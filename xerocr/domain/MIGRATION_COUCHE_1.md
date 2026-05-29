@@ -42,8 +42,8 @@ nettoyé ou abandonné.
 ## 3. Inventaire source → cible
 
 15 fichiers Picarones → **13 fichiers XerOCR** (`facts.py` et `module_protocol.py`
-non migrés en `domain`). Les seuls ajouts de la couche 1 liés à la segmentation
-sont `ArtifactType.REGIONS` et `Artifact.region_id` (dans `artifacts.py`).
+non migrés en `domain`). Les seuls ajouts de la couche 1 liés à la structure
+sont `ArtifactType.LAYOUT` et `Artifact.region_id` (dans `artifacts.py`).
 
 | # | Picarones (`domain/`) | → XerOCR (`domain/`) | Décision | Transformation |
 |---|------------------------|----------------------|----------|----------------|
@@ -95,7 +95,7 @@ backlog inexistant. **Aucune logique ne change.**
 
 ### 4.5 `__init__.py` — agrégateur
 - Retirer des imports/`__all__` tout ce qui vient de `facts` (`Fact`, `FactType`, `FactImportance`, `DetectorFn`, `DetectorRegistry`, `detect_all`) **et** de `module_protocol` (`BaseModule`).
-- **Exporter** `ArtifactType.REGIONS` (le `region_id` est un champ d'`Artifact`, déjà exporté).
+- **Exporter** `ArtifactType.LAYOUT` (le `region_id` est un champ d'`Artifact`, déjà exporté).
 - Adapter les chemins d'import aux fichiers renommés.
 - Conserver la note expliquant pourquoi `RunResult` n'est PAS dans `domain` (il agrège des couches externes).
 
