@@ -212,6 +212,43 @@ les sens ». Ils étaient absents de Picarones.
 
 ---
 
+## Critère d'appartenance à la couche 1 (domain) & backlog
+
+Un fichier est couche 1 (`domain`) **seulement** s'il réunit les **3 conditions** :
+
+1. c'est un **type ou contrat pur** (Pydantic / dataclass frozen / Enum / Protocol
+   / Error), pas du calcul ;
+2. c'est du **vocabulaire transversal**, agnostique des spécificités d'une seule
+   couche externe (pas « format ALTO », pas « métrique CER », pas « DTO HTTP ») ;
+3. il ne porte **ni contenu chargé** (vs référence) **ni instance d'une couche
+   externe**.
+
+⚠️ « N'importe que stdlib + pydantic » **ne suffit pas** : beaucoup d'algorithmes
+(métriques, stats, rendu) sont import-propres sans être des types domain.
+
+**Corollaire (inner → outer)** : on **ne crée pas** un type domain avant que son
+premier consommateur existe (garde-fou « pas de consommateur = supprimé »), et on
+ne fige pas une forme qui dépend d'une couche non encore conçue.
+
+**Backlog domain** — types repérés dans Picarones qui devront atterrir en
+`domain`, **à créer quand on migre leur couche propriétaire** (confirmer la forme
+à ce moment-là, pas avant) :
+
+| Type | Source Picarones | Déclencheur |
+|---|---|---|
+| `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
+| `RunSpec` (+ `StepSpec`) | `app/schemas/run_spec.py` | migration couche 6 (séparer du loader YAML) |
+| `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |
+
+**Non-candidats confirmés** (faux positifs analysés) : `RunContext` (→ couche 4,
+fait paire avec `RunControl`), `StoredArtifact` (reste en `adapters/storage`,
+usage mono-couche), `StepResult`/`PipelineResult` (forme dépend du fan-out →
+décidées au plan couche 4), types ALTO/PAGE (format-spécifiques → couche 2),
+payloads GT (contenu chargé → couche 3), `MetricsResult` (vocabulaire métrique →
+couche 3), DTO web (transport → couche 8).
+
+---
+
 ## 7. Conventions de code
 
 - Python, `snake_case` fichiers/fonctions, `PascalCase` classes, `UPPER_SNAKE`

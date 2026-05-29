@@ -35,6 +35,7 @@ nettoyé ou abandonné.
 | **D6** | Corriger un glissement de nom | `Fact.engines_involved` → sans objet (facts supprimé). Mais conserver la règle : préférer `pipelines_involved` partout ailleurs. |
 | **D7** | **Ajouter `ArtifactType.REGIONS`** | Nouveau type spatial de première classe (boîtes + labels de blocs) produit par un module de segmentation. Dimensionne le domaine pour le pipeline `segmentation → reconnaissance → assemblage`. |
 | **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Socle du fan-out par bloc (modèle b, **retenu**) : métriques par bloc + routage par type de bloc. `None` = artefact au niveau page. |
+| **D9** | **Rapatrier `RunCancelledError` dans `errors.py`** | Seule erreur transverse mal placée (était en `pipeline/run_control.py`), sœur de `DeadlineExceeded`. Voir §4.3. Les autres types « domain » repérés ailleurs (`ProjectionReport`, `RunSpec`, `ConfidenceToken`) sont **différés** à la migration de leur couche propriétaire (backlog domain dans `CLAUDE.md`) — pas créés maintenant (anti-spéculatif). |
 
 ---
 
@@ -54,7 +55,7 @@ sont `ArtifactType.REGIONS` et `Artifact.region_id` (dans `artifacts.py`).
 | 6 | `documents.py` | `documents.py` | **KEEP** | Recopier tel quel (conserver la défense path-traversal) |
 | 7 | `provenance.py` | `provenance.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 8 | `projection_spec.py` | `projection.py` *(renommé)* | **KEEP** | Recopier tel quel |
-| 9 | `errors.py` | `errors.py` | **KEEP + rename** | `PicaronesError` → `XerOCRError` ; purger note legacy `core` |
+| 9 | `errors.py` | `errors.py` | **KEEP + rename + D9** | `PicaronesError` → `XerOCRError` ; purger note legacy `core` ; **ajouter `RunCancelledError`** (rapatriée de `pipeline/run_control.py`) |
 | 10 | `pipeline_spec.py` | `pipeline.py` *(renommé)* | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 11 | `evaluation_spec.py` | `evaluation.py` *(renommé)* | **KEEP** | Recopier ; purger réf. backlog + mention `compute_metrics (legacy)` |
 | 12 | `module_protocol.py` | — | **DROP de `domain` (D1)** | Non migré en `domain`. Le contrat de module exécutable (`Protocol`) est construit en couche 4 (`pipeline`) — voir D1 |
@@ -80,8 +81,9 @@ sont `ArtifactType.REGIONS` et `Artifact.region_id` (dans `artifacts.py`).
 - **Conserver** : tous les champs reproductibilité (`run_id`, `corpus_name`, `n_documents`, `pipeline_specs`, `adapter_kwargs`, `view_specs`, `code_version`, `started_at/completed_at`, `dependencies_lock`, `system_binaries_lock`, `metadata`), `duration_seconds`, `utcnow()`.
 - **Supprimer** : le `computed_field` `pipeline_names` (lignes ~129-139) et le `model_validator` `_accept_legacy_pipeline_names` (lignes ~141-196). Pur shim de compatibilité JSON, sans consommateur une fois l'ancien `reports/html/render.py` abandonné.
 
-### 4.3 `errors.py` — renommage de la racine
+### 4.3 `errors.py` — renommage de la racine + 1 rapatriement (D9)
 - `PicaronesError` → **`XerOCRError`**. Conserver toutes les sous-classes : `ArtifactValidationError`, `ProjectionError`, `CorpusSpecError`, `AdapterStepError`, `DeadlineExceeded`.
+- **Ajouter `RunCancelledError` (D9)** — rapatriée de `pipeline/run_control.py`. C'est une **erreur transverse** (levée par le runner, rattrapée ailleurs), sœur de `DeadlineExceeded` qui est déjà en domain. Forme triviale et stable → le seul type « venu d'une autre couche » qui s'intègre proprement dès la couche 1. *(L'objet `RunControl` lui-même reste en couche 4 : threading + état mutable.)*
 - Conserver intégralement la docstring de `DeadlineExceeded` (elle porte un vrai contrat de comportement pour les adapters).
 - Supprimer la note historique sur `picarones.core` (lignes ~26-30).
 
@@ -191,5 +193,12 @@ backlog inexistant. **Aucune logique ne change.**
   La couche 1 peut être migrée sans attendre ; les call-sites seront corrigés
   lors du portage des couches consommatrices.
 - **`RunSpec`** : vit aujourd'hui en couche 6 (`app/schemas/`). L'architecture cible
-  pourrait le rapatrier dans `domain/run.py`. **Hors périmètre de ce plan** —
-  à trancher au moment de la couche 6.
+  le rapatrie dans `domain` (frère de `PipelineSpec`/`EvaluationSpec`). **Hors
+  périmètre de ce plan** — à créer au moment de la couche 6, en séparant du loader YAML.
+- **Backlog domain** : `ProjectionReport` (couche 3), `RunSpec` (couche 6),
+  `ConfidenceToken` (différable) sont des types qui appartiennent à `domain` mais
+  ne sont **pas** créés ici (anti-spéculatif : pas de consommateur en couche 1).
+  Liste et critère d'appartenance dans `CLAUDE.md`.
+- **`RunContext`** : ne PAS le placer en `domain`. Il fait paire avec `RunControl`
+  (threading, couche 4) et c'est l'argument de `execute()` → **couche 4**. Noté
+  ici pour éviter une future tentation de rapatriement.
