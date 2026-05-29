@@ -101,18 +101,24 @@ région → assemblage (textes + REGIONS → ALTO_XML)`. C'est l'architecture HT
 standard (Transkribus/eScriptorium/Kraken) et un cas de benchmark de premier
 ordre (VLM pleine page vs segmentation + VLM par bloc).
 
-Décision actée : **le domaine est dimensionné pour le fan-out géré par le
-framework (modèle b), l'exécution démarre au niveau page (modèle a).**
-Concrètement :
+Décision actée : **modèle (b) retenu et implémenté — le fan-out par bloc est
+géré par le framework, avec métriques par bloc.** Le traitement par région est
+une exigence de premier ordre, pas un ajout différé. Concrètement :
 
-- **Enveloppe (dès la couche 1)** : ajouter `ArtifactType.REGIONS` (boîtes +
-  labels) en première classe, et un `region_id` optionnel sur `Artifact` pour
-  qu'un « artefact texte d'une région » soit représentable.
-- **Implémentation (incrémentale)** : le premier executor reste au niveau page
-  (la boucle par bloc vit dans l'adapter). Le vrai fan-out framework
-  (lancer la reconnaissance N fois, métriques par bloc, routage par type de
-  bloc, agrégation déterministe par reading-order) s'ajoute ensuite **sans
-  réécriture**, parce que les types de domaine le permettent déjà.
+- **Enveloppe (couche 1)** : `ArtifactType.REGIONS` (boîtes + labels) en première
+  classe, et `region_id` optionnel sur `Artifact` pour qu'un « artefact texte
+  d'une région » soit représentable.
+- **Exécution (couche 4)** : l'executor sait **fan-out** — lancer la
+  reconnaissance une fois par région, collecter les N résultats, gérer les
+  échecs partiels, réassembler dans l'ordre de lecture de façon déterministe.
+- **Évaluation (couche 3)** : les métriques se calculent **par bloc** (CER par
+  région + agrégat page), et le `RunResult` porte le détail par région.
+- **Routage par type de bloc** possible : un moteur différent selon le label de
+  région (VLM pour manuscrit, OCR pour imprimé).
+
+Le tout reste compatible avec la règle des deux axes : l'architecture est
+dimensionnée pour (b) d'emblée, mais les modules concrets (un segmenteur de
+référence d'abord) s'ajoutent de façon incrémentale via le mécanisme de plugins.
 
 ---
 

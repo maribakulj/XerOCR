@@ -32,7 +32,7 @@ nettoyé ou abandonné.
 | **D5** | Nettoyer les commentaires historiques | Supprimer toutes les annotations de sprint (`S4`, `A14-S29`, `Phase 7.1`…) et les références au fichier inexistant `BACKLOG_POST_LIVRAISON.md`. |
 | **D6** | Corriger un glissement de nom | `Fact.engines_involved` → sans objet (facts supprimé). Mais conserver la règle : préférer `pipelines_involved` partout ailleurs. |
 | **D7** | **Ajouter `ArtifactType.REGIONS`** | Nouveau type spatial de première classe (boîtes + labels de blocs) produit par un module de segmentation. Dimensionne le domaine pour le pipeline `segmentation → reconnaissance → assemblage`. |
-| **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Rend possible le fan-out par bloc (modèle b) plus tard, **sans réécriture** — même si l'exécution démarre au niveau page (modèle a). |
+| **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Socle du fan-out par bloc (modèle b, **retenu**) : métriques par bloc + routage par type de bloc. `None` = artefact au niveau page. |
 
 ---
 
@@ -112,9 +112,10 @@ backlog inexistant. **Aucune logique ne change.**
 - **Ajouter `region_id: str | None`** sur `Artifact` : identifiant de la région
   d'origine quand l'artefact est rattaché à un bloc (ex. le texte reconnu d'une
   seule région). `None` = artefact au niveau page (cas par défaut).
-- Ces deux ajouts **dimensionnent le domaine pour le fan-out par bloc (modèle b)**
-  tout en laissant l'exécution démarrer au niveau page (modèle a). Aucune
-  réécriture future requise pour passer à (b).
+- Ces deux ajouts **dimensionnent le domaine pour le fan-out par bloc (modèle b,
+  retenu)** : métriques par région calculées par la couche 3, fan-out géré par
+  l'executor (couche 4). Au niveau couche 1, seuls `REGIONS` + `region_id` sont
+  requis ; le reste vit dans les couches consommatrices.
 
 ---
 
