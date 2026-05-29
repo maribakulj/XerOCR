@@ -32,7 +32,7 @@ nettoyé ou abandonné.
 | **D3** | Purger le legacy résiduel des fichiers conservés | Voir §4 : `LEGACY_VALUE_ALIASES`, shim `pipeline_names` du `RunManifest`. |
 | **D4** | Renommer la racine d'erreurs | `PicaronesError` → `XerOCRError` (et toute la hiérarchie reste). |
 | **D5** | Nettoyer les commentaires historiques | Supprimer toutes les annotations de sprint (`S4`, `A14-S29`, `Phase 7.1`…) et les références au fichier inexistant `BACKLOG_POST_LIVRAISON.md`. |
-| **D6** | Corriger un glissement de nom | `Fact.engines_involved` → sans objet (facts supprimé). Mais conserver la règle : préférer `pipelines_involved` partout ailleurs. |
+| **D6** | Convention de nommage | Préférer `pipelines_involved` à `engines_involved` (le champ d'origine disparaît avec `facts`). |
 | **D7** | `ArtifactType.LAYOUT` (type structurel unique) | Segmentation et structure transcrite = un seul type. Pas de `REGIONS` séparé : une segmentation est un `CanonicalLayout` à régions sans lignes. `CanonicalLayout` → `domain`, matérialisé couche 2. |
 | **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Socle du fan-out par bloc (modèle b, **retenu**) : métriques par bloc + routage par type de bloc. `None` = artefact au niveau page. |
 | **D9** | **Rapatrier `RunCancelledError` dans `errors.py`** | Seule erreur transverse mal placée (était en `pipeline/run_control.py`), sœur de `DeadlineExceeded`. Voir §4.3. Les autres types « domain » repérés ailleurs (`ProjectionReport`, `RunSpec`, `ConfidenceToken`) sont **différés** à la migration de leur couche propriétaire (backlog domain dans `CLAUDE.md`) — pas créés maintenant (anti-spéculatif). |
@@ -53,7 +53,7 @@ sont `ArtifactType.LAYOUT` et `Artifact.region_id` (dans `artifacts.py`).
 | 4 | `artifact_key.py` | `artifact_key.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 5 | `corpus.py` | `corpus.py` | **KEEP** | Supprimer réf. `BACKLOG_POST_LIVRAISON.md` + note « S10 » |
 | 6 | `documents.py` | `documents.py` | **KEEP** | Recopier tel quel (conserver la défense path-traversal) |
-| 7 | `provenance.py` | `provenance.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
+| 7 | `provenance.py` | `provenance.py` | **KEEP** | Recopier (purge réfs sprint). À **réellement câbler** côté executor (couche 4) : 0 consommateur dans Picarones (provenance dormante) |
 | 8 | `projection_spec.py` | `projection.py` *(renommé)* | **KEEP** | Recopier tel quel |
 | 9 | `errors.py` | `errors.py` | **KEEP + rename + D9** | `PicaronesError` → `XerOCRError` ; purger note legacy `core` ; **ajouter `RunCancelledError`** (rapatriée de `pipeline/run_control.py`) |
 | 10 | `pipeline_spec.py` | `pipeline.py` *(renommé)* | **KEEP** | Recopier tel quel (purge réfs sprint) |
@@ -63,10 +63,12 @@ sont `ArtifactType.LAYOUT` et `Artifact.region_id` (dans `artifacts.py`).
 | 14 | `facts.py` | — | **DROP (D2)** | Non migré |
 | 15 | `deadline.py` | `deadline.py` | **KEEP** | Recopier tel quel (type exemplaire) |
 
-> **Note sur les renommages** : `*_spec.py` → nom court (`projection.py`,
-> `pipeline.py`, `evaluation.py`) et `run_manifest.py` → `run.py` suivent la
-> convention cible (« une entité = un nom court »). Optionnel : on peut garder
-> les noms d'origine si tu préfères minimiser le delta cognitif avec Picarones.
+> **Renommages (actés)** : `projection_spec.py`→`projection.py`,
+> `pipeline_spec.py`→`pipeline.py`, `evaluation_spec.py`→`evaluation.py`,
+> `run_manifest.py`→`run.py`. Nom = concept ; les suffixes `_spec`/`_manifest`
+> étaient des béquilles de migration. `domain.pipeline` et `domain.evaluation`
+> partagent le nom des couches `pipeline/`/`evaluation/` mais en sont distincts
+> par le chemin d'import.
 
 ---
 
@@ -181,10 +183,6 @@ backlog inexistant. **Aucune logique ne change.**
 
 ## 9. Risques & points ouverts
 
-- **Renommage des fichiers `*_spec.py`** : choix de confort. Si tu préfères garder
-  `pipeline_spec.py` / `evaluation_spec.py` / `projection_spec.py` / `run_manifest.py`
-  à l'identique pour faciliter le diff mental avec Picarones, c'est sans impact
-  technique. **→ à confirmer.**
 - **Suppression des alias `TEXT/ALTO/PAGE`** : touche ~25 call-sites hors couche 1.
   La couche 1 peut être migrée sans attendre ; les call-sites seront corrigés
   lors du portage des couches consommatrices.
