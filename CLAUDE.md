@@ -1,0 +1,221 @@
+# CLAUDE.md — XerOCR
+
+Réécriture propre de **Picarones** (plateforme de benchmark OCR/HTR/VLM pour
+documents patrimoniaux) sous le nouveau nom **XerOCR**. Ce fichier est le
+contrat de travail de toute conversation de migration. **Le lire en entier
+avant d'écrire la moindre ligne.**
+
+---
+
+## 0. Statut actuel
+
+- Dépôt vierge, branche de travail : `claude/focused-gates-6737Q`.
+- Échafaudage posé : `xerocr/` avec 8 packages (un `__init__.py` vide par couche).
+- Couche 1 (`domain`) : plan de migration prêt dans
+  [`xerocr/domain/MIGRATION_COUCHE_1.md`](xerocr/domain/MIGRATION_COUCHE_1.md).
+- Aucune couche encore implémentée.
+
+---
+
+## 1. Ce qu'est XerOCR
+
+Un banc d'essai **déterministe et reproductible** pour comparer des pipelines de
+transcription (OCR, HTR, VLM, OCR+LLM) sur des corpus à vérité-terrain
+patrimoniaux, et produire un **verdict factuel chiffré** (métriques + tests
+statistiques) sous forme d'un rapport HTML autonome.
+
+XerOCR n'est PAS un fork. C'est une réécriture qui **recopie le noyau métier
+sain** de Picarones et **abandonne sa dette**. Picarones est disponible en
+lecture seule comme source de référence à porter (`../Picarones/`).
+
+---
+
+## 2. Principe directeur — les DEUX axes
+
+C'est la règle la plus importante du projet. Ce qui a alourdi Picarones, ce
+n'est **pas** son architecture (saine), c'est sa **surface fonctionnelle** qui a
+enflé sans élagage, plus des shims de compatibilité traînés. La protection n'est
+ni « tout prévoir d'avance » ni « partir petit et grossir », mais de séparer
+strictement deux axes :
+
+| Axe | Quand | Règle |
+|---|---|---|
+| **Architecture / contrats** (l'enveloppe) | **Dimensionnée pour le scope COMPLET, dès maintenant** | Les frontières des 8 couches, les types pivots (`Artifact`, `PipelineSpec`, `RunResult`, `EvaluationView`) et les points d'extension réels sont conçus pour porter *toutes* les features envisagées — même si on n'en remplit qu'une au début. Ex : `RunResult` doit pouvoir contenir taxonomy/NER/calibration dès sa conception, même si la v1 ne calcule qu'un CER. |
+| **Surface fonctionnelle** (le contenu) | **Implémentée incrémentalement et minimalement** | Adapters, métriques, renderers, importers : ajoutés un par un, entièrement, dans un budget, en élaguant. Jamais en masse, jamais « au cas où ». |
+
+> Analogie : on coule des fondations dimensionnées pour 3 étages (axe 1), mais on
+> finit et on meuble un étage à la fois (axe 2). Implémenter toute la surface
+> d'office reproduit le volume de Picarones **et** ajoute du risque spéculatif
+> (cf. `BaseModule`, supprimé précisément pour ça).
+
+---
+
+## 3. Architecture — 8 couches concentriques
+
+```
+domain ← formats ← evaluation ← pipeline ← adapters ← app ← reports ← interfaces
+(interne)                                                            (externe)
+```
+
+**Règle d'import absolue** : une couche n'importe **que** des couches plus
+internes qu'elle. Jamais l'inverse. Vérifiée mécaniquement par les tests
+d'architecture (à activer dès le premier commit de code).
+
+Conséquence opérationnelle : on construit **toujours de l'intérieur vers
+l'extérieur**. Dans ce sens, chaque couche écrite ne dépend que de couches déjà
+terminées — aucun blocage de dépendance vers l'avant n'est possible.
+
+Whitelist externe de `evaluation/` (rappel Picarones) : `PIL, annotated_types,
+jiwer, numpy, pydantic, rapidfuzz, scipy, spacy, typing_extensions, yaml`. Toute
+lib OCR/LLM (`pytesseract`, `mistralai`, `azure`, `google`, `pero_ocr`…) vit en
+`adapters/`.
+
+---
+
+## 4. Stratégie de migration
+
+1. **Couches 1-2 (`domain`, `formats`) : approche horizontale, complète, d'abord.**
+   Petites, stables, sans dépendance externe, déjà analysées. Les faire à fond
+   donne une fondation sûre.
+2. **Couches 3-8 : approche par tranches verticales (squelette ambulant).**
+   Une fois `domain`+`formats` posées, construire d'abord une tranche fine qui
+   traverse toutes les couches pour qu'un cas minimal tourne de bout en bout
+   (ex. `xerocr demo` : corpus pré-calculé → 1 CER → HTML basique → CLI).
+   **Le squelette n'est pas « petite ambition » : il est fin mais de pleine
+   profondeur, et son rôle est de prouver que l'enveloppe dimensionnée tient
+   debout avant d'y verser des features.** Puis épaissir feature par feature.
+3. **Ordre toujours interne → externe.** Jamais commencer par `interfaces`.
+
+---
+
+## 5. Les 5 garde-fous de discipline (NON NÉGOCIABLES)
+
+Ce sont eux, et non le choix incrémental, qui empêchent le dérapage « dans tous
+les sens ». Ils étaient absents de Picarones.
+
+1. **Rupture nette, zéro shim.** Un seul format de sortie (`RunResult`). Jamais
+   d'ancien chemin gardé « le temps de migrer ». Aucun helper de conversion
+   entre deux représentations.
+2. **Budgets par fichier.** Pas de fichier > 400 LOC sans entrée justifiée dans
+   `test_file_budgets`. Un fichier ne peut pas enfler en silence.
+3. **Pas de consommateur = supprimé.** Tout symbole/fichier sans usage réel en
+   CI est retiré. Aucune feature spéculative « au cas où ».
+4. **Tests d'architecture dès le jour 1.** layer-deps, no-legacy-imports,
+   file-budgets, no-broad-except, no-side-effect-imports, single-version-source.
+5. **Une feature = ajoutée entièrement, dans un budget, en élaguant.** On
+   n'empile pas ; on intègre proprement.
+
+---
+
+## 6. Décisions déjà actées
+
+- **`BaseModule` (`module_protocol.py`) : SUPPRIMÉ.** 0 sous-classe en
+  production. Les adapters utilisent `BaseOCRAdapter`/`BaseLLMAdapter`. À
+  recréer uniquement si un besoin réel d'extension tierce émerge.
+- **Moteur narratif : SUPPRIMÉ entièrement.** `facts.py` non migré ; tout
+  `reports/narrative/` abandonné. Le rapport affiche chiffres et tableaux bruts.
+- **Purge du legacy résiduel** : `LEGACY_VALUE_ALIASES` (artifacts), shim
+  `pipeline_names` + `_accept_legacy_pipeline_names` du `RunManifest`.
+- **Renommage racine d'erreurs** : `PicaronesError` → `XerOCRError`.
+- **Nettoyage transverse** : aucune annotation de sprint (`S4`, `A14`, `Phase
+  7.1`…), aucune référence à `BACKLOG_POST_LIVRAISON.md`.
+
+---
+
+## 7. Conventions de code
+
+- Python, `snake_case` fichiers/fonctions, `PascalCase` classes, `UPPER_SNAKE`
+  constantes.
+- **Types purs uniquement en `domain/`** : stdlib + `pydantic` + `pydantic_core`.
+  Aucun I/O, aucun calcul métier.
+- **Erreurs typées** : lever une sous-classe de `XerOCRError`, jamais
+  `Exception`/`ValueError` brut quand l'erreur a un sens métier.
+- **Jamais `except Exception: pass`.** Toujours
+  `logger.warning("[module] dégradé : %s", e)`.
+- **Pas de suffixe `_v2`/`_legacy`** ni de préfixe `Picarones*`. Renommages
+  atomiques avant merge.
+- **`__init__.py` minces** : aucun effet de bord à l'import (pas de
+  `register_default_metrics()` implicite — tout enregistrement est explicite,
+  idempotent, testable séparément).
+- **Modèles Pydantic** `frozen=True, extra="forbid"` pour les types de domaine.
+- Pas de placeholder de version dispersé : une source unique
+  (`_version_fallback.FALLBACK_VERSION`), vérifiée par test.
+
+---
+
+## 8. À NE PAS reproduire de Picarones
+
+1. Double format de sortie + shim `BenchmarkResult ↔ RunResult` (~1 570 LOC de
+   helpers `_benchmark_*`). → Un seul format `RunResult`.
+2. Renderers HTML sans interface commune (37 fichiers, 4 signatures). → un
+   `Protocol Section` typé unique, 4-5 sections.
+3. Data-layer `reports/html/data/` qui ré-agrège `evaluation/`. → consommer
+   `RunResult` directement.
+4. Workflows CLI pré-câblés (`diagnose`/`economics`/`edition`). → seulement
+   `run`/`report`/`compare`/`demo`/`serve`.
+5. Sécurité web éclatée en 7 modules `security_*`. → un package `security/`.
+6. Noms à suffixe interne dans le code livré (`_v2`, `legacy`).
+7. Commentaires de sprint dans le code.
+8. 11 profils de normalisation (→ 5), 8+8+8 adapters LLM/VLM (→ minimal),
+   20 détecteurs narratifs (→ 0, supprimé).
+9. Dossiers de tests vides « par symétrie », `docs/archive`, `CHANGELOG` de
+   97 sprints, scripts de refactor morts.
+
+---
+
+## 9. Workflow de migration (conversations)
+
+- **Mémoire durable = fichiers markdown committés.** Chaque couche (ou chaque
+  phase verticale) a son plan markdown dans le repo. C'est ce qui permet à une
+  conversation fraîche de reprendre sans traîner l'historique.
+- **Une conversation par couche** (couches stables 1-2) ou **par phase
+  verticale** (couches 3-8). Les grosses couches (`evaluation`, `reports`) se
+  sous-découpent par sous-paquet.
+- **Ne jamais tout faire dans une seule conversation** : la fenêtre de contexte
+  sature, le résumé perd du détail, le taux d'erreur explose.
+- Chaque conversation : lit le plan markdown concerné + la source Picarones de
+  référence → écrit le code XerOCR + ses tests → vérifie
+  (`mypy`/`ruff`/`pytest`) → commit sur la branche.
+
+---
+
+## 10. Tests
+
+- Activer les **tests d'architecture dès le premier commit de code** (ils
+  passent même avec peu de code et verrouillent la structure).
+- Chaque type/fonction de domaine testé en isolation (validateurs, hash
+  déterministe, immutabilité, sérialisation).
+- **Golden snapshots** refaits (pas hérités) : `RunResult` canonique + topologies
+  de pipeline.
+- **Mini-corpus de référence** recopiable de Picarones
+  (`tests/fixtures/reference_corpus/`).
+- Markers `slow`/`network`/`live` opt-in.
+- Cible couverture : 80 % au MVP, 85 % ensuite.
+
+---
+
+## 11. Commandes
+
+À renseigner quand le packaging existe (`pyproject.toml` + extras). Cible :
+
+```bash
+pip install -e ".[dev]"      # installation dev
+make test                    # pytest
+make lint                    # ruff + mypy
+xerocr demo --output r.html  # rapport démo sans moteur (squelette)
+```
+
+---
+
+## 12. Invariants produit (à préserver coûte que coûte)
+
+- **Déterminisme** : même spec + même corpus + même code → mêmes artefacts
+  (hash identique), mêmes métriques, même rapport.
+- **Reproductibilité** : `RunManifest` porte code_version + deps + binaires +
+  hash des paramètres.
+- **Sécurité XML** : tout XML via `safe_parse_xml` (defusedxml, no DTD).
+- **Sécurité chemins** : tout chemin utilisateur via `validated_path()` ;
+  défense path-traversal (rejet `..`) jusque dans les validateurs de domaine.
+- **Anti-hallucination rapport** : aucun LLM ne génère de prose dans le
+  rapport ; tous les nombres sont une fonction auditable des données d'entrée.
+- **Annulation/timeout coopératifs** via `Deadline` + `RunControl`.
