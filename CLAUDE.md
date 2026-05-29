@@ -121,9 +121,13 @@ module = incrémental.
   publique** (engagement de stabilité → en limiter le nombre) ; (2) le code
   tiers **s'exécute in-process** (sécurité ; cf. mode public) ; (3) un module
   **déclare sa version** (reproductibilité → alimente `RunManifest`).
-- **Périmètre des points d'extension (3 niveaux)** : N1 maintenant = briques de
-  pipeline ; N2 bientôt = métriques personnalisées ; N3 plus tard = importeurs,
-  sections de rapport, projecteurs. **Jamais une prise unique fourre-tout.**
+- **Périmètre STRICT : le seul et unique point d'extension = les briques de
+  pipeline** (segmentation, OCR/HTR, VLM, post-correction LLM, construction
+  d'ALTO, ordre de lecture, NER… — tout ce qui est une étape `IMAGE/TEXTE/… →
+  artefacts`). **Rien d'autre n'est pluggable.** Les métriques, les importeurs
+  de corpus, les sections de rapport, les projecteurs, les tests statistiques
+  restent **internes (first-party)**, non extensibles par des tiers. On n'ouvre
+  **aucune autre prise** — une seule API publique d'extension, point.
 
 ### Segmentation / mise en page (dimensionnée pour le fan-out par bloc)
 
