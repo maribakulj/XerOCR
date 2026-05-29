@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xerocr"
+description = "Banc d'essai déterministe de pipelines de transcription (OCR / HTR / VLM)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+dynamic = ["version"]
+dependencies = [
+    "pydantic>=2",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest", "pytest-cov"]
+
+[tool.setuptools.packages.find]
+include = ["xerocr*"]
+
+[tool.setuptools_scm]
+fallback_version = "0.1.0"
+version_file = "xerocr/_version.py"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = false
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+markers = [
+    "slow: tests lents (opt-in)",
+    "network: tests qui touchent le réseau (opt-in)",
+    "live: tests contre une vraie API/binaire (opt-in)",
+]
