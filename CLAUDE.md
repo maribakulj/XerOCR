@@ -79,20 +79,51 @@ C'est donc dimensionné dès le départ (≠ la décision initiale de supprimer
 3 briques, à concevoir maintenant avec 2-3 implémentations de référence
 seulement (le reste incrémental) :
 
-1. **Contrat de module typé (`Protocol`)** — toute brique (segmenteur, OCR,
-   VLM, post-correcteur, constructeur d'ALTO) implémente la même forme :
-   déclare `input_types`/`output_types`, un `name`, et `execute(inputs typés)
-   → outputs typés`. C'est la prise universelle. **Type pur → vit en `domain/`.**
-   Remplace `BaseModule` par un `Protocol` propre (pas une ABC emballée).
+1. **Contrat de module exécutable (`Protocol`)** — toute brique (segmenteur,
+   OCR, VLM, post-correcteur, constructeur d'ALTO) implémente la même forme :
+   `name`, `version` (reproductibilité), `input_types`/`output_types`, et
+   `execute(inputs typés, params, contexte d'exécution) → outputs typés`. **Un
+   seul contrat, implémenté directement** (≠ Picarones qui emballait
+   `BaseOCRAdapter` dans `BaseModule`).
+   **⚠️ Placement : couche `pipeline` (4), PAS `domain`.** Le contrat porte des
+   concerns d'exécution (deadline, annulation via `RunControl`) qui sont des
+   types de couche 4 ; un `Protocol` en `domain` qui les référencerait violerait
+   le sens des dépendances. La couche `domain` ne garde que le **déclaratif** :
+   `PipelineStep` (nomme l'`adapter_name` + ses `input_types`/`output_types`) et
+   `ArtifactType` — ça suffit à décrire un module dans une spec.
 2. **Registre + factory** — la spec YAML référence un `adapter_name` (string),
-   résolu au runtime. Vit en `app/`/`adapters/`.
-3. **Découverte de plugins** (ce qui manquait à Picarones) — **entry-points
-   Python** (`xerocr.modules`) pour qu'un tiers branche un package pip sans
-   forker, + un `register()` simple pour un module local.
+   résolu au runtime. Couches `app`/`adapters`.
+3. **Découverte de plugins** (absente de Picarones) — **entry-points Python**
+   (`xerocr.modules`) pour brancher un paquet pip sans forker, + un `register()`
+   pour un module local. Couche `app`.
 
 Règle des deux axes : on conçoit le contrat + registre + découverte d'office ;
-on n'implémente que precomputed + Tesseract + un segmenteur de référence au
-début. Ajouter un module = incrémental.
+on n'implémente que le starter pack au début (cf. ci-dessous). Ajouter un
+module = incrémental.
+
+### Socle intégré vs plugins tiers (extensible ≠ vide)
+
+- **Extensible ≠ livré vide.** XerOCR embarque un **socle de modules « maison »**
+  enregistrés d'office, qui utilisent **le même `Protocol`** que les modules
+  tiers. Seule diffère la livraison : intégré (`xerocr/adapters/`) vs
+  installé/déposé.
+- **Starter pack** : `precomputed` (0 dép), `tesseract` (binaire requis),
+  `openai` + `ollama` (LLM), un segmenteur de référence. Le reste = incrémental
+  via plugin.
+- **Dépendances lourdes = extras optionnels.** L'adapter est intégré, son SDK
+  est un extra (`pip install xerocr[llm]`). Sans l'extra, le module reste listé
+  mais signale qu'il faut l'installer (+ clé API) — il ne plante pas.
+- **Adapter sain ≠ shim.** Un module enveloppe une lib externe pour la traduire
+  vers le `Protocol` (sain, rôle de la couche 5). Interdit : un double contrat
+  interne (le wrapping `BaseOCRAdapter`→`BaseModule` de Picarones). Le `Protocol`
+  est le contrat unique, implémenté directement.
+- **3 contreparties à tenir** : (1) chaque point d'extension est une **API
+  publique** (engagement de stabilité → en limiter le nombre) ; (2) le code
+  tiers **s'exécute in-process** (sécurité ; cf. mode public) ; (3) un module
+  **déclare sa version** (reproductibilité → alimente `RunManifest`).
+- **Périmètre des points d'extension (3 niveaux)** : N1 maintenant = briques de
+  pipeline ; N2 bientôt = métriques personnalisées ; N3 plus tard = importeurs,
+  sections de rapport, projecteurs. **Jamais une prise unique fourre-tout.**
 
 ### Segmentation / mise en page (dimensionnée pour le fan-out par bloc)
 
@@ -159,11 +190,14 @@ les sens ». Ils étaient absents de Picarones.
 
 ## 6. Décisions déjà actées
 
-- **`BaseModule` (`module_protocol.py`) : décision RÉVISÉE.** À l'origine
-  supprimé (jugé spéculatif). Mais l'extensibilité par modules tiers est
-  désormais une exigence d'enveloppe (cf. §3) : on **réintroduit un contrat de
-  module, mais sous forme de `Protocol` typé propre** (pas l'ancienne ABC
-  emballée par wrapper), accompagné d'un registre + découverte par entry-points.
+- **`BaseModule` (`module_protocol.py`) : contrat unique, construit en couche
+  4.** L'extensibilité tierce est une exigence d'enveloppe → on construit **un
+  seul `Protocol` de module exécutable**, implémenté directement (pas l'ancien
+  double contrat emballé). **Mais il vit en `pipeline` (couche 4)**, pas en
+  `domain` : sa méthode `execute()` porte deadline + annulation (`RunControl`,
+  couche 4). Donc `module_protocol.py` n'est **pas** recréé en `domain` ; la
+  couche 1 ne garde que le déclaratif (`PipelineStep`, `ArtifactType`). Registre
+  + découverte entry-points en `app`.
 - **Moteur narratif : SUPPRIMÉ entièrement.** `facts.py` non migré ; tout
   `reports/narrative/` abandonné. Le rapport affiche chiffres et tableaux bruts.
 - **Purge du legacy résiduel** : `LEGACY_VALUE_ALIASES` (artifacts), shim

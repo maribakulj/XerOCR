@@ -3,8 +3,10 @@
 > **Statut** : plan validé, prêt à exécuter.
 > **Périmètre** : uniquement la couche 1 (`domain/`). Les 7 autres couches feront l'objet de plans dédiés.
 > **Source** : `Picarones/picarones/domain/` (15 fichiers, 2 401 LOC).
-> **Cible** : `XerOCR/xerocr/domain/` (14 fichiers après décisions : `facts.py`
-> abandonné, `module_protocol.py` réécrit en `module.py`).
+> **Cible** : `XerOCR/xerocr/domain/` (13 fichiers après décisions : `facts.py`
+> et `module_protocol.py` non migrés en `domain`). Le contrat de module
+> exécutable n'est **pas perdu** : il est construit en couche 4 (`pipeline`),
+> voir D1.
 
 ---
 
@@ -25,7 +27,7 @@ nettoyé ou abandonné.
 
 | # | Décision | Conséquence concrète |
 |---|----------|----------------------|
-| **D1** | **`BaseModule` RÉVISÉ : réécrire en `Protocol` typé** (`module.py`) | Décision initiale (suppression) **annulée** : l'extensibilité par modules tiers (YOLO HF, module perso) est une exigence d'enveloppe. On réécrit un contrat de module en `Protocol` propre (`name`, `input_types`/`output_types`, `execute(inputs typés) → outputs typés`), **pas** l'ancienne ABC emballée par wrapper. Le registre + la découverte par entry-points vivent en couches 5/6 (hors couche 1). |
+| **D1** | **`BaseModule` : contrat unique de module, construit en couche 4 (pas en `domain`)** | L'extensibilité tierce est une exigence d'enveloppe → on construit **un seul contrat de module exécutable (`Protocol`)** implémenté directement (≠ le double contrat `BaseOCRAdapter`→`BaseModule` de Picarones). **Mais il vit en `pipeline` (couche 4)**, pas en `domain` : sa méthode `execute()` porte des concerns d'exécution (deadline, annulation via `RunControl`, couche 4) — un `Protocol` en `domain` qui les référencerait violerait le sens des dépendances. Donc `module_protocol.py` n'est **pas** recréé en `domain`. La couche 1 ne garde que le **déclaratif** : `PipelineStep` (qui nomme l'`adapter_name` + `input_types`/`output_types`) et `ArtifactType` suffisent à décrire un module dans une spec. Registre + découverte entry-points = couche `app`. |
 | **D2** | **Supprimer entièrement le moteur narratif** | `facts.py` **non migré**. XerOCR n'aura pas de synthèse en prose : le rapport affichera les chiffres et tableaux bruts. Supprime aussi, en aval, toute la couche 7 `reports/narrative/` (hors périmètre de ce plan, mais acté). |
 | **D3** | Purger le legacy résiduel des fichiers conservés | Voir §4 : `LEGACY_VALUE_ALIASES`, shim `pipeline_names` du `RunManifest`. |
 | **D4** | Renommer la racine d'erreurs | `PicaronesError` → `XerOCRError` (et toute la hiérarchie reste). |
@@ -38,12 +40,13 @@ nettoyé ou abandonné.
 
 ## 3. Inventaire source → cible
 
-15 fichiers Picarones → **14 fichiers XerOCR** (`facts.py` supprimé ;
-`module_protocol.py` réécrit en `module.py`).
+15 fichiers Picarones → **13 fichiers XerOCR** (`facts.py` et `module_protocol.py`
+non migrés en `domain`). Les seuls ajouts de la couche 1 liés à la segmentation
+sont `ArtifactType.REGIONS` et `Artifact.region_id` (dans `artifacts.py`).
 
 | # | Picarones (`domain/`) | → XerOCR (`domain/`) | Décision | Transformation |
 |---|------------------------|----------------------|----------|----------------|
-| 1 | `__init__.py` | `__init__.py` | **KEEP** | Retirer exports de `facts`/`module_protocol` ; supprimer annotations sprint |
+| 1 | `__init__.py` | `__init__.py` | **KEEP** | Retirer exports de `facts` et `module_protocol` ; supprimer annotations sprint |
 | 2 | `_version_fallback.py` | `_version_fallback.py` | **KEEP** | `FALLBACK_VERSION = "0.1.0"` ; mettre à jour la docstring |
 | 3 | `artifacts.py` | `artifacts.py` | **KEEP + purge + étendre** | Supprimer `LEGACY_VALUE_ALIASES` + les 3 alias `TEXT/ALTO/PAGE` (garder `_missing_()`) ; **ajouter `ArtifactType.REGIONS` (D7) et le champ `region_id` (D8)** |
 | 4 | `artifact_key.py` | `artifact_key.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
@@ -54,7 +57,7 @@ nettoyé ou abandonné.
 | 9 | `errors.py` | `errors.py` | **KEEP + rename** | `PicaronesError` → `XerOCRError` ; purger note legacy `core` |
 | 10 | `pipeline_spec.py` | `pipeline.py` *(renommé)* | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 11 | `evaluation_spec.py` | `evaluation.py` *(renommé)* | **KEEP** | Recopier ; purger réf. backlog + mention `compute_metrics (legacy)` |
-| 12 | `module_protocol.py` | `module.py` *(réécrit)* | **REWRITE (D1)** | Réécrit en `Protocol` typé (contrat de module tiers) — voir §4.6 |
+| 12 | `module_protocol.py` | — | **DROP de `domain` (D1)** | Non migré en `domain`. Le contrat de module exécutable (`Protocol`) est construit en couche 4 (`pipeline`) — voir D1 |
 | 13 | `run_manifest.py` | `run.py` *(renommé)* | **KEEP + purge** | Supprimer `pipeline_names` (computed_field) ET `_accept_legacy_pipeline_names` (~67 LOC de shim) |
 | 14 | `facts.py` | — | **DROP (D2)** | Non migré |
 | 15 | `deadline.py` | `deadline.py` | **KEEP** | Recopier tel quel (type exemplaire) |
@@ -89,21 +92,24 @@ Seules transformations : retrait des annotations de sprint et des références a
 backlog inexistant. **Aucune logique ne change.**
 
 ### 4.5 `__init__.py` — agrégateur
-- Retirer des imports/`__all__` tout ce qui vient de `facts` (`Fact`, `FactType`, `FactImportance`, `DetectorFn`, `DetectorRegistry`, `detect_all`).
-- **Exporter** le nouveau contrat de module (`module.py`) et `ArtifactType.REGIONS`.
+- Retirer des imports/`__all__` tout ce qui vient de `facts` (`Fact`, `FactType`, `FactImportance`, `DetectorFn`, `DetectorRegistry`, `detect_all`) **et** de `module_protocol` (`BaseModule`).
+- **Exporter** `ArtifactType.REGIONS` (le `region_id` est un champ d'`Artifact`, déjà exporté).
 - Adapter les chemins d'import aux fichiers renommés.
 - Conserver la note expliquant pourquoi `RunResult` n'est PAS dans `domain` (il agrège des couches externes).
 
-### 4.6 `module.py` (ex-`module_protocol.py`) — contrat de module tiers
-- **Réécrire** `BaseModule` (ABC) en un `Protocol` typé (PEP 544) : un module
-  déclare `name`, `input_types`, `output_types`, et `execute(inputs typés) →
-  outputs typés`. Pas d'héritage obligatoire — n'importe quelle classe qui
-  respecte la forme est un module valide (« duck typing » vérifié statiquement).
-- **But** : c'est la prise universelle pour brancher un segmenteur YOLO, un OCR,
-  un VLM, ou un module Python local. Type pur → reste en couche 1.
-- **Hors couche 1** (à concevoir en couches 5/6, noté ici pour mémoire) : le
-  registre `nom → implémentation`, la factory, et la découverte par entry-points
-  Python (`xerocr.modules`) + un `register()` local.
+### 4.6 `module_protocol.py` — NON migré en `domain` (contrat déplacé en couche 4)
+- Le contrat de module **n'est pas perdu**, mais il **ne vit pas en `domain`** :
+  sa méthode `execute()` a besoin de la deadline et de l'annulation
+  (`RunControl`, couche 4). Un `Protocol` en couche 1 qui les référencerait
+  importerait vers l'extérieur → interdit.
+- **Décision** : construire **un seul `Protocol` de module exécutable en couche 4
+  (`pipeline`)** — `name`, `version` (reproductibilité), `input_types`,
+  `output_types`, `execute(inputs, params, contexte d'exécution) → outputs`.
+  Implémenté **directement** par chaque module (≠ double contrat de Picarones).
+- **Au niveau couche 1**, rien à faire : `PipelineStep` (déclare `adapter_name`
+  + `input_types`/`output_types`) et `ArtifactType` suffisent à **décrire** un
+  module dans une spec. Registre + découverte entry-points = couche `app`.
+- ⚠️ À traiter dans le **plan de la couche 4**, pas ici.
 
 ### 4.7 `artifacts.py` — extensions segmentation (D7/D8)
 - **Ajouter `ArtifactType.REGIONS`** : sortie d'un module de segmentation —
@@ -163,9 +169,10 @@ backlog inexistant. **Aucune logique ne change.**
 
 ## 8. Definition of Done (couche 1)
 
-- [ ] 14 fichiers créés dans `xerocr/domain/` ; `facts.py` abandonné ; `module_protocol.py` réécrit en `module.py` (`Protocol`).
+- [ ] 13 fichiers créés dans `xerocr/domain/` ; `facts.py` et `module_protocol.py` **non** migrés en `domain`.
 - [ ] `ArtifactType.REGIONS` et `Artifact.region_id` ajoutés et testés.
-- [ ] Aucune occurrence de `PicaronesError`, `BaseModule` (ABC), `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
+- [ ] Contrat de module exécutable **reporté au plan de la couche 4** (pas un livrable de la couche 1).
+- [ ] Aucune occurrence de `PicaronesError`, `BaseModule`, `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
 - [ ] Aucune annotation de sprint résiduelle.
 - [ ] `mypy --strict` vert sur `xerocr/domain/`.
 - [ ] `ruff check` vert.
