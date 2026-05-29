@@ -70,6 +70,50 @@ jiwer, numpy, pydantic, rapidfuzz, scipy, spacy, typing_extensions, yaml`. Toute
 lib OCR/LLM (`pytesseract`, `mistralai`, `azure`, `google`, `pero_ocr`…) vit en
 `adapters/`.
 
+### Extensibilité par modules tiers (EXIGENCE D'ENVELOPPE, axe 1)
+
+Brancher facilement un module tiers — un YOLO de HuggingFace, un module Python
+développé en local — est un **objectif central du produit**, pas une option.
+C'est donc dimensionné dès le départ (≠ la décision initiale de supprimer
+`BaseModule`, qui supposait à tort que c'était spéculatif). Conception en
+3 briques, à concevoir maintenant avec 2-3 implémentations de référence
+seulement (le reste incrémental) :
+
+1. **Contrat de module typé (`Protocol`)** — toute brique (segmenteur, OCR,
+   VLM, post-correcteur, constructeur d'ALTO) implémente la même forme :
+   déclare `input_types`/`output_types`, un `name`, et `execute(inputs typés)
+   → outputs typés`. C'est la prise universelle. **Type pur → vit en `domain/`.**
+   Remplace `BaseModule` par un `Protocol` propre (pas une ABC emballée).
+2. **Registre + factory** — la spec YAML référence un `adapter_name` (string),
+   résolu au runtime. Vit en `app/`/`adapters/`.
+3. **Découverte de plugins** (ce qui manquait à Picarones) — **entry-points
+   Python** (`xerocr.modules`) pour qu'un tiers branche un package pip sans
+   forker, + un `register()` simple pour un module local.
+
+Règle des deux axes : on conçoit le contrat + registre + découverte d'office ;
+on n'implémente que precomputed + Tesseract + un segmenteur de référence au
+début. Ajouter un module = incrémental.
+
+### Segmentation / mise en page (dimensionnée pour le fan-out par bloc)
+
+Pipeline canonique visé : `segmentation (IMAGE → REGIONS) → reconnaissance par
+région → assemblage (textes + REGIONS → ALTO_XML)`. C'est l'architecture HTR
+standard (Transkribus/eScriptorium/Kraken) et un cas de benchmark de premier
+ordre (VLM pleine page vs segmentation + VLM par bloc).
+
+Décision actée : **le domaine est dimensionné pour le fan-out géré par le
+framework (modèle b), l'exécution démarre au niveau page (modèle a).**
+Concrètement :
+
+- **Enveloppe (dès la couche 1)** : ajouter `ArtifactType.REGIONS` (boîtes +
+  labels) en première classe, et un `region_id` optionnel sur `Artifact` pour
+  qu'un « artefact texte d'une région » soit représentable.
+- **Implémentation (incrémentale)** : le premier executor reste au niveau page
+  (la boucle par bloc vit dans l'adapter). Le vrai fan-out framework
+  (lancer la reconnaissance N fois, métriques par bloc, routage par type de
+  bloc, agrégation déterministe par reading-order) s'ajoute ensuite **sans
+  réécriture**, parce que les types de domaine le permettent déjà.
+
 ---
 
 ## 4. Stratégie de migration
@@ -109,9 +153,11 @@ les sens ». Ils étaient absents de Picarones.
 
 ## 6. Décisions déjà actées
 
-- **`BaseModule` (`module_protocol.py`) : SUPPRIMÉ.** 0 sous-classe en
-  production. Les adapters utilisent `BaseOCRAdapter`/`BaseLLMAdapter`. À
-  recréer uniquement si un besoin réel d'extension tierce émerge.
+- **`BaseModule` (`module_protocol.py`) : décision RÉVISÉE.** À l'origine
+  supprimé (jugé spéculatif). Mais l'extensibilité par modules tiers est
+  désormais une exigence d'enveloppe (cf. §3) : on **réintroduit un contrat de
+  module, mais sous forme de `Protocol` typé propre** (pas l'ancienne ABC
+  emballée par wrapper), accompagné d'un registre + découverte par entry-points.
 - **Moteur narratif : SUPPRIMÉ entièrement.** `facts.py` non migré ; tout
   `reports/narrative/` abandonné. Le rapport affiche chiffres et tableaux bruts.
 - **Purge du legacy résiduel** : `LEGACY_VALUE_ALIASES` (artifacts), shim

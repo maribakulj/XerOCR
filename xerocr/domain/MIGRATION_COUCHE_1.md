@@ -3,7 +3,8 @@
 > **Statut** : plan validé, prêt à exécuter.
 > **Périmètre** : uniquement la couche 1 (`domain/`). Les 7 autres couches feront l'objet de plans dédiés.
 > **Source** : `Picarones/picarones/domain/` (15 fichiers, 2 401 LOC).
-> **Cible** : `XerOCR/xerocr/domain/` (13 fichiers après décisions).
+> **Cible** : `XerOCR/xerocr/domain/` (14 fichiers après décisions : `facts.py`
+> abandonné, `module_protocol.py` réécrit en `module.py`).
 
 ---
 
@@ -24,24 +25,27 @@ nettoyé ou abandonné.
 
 | # | Décision | Conséquence concrète |
 |---|----------|----------------------|
-| **D1** | **Supprimer `BaseModule`** (`module_protocol.py`) | Fichier **non migré**. Vérifié : 0 sous-classe en production — contrat d'extensibilité tiers jamais réalisé. Les vrais adapters utilisent `BaseOCRAdapter`/`BaseLLMAdapter` (couche 5). À recréer plus tard *seulement* si un besoin réel d'extension tierce émerge. |
+| **D1** | **`BaseModule` RÉVISÉ : réécrire en `Protocol` typé** (`module.py`) | Décision initiale (suppression) **annulée** : l'extensibilité par modules tiers (YOLO HF, module perso) est une exigence d'enveloppe. On réécrit un contrat de module en `Protocol` propre (`name`, `input_types`/`output_types`, `execute(inputs typés) → outputs typés`), **pas** l'ancienne ABC emballée par wrapper. Le registre + la découverte par entry-points vivent en couches 5/6 (hors couche 1). |
 | **D2** | **Supprimer entièrement le moteur narratif** | `facts.py` **non migré**. XerOCR n'aura pas de synthèse en prose : le rapport affichera les chiffres et tableaux bruts. Supprime aussi, en aval, toute la couche 7 `reports/narrative/` (hors périmètre de ce plan, mais acté). |
 | **D3** | Purger le legacy résiduel des fichiers conservés | Voir §4 : `LEGACY_VALUE_ALIASES`, shim `pipeline_names` du `RunManifest`. |
 | **D4** | Renommer la racine d'erreurs | `PicaronesError` → `XerOCRError` (et toute la hiérarchie reste). |
 | **D5** | Nettoyer les commentaires historiques | Supprimer toutes les annotations de sprint (`S4`, `A14-S29`, `Phase 7.1`…) et les références au fichier inexistant `BACKLOG_POST_LIVRAISON.md`. |
 | **D6** | Corriger un glissement de nom | `Fact.engines_involved` → sans objet (facts supprimé). Mais conserver la règle : préférer `pipelines_involved` partout ailleurs. |
+| **D7** | **Ajouter `ArtifactType.REGIONS`** | Nouveau type spatial de première classe (boîtes + labels de blocs) produit par un module de segmentation. Dimensionne le domaine pour le pipeline `segmentation → reconnaissance → assemblage`. |
+| **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Rend possible le fan-out par bloc (modèle b) plus tard, **sans réécriture** — même si l'exécution démarre au niveau page (modèle a). |
 
 ---
 
 ## 3. Inventaire source → cible
 
-15 fichiers Picarones → **13 fichiers XerOCR** (2 supprimés).
+15 fichiers Picarones → **14 fichiers XerOCR** (`facts.py` supprimé ;
+`module_protocol.py` réécrit en `module.py`).
 
 | # | Picarones (`domain/`) | → XerOCR (`domain/`) | Décision | Transformation |
 |---|------------------------|----------------------|----------|----------------|
 | 1 | `__init__.py` | `__init__.py` | **KEEP** | Retirer exports de `facts`/`module_protocol` ; supprimer annotations sprint |
 | 2 | `_version_fallback.py` | `_version_fallback.py` | **KEEP** | `FALLBACK_VERSION = "0.1.0"` ; mettre à jour la docstring |
-| 3 | `artifacts.py` | `artifacts.py` | **KEEP + purge** | Supprimer `LEGACY_VALUE_ALIASES` + les 3 alias `TEXT/ALTO/PAGE` (garder `_missing_()`) |
+| 3 | `artifacts.py` | `artifacts.py` | **KEEP + purge + étendre** | Supprimer `LEGACY_VALUE_ALIASES` + les 3 alias `TEXT/ALTO/PAGE` (garder `_missing_()`) ; **ajouter `ArtifactType.REGIONS` (D7) et le champ `region_id` (D8)** |
 | 4 | `artifact_key.py` | `artifact_key.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 5 | `corpus.py` | `corpus.py` | **KEEP** | Supprimer réf. `BACKLOG_POST_LIVRAISON.md` + note « S10 » |
 | 6 | `documents.py` | `documents.py` | **KEEP** | Recopier tel quel (conserver la défense path-traversal) |
@@ -50,7 +54,7 @@ nettoyé ou abandonné.
 | 9 | `errors.py` | `errors.py` | **KEEP + rename** | `PicaronesError` → `XerOCRError` ; purger note legacy `core` |
 | 10 | `pipeline_spec.py` | `pipeline.py` *(renommé)* | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 11 | `evaluation_spec.py` | `evaluation.py` *(renommé)* | **KEEP** | Recopier ; purger réf. backlog + mention `compute_metrics (legacy)` |
-| 12 | `module_protocol.py` | — | **DROP (D1)** | Non migré |
+| 12 | `module_protocol.py` | `module.py` *(réécrit)* | **REWRITE (D1)** | Réécrit en `Protocol` typé (contrat de module tiers) — voir §4.6 |
 | 13 | `run_manifest.py` | `run.py` *(renommé)* | **KEEP + purge** | Supprimer `pipeline_names` (computed_field) ET `_accept_legacy_pipeline_names` (~67 LOC de shim) |
 | 14 | `facts.py` | — | **DROP (D2)** | Non migré |
 | 15 | `deadline.py` | `deadline.py` | **KEEP** | Recopier tel quel (type exemplaire) |
@@ -85,9 +89,32 @@ Seules transformations : retrait des annotations de sprint et des références a
 backlog inexistant. **Aucune logique ne change.**
 
 ### 4.5 `__init__.py` — agrégateur
-- Retirer des imports/`__all__` tout ce qui vient de `facts` (`Fact`, `FactType`, `FactImportance`, `DetectorFn`, `DetectorRegistry`, `detect_all`) et de `module_protocol` (`BaseModule`).
+- Retirer des imports/`__all__` tout ce qui vient de `facts` (`Fact`, `FactType`, `FactImportance`, `DetectorFn`, `DetectorRegistry`, `detect_all`).
+- **Exporter** le nouveau contrat de module (`module.py`) et `ArtifactType.REGIONS`.
 - Adapter les chemins d'import aux fichiers renommés.
 - Conserver la note expliquant pourquoi `RunResult` n'est PAS dans `domain` (il agrège des couches externes).
+
+### 4.6 `module.py` (ex-`module_protocol.py`) — contrat de module tiers
+- **Réécrire** `BaseModule` (ABC) en un `Protocol` typé (PEP 544) : un module
+  déclare `name`, `input_types`, `output_types`, et `execute(inputs typés) →
+  outputs typés`. Pas d'héritage obligatoire — n'importe quelle classe qui
+  respecte la forme est un module valide (« duck typing » vérifié statiquement).
+- **But** : c'est la prise universelle pour brancher un segmenteur YOLO, un OCR,
+  un VLM, ou un module Python local. Type pur → reste en couche 1.
+- **Hors couche 1** (à concevoir en couches 5/6, noté ici pour mémoire) : le
+  registre `nom → implémentation`, la factory, et la découverte par entry-points
+  Python (`xerocr.modules`) + un `register()` local.
+
+### 4.7 `artifacts.py` — extensions segmentation (D7/D8)
+- **Ajouter `ArtifactType.REGIONS`** : sortie d'un module de segmentation —
+  liste de boîtes (bbox) + label de bloc (texte/image/tableau/marge…). Type
+  spatial de première classe.
+- **Ajouter `region_id: str | None`** sur `Artifact` : identifiant de la région
+  d'origine quand l'artefact est rattaché à un bloc (ex. le texte reconnu d'une
+  seule région). `None` = artefact au niveau page (cas par défaut).
+- Ces deux ajouts **dimensionnent le domaine pour le fan-out par bloc (modèle b)**
+  tout en laissant l'exécution démarrer au niveau page (modèle a). Aucune
+  réécriture future requise pour passer à (b).
 
 ---
 
@@ -135,8 +162,9 @@ backlog inexistant. **Aucune logique ne change.**
 
 ## 8. Definition of Done (couche 1)
 
-- [ ] 13 fichiers créés dans `xerocr/domain/`, 2 abandonnés (`module_protocol`, `facts`).
-- [ ] Aucune occurrence de `PicaronesError`, `BaseModule`, `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
+- [ ] 14 fichiers créés dans `xerocr/domain/` ; `facts.py` abandonné ; `module_protocol.py` réécrit en `module.py` (`Protocol`).
+- [ ] `ArtifactType.REGIONS` et `Artifact.region_id` ajoutés et testés.
+- [ ] Aucune occurrence de `PicaronesError`, `BaseModule` (ABC), `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
 - [ ] Aucune annotation de sprint résiduelle.
 - [ ] `mypy --strict` vert sur `xerocr/domain/`.
 - [ ] `ruff check` vert.
