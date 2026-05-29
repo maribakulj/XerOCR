@@ -129,31 +129,23 @@ module = incrémental.
   restent **internes (first-party)**, non extensibles par des tiers. On n'ouvre
   **aucune autre prise** — une seule API publique d'extension, point.
 
-### Segmentation / mise en page (dimensionnée pour le fan-out par bloc)
+### Segmentation / mise en page
 
-Pipeline canonique visé : `segmentation (IMAGE → REGIONS) → reconnaissance par
-région → assemblage (textes + REGIONS → ALTO_XML)`. C'est l'architecture HTR
-standard (Transkribus/eScriptorium/Kraken) et un cas de benchmark de premier
-ordre (VLM pleine page vs segmentation + VLM par bloc).
+Pipeline : `segmentation (IMAGE → LAYOUT régions-seules) → reconnaissance par
+région (remplit le LAYOUT) → assemblage (LAYOUT → ALTO_XML)`.
 
-Décision actée : **modèle (b) retenu et implémenté — le fan-out par bloc est
-géré par le framework, avec métriques par bloc.** Le traitement par région est
-une exigence de premier ordre, pas un ajout différé. Concrètement :
+Type structurel unique : `ArtifactType.LAYOUT`, payload `CanonicalLayout` (modèle
+neutre ALTO/PAGE). Pas de type `REGIONS` séparé : une sortie de segmentation est
+un `CanonicalLayout` à régions sans lignes.
 
-- **Enveloppe (couche 1)** : `ArtifactType.REGIONS` (boîtes + labels) en première
-  classe, et `region_id` optionnel sur `Artifact` pour qu'un « artefact texte
-  d'une région » soit représentable.
-- **Exécution (couche 4)** : l'executor sait **fan-out** — lancer la
-  reconnaissance une fois par région, collecter les N résultats, gérer les
-  échecs partiels, réassembler dans l'ordre de lecture de façon déterministe.
-- **Évaluation (couche 3)** : les métriques se calculent **par bloc** (CER par
-  région + agrégat page), et le `RunResult` porte le détail par région.
-- **Routage par type de bloc** possible : un moteur différent selon le label de
-  région (VLM pour manuscrit, OCR pour imprimé).
-
-Le tout reste compatible avec la règle des deux axes : l'architecture est
-dimensionnée pour (b) d'emblée, mais les modules concrets (un segmenteur de
-référence d'abord) s'ajoutent de façon incrémentale via le mécanisme de plugins.
+- Couche 1 : `ArtifactType.LAYOUT` + `region_id` optionnel sur `Artifact`. Le type
+  `CanonicalLayout` vit en `domain`, matérialisé à la migration couche 2 (backlog).
+- Couche 4 : fan-out — reconnaissance une fois par région, collecte des N
+  résultats, gestion des échecs partiels, réassemblage par ordre de lecture.
+- Couche 3 : métriques par bloc (CER par région + agrégat page). Segmentation et
+  structure mesurées sur le même `CanonicalLayout` ; niveau absent → métrique non
+  applicable (`None`).
+- Routage par type de bloc : moteur différent selon le label de région.
 
 ---
 
@@ -236,6 +228,7 @@ ne fige pas une forme qui dépend d'une couche non encore conçue.
 
 | Type | Source Picarones | Déclencheur |
 |---|---|---|
+| `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | migration couche 2 |
 | `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
 | `RunSpec` (+ `StepSpec`) | `app/schemas/run_spec.py` | migration couche 6 (séparer du loader YAML) |
 | `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |

@@ -33,7 +33,7 @@ nettoyé ou abandonné.
 | **D4** | Renommer la racine d'erreurs | `PicaronesError` → `XerOCRError` (et toute la hiérarchie reste). |
 | **D5** | Nettoyer les commentaires historiques | Supprimer toutes les annotations de sprint (`S4`, `A14-S29`, `Phase 7.1`…) et les références au fichier inexistant `BACKLOG_POST_LIVRAISON.md`. |
 | **D6** | Corriger un glissement de nom | `Fact.engines_involved` → sans objet (facts supprimé). Mais conserver la règle : préférer `pipelines_involved` partout ailleurs. |
-| **D7** | **Ajouter `ArtifactType.REGIONS`** | Nouveau type spatial de première classe (boîtes + labels de blocs) produit par un module de segmentation. Dimensionne le domaine pour le pipeline `segmentation → reconnaissance → assemblage`. |
+| **D7** | `ArtifactType.LAYOUT` (type structurel unique) | Segmentation et structure transcrite = un seul type. Pas de `REGIONS` séparé : une segmentation est un `CanonicalLayout` à régions sans lignes. `CanonicalLayout` → `domain`, matérialisé couche 2. |
 | **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Socle du fan-out par bloc (modèle b, **retenu**) : métriques par bloc + routage par type de bloc. `None` = artefact au niveau page. |
 | **D9** | **Rapatrier `RunCancelledError` dans `errors.py`** | Seule erreur transverse mal placée (était en `pipeline/run_control.py`), sœur de `DeadlineExceeded`. Voir §4.3. Les autres types « domain » repérés ailleurs (`ProjectionReport`, `RunSpec`, `ConfidenceToken`) sont **différés** à la migration de leur couche propriétaire (backlog domain dans `CLAUDE.md`) — pas créés maintenant (anti-spéculatif). |
 
@@ -49,7 +49,7 @@ sont `ArtifactType.REGIONS` et `Artifact.region_id` (dans `artifacts.py`).
 |---|------------------------|----------------------|----------|----------------|
 | 1 | `__init__.py` | `__init__.py` | **KEEP** | Retirer exports de `facts` et `module_protocol` ; supprimer annotations sprint |
 | 2 | `_version_fallback.py` | `_version_fallback.py` | **KEEP** | `FALLBACK_VERSION = "0.1.0"` ; mettre à jour la docstring |
-| 3 | `artifacts.py` | `artifacts.py` | **KEEP + purge + étendre** | Supprimer `LEGACY_VALUE_ALIASES` + les 3 alias `TEXT/ALTO/PAGE` (garder `_missing_()`) ; **ajouter `ArtifactType.REGIONS` (D7) et le champ `region_id` (D8)** |
+| 3 | `artifacts.py` | `artifacts.py` | **KEEP + purge + étendre** | Supprimer `LEGACY_VALUE_ALIASES` + les 3 alias `TEXT/ALTO/PAGE` (garder `_missing_()`) ; **ajouter `ArtifactType.LAYOUT` (D7) et le champ `region_id` (D8)** |
 | 4 | `artifact_key.py` | `artifact_key.py` | **KEEP** | Recopier tel quel (purge réfs sprint) |
 | 5 | `corpus.py` | `corpus.py` | **KEEP** | Supprimer réf. `BACKLOG_POST_LIVRAISON.md` + note « S10 » |
 | 6 | `documents.py` | `documents.py` | **KEEP** | Recopier tel quel (conserver la défense path-traversal) |
@@ -113,17 +113,13 @@ backlog inexistant. **Aucune logique ne change.**
   module dans une spec. Registre + découverte entry-points = couche `app`.
 - ⚠️ À traiter dans le **plan de la couche 4**, pas ici.
 
-### 4.7 `artifacts.py` — extensions segmentation (D7/D8)
-- **Ajouter `ArtifactType.REGIONS`** : sortie d'un module de segmentation —
-  liste de boîtes (bbox) + label de bloc (texte/image/tableau/marge…). Type
-  spatial de première classe.
-- **Ajouter `region_id: str | None`** sur `Artifact` : identifiant de la région
-  d'origine quand l'artefact est rattaché à un bloc (ex. le texte reconnu d'une
-  seule région). `None` = artefact au niveau page (cas par défaut).
-- Ces deux ajouts **dimensionnent le domaine pour le fan-out par bloc (modèle b,
-  retenu)** : métriques par région calculées par la couche 3, fan-out géré par
-  l'executor (couche 4). Au niveau couche 1, seuls `REGIONS` + `region_id` sont
-  requis ; le reste vit dans les couches consommatrices.
+### 4.7 `artifacts.py` — extensions structure (D7/D8)
+- `ArtifactType.LAYOUT` : type structurel unique (pas de `REGIONS` séparé).
+- `region_id: str | None` sur `Artifact` : rattachement d'un artefact à une
+  région ; `None` = niveau page.
+- La classe `CanonicalLayout` (et ses parties) n'est **pas** créée en couche 1 :
+  décidée en `domain`, matérialisée à la migration couche 2 (backlog domain dans
+  `CLAUDE.md`).
 
 ---
 
@@ -172,7 +168,7 @@ backlog inexistant. **Aucune logique ne change.**
 ## 8. Definition of Done (couche 1)
 
 - [ ] 13 fichiers créés dans `xerocr/domain/` ; `facts.py` et `module_protocol.py` **non** migrés en `domain`.
-- [ ] `ArtifactType.REGIONS` et `Artifact.region_id` ajoutés et testés.
+- [ ] `ArtifactType.LAYOUT` et `Artifact.region_id` ajoutés et testés.
 - [ ] Contrat de module exécutable **reporté au plan de la couche 4** (pas un livrable de la couche 1).
 - [ ] Aucune occurrence de `PicaronesError`, `BaseModule`, `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
 - [ ] Aucune annotation de sprint résiduelle.
