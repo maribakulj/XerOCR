@@ -5,9 +5,10 @@ système. N'opère que sur des ``bytes`` / des chaînes ; jamais sur un résulta
 d'OCR ou un calcul de métrique. Peut importer ``lxml`` et ``pyyaml`` ; jamais une
 lib de métrique (``jiwer``, ``rapidfuzz``) ni un moteur OCR.
 
-Surface publique (s'étoffera avec les parsers/writers ALTO et PAGE) :
+Surface publique (s'étoffera avec le format PAGE) :
 
 - sécurité XML (``safe_parse_xml``) — point d'entrée unique de tout parsing XML ;
+- format ALTO (``parse_alto`` / ``write_alto`` + types) ;
 - normalisation de comparaison (``NormalizationProfile`` & profils) ;
 - lecture de texte brut (``read_plaintext``).
 """
@@ -15,6 +16,17 @@ Surface publique (s'étoffera avec les parsers/writers ALTO et PAGE) :
 from __future__ import annotations
 
 from xerocr.formats._xml import safe_parse_xml
+from xerocr.formats.alto import (
+    AltoBBox,
+    AltoDocument,
+    AltoLine,
+    AltoPage,
+    AltoParseError,
+    AltoString,
+    AltoTextBlock,
+    parse_alto,
+    write_alto,
+)
 from xerocr.formats.text import (
     DEFAULT_PROFILE,
     NORMALIZATION_PROFILES,
@@ -25,6 +37,15 @@ from xerocr.formats.text import (
 
 __all__ = [
     "safe_parse_xml",
+    "parse_alto",
+    "write_alto",
+    "AltoDocument",
+    "AltoPage",
+    "AltoTextBlock",
+    "AltoLine",
+    "AltoString",
+    "AltoBBox",
+    "AltoParseError",
     "NormalizationProfile",
     "NORMALIZATION_PROFILES",
     "DEFAULT_PROFILE",

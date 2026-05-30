@@ -72,6 +72,16 @@ class RunCancelledError(XerOCRError):
     """
 
 
+class FormatError(XerOCRError):
+    """Racine des erreurs de lecture/écriture d'un format documentaire.
+
+    Permet à un caller (chargeur de corpus, projecteur) d'attraper « toute
+    erreur de format » sans connaître le format précis. Les sous-classes
+    spécifiques (``AltoParseError``, ``PageParseError``) vivent dans leur
+    module de format (couche 2).
+    """
+
+
 __all__ = [
     "XerOCRError",
     "ArtifactValidationError",
@@ -80,4 +90,5 @@ __all__ = [
     "AdapterStepError",
     "DeadlineExceeded",
     "RunCancelledError",
+    "FormatError",
 ]
