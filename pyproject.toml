@@ -11,6 +11,8 @@ license = { text = "Apache-2.0" }
 dynamic = ["version"]
 dependencies = [
     "pydantic>=2",
+    "lxml>=5",
+    "pyyaml>=6",
 ]
 
 [project.optional-dependencies]
