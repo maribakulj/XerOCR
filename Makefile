@@ -7,7 +7,7 @@ lint:
 	ruff check xerocr/ tests/
 
 type:
-	python -m mypy -p xerocr.domain
+	python -m mypy -p xerocr.domain -p xerocr.formats
 
 test:
 	python -m pytest -q

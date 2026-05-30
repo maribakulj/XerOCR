@@ -6,8 +6,12 @@ import ast
 import sys
 from pathlib import Path
 
-DOMAIN = Path(__file__).resolve().parents[2] / "xerocr" / "domain"
+ROOT = Path(__file__).resolve().parents[2] / "xerocr"
+DOMAIN = ROOT / "domain"
+FORMATS = ROOT / "formats"
 ALLOWED_EXT = {"pydantic", "pydantic_core", "typing_extensions", "annotated_types"}
+#: La couche formats peut aussi parler XML (lxml) et lire des profils (yaml).
+FORMATS_ALLOWED_EXT = ALLOWED_EXT | {"lxml", "yaml"}
 STDLIB = set(sys.stdlib_module_names)
 
 
@@ -38,3 +42,25 @@ def test_domain_imports_are_pure():
         if bad:
             offenders[path.name] = bad
     assert not offenders, f"imports interdits dans domain : {offenders}"
+
+
+def test_formats_imports_are_allowed():
+    """formats n'importe que stdlib + pydantic + lxml/yaml + domain/formats.
+    Jamais une lib de métrique (jiwer/rapidfuzz) ni un moteur OCR."""
+    offenders: dict[str, list[str]] = {}
+    for path in FORMATS.rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if (
+                mod == "xerocr"
+                or mod.startswith("xerocr.domain")
+                or mod.startswith("xerocr.formats")
+            ):
+                continue
+            if mod == "__future__" or top in FORMATS_ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans formats : {offenders}"

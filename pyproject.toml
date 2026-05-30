@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "pytest-cov"]
+dev = ["ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML"]
 
 [tool.setuptools.packages.find]
 include = ["xerocr*"]
@@ -41,8 +41,15 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+addopts = "--cov=xerocr --cov-report=term-missing --cov-fail-under=85"
 markers = [
     "slow: tests lents (opt-in)",
     "network: tests qui touchent le réseau (opt-in)",
     "live: tests contre une vraie API/binaire (opt-in)",
 ]
+
+[tool.coverage.run]
+omit = ["*/_version.py"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
