@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v2#">
+  <Description>
+    <MeasurementUnit>pixel</MeasurementUnit>
+    <sourceImageInformation>
+      <fileName>bpt6k000000.jp2</fileName>
+    </sourceImageInformation>
+  </Description>
+  <Styles>
+    <TextStyle ID="TS0" FONTSIZE="9" FONTFAMILY="Times"/>
+  </Styles>
+  <Layout>
+    <Page ID="PAG_0" PHYSICAL_IMG_NR="1" WIDTH="2550" HEIGHT="3400">
+      <PrintSpace HPOS="0" VPOS="0" WIDTH="2550" HEIGHT="3400">
+        <ComposedBlock ID="CB1" TYPE="article" HPOS="200" VPOS="300" WIDTH="2000" HEIGHT="1500">
+          <TextBlock ID="TB1" HPOS="200" VPOS="300" WIDTH="2000" HEIGHT="120">
+            <TextLine ID="TL1" HPOS="200" VPOS="300" WIDTH="2000" HEIGHT="60">
+              <String ID="S1" HPOS="200" VPOS="300" WIDTH="600" HEIGHT="55"
+                      STYLEREFS="TS0" CONTENT="CHAPITRE"/>
+              <SP WIDTH="30" HPOS="800" VPOS="300"/>
+              <String ID="S2" HPOS="830" VPOS="300" WIDTH="120" HEIGHT="55" CONTENT="PREMIER"/>
+            </TextLine>
+          </TextBlock>
+          <Illustration ID="ILL1" HPOS="300" VPOS="500" WIDTH="800" HEIGHT="600"/>
+        </ComposedBlock>
+      </PrintSpace>
+    </Page>
+  </Layout>
+</alto>
