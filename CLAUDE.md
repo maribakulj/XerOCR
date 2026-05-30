@@ -139,7 +139,10 @@ neutre ALTO/PAGE). Pas de type `REGIONS` séparé : une sortie de segmentation e
 un `CanonicalLayout` à régions sans lignes.
 
 - Couche 1 : `ArtifactType.LAYOUT` + `region_id` optionnel sur `Artifact`. Le type
-  `CanonicalLayout` vit en `domain`, matérialisé à la migration couche 2 (backlog).
+  `CanonicalLayout` vit en `domain`, **matérialisé à la tranche segmentation** (backlog) —
+  **pas en couche 2** : sans standard externe ni consommateur, le figer maintenant serait
+  spéculatif (cf. `xerocr/formats/MIGRATION_COUCHE_2.md`, L10). Le **nom**
+  `ArtifactType.LAYOUT` reste réservé en couche 1.
 - Couche 4 : fan-out — reconnaissance une fois par région, collecte des N
   résultats, gestion des échecs partiels, réassemblage par ordre de lecture.
 - Couche 3 : métriques par bloc (CER par région + agrégat page). Segmentation et
@@ -228,7 +231,7 @@ ne fige pas une forme qui dépend d'une couche non encore conçue.
 
 | Type | Source Picarones | Déclencheur |
 |---|---|---|
-| `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | migration couche 2 |
+| `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | tranche segmentation (couche 4) |
 | `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
 | `RunSpec` (+ `StepSpec`) | `app/schemas/run_spec.py` | migration couche 6 (séparer du loader YAML) |
 | `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |
@@ -276,8 +279,10 @@ couche 3), DTO web (transport → couche 8).
 5. Sécurité web éclatée en 7 modules `security_*`. → un package `security/`.
 6. Noms à suffixe interne dans le code livré (`_v2`, `legacy`).
 7. Commentaires de sprint dans le code.
-8. 11 profils de normalisation (→ 5), 8+8+8 adapters LLM/VLM (→ minimal),
-   20 détecteurs narratifs (→ 0, supprimé).
+8. 8+8+8 adapters LLM/VLM (→ minimal), 20 détecteurs narratifs (→ 0, supprimé).
+   (Les profils de normalisation, eux, sont de la **donnée**, pas de la surface
+   exécutable : on garde l'ensemble pertinent — 12, profils anglais retirés —
+   cf. `xerocr/formats/MIGRATION_COUCHE_2.md`.)
 9. Dossiers de tests vides « par symétrie », `docs/archive`, `CHANGELOG` de
    97 sprints, scripts de refactor morts.
 
@@ -333,7 +338,9 @@ xerocr demo --output r.html  # rapport démo sans moteur (squelette)
   (hash identique), mêmes métriques, même rapport.
 - **Reproductibilité** : `RunManifest` porte code_version + deps + binaires +
   hash des paramètres.
-- **Sécurité XML** : tout XML via `safe_parse_xml` (defusedxml, no DTD).
+- **Sécurité XML** : tout XML via `safe_parse_xml` (lxml durci : `resolve_entities=False`,
+  `no_network=True`, pas de DTD ni de DOCTYPE). Garantie prouvée par tests (XXE / billion
+  laughs / DOCTYPE doivent tous échouer).
 - **Sécurité chemins** : tout chemin utilisateur via `validated_path()` ;
   défense path-traversal (rejet `..`) jusque dans les validateurs de domaine.
 - **Anti-hallucination rapport** : aucun LLM ne génère de prose dans le

@@ -33,7 +33,7 @@ nettoyé ou abandonné.
 | **D4** | Renommer la racine d'erreurs | `PicaronesError` → `XerOCRError` (et toute la hiérarchie reste). |
 | **D5** | Nettoyer les commentaires historiques | Supprimer toutes les annotations de sprint (`S4`, `A14-S29`, `Phase 7.1`…) et les références au fichier inexistant `BACKLOG_POST_LIVRAISON.md`. |
 | **D6** | Convention de nommage | Préférer `pipelines_involved` à `engines_involved` (le champ d'origine disparaît avec `facts`). |
-| **D7** | `ArtifactType.LAYOUT` (type structurel unique) | Segmentation et structure transcrite = un seul type. Pas de `REGIONS` séparé : une segmentation est un `CanonicalLayout` à régions sans lignes. `CanonicalLayout` → `domain`, matérialisé couche 2. |
+| **D7** | `ArtifactType.LAYOUT` (type structurel unique) | Segmentation et structure transcrite = un seul type. Pas de `REGIONS` séparé : une segmentation est un `CanonicalLayout` à régions sans lignes. `CanonicalLayout` → `domain`, matérialisé à la **tranche segmentation** (pas en couche 2 : anti-spéculatif — cf. `formats/MIGRATION_COUCHE_2.md`, L10). |
 | **D8** | **Ajouter `region_id` optionnel sur `Artifact`** | Permet de représenter « un artefact texte rattaché à une région ». Socle du fan-out par bloc (modèle b, **retenu**) : métriques par bloc + routage par type de bloc. `None` = artefact au niveau page. |
 | **D9** | **Rapatrier `RunCancelledError` dans `errors.py`** | Seule erreur transverse mal placée (était en `pipeline/run_control.py`), sœur de `DeadlineExceeded`. Voir §4.3. Les autres types « domain » repérés ailleurs (`ProjectionReport`, `RunSpec`, `ConfidenceToken`) sont **différés** à la migration de leur couche propriétaire (backlog domain dans `CLAUDE.md`) — pas créés maintenant (anti-spéculatif). |
 
@@ -120,8 +120,8 @@ backlog inexistant. **Aucune logique ne change.**
 - `region_id: str | None` sur `Artifact` : rattachement d'un artefact à une
   région ; `None` = niveau page.
 - La classe `CanonicalLayout` (et ses parties) n'est **pas** créée en couche 1 :
-  décidée en `domain`, matérialisée à la migration couche 2 (backlog domain dans
-  `CLAUDE.md`).
+  décidée en `domain`, matérialisée à la **tranche segmentation** (pas en couche 2 ;
+  backlog domain dans `CLAUDE.md`).
 
 ---
 
