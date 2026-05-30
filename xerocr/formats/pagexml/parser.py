@@ -63,31 +63,52 @@ def _points_child(el: etree._Element, child_name: str) -> tuple[Point, ...] | No
     return None
 
 
+def _textequiv_text_conf(te: etree._Element) -> tuple[str, float | None]:
+    unicode_text = ""
+    for node in te:
+        if _lname(node) == "Unicode":
+            unicode_text = node.text or ""
+            break
+    conf: float | None = None
+    raw_conf = te.get("conf")
+    if raw_conf is not None:
+        try:
+            conf = float(raw_conf)
+        except ValueError:
+            conf = None
+    return unicode_text, conf
+
+
 def _line_text_and_conf(line: etree._Element) -> tuple[str, float | None]:
-    """Texte + confidence du ``TextEquiv`` d'``index`` le plus bas (sinon premier)."""
+    """Texte + confidence de la ligne.
+
+    On retient le ``TextEquiv`` de niveau ligne d'``index`` le plus bas. À défaut
+    (lignes uniquement segmentées en mots, ex. certains exports Transkribus), on
+    reconstruit le texte depuis les ``<Word>`` (T2).
+    """
     best: tuple[int, str, float | None] | None = None
     for te in line:
         if _lname(te) != "TextEquiv":
             continue
         index = _int_attr(te, "index")
         order = index if index is not None else 0
-        unicode_text = ""
-        for node in te:
-            if _lname(node) == "Unicode":
-                unicode_text = (node.text or "")
-                break
-        conf: float | None = None
-        raw_conf = te.get("conf")
-        if raw_conf is not None:
-            try:
-                conf = float(raw_conf)
-            except ValueError:
-                conf = None
+        text, conf = _textequiv_text_conf(te)
         if best is None or order < best[0]:
-            best = (order, unicode_text, conf)
-    if best is None:
-        return "", None
-    return best[1], best[2]
+            best = (order, text, conf)
+    if best is not None:
+        return best[1], best[2]
+
+    words: list[str] = []
+    for word in line:
+        if _lname(word) != "Word":
+            continue
+        for te in word:
+            if _lname(te) == "TextEquiv":
+                words.append(_textequiv_text_conf(te)[0])
+                break
+    if words:
+        return " ".join(words), None
+    return "", None
 
 
 def _parse_text_line(el: etree._Element) -> PageTextLine:

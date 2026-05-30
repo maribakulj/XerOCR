@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">
+  <Metadata>
+    <Creator>escriptorium</Creator>
+    <Created>2022-06-01T08:00:00+00:00</Created>
+    <LastChange>2022-06-01T09:00:00+00:00</LastChange>
+  </Metadata>
+  <Page imageFilename="folio_12r.png" imageWidth="1500" imageHeight="2100">
+    <ReadingOrder>
+      <OrderedGroup id="ro">
+        <RegionRefIndexed index="0" regionRef="main"/>
+        <RegionRefIndexed index="1" regionRef="margin"/>
+      </OrderedGroup>
+    </ReadingOrder>
+    <TextRegion id="main" type="text">
+      <Coords points="100,150 1400,150 1400,1800 100,1800"/>
+      <TextLine id="l1">
+        <Coords points="110,160 1390,160 1390,210 110,210"/>
+        <Baseline points="110,205 1390,205"/>
+        <TextEquiv><Unicode>In principio erat verbum</Unicode></TextEquiv>
+      </TextLine>
+      <TextLine id="l2">
+        <Coords points="110,220 1390,220 1390,270 110,270"/>
+        <Baseline points="110,265 1390,265"/>
+        <TextEquiv><Unicode>et verbum erat apud Deum</Unicode></TextEquiv>
+      </TextLine>
+    </TextRegion>
+    <TextRegion id="margin" type="marginalia">
+      <Coords points="1410,150 1490,150 1490,800 1410,800"/>
+      <TextLine id="m1">
+        <Coords points="1415,160 1485,160 1485,200 1415,200"/>
+        <TextEquiv><Unicode>nota</Unicode></TextEquiv>
+      </TextLine>
+    </TextRegion>
+  </Page>
+</PcGts>

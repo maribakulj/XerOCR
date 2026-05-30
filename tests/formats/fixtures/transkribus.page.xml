@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2013-07-15">
+  <Metadata>
+    <Creator>Transkribus</Creator>
+    <Created>2021-03-14T10:00:00.000+01:00</Created>
+    <LastChange>2021-03-15T12:30:00.000+01:00</LastChange>
+  </Metadata>
+  <Page imageFilename="0001.jpg" imageWidth="2000" imageHeight="3000">
+    <ReadingOrder>
+      <OrderedGroup id="ro_0">
+        <RegionRefIndexed index="0" regionRef="region_0"/>
+      </OrderedGroup>
+    </ReadingOrder>
+    <TextRegion id="region_0" type="paragraph"
+                custom="readingOrder {index:0;} structure {type:paragraph;}">
+      <Coords points="200,300 1800,300 1800,900 200,900"/>
+      <TextLine id="line_0" custom="readingOrder {index:0;}">
+        <Coords points="210,310 1790,310 1790,360 210,360"/>
+        <Baseline points="210,355 1790,355"/>
+        <Word id="word_0">
+          <Coords points="210,310 500,310 500,360 210,360"/>
+          <TextEquiv><Unicode>Nostre</Unicode></TextEquiv>
+        </Word>
+        <Word id="word_1">
+          <Coords points="520,310 800,310 800,360 520,360"/>
+          <TextEquiv><Unicode>Seigneur</Unicode></TextEquiv>
+        </Word>
+        <TextEquiv conf="0.92"><Unicode>Nostre Seigneur</Unicode></TextEquiv>
+      </TextLine>
+    </TextRegion>
+  </Page>
+</PcGts>
