@@ -1,270 +1,268 @@
 # Plan de migration — Couche 3 (`evaluation/`) : Picarones → XerOCR
 
-> Statut : **plan acté**, implémentation à venir. Lecture seule du code Picarones ;
-> ce document fige les **contrats transverses** et les **décisions irréversibles**.
-> Tout ce qui est local/réversible est explicitement **laissé au codage sous test** (§11).
+> Statut : **plan acté**, implémentation à venir. Lecture seule du code Picarones.
+> Ce document fige les **contrats transverses** (enveloppe) ; le **remplissage**
+> suit des tranches verticales (cf. §2). Aligné sur `CLAUDE.md` (deux axes,
+> tranches, narrative supprimé, `CanonicalLayout` différé).
 
 ---
 
 ## 1. Objectif & périmètre
 
-La couche 3 calcule des **métriques** sur les sorties des pipelines (OCR/HTR/VLM, OCR+LLM)
-face à une vérité-terrain, et produit un **`RunResult`** sérialisable + des données pour
-le rapport. **Migration complète** (pas un MVP réduit) : on conserve toutes les vraies
-métriques ; on ne supprime que le **mort / doublon / mal placé**.
+La couche 3 calcule des **métriques** sur les sorties des pipelines (OCR/HTR/VLM,
+OCR+LLM) face à une vérité-terrain, et produit un **`RunResult`** sérialisable +
+les données du rapport. **Migration complète** (pas un MVP réduit) : on conserve
+toutes les vraies métriques ; on ne supprime que le **mort / doublon / mal placé**.
 
-Dépend des couches déjà mergées :
-- **Couche 1 (domain)** : `ArtifactType` (dont `LAYOUT`), `Artifact`, `EvaluationView`,
-  `MetricSpec` (contrat minimal), `EvaluationSpec`, `RunManifest`, `Corpus`/`Document`.
-- **Couche 2 (formats)** : parsers/writers ALTO & PAGE (types riches : polygones,
-  baselines, typage, **imbrication**, **arbre `ReadingOrder`** côté PAGE), `_geometry`
-  (`Point`, `parse_points`), `text/normalization` (table canonique consolidée).
+Dépend des couches mergées : **domain** (`ArtifactType` dont `LAYOUT`, `Artifact`,
+`EvaluationView`/`MetricSpec`/`EvaluationSpec`, `RunManifest`, `Corpus`/`Document`)
+et **formats** (ALTO/PAGE riches, `_geometry`, `text/normalization`).
 
-Ne fait **ni I/O, ni rendu, ni exécution de moteur** (cf. §3). Ce qui violerait cette
-règle sort vers `adapters/` / `reports/` / `pipeline/`.
+Ne fait **ni I/O, ni rendu, ni exécution de moteur** : ce qui violerait ça sort
+vers `adapters/` / `reports/` / `pipeline/`.
 
 ---
 
-## 2. Principe directeur
+## 2. Principe directeur — deux axes, tranches verticales
 
-**Un seul mécanisme**, **pureté de couche stricte**, **co-localisation** (une métrique =
-un fichier autonome : fiche + fonction + test voisin). On décide **à l'avance uniquement**
-ce qui est **transverse** (contrats) ou **irréversible** (formats de données persistés).
-L'intérieur des métriques, le contenu des profils, les découpes de fichiers : **émergent
-en codant**, sous test. La passe adverse a montré que seuls les retours du code révèlent
-les vrais recoins — donc ce plan reste **lean**.
+Rappel `CLAUDE.md` §2/§4. **Deux axes strictement séparés** :
+
+| Axe | Quand | Ici |
+|---|---|---|
+| **Enveloppe** (contrats, types pivots, points d'extension) | **Dimensionnée plein-scope, maintenant** | registre type-driven, `RunResult`, deux formes de métriques, `Protocol Section` du rapport, slot `ArtifactType.LAYOUT` |
+| **Surface** (métriques, sections, importeurs) | **Incrémentale, minimale, élaguée** | une métrique/section à la fois, dans un budget |
+
+**Tranches verticales** (≠ « finir la couche 3 horizontalement ») : couches 1-2
+faites horizontalement (stables) ; couche 3+ par **squelettes ambulants** fins de
+pleine profondeur. La **première tranche** prouve que l'enveloppe tient avant d'y
+verser des features.
+
+**Cas particulier du rapport (cadre vs contenu)** : le **cadre** conceptuel
+(`Protocol Section` unique, consommation directe du `RunResult`, un seul format)
+est conçu **plein-scope dès maintenant** ; le **contenu** (nombre de sections,
+visualisations) grossit **au rythme des métriques** qui l'alimentent. Construire
+toutes les sections d'avance = bâtir du rapport **en avance sur ses données** =
+l'accrétion qui a alourdi Picarones. Le HTML basique du squelette **n'est pas
+jetable** : c'est la première section vraie, sur le cadre définitif.
 
 ---
 
-## 3. Noyau verrouillé (contraintes fondatrices actées)
+## 3. Noyau verrouillé (enveloppe, plein-scope maintenant)
 
-1. **Registre unique type-driven.** On supprime les **4 systèmes parallèles** de Picarones
-   (hooks `①`, registre module-level `③`, `@register_lever` `④`) ; il ne reste que le
-   **registre instanciable** (`②`), sélection **100 % par `input_types`**.
+1. **Registre unique type-driven.** Suppression des 4 systèmes parallèles de
+   Picarones (hooks `①`, registre module-level `③`, `@register_lever` `④`) ;
+   reste le **registre instanciable** (`②`), sélection **100 % par `input_types`**.
 2. **Deux formes de métriques** : **par-document** `(ref, hyp)` et **inter-moteurs**
-   `(tous les EngineReports)`. **Agrégation par-moteur** : générique (moyenne/min/max/médiane)
-   pour les scalaires, **agrégateur custom co-localisé pour les métriques struct** (dict).
-3. **`DocContext` / `CrossEngineContext`** : un **sac d'entrées extensible** par forme.
-   Une nouvelle entrée = un champ optionnel ; **zéro changement** aux métriques existantes.
-4. **Fiche + fonction co-localisées** ; enregistrement par **décorateur pur** (construit un
-   `Metric`, **ne mute aucun global**) + **collecte explicite par sous-paquet**.
-5. **Sécurité scientifique obligatoire** (dette C) :
-   - tout ratio/moyenne passe par **`safe_ratio` / `safe_mean`** (rendent `None` sur vide) ;
-   - l'agrégation **exclut `None`** (jamais `0`) et **expose le *support*** (« 47/50 »).
-6. **`scipy` en dépendance dure** (Wilcoxon/Friedman/OLS validés — pas de réimplémentation maison).
-7. **`shapely` confiné** dans `evaluation/geometry.py`, **invoqué seulement pour les polygones**,
-   et **dégradable** (`backend="shapely"` → repli bbox + `logger.warning` si absent).
-8. **Persistance** : `schema_version` sur le **document `RunResult`** (chemin rapport/compare) ;
-   **store longitudinal en lignes *tidy*** `(run, moteur, métrique, valeur, spec_version)`
-   — additif par construction. Les deux sont **complémentaires** (cf. §8).
-9. **Déterminisme bit-à-bit** : ordres triés, aucune horloge/aléatoire dans les sorties.
-10. **`CanonicalLayout` : extension additive uniquement** (on ajoute des champs, on ne
-    change jamais le sens d'un champ existant).
-11. **Clés de sortie stables** : renommer un fichier/module est libre ; **renommer une clé
-    de sortie de métrique est interdit** (contrat dur avec rapports/JS/compare).
+   `(EngineReports)`. Agrégation par-moteur **générique** (scalaires) +
+   **agrégateur custom co-localisé pour les structs** (dict — pas un cas rare).
+3. **`DocContext` / `CrossEngineContext`** : sac d'entrées **extensible** par forme.
+4. **Fiche + fonction co-localisées** ; **décorateur pur** (construit un `Metric`,
+   ne mute aucun global) + **collecte explicite par sous-paquet**.
+5. **Sécurité scientifique obligatoire** (dette C) : `safe_ratio`/`safe_mean`
+   (rendent `None` sur vide) ; agrégation **exclut `None`** + **expose le *support***.
+6. **`scipy` en dépendance dure** (Wilcoxon/Friedman/OLS validés).
+7. **`shapely` confiné** (`evaluation/geometry.py`), invoqué **seulement pour les
+   polygones**, **dégradable** (`backend="shapely"` → repli bbox + warning).
+   **Ajouté avec la tranche structure** (§10), pas maintenant.
+8. **Persistance** : `schema_version` sur le **document `RunResult`** (rapport/compare)
+   + **store longitudinal en lignes *tidy*** (additif). Complémentaires (§8).
+9. **Déterminisme bit-à-bit** ; **clés de sortie stables** (renommer un fichier =
+   libre ; renommer une clé de métrique = interdit, contrat dur avec rapports/JS).
 
 ---
 
-## 4. G-A — La pièce porteuse : `CanonicalLayout` (prérequis bloquant)
+## 4. Première tranche = squelette ambulant (axe texte)
 
-État actuel : **`ArtifactType.LAYOUT` réservé**, décision « en `domain` » prise, mais
-**aucune classe concrète écrite**. C'est le **prérequis n°1** de l'axe structure.
-
-### Où
-- **Le type `CanonicalLayout` → `domain/` (couche 1)** : type neutre, pur (Pydantic+stdlib),
-  consommé par `formats` (production), `evaluation` (métriques), `reports` (affichage).
-- **Les mappers `parse_alto_to_layout` / `parse_page_to_layout` → `formats/`** (couche 2 →
-  domain autorisé) : produisent le `LAYOUT` à partir des arbres fidèles `AltoDocument` / `PageDocument`.
-- **Le projecteur `LAYOUT → RAW_TEXT` → `evaluation/projectors/`** (axe texte).
-
-### Forme proposée (sur-ensemble **fidèle** des types couche 2)
-
-Calquée sur ce que les formats portent réellement (polygones, baselines, typage,
-imbrication, hyphénation, arbre d'ordre de lecture) :
+Le premier pas n'est **pas** le `CanonicalLayout` — c'est un **squelette fin de
+pleine profondeur** sur l'axe texte (`CLAUDE.md` §4) :
 
 ```
-Geometry   : bbox? + polygon(tuple[Point])? + baseline(tuple[Point])?   # accès as_bbox()/as_polygon()
-Word       : text, id?, geometry?, hyphen_role?(start|end), full_form?  # ALTO String ; PAGE: absent
-Line       : text, id?, geometry?, words: tuple[Word]=() , confidence?  # text direct (PAGE) ou dérivé (ALTO)
-Region     : id?, region_type?, kind(text|generic)=text, geometry?,
-             lines: tuple[Line]=() , regions: tuple[Region]=()          # IMBRICATION (ComposedBlock / nested)
-ReadingOrder: ordered: bool, items: tuple[str | ReadingOrder]           # arbre ; ALTO = groupe plat (ordre doc)
-LayoutPage : id?, image_name?, width?, height?, regions, reading_order?
-CanonicalLayout: pages, source_format(alto|page|other), source_profile?
-             + has_word_level (property), full_text, iter_lines(), iter_regions()
+corpus pré-calculé (texte) → 1 CER → RunResult → HTML basique (1 section) → CLI `demo`
 ```
 
-### Choix de forme tranchés ici (transverses)
-- **Ordre de lecture** : représenté en **arbre** (`ReadingOrder`), pour mapper fidèlement le
-  `ReadingOrderGroup` PAGE ; l'ALTO mappe vers un **groupe ordonné plat** = ordre des blocs.
-  → comble le « trou n°1 » de la passe adverse (côté PAGE déjà capté en couche 2).
-- **Imbrication** des régions conservée (`Region.regions`) — les deux formats l'ont.
-- **Régions non-texte** (`kind="generic"` : Image/Separator/Table) conservées.
-- **Mots optionnels** : `Word` absent côté PAGE → `has_word_level` pilote le `None` gracieux.
-- **Hyphénation** ALTO (`subs_type`/`subs_content`) remontée dans `Word` (champ optionnel).
-
-### Mise à jour d'hypothèse (bonne nouvelle de la couche 2)
-L'**ALTO de XerOCR porte `baseline` et `block_type`** (plus riche que Picarones). Donc
-`baseline_coverage` et `region_detection.per_type` **peuvent fonctionner sur l'ALTO aussi**
-— ils ne renvoient pas systématiquement `None`. La précondition (`requires`) reste pour les
-formats qui ne **peuvent pas** porter la dimension.
+Il **exerce l'enveloppe complète** (registre, `RunResult`, runner, `Protocol Section`)
+avec **une seule métrique scalaire** (CER). Aucun `CanonicalLayout`, aucun shapely,
+aucune structure. Objectif : prouver que les contrats s'emboîtent de bout en bout.
+Puis on **épaissit l'axe texte** (WER/MER, profils, stats scipy, cross_engine,
+compare) avant d'ouvrir l'axe structure.
 
 ---
 
-## 5. G-B — Le registre unique (contrat)
+## 5. Le registre (contrat — enveloppe)
 
-### Fiche `MetricSpec` (réconciliation domain ↔ evaluation)
-- **`domain/evaluation.py:MetricSpec`** reste le **contrat de type minimal** :
-  `name`, `input_types`, `description`, `higher_is_better`. (déjà présent en couche 1.)
-- **La couche 3 enrichit** avec les **métadonnées opérationnelles** (pas du domain) :
-  `level`/forme, `profiles`, `tags`, `requires` (préconditions), `backend`, `unit`,
-  `cost_hint`, `spec_version` — **chacune avec un lecteur nommé** (profil rapide, dégradation
-  shapely, CSV, longitudinal). Pas de champ sans lecteur.
-- **Co-localisation** : la fiche enrichie + la fonction vivent dans le **même fichier** de métrique.
-
-### Signatures (deux formes)
-```
-DocumentMetric    : fn(ctx: DocContext)        -> float | dict | None
-CrossEngineMetric : fn(ctx: CrossEngineContext)-> float | dict | None
-```
-Séparation **garantie par les signatures** (une métrique inter-moteurs reçoit des
-`EngineReport`, jamais les documents) — **pas de police AST**.
-
-### Enregistrement
-Décorateur **pur** `@metric(...)` (→ construit un `Metric`, n'écrit dans aucun global) ;
-chaque `metrics/<groupe>/__init__.py` **collecte explicitement** ses objets ;
-`build_default_registry()` assemble. Aucun effet de bord d'import.
-
-### Profils
-`profiles.py` : un profil = **liste nommée explicite** **OU** **sélecteur de tags simple**
-(`rapide`, `avancé`, + profils-métier). **Pas** d'algèbre include/exclude/cost. Vocabulaire
-de tags **petit et validé**.
+- **`domain/evaluation.py:MetricSpec`** = contrat de type **minimal** (`name`,
+  `input_types`, `description`, `higher_is_better`) — déjà présent.
+- **La couche 3 enrichit** (métadonnées opérationnelles, hors domain) : `level`/forme,
+  `profiles`, `tags`, `requires`, `backend`, `unit`, `cost_hint`, `spec_version` —
+  **chacune avec un lecteur nommé**. Co-localisée avec la fonction.
+- **Signatures** : `fn(ctx: DocContext) -> …` et `fn(ctx: CrossEngineContext) -> …`.
+  Séparation **garantie par les signatures**, pas par une police AST.
+- **Profils** (`profiles.py`) : liste nommée **ou** sélecteur de tags simple
+  (`rapide`, `avancé`, …). Pas d'algèbre. Vocabulaire de tags petit et validé.
 
 ---
 
-## 6. G-C — Le runner (deux passes + agrégation)
+## 6. Le runner (deux passes)
 
-`evaluation/runner.py` (ex-`evaluation_engine`, + logique de calcul **rapatriée** de
-`app/services/_benchmark_*` — l'app *appelle* l'évaluation, ne *calcule* plus) :
-
-1. **Passe par-document** : `select(input_types)` → exécute chaque `DocumentMetric` sur
-   `DocContext`. `None` = non applicable (skip).
-2. **Agrégation par-moteur** : générique pour scalaires ; **agrégateur custom déclaré** pour
-   les structs (confusion, taxonomie, calibration… — **ce n'est pas un cas rare**).
-   `None` **exclu** ; **support** calculé.
-3. **Passe inter-moteurs** : exécute chaque `CrossEngineMetric` sur `CrossEngineContext`
-   (les `EngineReport` + corpus + tables) → **écrit dans le `RunResult`**.
+`evaluation/runner.py` (+ logique de calcul **rapatriée** de `app/services/_benchmark_*` —
+l'app *appelle*, ne *calcule* plus) :
+1. **Par-document** : `select(input_types)` → `DocumentMetric` sur `DocContext` ;
+   `None` = non applicable (skip).
+2. **Agrégation par-moteur** : générique (scalaires) + **custom (structs)** ;
+   `None` exclu ; **support** calculé.
+3. **Inter-moteurs** : `CrossEngineMetric` sur `CrossEngineContext` → **écrit dans `RunResult`**.
 
 ---
 
-## 7. G-D — Défenses (sécurité scientifique, dette C)
+## 7. Défenses (sécurité scientifique, dette C)
 
-Défense en couches (cf. §3.5). En complément :
-- **C4 — test générique** : fabrique des entrées dégénérées de chaque `input_types`
-  (+ une entrée violant chaque `requires`) et **exige `None`** ;
-- **C5 — golden** sur fixtures réelles **ALTO + PAGE + texte** ;
-- **C7 — checklist de revue** (filet pour le résidu, surtout contributions externes).
-
-Acté : la dette n'est **pas éliminable** (un faux chiffre plausible est indiscernable d'un
-vrai) ; on la rend **locale, visible au CI (support + diffs golden), bornée**. Risque
-**présent dès maintenant** sur les métriques structurelles (mélange ALTO/PAGE) → `safe_*`
-et préconditions dès le jour 1.
+Couches : `input_types` (gratuit) · `safe_*` (vide → `None`) · préconditions
+`requires` (le runner saute) · **test générique** d'entrées dégénérées · **golden**
+sur fixtures réelles **ALTO + PAGE + texte** · agrégation `None`-exclu + support ·
+revue. Risque **présent dès l'axe texte** (ratios sur vide) → `safe_*` jour 1 ;
+amplifié à l'axe structure (mélange ALTO/PAGE).
 
 ---
 
 ## 8. Résultat & persistance
 
-- **`evaluation/result.py:RunResult`** (ex-`benchmark_result`, dégonflé) = contrat de sortie
-  unique, avec **`schema_version`** + upcaster (protège le chemin rapport/compare, y compris
-  les vieux fichiers JSON sauvegardés).
-- **`cross_engine`** : nombres **écrits dans le `RunResult`** (le HTML/CSV/JSON lisent les données).
-- **Store longitudinal** : **lignes tidy** (ajout de métrique = nouvelles lignes ; rien ne casse).
-  Le store SQLite vit en **`adapters/storage`** (pas en couche 3).
-- **Coexistence** : « jeu de champs fait foi » (note couche 2) = même esprit que le tidy pour
-  les **ajouts** ; `schema_version` couvre l'autre cas, les **changements structurels** du
-  document `RunResult`. Ne pas laisser la convention « pas de version » déborder sur le document.
+- **`evaluation/result.py:RunResult`** (ex-`benchmark_result`, dégonflé) = contrat
+  de sortie unique, **dimensionné plein-scope** (porte taxonomy/NER/structure dès
+  sa conception, même si la 1ʳᵉ tranche n'écrit qu'un CER), avec **`schema_version`** + upcaster.
+- **cross_engine écrit dans le `RunResult`** ; le rapport ne fait que lire.
+- **Store longitudinal *tidy*** (lignes `(run, moteur, métrique, valeur, spec_version)`),
+  en `adapters/storage` (I/O hors couche 3). Ajout de métrique = additif.
+- **Réconciliation note couche 2** : « le jeu de champs fait foi » = même esprit que
+  le tidy pour les **ajouts** ; `schema_version` couvre les **changements structurels**
+  du document. Ne pas laisser « pas de version » déborder sur le document `RunResult`.
 
 ---
 
-## 9. Inventaire source → cible (Picarones `evaluation/`, 93 fichiers)
+## 9. Le rapport — cadre plein-scope, contenu incrémental
 
-**Supprimés (18)** — 4 registres + plomberie (`metric_hooks`, `builtin_hooks`,
-`builtin_metrics`, `metric_registry`, 4×`*_hooks`), doublons (`search`), morts
-(`equivalence_profile`, `alto_metrics`, `cost_projection`, `ner_backends`, `difficulty`,
-`module_policy`), `normalization` (consolidé en `formats/text`).
-⚠️ **Supprimer une métrique n'est pas local** : nettoyer ses références côté
-`reports`/JS/CSV/glossaire (ex. clé `difficulty_score`).
+- **Cadre (maintenant)** : un **`Protocol Section` typé unique**, consommant le
+  `RunResult` **directement** (pas de data-layer qui ré-agrège — anti-pattern
+  Picarones), un seul format, budgets.
+- **Contenu (incrémental)** : 1 section au squelette (overview/engines/CER) ;
+  on **ajoute des sections à côté** au rythme des métriques (documents, crosses,
+  structure…). Jamais de section en avance sur sa donnée.
+- **Pas de `reports/narrative/`** (supprimé, `CLAUDE.md` §6) : chiffres et tableaux
+  bruts, aucune prose générée.
 
-**Changés de couche (≈5)** — `history` (SQLite) → `adapters/storage` ; `cdd_render` (SVG),
-`worst_lines` → `reports` ; `levers` (4ᵉ registre) → `reports/narrative` ; ré-exécution
-moteur de `robustness` → `pipeline`.
+---
 
-**Modifiés (≈22)** — renommages (`benchmark_result`→`result`, `evaluation_engine`→`runner`,
-`_diff_utils`→`diff`, …), **splits >400 LOC** (`modern_archives`, `roman_numerals`,
-`numerical_sequences`, `inter_engine`), réécriture structure sur `LAYOUT`
+## 10. `CanonicalLayout` & axe structure — ENVELOPPE, matérialisés à la 1ʳᵉ tranche structure
+
+**Différé, par discipline** (`CLAUDE.md` §3/§6) — *pas le premier pas*.
+
+- **Réservé maintenant (enveloppe)** : `ArtifactType.LAYOUT` existe + `region_id`
+  optionnel sur `Artifact`. Le registre (générique sur les types) et le `RunResult`
+  (générique sur les métriques) **accueillent déjà** une métrique `(LAYOUT, LAYOUT)`
+  dès que des artefacts `LAYOUT` existeront — **sans** connaître les champs du type.
+- **Matérialisé plus tard** : le **type concret** `CanonicalLayout` (en `domain`)
+  + les **mappers** `alto/page → layout` (formats) + le projecteur `layout → text`
+  + les **métriques structurelles** (`region_detection`, `line_detection`,
+  `reading_order`, `geometry_coverage`) + **shapely** — tout ça naît à la
+  **première tranche *structure***.
+- **Déclencheur = la première tranche structure**, qui peut être l'**évaluation
+  structurelle** (couche 3 : mappers + métriques, sur des sorties ALTO/PAGE de
+  n'importe quel pipeline) **ou** la **segmentation** (couche 4), selon laquelle on
+  construit en premier. Le type **vit en `domain`** dans les deux cas ; « couche 4 »
+  est un raccourci pour « la tranche où son premier consommateur apparaît ».
+- **Pourquoi pas maintenant** : un type sans consommateur = code mort + champs figés
+  **avant** son consommateur = spéculatif (garde-fou *« pas de consommateur =
+  supprimé »*). Le différer est **plus sûr**, pas moins.
+
+**Esquisse cible** (à *confirmer* avec le consommateur, **ne pas figer maintenant**) :
+sur-ensemble fidèle des types couche 2 — `Geometry{bbox?, polygon?, baseline?}`,
+`Word` optionnel (+ hyphénation), `Line{text, words?, geometry?}`,
+`Region{region_type?, kind(text|generic), regions(imbrication)}`, `ReadingOrder`
+**en arbre** (mappe le PAGE ; ALTO = groupe plat = ordre des blocs), `LayoutPage`,
+`CanonicalLayout{pages, source_format}` + `has_word_level`. **Bonne nouvelle couche 2** :
+l'ALTO de XerOCR porte déjà `baseline` + `block_type` → métriques structurelles
+applicables sur ALTO aussi (pas systématiquement `None`).
+
+---
+
+## 11. Inventaire source → cible (Picarones `evaluation/`, 93 fichiers)
+
+**Supprimés** — 4 registres + plomberie (`metric_hooks`, `builtin_hooks`,
+`builtin_metrics`, `metric_registry`, 4×`*_hooks`), doublon (`search`), morts
+(`equivalence_profile`, `alto_metrics`, `cost_projection`, `ner_backends`,
+`difficulty`, `module_policy`), `normalization` (consolidé en `formats/text`),
+**`levers`** (4ᵉ registre, synthèse type-narrative → **abandonné**, narrative supprimé).
+⚠️ Supprimer une métrique n'est pas local : nettoyer ses références côté reports/JS/CSV
+(ex. clé `difficulty_score`).
+
+**Changés de couche** — `history` (SQLite) → `adapters/storage` ; `cdd_render` (SVG),
+`worst_lines` → `reports` ; ré-exécution moteur de `robustness` → `pipeline`.
+
+**Modifiés** — renommages (`benchmark_result`→`result`, `evaluation_engine`→`runner`,
+`_diff_utils`→`diff`), splits >400 LOC (`modern_archives`, `roman_numerals`,
+`numerical_sequences`, `inter_engine`), structure réécrite sur `LAYOUT`
 (`layout`→`region_detection`, `reading_order`, `alto_structural`→`geometry_coverage`),
-dédoublonnage (`searchability` absorbe `search`), `reliability`→`multirun_stability` (κ/α morts retirés).
+dédoublonnage (`searchability` absorbe `search`), `reliability`→`multirun_stability`.
 
-**Gardés (≈35)** — le noyau métier réel (CER/WER, philologie, inter-moteurs, économie, image,
+**Gardés** — noyau métier (CER/WER, philologie, inter-moteurs, économie, image,
 longitudinal) ; **clés de sortie inchangées**.
 
-**Nouveaux (8)** — `geometry.py` (shapely), `profiles.py`, `metrics/_helpers.py` (`safe_*`),
-`structure/region_detection.py`, `structure/line_detection.py`, `projectors/layout.py`,
-`gt_types.py`, + `__init__` de sous-paquets.
+**Nouveaux** — `profiles.py`, `metrics/_helpers.py` (`safe_*`) [axe texte] ;
+`geometry.py`, `structure/region_detection.py`, `structure/line_detection.py`,
+`projectors/layout.py`, `gt_types.py` [tranche structure].
 
-**Organisation cible** : `metrics/{text, philology/, structure/, cross_engine/, economics/,
-image/, longitudinal/}`, `statistics/`, `views/`, `projectors/`.
-
----
-
-## 10. Risques de transfert Picarones → XerOCR
-
-1. **`reading_order` sans source** (Picarones) → **résolu en couche 2** côté PAGE (arbre
-   `ReadingOrder`) ; ALTO = ordre de bloc implicite → groupe plat dans le mapper.
-2. **Agrégateurs custom** (confusion/taxonomie/calibration) — **pas des moyennes** ; prévoir
-   l'agrégateur custom comme chemin normal des structs (§6).
-3. **Clés de sortie = contrat dur** avec reports/JS/compare (§3.11).
-4. **`benchmark_result`→`RunResult`** : ~30 consommateurs côté reports/web/compare —
-   beaucoup meurent (shim, workflows), mais **migrer reports + web + compare JS en bloc**.
-5. **Consolidation `normalization`** : **sans danger** (l'`evaluation/normalization.py` de
-   Picarones ne définit aucun profil ; tout est en `formats/text`).
+**Organisation cible** : `metrics/{text, philology/, structure/, cross_engine/,
+economics/, image/, longitudinal/}`, `statistics/`, `views/`, `projectors/`.
 
 ---
 
-## 11. Explicitement laissé au codage (sous test)
+## 12. Risques de transfert Picarones → XerOCR
 
-- L'intérieur de chaque métrique (algorithme).
-- Le **contenu** des profils `rapide`/`avancé` et le **vocabulaire de tags**.
-- La **liste des métriques structurelles PAGE-natives** à ajouter.
-- Les découpes exactes des fichiers >400 LOC.
-- Les coutures de câblage (pré-passe stats corpus → `DocContext` pour `rare_tokens` ;
-  alimentation des données d'historique → passe longitudinale/`baseline_comparison`).
-
----
-
-## 12. Tests & budgets
-
-- **Architecture** : étendre la whitelist `evaluation/` (+`scipy`, +`shapely`, +`jiwer`,
-  +`rapidfuzz`, +`numpy`, +`PIL`) ; ajouter `no-side-effect-import` (décorateur = valeur pure)
-  et `file-budgets` (>400 LOC = entrée justifiée).
-- **Golden** : `RunResult` canonique sur **ALTO + PAGE + texte** ; déterminisme bit-à-bit.
-- **Sécurité** : le **test générique d'entrées dégénérées** (C4) ; conformité CER/WER vs `jiwer` ;
-  ALTO/PAGE → `LAYOUT` round-trip de fidélité (aucune dimension visée perdue).
+1. `reading_order` sans source (Picarones) → **résolu couche 2** (arbre `ReadingOrder`
+   côté PAGE ; ALTO = ordre de bloc → groupe plat dans le mapper).
+2. **Agrégateurs custom** (confusion/taxonomie/calibration) — pas des moyennes (§6).
+3. **Clés de sortie = contrat dur** avec reports/JS/compare.
+4. `benchmark_result`→`RunResult` : ~30 consommateurs — beaucoup meurent (shim,
+   workflows), migrer reports + web + compare **en bloc**.
+5. Consolidation `normalization` : **sans danger** (l'eval n'en définissait aucun).
 
 ---
 
-## 13. Ordre d'implémentation (bas-en-haut)
+## 13. Explicitement laissé au codage (sous test)
 
-1. **`CanonicalLayout`** (domain) + mappers `alto/page → layout` (formats) + projecteur `layout → text`.
-2. **Registre** (`registry.py` + décorateur pur + `profiles.py`) + **`DocContext`/`CrossEngineContext`** + **`_helpers.py`** (`safe_*`).
-3. **`runner.py`** (2 passes + agrégation générique/custom + `None`-exclu + support).
-4. **`result.py:RunResult`** (+ `schema_version`).
-5. **Métriques texte** d'abord (CER/WER + portage du noyau, clés stables), **puis structure**
-   (`region_detection`, `line_detection`, `reading_order`, `geometry_coverage`).
-6. **`cross_engine`** (écriture dans `RunResult`) + **statistiques** (scipy).
-7. **Store longitudinal tidy** (via `adapters/storage`) + profils + reste des métriques.
+Intérieur des métriques ; contenu des profils + vocabulaire de tags ; liste des
+métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutures
+(pré-passe stats corpus → `DocContext` pour `rare_tokens` ; alimentation historique
+→ longitudinal/`baseline_comparison`) ; champs concrets du `CanonicalLayout` (§10).
 
 ---
 
-*Référence : décisions actées lors de la session de conception couche 3. Ce document est le
-contrat ; l'implémentation suit l'ordre §13, le reste émerge sous test (§11).*
+## 14. Tests & budgets
+
+- **Architecture** : étendre la whitelist `evaluation/` (**+scipy maintenant** ;
+  **+shapely/jiwer/rapidfuzz/numpy/PIL au fil des tranches qui les introduisent**) ;
+  `no-side-effect-import` (décorateur = valeur pure) ; `file-budgets`.
+- **Golden** : `RunResult` canonique ; **ALTO+PAGE+texte** à la tranche structure ;
+  déterminisme bit-à-bit.
+- **Sécurité** : test générique d'entrées dégénérées ; CER/WER vs `jiwer` ;
+  round-trip de fidélité format→`LAYOUT` (à la tranche structure).
+
+---
+
+## 15. Ordre d'implémentation (tranches verticales)
+
+1. **Squelette texte** : corpus pré-calculé → CER → `RunResult` (plein-scope) →
+   HTML basique (1 section, cadre `Protocol Section`) → CLI `demo`. Registre +
+   `DocContext` + `runner` (1 métrique) + `safe_*`.
+2. **Épaissir l'axe texte** : WER/MER + portage du noyau texte (clés stables),
+   `profiles`, statistiques (**scipy**), `cross_engine` (écriture `RunResult`), `compare`.
+3. **Tranche structure** : `CanonicalLayout` (domain) + mappers `alto/page→layout`
+   + projecteur `layout→text` + **shapely**/`geometry.py` + `region_detection`/
+   `line_detection`/`reading_order`/`geometry_coverage` + golden ALTO/PAGE.
+4. **Store longitudinal *tidy*** (via `adapters/storage`) + reste des métriques
+   (philologie, économie, image, longitudinal) — une par une, en budget.
+
+---
+
+*Référence : décisions actées en session de conception couche 3, réconciliées avec
+`CLAUDE.md`. Enveloppe (contrats §3,§5-9) plein-scope maintenant ; surface remplie
+par tranches (§15). Le reste émerge sous test (§13).*
