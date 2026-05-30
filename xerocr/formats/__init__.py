@@ -7,12 +7,14 @@ lib de métrique (``jiwer``, ``rapidfuzz``) ni un moteur OCR.
 
 Surface publique (s'étoffera avec les parsers/writers ALTO et PAGE) :
 
+- sécurité XML (``safe_parse_xml``) — point d'entrée unique de tout parsing XML ;
 - normalisation de comparaison (``NormalizationProfile`` & profils) ;
 - lecture de texte brut (``read_plaintext``).
 """
 
 from __future__ import annotations
 
+from xerocr.formats._xml import safe_parse_xml
 from xerocr.formats.text import (
     DEFAULT_PROFILE,
     NORMALIZATION_PROFILES,
@@ -22,6 +24,7 @@ from xerocr.formats.text import (
 )
 
 __all__ = [
+    "safe_parse_xml",
     "NormalizationProfile",
     "NORMALIZATION_PROFILES",
     "DEFAULT_PROFILE",
