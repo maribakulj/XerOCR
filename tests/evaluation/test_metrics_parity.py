@@ -29,14 +29,14 @@ def _ctx(reference: str, hypothesis: str) -> DocContext:
 
 @pytest.mark.parametrize(("ref", "hyp"), _PAIRS)
 def test_cer_matches_jiwer(ref: str, hyp: str) -> None:
-    assert cer.fn(_ctx(ref, hyp)) == pytest.approx(jiwer.cer(ref, hyp))
+    assert cer.fn(_ctx(ref, hyp)).value == pytest.approx(jiwer.cer(ref, hyp))
 
 
 @pytest.mark.parametrize(("ref", "hyp"), _PAIRS)
 def test_wer_matches_jiwer(ref: str, hyp: str) -> None:
-    assert wer.fn(_ctx(ref, hyp)) == pytest.approx(jiwer.wer(ref, hyp))
+    assert wer.fn(_ctx(ref, hyp)).value == pytest.approx(jiwer.wer(ref, hyp))
 
 
 @pytest.mark.parametrize(("ref", "hyp"), _PAIRS)
 def test_mer_matches_jiwer(ref: str, hyp: str) -> None:
-    assert mer.fn(_ctx(ref, hyp)) == pytest.approx(jiwer.mer(ref, hyp))
+    assert mer.fn(_ctx(ref, hyp)).value == pytest.approx(jiwer.mer(ref, hyp))

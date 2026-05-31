@@ -13,8 +13,11 @@ from scipy import stats  # type: ignore[import-untyped]
 from xerocr.evaluation.context import CrossEngineContext
 from xerocr.evaluation.metric import CrossEngineMetric, cross_engine_metric
 
-#: En-dessous, pas de test (échantillon apparié trop petit).
-_MIN_SUPPORT = 2
+#: Plancher de **puissance** (pas seulement de calcul) : sous ~6 paires, un
+#: Wilcoxon bilatéral ne peut **pas** atteindre p < 0,05 (n=6 → p_min exact ≈
+#: 0,031), et un Friedman à 2-3 blocs est dégénéré. Renvoyer une p-value sous ce
+#: seuil serait un artefact de petit n présenté comme un verdict → on rend ``None``.
+_MIN_SUPPORT = 6
 
 
 @cross_engine_metric(
@@ -38,10 +41,15 @@ def significance(ctx: CrossEngineContext) -> tuple[float | None, int]:
     if all(len(set(row)) == 1 for row in complete):
         return None, support  # tous les pipelines égaux : rien à tester
     columns = [list(values) for values in zip(*complete, strict=True)]
-    if len(pipelines) == 2:
-        result = stats.wilcoxon(columns[0], columns[1])
-    else:
-        result = stats.friedmanchisquare(*columns)
+    try:
+        if len(pipelines) == 2:
+            result = stats.wilcoxon(columns[0], columns[1])
+        else:
+            result = stats.friedmanchisquare(*columns)
+    except ValueError:  # pragma: no cover -- filet : entrée dégénérée résiduelle
+        # scipy refuse un échantillon que nos gardes n'ont pas écarté
+        # (ex. différences toutes nulles après abandon des ex æquo) → non testable.
+        return None, support
     return float(result.pvalue), support
 
 

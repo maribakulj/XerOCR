@@ -22,7 +22,6 @@ from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics._helpers import safe_mean
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation
 from xerocr.evaluation.result import (
@@ -39,8 +38,8 @@ PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
 #: Signature d'entrée d'une métrique : ``(type_référence, type_hypothèse)``.
 _Signature = tuple[ArtifactType, ArtifactType]
 
-#: { métrique : { pipeline : [valeur par doc, alignée, ``None`` inclus] } }
-_Series = dict[str, dict[str, list[float | None]]]
+#: { métrique : { pipeline : [score par doc, aligné, ``None`` inclus] } }
+_Series = dict[str, dict[str, list[MetricScore]]]
 
 
 def evaluate_run(
@@ -68,7 +67,7 @@ def evaluate_run(
                 )
                 scores = _score_document(view, document, candidate, registry)
                 for score in scores:
-                    series[score.metric][pipeline_name].append(score.value)
+                    series[score.metric][pipeline_name].append(score)
                 documents.append(
                     RunDocumentResult(
                         document_id=document.id,
@@ -97,9 +96,28 @@ def evaluate_run(
     )
 
 
-def _aggregate(name: str, values: list[float | None]) -> MetricScore:
-    present = [value for value in values if value is not None]
-    return MetricScore(metric=name, value=safe_mean(present), support=len(present))
+def _aggregate(name: str, scores: list[MetricScore]) -> MetricScore:
+    """Agrégat **micro** : Σ(valeur·poids)/Σpoids — la métrique au niveau corpus.
+
+    Micro (et non la moyenne *macro* des taux par-document) est la métrique
+    conventionnelle au niveau corpus, comparable à ``jiwer`` sur le corpus
+    entier : un long document pèse à proportion de sa taille. La moyenne macro
+    reste reconstructible depuis le détail par-document (``RunResult.documents``).
+    Les documents à poids nul (référence vide) sont exclus du micro ; ``value``
+    vaut ``None`` si aucun poids (toutes réfs vides). ``support`` = nombre de
+    documents applicables.
+    """
+    pairs: list[tuple[float, int]] = []
+    for score in scores:
+        if score.value is not None:
+            pairs.append((score.value, score.support or 0))
+    total_weight = sum(weight for _, weight in pairs)
+    micro = (
+        sum(value * weight for value, weight in pairs) / total_weight
+        if total_weight > 0
+        else None
+    )
+    return MetricScore(metric=name, value=micro, support=len(pairs))
 
 
 def _cross_engine_scores(
@@ -111,8 +129,8 @@ def _cross_engine_scores(
     scores: list[MetricScore] = []
     for base_metric in view.metric_names:
         per_pipeline = {
-            pipeline: tuple(values)
-            for pipeline, values in series[base_metric].items()
+            pipeline: tuple(score.value for score in scores_list)
+            for pipeline, scores_list in series[base_metric].items()
         }
         context = CrossEngineContext(metric=base_metric, per_pipeline=per_pipeline)
         for metric in metrics:
@@ -161,8 +179,14 @@ def _score_document(
         if signature not in contexts:
             contexts[signature] = _context_for(view, document, candidate, signature)
         context = contexts[signature]
-        value = metric.fn(context) if context is not None else None
-        scores.append(MetricScore(metric=name, value=value))
+        observation = metric.fn(context) if context is not None else None
+        scores.append(
+            MetricScore(
+                metric=name,
+                value=observation.value if observation is not None else None,
+                support=observation.weight if observation is not None else None,
+            )
+        )
     return tuple(scores)
 
 

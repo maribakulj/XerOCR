@@ -88,8 +88,14 @@ def test_aggregate_and_per_document(tmp_path: Path) -> None:
     aggregate = result.pipelines[0].aggregate[0]
     assert aggregate.metric == "cer"
     assert aggregate.support == 2
-    assert aggregate.value == pytest.approx(0.125)  # mean(0.25, 0.0)
+    # micro = Σ erreurs / Σ longueurs = (1 + 0) / (4 + 2) = 1/6, PAS la moyenne
+    # macro mean(0.25, 0.0) = 0.125 : un long document pèse plus (cf. _aggregate).
+    assert aggregate.value == pytest.approx(1 / 6)
     assert len(result.documents) == 2
+    # le détail par-document porte le poids (dénominateur) → macro reconstructible.
+    doc1_cer = result.documents[0].scores[0]
+    assert doc1_cer.value == pytest.approx(0.25)
+    assert doc1_cer.support == 4  # longueur de la référence "abcd"
 
 
 def test_missing_ground_truth_is_not_applicable(tmp_path: Path) -> None:

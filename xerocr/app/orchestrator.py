@@ -12,7 +12,9 @@ loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from xerocr.app.modules.registry import ModuleRegistry
@@ -26,6 +28,7 @@ from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
 from xerocr.evaluation.result import RunResult
 from xerocr.evaluation.runner import evaluate_run
 from xerocr.pipeline.executor import PipelineExecutor
+from xerocr.pipeline.protocols import Module
 
 
 class OrchestrationError(XerOCRError):
@@ -53,10 +56,17 @@ def run(
     register_default_metrics(metric_registry)
 
     # Workspace temporaire par run : les modules qui produisent des artefacts
-    # (tesseract…) y écrivent ; le runner lit ces sorties avant le nettoyage.
+    # (tesseract, LLM…) y écrivent ; le runner lit ces sorties avant le nettoyage.
+    # Chaque pipeline écrit dans son **propre sous-dossier** : deux pipelines qui
+    # partagent un même `adapter_name` (ex. `openai:gpt` corrigeant deux OCR
+    # différents) écriraient sinon le même fichier de sortie, et le second
+    # écraserait le premier → évaluation contaminée. L'isolation par pipeline
+    # tue cette collision sans que les adapters aient à connaître la topologie.
     with TemporaryDirectory(prefix="xerocr-run-") as workspace:
         pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
-        for pipeline in spec.pipelines:
+        for index, pipeline in enumerate(spec.pipelines):
+            pipeline_workspace = Path(workspace) / f"pipeline{index}"
+            pipeline_workspace.mkdir()
             per_document: dict[str, dict[ArtifactType, Artifact]] = {}
             for document in spec.corpus.documents:
                 per_document[document.id] = executor.execute_document(
@@ -65,12 +75,14 @@ def run(
                     _initial_inputs(document),
                     document_id=document.id,
                     deadline=deadline,
-                    workspace_uri=workspace,
+                    workspace_uri=str(pipeline_workspace),
                 )
             pipeline_outputs[pipeline.name] = per_document
 
         completed_at = utcnow()
-        manifest = _manifest(spec, needed, code_version, started_at, completed_at)
+        manifest = _manifest(
+            spec, modules, code_version, started_at, completed_at
+        )
         return evaluate_run(
             corpus=spec.corpus,
             evaluation=spec.evaluation,
@@ -97,19 +109,25 @@ def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:
 
 def _manifest(
     spec: RunSpec,
-    needed: list[str],
+    modules: Mapping[str, Module],
     code_version: str,
     started_at: datetime,
     completed_at: datetime,
 ) -> RunManifest:
+    names = sorted(modules)
     return RunManifest(
         run_id=spec.run_id or f"run-{started_at.strftime('%Y%m%dT%H%M%S')}",
         corpus_name=spec.corpus.name,
         n_documents=len(spec.corpus.documents),
         pipeline_specs=spec.pipelines,
         adapter_kwargs={
-            name: dict(spec.adapter_kwargs.get(name, {})) for name in needed
+            name: dict(spec.adapter_kwargs.get(name, {})) for name in names
         },
+        # Reproductibilité (R-2) : la version de chaque module exécuté entre dans
+        # l'empreinte. La version *binaire* d'un moteur externe (ex. tesseract)
+        # reste à capturer dans `system_binaries_lock` à l'exécution (appel live,
+        # hors CI) — non couvert ici : `module.version` est la version d'adapter.
+        module_versions={name: modules[name].version for name in names},
         view_specs=spec.evaluation.views,
         code_version=code_version,
         started_at=started_at,

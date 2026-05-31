@@ -17,8 +17,23 @@ from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.evaluation import MetricSpec
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 
-#: Une métrique par-document calcule un scalaire (ou ``None`` si non applicable).
-DocMetricFn = Callable[[DocContext], float | None]
+
+@dataclass(frozen=True)
+class Observation:
+    """Mesure par-document d'une métrique : valeur + poids de micro-agrégation.
+
+    ``weight`` est le **dénominateur** de la métrique (longueur de référence pour
+    CER, nombre de mots pour WER, ``hits + edits`` pour MER). Il autorise
+    l'agrégat **micro** (Σ erreurs / Σ dénominateurs = la métrique au niveau
+    corpus, comparable à ``jiwer``) en plus de la moyenne **macro** par document.
+    """
+
+    value: float
+    weight: int
+
+
+#: Une métrique par-document renvoie une ``Observation`` (ou ``None`` si N/A).
+DocMetricFn = Callable[[DocContext], Observation | None]
 
 #: Une métrique inter-moteurs renvoie ``(valeur, support)`` (``None`` si N/A).
 CrossEngineFn = Callable[[CrossEngineContext], tuple[float | None, int]]
@@ -90,6 +105,7 @@ __all__ = [
     "CrossEngineMetric",
     "DocMetricFn",
     "DocumentMetric",
+    "Observation",
     "cross_engine_metric",
     "document_metric",
 ]

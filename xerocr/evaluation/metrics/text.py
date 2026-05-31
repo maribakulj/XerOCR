@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metric import DocumentMetric, document_metric
+from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
 
 
 def _edit_distance(
@@ -114,9 +114,12 @@ def _text_pair(ctx: DocContext) -> tuple[str, str]:
     higher_is_better=False,
     tags=frozenset({"text", "edit_distance"}),
 )
-def cer(ctx: DocContext) -> float:
+def cer(ctx: DocContext) -> Observation:
     reference, hypothesis = _text_pair(ctx)
-    return _error_rate(_edit_distance(reference, hypothesis), len(reference))
+    edits = _edit_distance(reference, hypothesis)
+    return Observation(
+        value=_error_rate(edits, len(reference)), weight=len(reference)
+    )
 
 
 @document_metric(
@@ -126,10 +129,13 @@ def cer(ctx: DocContext) -> float:
     higher_is_better=False,
     tags=frozenset({"text", "edit_distance", "word"}),
 )
-def wer(ctx: DocContext) -> float:
+def wer(ctx: DocContext) -> Observation:
     reference, hypothesis = _text_pair(ctx)
     ref_words, hyp_words = reference.split(), hypothesis.split()
-    return _error_rate(_edit_distance(ref_words, hyp_words), len(ref_words))
+    edits = _edit_distance(ref_words, hyp_words)
+    return Observation(
+        value=_error_rate(edits, len(ref_words)), weight=len(ref_words)
+    )
 
 
 @document_metric(
@@ -139,11 +145,13 @@ def wer(ctx: DocContext) -> float:
     higher_is_better=False,
     tags=frozenset({"text", "edit_distance", "word"}),
 )
-def mer(ctx: DocContext) -> float:
+def mer(ctx: DocContext) -> Observation:
     reference, hypothesis = _text_pair(ctx)
     alignment = _align(reference.split(), hypothesis.split())
     total = alignment.hits + alignment.edits
-    return alignment.edits / total if total else 0.0
+    return Observation(
+        value=alignment.edits / total if total else 0.0, weight=total
+    )
 
 
 #: Socle de métriques texte, collecté explicitement par le registre.

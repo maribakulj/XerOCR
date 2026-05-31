@@ -21,9 +21,20 @@ def test_significant_difference_low_pvalue() -> None:
 
 
 def test_no_difference_returns_none() -> None:
-    same = tuple(0.2 for _ in range(5))
+    # support >= plancher (6) ET aucune variance → exerce la garde « tous égaux ».
+    same = tuple(0.2 for _ in range(6))
     value, support = significance.fn(_ctx({"A": same, "B": same}))
     assert value is None  # aucune variance à tester
+    assert support == 6
+
+
+def test_below_power_floor_returns_none() -> None:
+    # 5 paires distinctes : calculable, mais sous le plancher de puissance (6) un
+    # Wilcoxon bilatéral ne peut pas atteindre p<0.05 → None (pas un faux verdict).
+    a = (0.10, 0.11, 0.12, 0.13, 0.14)
+    b = (0.30, 0.31, 0.32, 0.33, 0.34)
+    value, support = significance.fn(_ctx({"A": a, "B": b}))
+    assert value is None
     assert support == 5
 
 

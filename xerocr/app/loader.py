@@ -56,8 +56,14 @@ def _secure_document(document: DocumentRef, base: Path) -> DocumentRef:
         if document.image_uri is not None
         else None
     )
+    # La vérité-terrain est lue par l'évaluation : exiger son existence dès le
+    # chargement donne une erreur claire (RunSpecError) au lieu d'un OSError
+    # opaque en plein run. L'image, elle, n'est pas exigée ici — certains modules
+    # (precomputed) ne la lisent pas, et tesseract signale clairement son absence.
     ground_truths = tuple(
-        truth.model_copy(update={"uri": str(validated_path(truth.uri, base))})
+        truth.model_copy(
+            update={"uri": str(validated_path(truth.uri, base, must_exist=True))}
+        )
         for truth in document.ground_truths
     )
     return document.model_copy(

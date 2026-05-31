@@ -19,7 +19,14 @@ _TEXT_TYPES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 def load_representation(uri: str, artifact_type: ArtifactType) -> object:
     """Charge le contenu pointé par ``uri`` dans sa représentation comparable."""
     if artifact_type in _TEXT_TYPES:
-        return read_plaintext(Path(uri).read_bytes())
+        try:
+            data = Path(uri).read_bytes()
+        except OSError as exc:
+            raise EvaluationError(
+                f"représentation illisible ({artifact_type.value}) : "
+                f"{uri!r} ({exc})."
+            ) from exc
+        return read_plaintext(data)
     raise EvaluationError(
         f"représentation non chargeable en T1 pour le type "
         f"{artifact_type.value!r}."

@@ -241,8 +241,9 @@ xerocr/app/
 - [x] **Registre + factory** (`name→Module` via builder enregistré, convention `<kind>:<label>`) — socle en dur, **seul** point d'extension. — *preuve : `test_module_registry` (build `precomputed` ; kind inconnu ; kwargs incohérents)*
 - [ ] Découverte **entry-points `xerocr.modules`** + `register()` tiers. — *T6*
 - [x] `RunSpec` → `domain` (compose `PipelineSpec` **directement**, sans `StepSpec` — D-010) ; orchestrateur assemble `RunManifest` (`adapter_kwargs` capturés). — *preuve : `test_run_spec` + `test_orchestrator`*
-- [x] **loader YAML** (`RunSpec.model_validate`, `extra="forbid"`) + **sécurité chemins** (`validated_path` : rejet `..`/absolu-hors-base/octet-nul/symlink, §12) — **pas** de `resolve_adapter_class` (le registre résout `name→Module`, D-010). — *preuve : `test_loader` + `test_security`*
-- [ ] capture deps/binaires lock → `RunManifest` (reproductibilité). — *avec `compare` (T2.f)*
+- [x] **loader YAML** (`RunSpec.model_validate`, `extra="forbid"`) + **sécurité chemins** (`validated_path` : rejet `..`/absolu-hors-base/octet-nul/symlink, §12 ; **GT `must_exist=True`** → erreur typée au chargement, pas d'`OSError` opaque en run) — **pas** de `resolve_adapter_class` (le registre résout `name→Module`, D-010). — *preuve : `test_loader` (+ GT manquante rejetée) + `test_security`*
+- [x] **Isolation des workspaces par pipeline** (sous-dossier dédié) : deux pipelines partageant un `adapter_name` **écrivain** (ex. `openai:gpt`) n'écrasent plus mutuellement leur sortie → zéro contamination inter-pipelines. — *preuve : `test_orchestrator::test_pipelines_sharing_a_writer_do_not_contaminate`* — **corrigé à l'audit T3.**
+- [x] **`RunManifest.module_versions`** : version déclarée de chaque module exécuté capturée (R-2). — *preuve : `test_orchestrator::test_manifest_captures_module_versions`.* `[~]` deps/binaires lock (`dependencies_lock`/`system_binaries_lock`, dont version **binaire** tesseract) : capture live, **différée** (hors CI).
 
 **Garde-fous :**
 - [x] `no_side_effect_imports` (**pas de `register_default_*()` auto** ni singleton module-level ; `register_default_modules`/`metrics` explicites) · `file_budgets` · `layer_dependencies`. — *preuve : suite archi verte*
