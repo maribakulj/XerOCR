@@ -276,5 +276,25 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
    cache** vers le store. Tests d'archi (`layer-deps` sans `evaluation`,
    `no-side-effect-import`, `file-budgets`) dès le premier commit de code.
 
+## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Démarre en **T1**.
+
+**Enveloppe (plein-scope dès T1) :**
+- [ ] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *gate : `precomputed` l'implémente et tourne (T1)*
+- [ ] Split `RunContext`(sérialisable)/`RunControl`(runtime)/`Deadline`(domain). — *gate : test sérialisation `RunContext`*
+- [ ] `PipelineExecutor` mono-doc (provenance câblée) + `CorpusRunner` N-docs (threads/timeout/cancel/backpressure). — *gate : provenance présente dans `RunManifest`*
+- [ ] `planner`+`validation` fusionnés (`SpecError`, pas d'homonyme pydantic) ; port de cache.
+
+**Garde-fous :**
+- [ ] `layer_dependencies` : `pipeline` n'importe **pas** `evaluation` (chaîne `MetricJunction` morte retirée) · `no_side_effect_imports` (`__init__` mince) · `file_budgets` (executor/runner à splitter <400) · `no_broad_except`.
+
+**Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
+
+- [~] **Différé** : fan-out par région (T5) · ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
+
+---
+
 *Verdicts marqués « PROVISOIRE — à confirmer au build ». Partie 1 durable (source
 figée) ; Partie 2 périssable (à confirmer à la tranche).*

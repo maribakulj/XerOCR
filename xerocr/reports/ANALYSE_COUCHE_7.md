@@ -258,4 +258,23 @@ xerocr/reports/
 4. **Suppressions nettes :** `narrative/`(2 162 LOC, 3 accroches), `html/data/`(1 614, ré-agrégation), `section_registry`, `generator` legacy, vendor `chart.umd.min.js`, i18n/glossary d'office. « Pas de consommateur = supprimé », budgets <400 (render/crosses/philological/engines_table à splitter).
 5. **Invariants à tenir :** `reports` **lit, ne calcule pas, ne narre pas** (anti-hallucination) ; **clés de métrique = contrat dur** avec les sections/CSV ; **golden HTML byte-stable** (déterminisme §12) ; la repro s'**affiche** depuis le `RunManifest`, ne se ré-embarque pas ; direction de couche `reports→{domain,evaluation}` seulement (jamais `app`/`interfaces`).
 
+## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Cadre en **T1**, sections **incrémentales**.
+
+**Enveloppe (cadre, plein-scope dès T1) :**
+- [ ] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés) ; 0 des 4 `arg_kind` + 0 `section_registry`. — *gate : grep, 1 seule signature*
+- [ ] Consommation **directe de `RunResult`**, **zéro data-layer** qui ré-agrège. — *gate : `layer_dependencies` — `reports` n'appelle pas `evaluation.statistics`/`metrics` pour calculer*
+- [ ] `ReportRenderer` **injecté par `app`** (reports ne connaît pas `app`) · charts **SVG serveur** déterministes (pas de Chart.js/CDN).
+
+**Garde-fous :**
+- [ ] `layer_dependencies` (`reports → {domain, evaluation}` seulement) · **`no-orphan section↔métrique`** (`requires` ↔ clé `RunResult`) · **golden HTML byte-stable** · `file_budgets` (render/crosses/philological à splitter).
+
+**Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (1 section overview/CER lit `RunResult` → HTML déterministe).
+
+- [~] **Supprimé** : `narrative/` (D2) · `generator` legacy + `html/data/` + i18n/glossary d'office + Chart.js + SPA. **Différé** : 1 section/métrique à sa tranche (jamais en avance). **Interactivité what-if** = question ouverte (sélection, jamais re-mesure ; cf. §2.7).
+
+---
+
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/app non encore implémentés) prévaut.*

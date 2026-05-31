@@ -280,6 +280,26 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 
 ---
 
+## DoD vivante (couche 3) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 plan acté, 0 code.** Démarre en **T1** (squelette).
+
+**Enveloppe (plein-scope dès T1) :**
+- [ ] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (porte structure/NER/taxonomy + par-doc + `schema_version`). — *gate : golden `RunResult` canonique*
+- [ ] Registre **type-driven** unique (sélection par `input_types`) ; 0 des 4 registres Picarones. — *gate : `test_no_legacy_imports` (pas de `register_lever`/hooks)*
+- [ ] `DocContext`/`CrossEngineContext` + runner 2 passes + `safe_*` (vide→`None`). — *gate : test entrées dégénérées*
+
+**Garde-fous :**
+- [ ] `layer_dependencies` : whitelist `evaluation` = domain+formats+`scipy` (+ jiwer/rapidfuzz/numpy/shapely **au fil des tranches**).
+- [ ] `no_side_effect_imports` (décorateur = valeur pure, pas d'enregistrement à l'import) · `file_budgets` · **`no-orphan métrique↔section`**.
+
+**Validation inter-couches :** voir `MIGRATION_PLAN.md` §3-T1 (1 CER → `RunResult` → HTML déterministe de bout en bout).
+
+- [~] **Surface différée** : WER/MER/profils/stats (T2), structure (T5), longitudinal/philologie/taxo/économie (T7). — *cases créées au démarrage de chaque tranche, pas d'avance.*
+
+---
+
 *Référence : décisions actées en session de conception couche 3, réconciliées avec
 `CLAUDE.md`. Enveloppe (contrats §3,§5-9) plein-scope maintenant ; surface remplie
 par tranches (§15). Le reste émerge sous test (§13).*

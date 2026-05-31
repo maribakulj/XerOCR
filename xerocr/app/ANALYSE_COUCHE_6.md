@@ -231,4 +231,23 @@ xerocr/app/
 4. **Invariants à porter fidèlement et à tester EN PREMIER** : sécurité chemins (`validated_path`/`WorkspaceManager`/anti zip-bomb-traversal-symlink, §12), reproductibilité (`dependencies` → `RunManifest`), annulation coopérative (`Deadline`/`RunControl` — Picarones ne la branche pas vraiment, à corriger).
 5. **Ne pas bâtir `app` en bloc** : elle naît par tranches. Tranche 1 (`demo`) = orchestrateur minimal + registre (1 module `precomputed`) + `RunSpec` minimal — juste assez pour prouver que la coquille tient. Budgets <400, zéro shim, zéro effet de bord à l'import, zéro champ de spec sans consommateur.
 
+## DoD vivante (couche 6) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Naît **par tranches** (T1 minimal → T6).
+
+**Enveloppe :**
+- [ ] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis evaluation ; l'assemblage `RunResult` se fait en `evaluation/runner`). — *gate : `layer_dependencies` — `app` n'importe pas `evaluation.metrics*` pour calculer*
+- [ ] **Registre de modules + factory + découverte entry-points `xerocr.modules`** + `register()` — **seul point d'extension tiers** (pas les métriques). — *gate : 1 plugin out-of-tree chargé (T6)*
+- [ ] `RunSpec`/`StepSpec` → `domain` ; loader YAML + `resolve_adapter_class` → `app`. · `security/` chemins (`validated_path`/`WorkspaceManager`) · capture deps/binaires → `RunManifest`.
+
+**Garde-fous :**
+- [ ] `no_side_effect_imports` (**pas de `register_default_metrics()` auto** ni `JOB_STORE` module-level) · `file_budgets` (run_spec/orchestrator/path_security/corpus_service <400) · `layer_dependencies`.
+
+**Validation par tranche :** `MIGRATION_PLAN.md` §3 — orchestrateur minimal + registre 1 module + `RunSpec` minimal (T1) · sécurité chemins testée d'abord + repro (T2) · entry-points + plugin (T6).
+
+- [~] **Supprimé** : tout `_benchmark_*` (double format) · `results.py`/`legacy.py` (shim) · ½ `partial_store` mort · `python_helpers` (preset). **Différé** : reprise partielle (1 seul mécanisme, à sa tranche).
+
+---
+
 *(Tous les verdicts ci-dessus sont **PROVISOIRES — à confirmer au build** ; le contact du code amont non encore mergé prévaut.)*

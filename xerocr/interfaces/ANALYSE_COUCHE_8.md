@@ -261,4 +261,23 @@ xerocr/interfaces/
 4. **Suppressions nettes** : `synthesis.py` + narratif (§6) ; `diagnose/economics/edition` (§8.4) ; le doublon `web/jobs.py` (→ `adapters/storage` **en gardant le SSE/events** que la réécriture actuelle a perdu) ; la façade de ré-export `security.py` ; la lourde SPA de pilotage (panneau mince) ; endpoints orphelins + conseils CLI morts + docs périmées (« 11 routers », `start`, `measurements`).
 5. **Invariants à porter fidèlement et tester EN PREMIER** : sécurité HTTP (CSRF/CSP/path-traversal/upload) **et** la barrière d'exécution **code tiers in-process** = le **mode public** (allowlist fail-closed moteurs/LLM/NER, §3) ; annulation/timeout coopératifs réels (§12) ; déterminisme du rendu (le HTML vient de `RunResult`, pas d'un état serveur). Budgets <400, zéro effet de bord à l'import, `no-broad-except`.
 
+## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** CLI `demo` en **T1**, `serve` en **T4**.
+
+**Enveloppe :**
+- [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` au niveau module). — *gate : `no_side_effect_imports` (importer `interfaces.web.app` n'ouvre aucune SQLite)*
+- [ ] **Contrat de commande CLI** = 5 verbes `run/report/compare/demo/serve` (le reste non porté). · DTO de transport (réf. types canoniques, pas de copie de regex).
+- [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) qui **importe** la validation de chemin d'`app/security` (pas de duplication). · SSE + annulation `RunControl`/`Deadline` branchés réellement.
+
+**Garde-fous :**
+- [ ] `no_side_effect_imports` (factory, pas de singleton module-level) · `layer_dependencies` · `file_budgets` (`_workflows`/`benchmark_utils`/`models` <400) · `no_broad_except` (28 `except Exception` → `logger.warning`) · **tests sécurité obligatoires** (CSRF→403, `..`/symlink→rejet, zip-bomb→échec, cloud en mode public→403).
+
+**Validation inter-couches :** `MIGRATION_PLAN.md` §3 — `demo` bout-en-bout **sans serveur** (T1) · `serve` avec sécurité complète + un `cancel` qui interrompt réellement + reprise SSE `Last-Event-ID` (T4).
+
+- [~] **Supprimé** : `synthesis`+narratif · `diagnose/economics/edition` · doublon `web/jobs.py` (→ `adapters/storage`, **SSE conservé**) · façade ré-export `security.py` · SPA lourde (→ panneau mince) · docs périmées (« 11 routers », `start`, `measurements`). **Convention (D-003/L7)** : le *flux de run* passe par `app`, pas `evaluation`/`reports` en direct.
+
+---
+
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/pipeline/adapters/app non encore implémentés) prévaut.*

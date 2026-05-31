@@ -11,6 +11,39 @@
 
 ---
 
+## Tableau de bord (roll-up) — état vivant
+
+> **Source de vérité du détail = la `DoD vivante` de chaque `COUCHE` doc.** Ce
+> tableau n'est qu'un **index** : il pointe, il ne recopie pas (sinon il dériverait).
+
+**Légende tri-état** : `[x]` fait **+ preuve nommée** (test/commande/grep) · `[ ]` à faire ·
+`[~]` **différé/réserve avec raison** (distinguer *différé-par-design* de *réserve-ouverte*).
+
+| Couche / Tranche | État | DoD détaillée (autorité) |
+|---|---|---|
+| 1 `domain` | ✅ **vert** | `xerocr/domain/MIGRATION_COUCHE_1.md` §DoD |
+| 2 `formats` | ✅ **vert** | `xerocr/formats/MIGRATION_COUCHE_2.md` §DoD |
+| 3 `evaluation` | 📋 plan, 0 code | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
+| 4 `pipeline` | 📋 analyse | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
+| 5 `adapters` | 📋 analyse | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
+| 6 `app` | 📋 analyse | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
+| 7 `reports` | 📋 analyse | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 📋 analyse | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
+| **T1 squelette ambulant** | ⏳ pas commencé | critère inter-couches §3-T1 |
+
+### Rituel de réconciliation (NON négociable — c'est ce qui rend la redondance utile)
+
+À chaque tranche, l'agent de construction :
+1. **lit les deux** — ce plan (tranche + roll-up) **et** la `DoD vivante` de chaque couche touchée ;
+2. **coche uniquement ce qu'un *gate nommé* prouve** (test/commande/grep) — jamais « je l'affirme » ;
+3. **si pas coché → écrit pourquoi** (différé-par-design vs réserve-ouverte vs bloqué) ;
+4. **si le plan et une DoD de couche divergent → arbitre** : corrige l'un, **ou** justifie l'écart dans le **journal de décisions** (§10) ;
+5. **met à jour les deux dans le MÊME commit que le code** (règle d'or anti-dérive : les docs de Picarones mentaient parce qu'ils étaient mis à jour à part, ou jamais) ;
+6. **n'ajoute les cases de *surface*** (quelle métrique/route exactement) **qu'au démarrage de la tranche** — pas toutes d'avance (l'enveloppe est détaillée maintenant, la surface est périssable).
+
+---
+
 ## 0. Principes directeurs → mécanismes concrets
 
 Les quatre exigences du projet ne sont pas des slogans : chacune est portée par un
@@ -245,6 +278,25 @@ Mesuré le 2026-05-31 sur la branche de travail :
 
 ---
 
+## 10. Journal de décisions (ADR-lite, append-only)
+
+> Toute décision/arbitrage qui **confirme, corrige ou contredit** un verdict
+> PROVISOIRE d'un `COUCHE` doc, ou qui ajoute un choix transverse, est tracée ici.
+> « Expliquer tous les choix faits » — garder le *pourquoi*, dater l'entrée.
+
+| ID | Date | Tranche | Question / arbitrage | Verdict | Pourquoi | Remplace quel PROVISOIRE |
+|---|---|---|---|---|---|---|
+| D-001 | 2026-05-31 | T0 | `model_rebuild()` au niveau module est-il un effet de bord interdit ? | **Allowlisté** dans `test_no_side_effect_imports` | Idiome Pydantic v2 pur/idempotent/requis pour modèles récursifs (régions imbriquées) ; ≠ `register_default_metrics()` | — (découvert en calibrant le gate) |
+| D-002 | 2026-05-31 | T0 | 2 garde-fous d'archi manquants | **Ajoutés** : `no_side_effect_imports` + `file_budgets` | Exigés par `MIGRATION_COUCHE_1 §7` + `CLAUDE.md §5` ; étaient absents → régression possible | comble la DoD couche 1 |
+| D-003 | 2026-05-31 | transverse | Un agent affirmait « 27 violations d'archi en `interfaces` » | **Réfuté** : ce sont des imports légaux (couche plus interne) | `test_layer_dependencies` l.258 « peut importer plus interne » ; CI verte. C'est une **convention** (le run passe par `app`), pas une violation dure | crée la convention L7 (plan §8) |
+| D-004 | 2026-05-31 | méthode | Où vit la DoD vivante ? | **Dans chaque `COUCHE` doc** + plan = roll-up/orchestration/journal | Redondance plan↔couche = **détection d'erreur** (réconciliation forcée), pas duplication ; les deux sont complémentaires | — |
+| D-005 | 2026-05-31 | méthode | Granularité des cases par tranche | **Enveloppe + garde-fous + validation** | Signal porteur sans bruit (≠ case par fichier) | — |
+
+*Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
+
+---
+
 *Référence : ce plan relie les guides par couche en un parcours de tranches. Enveloppe
 (§1) durable ; surface (§3 détail) à confirmer au build. Verdicts de surface marqués
-PROVISOIRE.*
+PROVISOIRE. Détail d'avancement = `DoD vivante` de chaque `COUCHE` doc (autorité) ;
+ce plan = index + orchestration + journal.*

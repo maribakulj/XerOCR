@@ -241,4 +241,22 @@ xerocr/adapters/
 4. **Élagage discipliné** : **SUPPRIMER** `_fallback_log` (son seul débouché, le narratif, est supprimé), `atomic_write_bytes`, la surface morte (escriptorium/gallica/hf), `execution_mode` (déjà parti) ; **sortir** les ~220 LOC de données démo en `data/` ; **sortie corpus unique = `Corpus`** (fin des dict-manifestes). Registre/découverte = **couche `app`** (entry-points `xerocr.modules`), **seul point d'extension tiers = les briques de pipeline**.
 5. **Placement & dépendances** : les importeurs de corpus restent **first-party en couche 5** (transport + parsing → `Corpus`), l'**orchestration disque** remonte en service `app` ; le **store SQLite longitudinal/tidy** est **rapatrié** de `evaluation/` vers `adapters/storage` (cf. `MIGRATION_COUCHE_3.md`). Whitelist d'archi `adapters/` à **expliciter** (inclut `evaluation` pour le type `Corpus` chargé).
 
+## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Se remplit **par tranches** (chaque adapter naît avec son pipeline).
+
+**Enveloppe :**
+- [ ] Les `Base*Adapter` = **mixins d'impl** (pas un 2ᵉ contrat) ; implémentent le `Module` Protocol (couche 4) **directement**, avec **`version`**. — *gate : `RunManifest` capte name+version de chaque step*
+- [ ] `effective_output_types` conservé · utils racine portés en bloc (`_atomic_io`/`_retry` jitter corrigé/`output_paths`/`_image`/`_http`).
+
+**Garde-fous :**
+- [ ] `layer_dependencies` : whitelist `adapters` **explicitée** (domain+pipeline+formats+evaluation pour `Corpus`) · `no_side_effect_imports` (**tue `install_opener` global** D-E) · `no_broad_except` (htr/hf) · `file_budgets` (llm/base, escriptorium, iiif… à dégraisser <400).
+
+**Validation par tranche :** `MIGRATION_PLAN.md` §3 — starter pack via `Module` (T1-T3) · **1 seul `JobStore` avec SSE/`job_events` réabsorbés** (T4, cf. §0/D-γ) · bugs latents `Corpus(source=)`/`selected_indices+1` corrigés + test `live` (T7).
+
+- [~] **Différé** : kraken/calamari/pero/cloud OCR, anthropic/mistral, **VLM (0 conso → pas avant `zero_shot`)**, importeurs (1/tranche, sortie unique `Corpus`), stores. **Supprimer** `_fallback_log` + données démo en dur (→`data/`).
+
+---
+
 *Tous les verdicts de la Partie 1 sont marqués **PROVISOIRE — à confirmer au build** : le contact du code corrige souvent l'analyse.*
