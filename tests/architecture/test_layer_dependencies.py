@@ -155,6 +155,8 @@ APP_ALLOWED_PKG = (
     "xerocr.adapters",
     "xerocr.app",
 )
+#: app charge des specs YAML (loader) → ``yaml`` autorisé.
+APP_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
 
 
 def test_app_imports_are_allowed():
@@ -167,7 +169,7 @@ def test_app_imports_are_allowed():
                 mod.startswith(pkg) for pkg in APP_ALLOWED_PKG
             ):
                 continue
-            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+            if mod == "__future__" or top in APP_ALLOWED_EXT or top in STDLIB:
                 continue
             bad.append(mod)
         if bad:

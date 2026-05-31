@@ -241,7 +241,8 @@ xerocr/app/
 - [x] **Registre + factory** (`name→Module` via builder enregistré, convention `<kind>:<label>`) — socle en dur, **seul** point d'extension. — *preuve : `test_module_registry` (build `precomputed` ; kind inconnu ; kwargs incohérents)*
 - [ ] Découverte **entry-points `xerocr.modules`** + `register()` tiers. — *T6*
 - [x] `RunSpec` → `domain` (compose `PipelineSpec` **directement**, sans `StepSpec` — D-010) ; orchestrateur assemble `RunManifest` (`adapter_kwargs` capturés). — *preuve : `test_run_spec` + `test_orchestrator`*
-- [ ] loader YAML + `resolve_adapter_class` · `security/` chemins (`validated_path`) · capture deps/binaires lock → `RunManifest`. — *T2*
+- [x] **loader YAML** (`RunSpec.model_validate`, `extra="forbid"`) + **sécurité chemins** (`validated_path` : rejet `..`/absolu-hors-base/octet-nul/symlink, §12) — **pas** de `resolve_adapter_class` (le registre résout `name→Module`, D-010). — *preuve : `test_loader` + `test_security`*
+- [ ] capture deps/binaires lock → `RunManifest` (reproductibilité). — *avec `compare` (T2.f)*
 
 **Garde-fous :**
 - [x] `no_side_effect_imports` (**pas de `register_default_*()` auto** ni singleton module-level ; `register_default_modules`/`metrics` explicites) · `file_budgets` · `layer_dependencies`. — *preuve : suite archi verte*
