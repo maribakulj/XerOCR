@@ -270,9 +270,11 @@ xerocr/interfaces/
 - [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` au niveau module). — *gate : `no_side_effect_imports` (importer `interfaces.web.app` n'ouvre aucune SQLite)*
 - [ ] **Contrat de commande CLI** = 5 verbes `run/report/compare/demo/serve` (le reste non porté). · DTO de transport (réf. types canoniques, pas de copie de regex).
 - [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) qui **importe** la validation de chemin d'`app/security` (pas de duplication). · SSE + annulation `RunControl`/`Deadline` branchés réellement.
+- [ ] **Duplicable par construction** (cible vitrine, plan §Cibles) : config **par secrets/env** (zéro chemin en dur), **boot sans aucun secret** (le mode public démarre nu), déblocage moteurs **fail-closed** dès qu'une clé apparaît. — *gate : conteneur démarré sans secret → vitrine OK, moteurs à clé masqués*
 
 **Garde-fous :**
 - [ ] `no_side_effect_imports` (factory, pas de singleton module-level) · `layer_dependencies` · `file_budgets` (`_workflows`/`benchmark_utils`/`models` <400) · `no_broad_except` (28 `except Exception` → `logger.warning`) · **tests sécurité obligatoires** (CSRF→403, `..`/symlink→rejet, zip-bomb→échec, cloud en mode public→403).
+- [ ] **Hygiène des clés = invariant testé** (vaut aussi en **mode dupliqué**, où le code tourne avec la clé d'autrui) : clé en **mémoire-seule**, **jamais** journalisée / persistée (JobStore, `RunManifest`) / rendue (HTML). — *gate : test « la clé n'apparaît dans aucun log, artefact ou réponse »*
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3 — `demo` bout-en-bout **sans serveur** (T1) · `serve` avec sécurité complète + un `cancel` qui interrompt réellement + reprise SSE `Last-Event-ID` (T4).
 

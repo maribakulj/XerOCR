@@ -31,6 +31,8 @@
 | 8 `interfaces` | 📋 analyse | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ⏳ pas commencé | critère inter-couches §3-T1 |
+| **Rapport autonome interactif** | ⏳ livrable **T1** | artefact partageable sans backend — §Cibles de distribution |
+| **Space hébergé (vitrine, mode public)** | ⏳ **non-optionnel** — T4 | §Cibles de distribution |
 
 ### Rituel de réconciliation (NON négociable — c'est ce qui rend la redondance utile)
 
@@ -278,6 +280,34 @@ Mesuré le 2026-05-31 sur la branche de travail :
 
 ---
 
+## Cibles de distribution (calcul vs vitrine)
+
+> **Principe :** séparer le **calcul** (produire des résultats — exige moteurs/clés) de la
+> **vitrine** (montrer des résultats — n'exige rien). L'archi (déterminisme + `RunManifest` +
+> adapter `precomputed` + rapport HTML autonome) est faite pour ce découplage.
+
+| | **Calcul** | **Vitrine** |
+|---|---|---|
+| Où | en **local** (`serve`/CLI) : tes clés, tes corpus, privé | **hébergée**, partageable |
+| Clés | oui (les tiennes, sur ta machine) | **aucune** déployée |
+| Coût / abus | tu ne paies que tes runs | nul (rien à calculer) |
+| Quoi | moteurs OCR/LLM | **rapport HTML autonome, interactif côté navigateur** (repli/tri/filtre/comparaison de runs **déjà calculés** ; jamais de re-mesure) |
+
+**Canaux, par engagement croissant — le Space n'est PAS optionnel :**
+
+1. **Rapport autonome interactif** — livrable **≈ T1**. HTML déterministe, sans backend, sans clé, sans CDN ; interactif dans le navigateur (sélection/exploration, pas de recalcul). **Premier artefact partageable**, pas un substitut du Space.
+2. **Space hébergé « vitrine » (mode public)** — **cible engagée, T4** (exige `serve`). Sert tes runs pré-calculés via l'app complète ; allowlist **fail-closed** (moteurs à clé bloqués) ; **zéro secret déployé**. La démo publique.
+3. **BYO-key par *duplication*** — **quasi-gratuit si (2) est bâti propre** (config-par-secrets, boot-sans-secret, fail-closed) : activer = surtout **documenter** le flux *Duplicate this Space* (chaque user met SA clé dans SA copie). La **custodie de secrets reste hors de ton assiette**. Coûts : friction (compte HF + hardware) et forks qui vieillissent (pas de push de fix ; `RunManifest` rend la divergence détectable).
+4. **Service partagé BYO-key** (une boîte, clés saisies chez toi) — **non retenu par défaut** : custodie de secrets + limites anti-abus + hygiène **testée** (DoD couche 8). À n'ouvrir que sur besoin explicite.
+
+**Écarté :** desktop bundlé PyInstaller (D-006) — « install facile » = vitrine + `pipx`/`serve`.
+
+**Conséquences de conception (couche 8) :** la vitrine est **duplicable par construction** dès
+sa v1 ; et comme **ton code tourne avec la clé d'autrui en mode dupliqué**, l'hygiène des clés
+(mémoire-seule, jamais journalisée/persistée/rendue) est un invariant **testé**, pas une intention.
+
+---
+
 ## 10. Journal de décisions (ADR-lite, append-only)
 
 > Toute décision/arbitrage qui **confirme, corrige ou contredit** un verdict
@@ -291,6 +321,7 @@ Mesuré le 2026-05-31 sur la branche de travail :
 | D-003 | 2026-05-31 | transverse | Un agent affirmait « 27 violations d'archi en `interfaces` » | **Réfuté** : ce sont des imports légaux (couche plus interne) | `test_layer_dependencies` l.258 « peut importer plus interne » ; CI verte. C'est une **convention** (le run passe par `app`), pas une violation dure | crée la convention L7 (plan §8) |
 | D-004 | 2026-05-31 | méthode | Où vit la DoD vivante ? | **Dans chaque `COUCHE` doc** + plan = roll-up/orchestration/journal | Redondance plan↔couche = **détection d'erreur** (réconciliation forcée), pas duplication ; les deux sont complémentaires | — |
 | D-005 | 2026-05-31 | méthode | Granularité des cases par tranche | **Enveloppe + garde-fous + validation** | Signal porteur sans bruit (≠ case par fichier) | — |
+| D-006 | 2026-05-31 | distribution | Comment partager / qui peut l'utiliser ? | **Vitrine hébergée non-optionnelle (T4), duplicable par construction** ; desktop écarté | Découpler calcul (local, tes clés) / vitrine (sans clé) ; BYO-key par *duplication* HF = doc, pas un chantier (custodie de secrets hors de ton assiette) ; rapport autonome **interactif** = artefact T1 | crée §Cibles de distribution |
 
 *Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
 
