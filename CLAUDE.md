@@ -290,17 +290,37 @@ couche 3), DTO web (transport → couche 8).
 
 ## 9. Workflow de migration (conversations)
 
-- **Mémoire durable = fichiers markdown committés.** Chaque couche (ou chaque
-  phase verticale) a son plan markdown dans le repo. C'est ce qui permet à une
-  conversation fraîche de reprendre sans traîner l'historique.
-- **Une conversation par couche** (couches stables 1-2) ou **par phase
-  verticale** (couches 3-8). Les grosses couches (`evaluation`, `reports`) se
-  sous-découpent par sous-paquet.
-- **Ne jamais tout faire dans une seule conversation** : la fenêtre de contexte
-  sature, le résumé perd du détail, le taux d'erreur explose.
-- Chaque conversation : lit le plan markdown concerné + la source Picarones de
-  référence → écrit le code XerOCR + ses tests → vérifie
-  (`mypy`/`ruff`/`pytest`) → commit sur la branche.
+- **Mémoire durable = fichiers markdown committés.** C'est ce qui permet à une
+  conversation fraîche de travailler sans traîner l'historique.
+- **Deux natures de savoir, à NE PAS mélanger :**
+  - **Analyse de la *source* Picarones** (rôle réel de chaque fichier, bugs, code
+    mort, doublons, risques) → **durable** : Picarones est gelé (lecture seule),
+    cette analyse ne périme jamais. Vaut d'être produite d'avance.
+  - **Design *cible* XerOCR** (réorganisation, verdicts précis) → **périssable** :
+    se précise au contact du code ; le design aval dépend de contrats amont non
+    encore figés. À confirmer juste-à-temps, pas à figer d'avance.
+- **Deux types de session, à NE PAS confondre :**
+  - **Session d'ANALYSE** (par couche, ou par sous-paquet d'une grosse couche) :
+    profonde, budget plein, **ne code rien**. Produit un guide de portage durable
+    `xerocr/<couche>/ANALYSE_COUCHE_<N>.md` — **scannable** (tableaux + verdicts,
+    prose minimale), verdicts garde/modifie/déplace/supprime **marqués
+    « PROVISOIRE — à confirmer au build »** (le contact du code corrige souvent
+    l'analyse). Prompt prêt à l'emploi :
+    [`PROMPT_ANALYSE_COUCHE.md`](PROMPT_ANALYSE_COUCHE.md).
+  - **Session de CONSTRUCTION** (par **tranche verticale**, PAS par couche) : lit
+    les `ANALYSE_*`/`MIGRATION_*` concernés + ce `CLAUDE.md` + la source Picarones,
+    code une tranche fine de pleine profondeur (squelette d'abord, puis
+    épaississements), vérifie (`mypy`/`ruff`/`pytest`), commit. **On construit par
+    tranches, jamais en complétant une couche entière de haut en bas** (sinon rien
+    ne tourne avant la fin + risque de sur-ingénierie ; cf. §4).
+- **Docs par couche** : `ANALYSE_COUCHE_<N>.md` (durable, toujours) +, pour les
+  couches **riches en contrats** (ex. `evaluation`), un `MIGRATION_COUCHE_<N>.md`
+  (l'**enveloppe** : contrats plein-scope + ordre des tranches).
+- **Lire `CLAUDE.md` EN ENTIER avant d'agir.** Si une analyse ou un plan contredit
+  `CLAUDE.md` ou une couche déjà mergée, **le signaler explicitement et s'arrêter
+  pour clarifier** — ne jamais passer outre en silence.
+- **Ne jamais tout faire dans une seule conversation** : la fenêtre sature, le
+  résumé perd du détail, le taux d'erreur explose.
 
 ---
 
