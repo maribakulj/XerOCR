@@ -28,3 +28,14 @@ def test_get_and_select_by_input_types() -> None:
 
 def test_fresh_registry_is_empty() -> None:
     assert MetricRegistry().names() == ()
+
+
+def test_cross_engine_metrics_registered() -> None:
+    registry = MetricRegistry()
+    register_default_metrics(registry)
+    names = {metric.name for metric in registry.cross_engine_metrics()}
+    assert "significance_p" in names
+
+
+def test_fresh_registry_has_no_cross_engine_metrics() -> None:
+    assert MetricRegistry().cross_engine_metrics() == ()

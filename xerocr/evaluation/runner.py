@@ -1,15 +1,14 @@
-"""``evaluate_run`` — le runner d'évaluation (par-document → agrégat).
+"""``evaluate_run`` — le runner (par-document → agrégat → inter-moteurs).
 
-Reçoit des **artefacts déjà produits** (par l'exécuteur de la couche 4, via
-l'app) : il n'exécute aucun moteur et n'importe pas ``pipeline`` (couche plus
-externe). Deux passes : (1) par-document, ``None`` = non applicable ; (2) agrégat
-par pipeline, ``None`` **exclu**, **support** exposé. La passe inter-moteurs
-(``cross_engine``) arrive plus tard en T2.
+Reçoit des **artefacts déjà produits** (couche 4, via l'app) : il n'exécute aucun
+moteur et n'importe pas ``pipeline``. **Trois passes** par vue : (1) par-document
+(``None`` = non applicable), (2) agrégat par pipeline (``None`` exclu, **support**
+exposé), (3) **inter-moteurs** — chaque ``CrossEngineMetric`` compare les
+pipelines et écrit dans ``RunResult.cross_engine``.
 
-Le runner applique la **normalisation déclarée par la vue**
-(``normalization_profile`` + ``char_exclude``), symétriquement à la référence et
-à l'hypothèse (couche 2 ``formats/text``), et **charge chaque représentation une
-seule fois** par signature ``(ref, hyp)`` — les métriques texte la partagent.
+Normalisation de la vue (``normalization_profile``/``char_exclude``) appliquée
+symétriquement GT/hyp ; représentation chargée+normalisée **une fois par
+signature** ``(ref, hyp)``.
 """
 
 from __future__ import annotations
@@ -21,7 +20,7 @@ from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
-from xerocr.evaluation.context import DocContext
+from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metrics._helpers import safe_mean
 from xerocr.evaluation.registry import MetricRegistry
@@ -40,6 +39,9 @@ PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
 #: Signature d'entrée d'une métrique : ``(type_référence, type_hypothèse)``.
 _Signature = tuple[ArtifactType, ArtifactType]
 
+#: { métrique : { pipeline : [valeur par doc, alignée, ``None`` inclus] } }
+_Series = dict[str, dict[str, list[float | None]]]
+
 
 def evaluate_run(
     *,
@@ -53,15 +55,20 @@ def evaluate_run(
     pipeline_order = [spec.name for spec in manifest.pipeline_specs]
     pipelines: list[PipelineResult] = []
     documents: list[RunDocumentResult] = []
+    cross_engine: list[MetricScore] = []
 
     for view in evaluation.views:
+        series: _Series = {name: {} for name in view.metric_names}
         for pipeline_name in pipeline_order:
-            collected: dict[str, list[float]] = {n: [] for n in view.metric_names}
+            for name in view.metric_names:
+                series[name][pipeline_name] = []
             for document in corpus.documents:
                 candidate = _candidate_for(
                     pipeline_outputs, pipeline_name, document.id, view.candidate_types
                 )
-                scores = _score_document(view, document, candidate, registry, collected)
+                scores = _score_document(view, document, candidate, registry)
+                for score in scores:
+                    series[score.metric][pipeline_name].append(score.value)
                 documents.append(
                     RunDocumentResult(
                         document_id=document.id,
@@ -70,23 +77,54 @@ def evaluate_run(
                         scores=scores,
                     )
                 )
-            aggregate = tuple(
-                MetricScore(
-                    metric=name,
-                    value=safe_mean(collected[name]),
-                    support=len(collected[name]),
-                )
-                for name in view.metric_names
-            )
             pipelines.append(
                 PipelineResult(
-                    pipeline=pipeline_name, view=view.name, aggregate=aggregate
+                    pipeline=pipeline_name,
+                    view=view.name,
+                    aggregate=tuple(
+                        _aggregate(name, series[name][pipeline_name])
+                        for name in view.metric_names
+                    ),
                 )
             )
+        cross_engine.extend(_cross_engine_scores(view, series, registry))
 
     return RunResult(
-        manifest=manifest, pipelines=tuple(pipelines), documents=tuple(documents)
+        manifest=manifest,
+        pipelines=tuple(pipelines),
+        documents=tuple(documents),
+        cross_engine=tuple(cross_engine),
     )
+
+
+def _aggregate(name: str, values: list[float | None]) -> MetricScore:
+    present = [value for value in values if value is not None]
+    return MetricScore(metric=name, value=safe_mean(present), support=len(present))
+
+
+def _cross_engine_scores(
+    view: EvaluationView, series: _Series, registry: MetricRegistry
+) -> list[MetricScore]:
+    metrics = registry.cross_engine_metrics()
+    if not metrics:
+        return []
+    scores: list[MetricScore] = []
+    for base_metric in view.metric_names:
+        per_pipeline = {
+            pipeline: tuple(values)
+            for pipeline, values in series[base_metric].items()
+        }
+        context = CrossEngineContext(metric=base_metric, per_pipeline=per_pipeline)
+        for metric in metrics:
+            value, support = metric.fn(context)
+            scores.append(
+                MetricScore(
+                    metric=f"{base_metric}:{metric.name}",
+                    value=value,
+                    support=support,
+                )
+            )
+    return scores
 
 
 def _candidate_for(
@@ -110,7 +148,6 @@ def _score_document(
     document: DocumentRef,
     candidate: Artifact | None,
     registry: MetricRegistry,
-    collected: dict[str, list[float]],
 ) -> tuple[MetricScore, ...]:
     # Représentation chargée + normalisée une seule fois par signature, partagée
     # par toutes les métriques qui la consomment (CER/WER/MER).
@@ -125,8 +162,6 @@ def _score_document(
             contexts[signature] = _context_for(view, document, candidate, signature)
         context = contexts[signature]
         value = metric.fn(context) if context is not None else None
-        if value is not None:
-            collected[name].append(value)
         scores.append(MetricScore(metric=name, value=value))
     return tuple(scores)
 

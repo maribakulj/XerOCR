@@ -150,3 +150,45 @@ def test_unknown_normalization_profile_raises(tmp_path: Path) -> None:
             registry=_registry(),
             manifest=_manifest(1),
         )
+
+
+def test_cross_engine_significance_written(tmp_path: Path) -> None:
+    # 2 pipelines (a parfait, b avec erreurs) → RunResult.cross_engine peuplé
+    gt1 = _write(tmp_path / "d1.gt.txt", "abcd")
+    gt2 = _write(tmp_path / "d2.gt.txt", "abcd")
+    a1 = _write(tmp_path / "d1.a.txt", "abcd")
+    a2 = _write(tmp_path / "d2.a.txt", "abcd")
+    b1 = _write(tmp_path / "d1.b.txt", "xbcd")
+    b2 = _write(tmp_path / "d2.b.txt", "xycd")
+    corpus = CorpusSpec(name="c", documents=(_doc("d1", gt1), _doc("d2", gt2)))
+    manifest = RunManifest(
+        run_id="r",
+        corpus_name="c",
+        n_documents=2,
+        pipeline_specs=(
+            PipelineSpec(name="a", initial_inputs=(ArtifactType.IMAGE,)),
+            PipelineSpec(name="b", initial_inputs=(ArtifactType.IMAGE,)),
+        ),
+        code_version="1.0",
+        started_at=FIXED,
+        completed_at=FIXED,
+    )
+    outputs = {
+        "a": {
+            "d1": {ArtifactType.RAW_TEXT: _candidate("d1", a1)},
+            "d2": {ArtifactType.RAW_TEXT: _candidate("d2", a2)},
+        },
+        "b": {
+            "d1": {ArtifactType.RAW_TEXT: _candidate("d1", b1)},
+            "d2": {ArtifactType.RAW_TEXT: _candidate("d2", b2)},
+        },
+    }
+    result = evaluate_run(
+        corpus=corpus,
+        evaluation=EvaluationSpec(views=(TEXT_VIEW,)),
+        pipeline_outputs=outputs,
+        registry=_registry(),
+        manifest=manifest,
+    )
+    keys = {score.metric for score in result.cross_engine}
+    assert "cer:significance_p" in keys

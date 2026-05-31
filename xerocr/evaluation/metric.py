@@ -1,10 +1,11 @@
-"""``DocumentMetric`` + décorateur **pur**.
+"""Métriques co-localisées (fiche + fonction) + décorateurs **purs**.
 
-Une métrique par-document = une fiche (``MetricSpec``, domain) **co-localisée**
-avec sa fonction, qui opère sur un ``DocContext``. Le décorateur
-``@document_metric`` ne fait que **construire** l'objet — il ne mute aucun
-registre global (→ import sans effet de bord, CLAUDE.md §7). La collecte dans un
-registre est explicite (``register_default_metrics``).
+- ``DocumentMetric`` (par-document) : opère sur un ``DocContext``.
+- ``CrossEngineMetric`` (inter-moteurs) : opère sur un ``CrossEngineContext`` et
+  renvoie ``(valeur, support)``.
+
+Les décorateurs **construisent** l'objet sans muter de registre global (→ import
+sans effet de bord, CLAUDE.md §7) ; la collecte est explicite.
 """
 
 from __future__ import annotations
@@ -14,10 +15,13 @@ from dataclasses import dataclass
 
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.evaluation import MetricSpec
-from xerocr.evaluation.context import DocContext
+from xerocr.evaluation.context import CrossEngineContext, DocContext
 
 #: Une métrique par-document calcule un scalaire (ou ``None`` si non applicable).
 DocMetricFn = Callable[[DocContext], float | None]
+
+#: Une métrique inter-moteurs renvoie ``(valeur, support)`` (``None`` si N/A).
+CrossEngineFn = Callable[[CrossEngineContext], tuple[float | None, int]]
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,15 @@ class DocumentMetric:
     @property
     def input_types(self) -> tuple[ArtifactType, ArtifactType]:
         return self.spec.input_types
+
+
+@dataclass(frozen=True)
+class CrossEngineMetric:
+    """Métrique inter-moteurs : compare les pipelines entre eux sur une métrique."""
+
+    name: str
+    description: str
+    fn: CrossEngineFn
 
 
 def document_metric(
@@ -61,4 +74,22 @@ def document_metric(
     return decorate
 
 
-__all__ = ["DocMetricFn", "DocumentMetric", "document_metric"]
+def cross_engine_metric(
+    *, name: str, description: str = ""
+) -> Callable[[CrossEngineFn], CrossEngineMetric]:
+    """Construit une ``CrossEngineMetric`` depuis une fonction (pur, sans effet)."""
+
+    def decorate(fn: CrossEngineFn) -> CrossEngineMetric:
+        return CrossEngineMetric(name=name, description=description, fn=fn)
+
+    return decorate
+
+
+__all__ = [
+    "CrossEngineFn",
+    "CrossEngineMetric",
+    "DocMetricFn",
+    "DocumentMetric",
+    "cross_engine_metric",
+    "document_metric",
+]

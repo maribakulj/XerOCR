@@ -299,7 +299,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 
 - [x] **WER/MER** (impl maison déterministe + **parité jiwer**, 15 cas) au socle texte. — *preuve : `test_metrics_text` (valeurs main) + `test_metrics_parity` (vs jiwer)*
 - [x] **Profils de normalisation** (`normalization_profile`/`char_exclude`) honorés par le runner (couche 2 `formats/text`), symétriques GT/hyp ; **1 chargement par signature**. — *preuve : `test_runner` (caseless→0 ; profil inconnu→erreur) ; démo : vue `francais_medieval`*
-- [~] **Surface encore différée** : stats `scipy`, `cross_engine` (T2) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
+- [x] **`cross_engine` + stats** : passe inter-moteurs (`CrossEngineContext`) → `RunResult.cross_engine` ; significativité **Wilcoxon/Friedman** (`scipy`, dép. dure). — *preuve : `test_metrics_stats` + `test_runner` (`cer:significance_p`)*
+- [~] **Surface encore différée** : `compare` + sections engines/cross (T2.f) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
 
 ---
 
