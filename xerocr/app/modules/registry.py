@@ -80,10 +80,22 @@ def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
     )
 
 
+def _build_openai(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "openai : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.llm.openai import OpenAIAdapter
+
+    return OpenAIAdapter(label=label, model=str(kwargs.get("model", "gpt-4o-mini")))
+
+
 def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
+    registry.register_builder("openai", _build_openai)
 
 
 __all__ = [
