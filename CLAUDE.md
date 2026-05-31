@@ -243,7 +243,7 @@ ne fige pas une forme qui dépend d'une couche non encore conçue.
 |---|---|---|
 | `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | tranche segmentation (couche 4) |
 | `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
-| `RunSpec` (+ `StepSpec`) | `app/schemas/run_spec.py` | migration couche 6 (séparer du loader YAML) |
+| `RunSpec` ✅ (créé T1, **sans `StepSpec`** — D-010 : `PipelineStep` suffit) | `app/schemas/run_spec.py` | couche 6 — fait ; loader YAML différé T2 |
 | `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |
 
 **Non-candidats confirmés** (faux positifs analysés) : `RunContext` (→ couche 4,

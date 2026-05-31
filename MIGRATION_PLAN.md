@@ -26,7 +26,7 @@
 | 3 `evaluation` | 🔨 **T1** (RunResult + registre + runner verts) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
 | 4 `pipeline` | 🔨 **T1** (Protocol + exécuteur verts) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
 | 5 `adapters` | 🔨 **T1** (`precomputed` vert) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
-| 6 `app` | 📋 analyse | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
+| 6 `app` | 🔨 **T1** (orchestrateur + registre/factory + RunSpec) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
 | 7 `reports` | 📋 analyse | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
 | 8 `interfaces` | 📋 analyse | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
@@ -325,6 +325,7 @@ sa v1 ; et comme **ton code tourne avec la clé d'autrui en mode dupliqué**, l'
 | D-007 | 2026-05-31 | T1 | Outillage métrique & CLI (deps minimales) | **CER = impl maison déterministe** (jiwer = oracle de parité à T2) ; **CLI = argparse** (stdlib) | `pyproject` n'a ni `jiwer` ni `click` ; squelette **sans dépendance ajoutée** + contrôle du déterminisme ; cadre le T2 « parité vs jiwer » | — |
 | D-008 | 2026-05-31 | T1 | `RunControl` : `raise_if_cancelled` à garder ou retirer ? | **Conservé** (et devient le mécanisme d'annulation coopératif) ; `register_cancel_handle` **omis** (0 conso) | L'analyse couche 4 disait « retirer, 0 conso » — **corrigé** : en T1, executor + `precomputed` l'appellent (tests verts), donc il A un consommateur. Le handle SDK, lui, reste omis jusqu'à l'adapter LLM (T3/T4) | corrige verdict ANALYSE_COUCHE_4 (`run_control`) |
 | D-009 | 2026-05-31 | T1 (couche 3) | Réserve T0 : `EvaluationSpec`/`ProjectionSpec` sans consommateur | `MetricSpec`/`EvaluationView`/`EvaluationSpec` **confirmés** (registre + runner les consomment) ; `ProjectionSpec` **différé** (T2, projections) | T1 leur donne enfin un consommateur → lève la tension « pas de conso = supprimé » pour les 3 ; `ProjectionSpec` attend sa tranche | lève partiellement la réserve couche 1 §8 |
+| D-010 | 2026-05-31 | T1 (couche 6) | `RunSpec` : reprendre le `StepSpec` de l'héritage ? | **Non** — `RunSpec` compose `PipelineSpec`/`PipelineStep` (domain) directement ; **pas de `StepSpec`** | Un `StepSpec` distinct = **2ᵉ représentation de pipeline** (la dette qu'on tue) ; `PipelineStep` déclaratif suffit. La factory résout `<kind>:<label>` via un **builder enregistré** (pas d'import de chemin pointé) | raffine le backlog CLAUDE (`RunSpec (+StepSpec)`) |
 
 *Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
 

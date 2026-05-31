@@ -234,15 +234,17 @@ xerocr/app/
 ## DoD vivante (couche 6) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Naît **par tranches** (T1 minimal → T6).
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — orchestrateur minimal + registre/factory + `RunSpec` verts ; loader YAML / sécurité / entry-points à T2/T4/T6.
 
 **Enveloppe :**
-- [ ] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis evaluation ; l'assemblage `RunResult` se fait en `evaluation/runner`). — *gate : `layer_dependencies` — `app` n'importe pas `evaluation.metrics*` pour calculer*
-- [ ] **Registre de modules + factory + découverte entry-points `xerocr.modules`** + `register()` — **seul point d'extension tiers** (pas les métriques). — *gate : 1 plugin out-of-tree chargé (T6)*
-- [ ] `RunSpec`/`StepSpec` → `domain` ; loader YAML + `resolve_adapter_class` → `app`. · `security/` chemins (`validated_path`/`WorkspaceManager`) · capture deps/binaires → `RunManifest`.
+- [x] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis `evaluate_run` ; l'assemblage métrique vit en `evaluation`). — *preuve : `test_app_imports_are_allowed` ; l'orchestrateur délègue, n'importe aucune `evaluation.metrics*`*
+- [x] **Registre + factory** (`name→Module` via builder enregistré, convention `<kind>:<label>`) — socle en dur, **seul** point d'extension. — *preuve : `test_module_registry` (build `precomputed` ; kind inconnu ; kwargs incohérents)*
+- [ ] Découverte **entry-points `xerocr.modules`** + `register()` tiers. — *T6*
+- [x] `RunSpec` → `domain` (compose `PipelineSpec` **directement**, sans `StepSpec` — D-010) ; orchestrateur assemble `RunManifest` (`adapter_kwargs` capturés). — *preuve : `test_run_spec` + `test_orchestrator`*
+- [ ] loader YAML + `resolve_adapter_class` · `security/` chemins (`validated_path`) · capture deps/binaires lock → `RunManifest`. — *T2*
 
 **Garde-fous :**
-- [ ] `no_side_effect_imports` (**pas de `register_default_metrics()` auto** ni `JOB_STORE` module-level) · `file_budgets` (run_spec/orchestrator/path_security/corpus_service <400) · `layer_dependencies`.
+- [x] `no_side_effect_imports` (**pas de `register_default_*()` auto** ni singleton module-level ; `register_default_modules`/`metrics` explicites) · `file_budgets` · `layer_dependencies`. — *preuve : suite archi verte*
 
 **Validation par tranche :** `MIGRATION_PLAN.md` §3 — orchestrateur minimal + registre 1 module + `RunSpec` minimal (T1) · sécurité chemins testée d'abord + repro (T2) · entry-points + plugin (T6).
 

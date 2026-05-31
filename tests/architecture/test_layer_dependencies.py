@@ -141,3 +141,33 @@ def test_evaluation_imports_are_allowed():
         if bad:
             offenders[str(path.relative_to(ROOT))] = bad
     assert not offenders, f"imports interdits dans evaluation : {offenders}"
+
+
+#: app câble toutes les couches internes (domain..adapters) ; il orchestre, ne
+#: calcule pas. Pas de lib métier directe (métriques/moteurs) — il délègue.
+APP_ALLOWED_PKG = (
+    "xerocr.domain",
+    "xerocr.formats",
+    "xerocr.evaluation",
+    "xerocr.pipeline",
+    "xerocr.adapters",
+    "xerocr.app",
+)
+
+
+def test_app_imports_are_allowed():
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "app").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or any(
+                mod.startswith(pkg) for pkg in APP_ALLOWED_PKG
+            ):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans app : {offenders}"
