@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from xerocr.app.results import load_run_result
 from xerocr.interfaces.cli import main
 
 _YAML = """
@@ -45,3 +46,19 @@ def test_run_command_end_to_end(tmp_path: Path) -> None:
     assert html.startswith("<!DOCTYPE html>")
     assert "0.2500" in html  # CER(abcd, abxd) = 1/4
     assert "eng" in html
+
+
+def test_run_command_writes_json(tmp_path: Path) -> None:
+    (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
+    (tmp_path / "doc1.eng.txt").write_text("abxd", encoding="utf-8")
+    config = tmp_path / "run.yaml"
+    config.write_text(_YAML, encoding="utf-8")
+    json_out = tmp_path / "r.json"
+
+    code = main(
+        ["run", str(config), "-o", str(tmp_path / "r.html"), "--json", str(json_out)]
+    )
+
+    assert code == 0
+    assert json_out.is_file()
+    assert load_run_result(json_out).pipelines[0].aggregate[0].value == 0.25

@@ -13,6 +13,7 @@ from xerocr.app.modules.registry import (
     register_default_modules,
 )
 from xerocr.app.orchestrator import OrchestrationError, run
+from xerocr.app.results import RunResultError, dump_run_result, load_run_result
 from xerocr.app.security import PathSecurityError, validated_path
 
 __all__ = [
@@ -20,7 +21,10 @@ __all__ = [
     "ModuleResolutionError",
     "OrchestrationError",
     "PathSecurityError",
+    "RunResultError",
     "RunSpecError",
+    "dump_run_result",
+    "load_run_result",
     "load_run_spec",
     "register_default_modules",
     "run",

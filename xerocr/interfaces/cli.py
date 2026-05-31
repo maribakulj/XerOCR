@@ -13,7 +13,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from xerocr.app import load_run_spec
+from xerocr.app import dump_run_result, load_run_result, load_run_spec
 from xerocr.app import run as run_orchestrator
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.domain.artifacts import ArtifactType
@@ -22,7 +22,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
 from xerocr.domain.run_spec import RunSpec
-from xerocr.reports import default_report_renderer
+from xerocr.reports import default_report_renderer, render_comparison
 
 _ENGINES = ("tesseract", "pero")
 
@@ -150,7 +150,7 @@ def _run_demo(output: str) -> int:
     return 0
 
 
-def _run_config(config_path: str, output: str) -> int:
+def _run_config(config_path: str, output: str, json_output: str | None) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
     spec = load_run_spec(config_path)
@@ -163,7 +163,17 @@ def _run_config(config_path: str, output: str) -> int:
         ),
         encoding="utf-8",
     )
+    if json_output is not None:
+        dump_run_result(result, json_output)
     print(f"Rapport écrit : {output}")
+    return 0
+
+
+def _compare_command(path_a: str, path_b: str, output: str) -> int:
+    run_a = load_run_result(path_a)
+    run_b = load_run_result(path_b)
+    Path(output).write_text(render_comparison(run_a, run_b), encoding="utf-8")
+    print(f"Comparaison écrite : {output}")
     return 0
 
 
@@ -187,11 +197,27 @@ def main(argv: list[str] | None = None) -> int:
     run_cmd.add_argument(
         "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
     )
+    run_cmd.add_argument(
+        "--json",
+        dest="json_output",
+        default=None,
+        help="Écrit aussi le RunResult en JSON (pour comparer plus tard).",
+    )
+    compare_cmd = subparsers.add_parser(
+        "compare", help="Compare deux RunResult JSON → rapport de deltas."
+    )
+    compare_cmd.add_argument("run_a", help="Premier RunResult (JSON).")
+    compare_cmd.add_argument("run_b", help="Second RunResult (JSON).")
+    compare_cmd.add_argument(
+        "-o", "--output", default="comparaison.html", help="Fichier HTML de sortie."
+    )
     args = parser.parse_args(argv)
     if args.command == "demo":
         return _run_demo(args.output)
     if args.command == "run":
-        return _run_config(args.config, args.output)
+        return _run_config(args.config, args.output, args.json_output)
+    if args.command == "compare":
+        return _compare_command(args.run_a, args.run_b, args.output)
     return 1  # pragma: no cover (sous-commande requise)
 
 

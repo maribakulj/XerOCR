@@ -268,7 +268,8 @@ xerocr/interfaces/
 
 **Enveloppe :**
 - [x] **Contrat de commande CLI** (`argparse`, D-007) — verbes **`demo`** + **`run`** (YAML → orchestrateur → rapport) câblés, console-script `xerocr`. — *preuve : `test_cli_demo` + `test_cli_run` (bout en bout)*
-- [ ] `report` / `compare` (T2.f) · `serve` (T4).
+- [x] **`compare`** (2 RunResult JSON → deltas `B − A`) + **`run --json`** (export du RunResult). — *preuve : `test_cli_compare` + `test_results_io` (round-trip)*
+- [ ] `report` (rendre un JSON sauvé) · `serve` (T4).
 - [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` module-level). — *T4 ; gate `no_side_effect_imports`*
 - [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) + SSE + annulation `RunControl`/`Deadline` réelle. — *T4*
 - [ ] **Duplicable par construction** (config par secrets/env, boot sans secret, déblocage **fail-closed**). — *T4*
