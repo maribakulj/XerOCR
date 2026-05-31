@@ -284,6 +284,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 **Enveloppe (plein-scope dès T1) :**
 - [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*
 - [x] Split `RunContext`(domain `Deadline`) / `RunControl`(runtime), câblés par l'exécuteur. — *preuve : `tests/pipeline/test_run_control.py` + `test_executor.py` verts.* `[~]` round-trip (dé)sérialisation `RunContext` : test dédié à ajouter.
+- [x] **`RunControl.register_cancel_handle`** (interruption d'appel bloquant) — différé en T1 faute de consommateur (D-008), **livré en T3 avec son 1ᵉʳ vrai consommateur** (`ollama`). Thread-safe (`Lock`) : enregistrement et `trigger_cancel` synchronisés → handle ni perdu (course) ni appelé deux fois ; enregistrement *après* annulation = appel immédiat. Sondage coopératif (`raise_if_cancelled`) reste la **garantie** ; le handle est *best-effort*. — *preuve : `test_run_control` (fire-on-cancel · immédiat-si-déjà-annulé · once · ordre) ; consommateur réel `adapters/llm/ollama.py`*
 - [x] `PipelineExecutor` mono-doc, **provenance estampillée** (`code_version` + `parameters_hash` + `produced_by_step`). — *preuve : `test_executor::test_runs_single_step_and_stamps_provenance`*
 - [ ] `CorpusRunner` N-docs (threads/timeout/cancel/backpressure). — *T1 (app) / T2*
 - [ ] `planner`+`validation` fusionnés (`SpecError`, pas d'homonyme pydantic) ; port de cache.

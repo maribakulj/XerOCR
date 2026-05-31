@@ -45,6 +45,19 @@ def normalize_llm_content(raw: Any) -> str:
     return str(raw)
 
 
+def validate_llm_label(label: str, adapter: str) -> str:
+    """Valide un label d'adapter LLM (alphanum + ``_ -``) et le renvoie.
+
+    Le label compose le ``name`` du module (``<kind>:<label>``) ; le restreindre
+    garde les noms de modules sûrs et stables (provenance ``RunManifest``).
+    """
+    if not label or not all(c.isalnum() or c in "_-" for c in label):
+        raise AdapterStepError(
+            f"{adapter} : label invalide {label!r} (alphanum + _ -)."
+        )
+    return label
+
+
 def build_prompt(template: str, ocr_text: str) -> str:
     return template.replace("{ocr_text}", ocr_text)
 
@@ -86,5 +99,6 @@ __all__ = [
     "build_prompt",
     "load_ocr_text",
     "normalize_llm_content",
+    "validate_llm_label",
     "write_corrected",
 ]

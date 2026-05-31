@@ -14,6 +14,7 @@ from xerocr.adapters.llm._base import (
     build_prompt,
     load_ocr_text,
     normalize_llm_content,
+    validate_llm_label,
     write_corrected,
 )
 from xerocr.domain.artifacts import Artifact, ArtifactType
@@ -70,11 +71,7 @@ class OpenAIAdapter:
         model: str = _DEFAULT_MODEL,
         prompt: str = DEFAULT_CORRECTION_PROMPT,
     ) -> None:
-        if not label or not all(c.isalnum() or c in "_-" for c in label):
-            raise AdapterStepError(
-                f"OpenAIAdapter : label invalide {label!r} (alphanum + _ -)."
-            )
-        self._label = label
+        self._label = validate_llm_label(label, "OpenAIAdapter")
         self._model = model
         self._prompt = prompt
 

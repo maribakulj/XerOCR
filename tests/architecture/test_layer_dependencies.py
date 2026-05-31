@@ -98,7 +98,7 @@ ADAPTERS_ALLOWED_PKG = (
     "xerocr.adapters",
 )
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
-ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract", "openai"}
+ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract", "openai", "httpx"}
 
 
 def test_adapters_imports_are_allowed():

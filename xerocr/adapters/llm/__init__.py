@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from xerocr.adapters.llm.ollama import OllamaAdapter
 from xerocr.adapters.llm.openai import OpenAIAdapter
 
-__all__ = ["OpenAIAdapter"]
+__all__ = ["OllamaAdapter", "OpenAIAdapter"]

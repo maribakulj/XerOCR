@@ -91,11 +91,27 @@ def _build_openai(kwargs: Mapping[str, ParamValue]) -> Module:
     return OpenAIAdapter(label=label, model=str(kwargs.get("model", "gpt-4o-mini")))
 
 
+def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "ollama : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.llm.ollama import OllamaAdapter
+
+    return OllamaAdapter(
+        label=label,
+        model=str(kwargs.get("model", "llama3")),
+        host=str(kwargs.get("host", "http://localhost:11434")),
+    )
+
+
 def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
     registry.register_builder("openai", _build_openai)
+    registry.register_builder("ollama", _build_ollama)
 
 
 __all__ = [

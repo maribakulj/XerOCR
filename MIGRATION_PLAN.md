@@ -23,14 +23,16 @@
 |---|---|---|
 | 1 `domain` | ✅ **vert** | `xerocr/domain/MIGRATION_COUCHE_1.md` §DoD |
 | 2 `formats` | ✅ **vert** | `xerocr/formats/MIGRATION_COUCHE_2.md` §DoD |
-| 3 `evaluation` | 🔨 **T1** (RunResult + registre + runner verts) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
-| 4 `pipeline` | 🔨 **T1** (Protocol + exécuteur verts) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
-| 5 `adapters` | 🔨 **T1** (`precomputed` vert) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
-| 6 `app` | 🔨 **T1** (orchestrateur + registre/factory + RunSpec) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
-| 7 `reports` | 🔨 **T1** (Section + assembleur + overview) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T1** (CLI `demo`) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 3 `evaluation` | 🔨 **T2** (WER/MER · stats `scipy` · `cross_engine`) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
+| 4 `pipeline` | 🔨 **T3** (Protocol + exécuteur · `register_cancel_handle`) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
+| 5 `adapters` | 🔨 **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
+| 6 `app` | 🔨 **T3** (orchestrateur · loader/sécurité · 4 builders) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
+| 7 `reports` | 🔨 **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 🔨 **T2** (CLI `demo`/`run`/`compare`) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
+| **T2 axe texte** | ✅ **fait** — `tesseract` réel · WER/MER · stats · `run`/`compare` · round-trip JSON | §3-T2 |
+| **T3 OCR + LLM** | ✅ **fait** — pipeline 2 étapes OCR→LLM (`CORRECTED_TEXT` non vide) · `openai`+`ollama` (2ᵉ famille) · annulation câblée | §3-T3 |
 | **Rapport autonome interactif** | ✅ HTML autonome déterministe (interactivité client-side = surface ult.) | §Cibles de distribution |
 | **Space hébergé (vitrine, mode public)** | ⏳ **non-optionnel** — T4 | §Cibles de distribution |
 
@@ -329,6 +331,8 @@ sa v1 ; et comme **ton code tourne avec la clé d'autrui en mode dupliqué**, l'
 | D-011 | 2026-05-31 | T1 (clôture) | Golden du rapport : snapshot stocké ou déterminisme par construction ? | **Déterminisme par construction** : la section overview ne rend **ni timestamp ni chemin ni version** → HTML naturellement octet-stable | Un snapshot HTML stocké casse à chaque retouche CSS (fragile) ; « 2 runs == identiques » tient l'invariant §12 sans ce fardeau | clôt T1 (`xerocr demo` octet-stable) |
 | D-012 | 2026-05-31 | revue T1 | Frontière de déterminisme : timestamps wall-clock (provenance, manifest, `run_id` par défaut) | **Métadonnée EXCLUE de l'identité** ; jamais rendue dans `RunResult`/HTML (vérifié : demo octet-stable) | §12 = « hash identique » (content_hash déterministe) ; `ProvenanceRecord.is_compatible_with` exclut déjà le timestamp ; cohérent avec `RunManifest` | guide le cache/store T2+ : clé = content_hash, **pas** `model_dump_json` |
 | D-013 | 2026-05-31 | revue T1 | Revue complète (3 angles : ligne-à-ligne, inter-fichiers/déterminisme, qualité/altitude) | **0 bug T1** ; robustesse différée | Code déjà passé ruff/mypy/pytest. Sans conso T1 (pas de spéculation) : validation module↔step + `inputs_from` au **loader YAML (T2)** ; précision `run_id` au **store (T4)** ; I/O texte dédupliqué si chaud. **+ corrige** : `make type` ne couvrait pas les couches T1 → `mypy -p xerocr` | trace l'audit + ses suites |
+| D-014 | 2026-05-31 | T3 | `register_cancel_handle` : distinguer une **annulation** d'une vraie panne réseau ? | **Sonder `is_cancelled` après l'échec** (`_fail_or_cancel`) ; mécanisme thread-safe (`Lock`) livré **avec son 1ᵉʳ consommateur** (`ollama`) → clôt le différé D-008 | L'implémentation source **devinait par le message** d'exception (fragile, dette D-A) ; sonder l'état est fiable. Le sondage coopératif (`raise_if_cancelled`) reste la **garantie** ; le handle est best-effort (un `cancel_event` partagé `set()` hors `trigger_cancel` ne déclenche pas les handles — limite assumée, documentée) | clôt D-008 (handle différé) + dette D-A (couche 5) |
+| D-015 | 2026-05-31 | réconciliation T3 | Le roll-up (index) marquait encore **T1** pour les couches 3-8 alors que T2/T3 avaient shippé | **Index resynchronisé** sur les DoD par couche (autorité) : 3→T2, 4→T3, 5→T3 complet, 6→T3, 7→T2, 8→T2 ; lignes tranches T2/T3 ajoutées | Le rituel de réconciliation a **détecté une dérive réelle** (DoD par couche à jour, index en retard) — précisément ce que la redondance D-004 doit attraper ; corrigé dans ce commit | applique le rituel §Réconciliation |
 
 *Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
 

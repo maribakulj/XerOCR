@@ -20,6 +20,7 @@ dependencies = [
 dev = ["ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML", "jiwer"]
 tesseract = ["pytesseract"]
 openai = ["openai"]
+ollama = ["httpx"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

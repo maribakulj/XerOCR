@@ -244,13 +244,14 @@ xerocr/adapters/
 ## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T3)** — `precomputed` + `tesseract` + **`openai`** (LLM post-correction) verts ; `ollama`/importeurs/stores **par tranches**.
+> Maj dans le **même commit** que le code. **Statut : ✅ T3 complet** — `precomputed` + `tesseract` + **`openai`** + **`ollama`** (LLM post-correction) verts, annulation câblée (D-A clos) ; importeurs/stores/VLM **par tranches**.
 
 **Enveloppe :**
 - [x] `precomputed` implémente le `Module` Protocol (couche 4) **directement**, avec `name`/`version`. — *preuve : `tests/adapters/test_precomputed.py` (`isinstance(.., Module)` ; lecture `<stem>.<label>.txt` → `RAW_TEXT` + `content_hash` ; UTF-8 strict ; annulation)*
 - [x] **1ᵉʳ vrai moteur : `tesseract`** (implémente `Module` directement ; `lang` anti-injection, timeout borné par la deadline, écrit dans le **workspace** ; pytesseract = **extra**, invocation **mockable** → CI sans binaire). — *preuve : `test_tesseract` (mock + validations + workspace + annulation) ; `test_live` opt-in*
 - [x] **2ᵉ famille de module : LLM post-correction** (`openai`, mode `text_only`) — `RAW_TEXT → CORRECTED_TEXT` ; SDK extra, invocation **mockable** (CI sans clé) ; **pipeline multi-étapes OCR→LLM** prouvé (`CORRECTED_TEXT` **non vide**, bug historique). — *preuve : `test_openai` + `test_llm_pipeline`*
-- [~] `ollama` (2ᵉ LLM, annulation `register_cancel_handle` de référence) · VLM/`zero_shot` (0 conso) · `Base*Adapter` mixins · confidences/ALTO : **différés**.
+- [x] **2ᵉ LLM (généralisation prouvée) : `ollama`** — *même* contrat que `openai`, sortie `CORRECTED_TEXT`, **aucun cas particulier** ; transport `httpx` = **extra**, `_invoke_ollama` **mockable** (CI sans serveur). **Référence d'annulation câblée** : `_invoke_ollama` enregistre `client.close` via `RunControl.register_cancel_handle` → `trigger_cancel` ferme la connexion en vol ; « annulation vs panne » tranchée en sondant `is_cancelled` (`_fail_or_cancel`, **fiable** — remplace l'heuristique de message fragile, **D-A clos**). — *preuve : `test_ollama` (conformité Module + mock + workspace + annulation + `_fail_or_cancel` cancel/panne) ; mécanisme `register_cancel_handle` : `test_run_control` (fire-on-cancel · immédiat-si-déjà-annulé · once · ordre)*
+- [~] VLM/`zero_shot` (0 conso) · `Base*Adapter` mixins · confidences/ALTO · `unregister`/déduplication des handles (accumulation bénigne, runs bornés) : **différés**.
 
 **Garde-fous :**
 - [x] `layer_dependencies` (whitelist `adapters` explicitée : domain+pipeline+formats) · `no_side_effect_imports` · `no_broad_except` · `file_budgets`. — *preuve : `test_adapters_imports_are_allowed` + suite archi verte.* `[~]` `install_opener` global (D-E) : tué à la tranche HTTP.
