@@ -135,6 +135,18 @@ amplifié à l'axe structure (mélange ALTO/PAGE).
 - **Réconciliation note couche 2** : « le jeu de champs fait foi » = même esprit que
   le tidy pour les **ajouts** ; `schema_version` couvre les **changements structurels**
   du document. Ne pas laisser « pas de version » déborder sur le document `RunResult`.
+- **Rapport interactif (what-if) — QUESTION OUVERTE, à trancher à sa tranche (tardive)** :
+  un rapport **filtrable** (ex. « exclure les docs hallucinés » → recalculer les agrégats)
+  est une feature **tardive, sans consommateur aujourd'hui** → on **ne fige pas son mécanisme
+  ici** (`CLAUDE.md` §9 : ne pas figer une forme avant son consommateur). Constat utile :
+  `RunResult` **porte déjà les résultats par-doc** (`RunDocumentResult`) → **aucun changement
+  d'enveloppe forcé maintenant**. Deux mécanismes à départager **à la tranche** :
+  **(a, recommandé)** le **runner pré-calcule** les agrégats des états what-if pertinents
+  (p. ex. via des `EvaluationView` dédiées) → le rapport **sélectionne**, ne calcule jamais
+  (invariant « le rapport ne recalcule jamais » respecté à la lettre ; marche pour générique
+  *et* custom) ; **(b)** ré-agrégation côté client sur les valeurs par-doc (continu, mais 2ᵉ
+  implémentation à golden-tester, limitée aux agrégateurs simples). *(Soulevé par
+  `reports/ANALYSE_COUCHE_7.md` §2.7 ; décision au build, pas ici.)*
 
 ---
 
@@ -148,6 +160,11 @@ amplifié à l'axe structure (mélange ALTO/PAGE).
   structure…). Jamais de section en avance sur sa donnée.
 - **Pas de `reports/narrative/`** (supprimé, `CLAUDE.md` §6) : chiffres et tableaux
   bruts, aucune prose générée.
+- **Interactivité (what-if) = sélection, jamais re-mesure** (cf. §8, **question ouverte**) :
+  si un rapport filtrable est construit (tranche tardive), il **sélectionne** une vue/projection
+  ou ré-agrège un sous-ensemble — **jamais** une re-mesure côté client ; l'**inférentiel**
+  (Wilcoxon/IC) reste gelé sur le corpus complet. **Mécanisme tranché à sa tranche**
+  (candidat = projections pré-calculées par le runner).
 
 ---
 
