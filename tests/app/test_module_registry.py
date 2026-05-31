@@ -25,7 +25,12 @@ def test_builds_precomputed_module() -> None:
 
 
 def test_kinds_listed() -> None:
-    assert _registry().kinds() == ("precomputed",)
+    assert _registry().kinds() == ("precomputed", "tesseract")
+
+
+def test_builds_tesseract_module() -> None:
+    module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
+    assert module.name == "tesseract:fra"
 
 
 def test_unknown_kind_raises() -> None:

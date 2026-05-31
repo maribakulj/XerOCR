@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML", "jiwer"]
+tesseract = ["pytesseract"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

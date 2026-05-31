@@ -97,6 +97,8 @@ ADAPTERS_ALLOWED_PKG = (
     "xerocr.formats",
     "xerocr.adapters",
 )
+#: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
+ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract"}
 
 
 def test_adapters_imports_are_allowed():
@@ -109,7 +111,7 @@ def test_adapters_imports_are_allowed():
                 mod.startswith(pkg) for pkg in ADAPTERS_ALLOWED_PKG
             ):
                 continue
-            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+            if mod == "__future__" or top in ADAPTERS_ALLOWED_EXT or top in STDLIB:
                 continue
             bad.append(mod)
         if bad:

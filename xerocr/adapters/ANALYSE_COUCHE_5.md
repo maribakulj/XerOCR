@@ -244,12 +244,12 @@ xerocr/adapters/
 ## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — `precomputed` vert (1ᵉʳ `Module` du starter pack) ; reste **par tranches**.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — `precomputed` + **`tesseract`** verts ; LLM/importeurs/stores **par tranches**.
 
 **Enveloppe :**
 - [x] `precomputed` implémente le `Module` Protocol (couche 4) **directement**, avec `name`/`version`. — *preuve : `tests/adapters/test_precomputed.py` (`isinstance(.., Module)` ; lecture `<stem>.<label>.txt` → `RAW_TEXT` + `content_hash` ; UTF-8 strict ; annulation)*
-- [ ] Les `Base*Adapter` = **mixins d'impl** (pas un 2ᵉ contrat) ; `RunManifest` capte name+version de chaque step. — *à la 1ᵉʳ vrai moteur (T2) + assemblage manifest (app)*
-- [ ] `effective_output_types` conservé · utils racine portés en bloc (`_atomic_io`/`_retry` jitter corrigé/`output_paths`/`_image`/`_http`).
+- [x] **1ᵉʳ vrai moteur : `tesseract`** (implémente `Module` directement ; `lang` anti-injection, timeout borné par la deadline, écrit dans le **workspace** ; pytesseract = **extra**, invocation **mockable** → CI sans binaire). — *preuve : `test_tesseract` (mock + validations + workspace + annulation) ; `test_live` opt-in*
+- [~] `Base*Adapter` mixins · `effective_output_types` · confidences/ALTO · utils `_atomic_io`/`_retry` : **différés** (pas de 2ᵉ moteur ni de consommateur confidences en T2).
 
 **Garde-fous :**
 - [x] `layer_dependencies` (whitelist `adapters` explicitée : domain+pipeline+formats) · `no_side_effect_imports` · `no_broad_except` · `file_budgets`. — *preuve : `test_adapters_imports_are_allowed` + suite archi verte.* `[~]` `install_opener` global (D-E) : tué à la tranche HTTP.

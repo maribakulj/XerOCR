@@ -51,6 +51,7 @@ class PipelineExecutor:
         document_id: str,
         deadline: Deadline | None = None,
         control: RunControl | None = None,
+        workspace_uri: str | None = None,
     ) -> dict[ArtifactType, Artifact]:
         """Exécute ``spec`` ; renvoie le pool d'artefacts (dernier par type)."""
         ctrl = control if control is not None else RunControl()
@@ -72,6 +73,7 @@ class PipelineExecutor:
                 code_version=self._code_version,
                 pipeline_name=spec.name,
                 deadline=dl,
+                workspace_uri=workspace_uri,
             )
             outputs = module.execute(inputs, dict(step.params), context, ctrl)
             stamped = self._stamp(outputs, step)

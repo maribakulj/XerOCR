@@ -64,9 +64,26 @@ def _build_precomputed(kwargs: Mapping[str, ParamValue]) -> Module:
     return PrecomputedTextAdapter(source_label=label)
 
 
+def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "tesseract : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.tesseract import TesseractAdapter
+
+    return TesseractAdapter(
+        label=label,
+        lang=str(kwargs.get("lang", "fra")),
+        psm=int(kwargs.get("psm", 6)),
+        oem=int(kwargs.get("oem", 3)),
+    )
+
+
 def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
+    registry.register_builder("tesseract", _build_tesseract)
 
 
 __all__ = [

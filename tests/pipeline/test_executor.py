@@ -178,3 +178,34 @@ def test_cancellation_raises_before_step() -> None:
 def test_empty_code_version_rejected() -> None:
     with pytest.raises(XerOCRError):
         PipelineExecutor("")
+
+
+def test_threads_workspace_uri_to_context() -> None:
+    captured: dict[str, str | None] = {}
+
+    class _Capture:
+        input_types = frozenset({ArtifactType.IMAGE})
+        output_types = frozenset({ArtifactType.RAW_TEXT})
+
+        def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
+            captured["workspace"] = context.workspace_uri
+            return {
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:cap:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri="mem://x",
+                )
+            }
+
+    spec = PipelineSpec(
+        name="p", initial_inputs=(ArtifactType.IMAGE,), steps=(_ocr_step(),)
+    )
+    PipelineExecutor(CODE_VERSION).execute_document(
+        spec,
+        {"fake:echo": _Capture()},
+        {ArtifactType.IMAGE: _image()},
+        document_id="doc1",
+        workspace_uri="/work",
+    )
+    assert captured["workspace"] == "/work"
