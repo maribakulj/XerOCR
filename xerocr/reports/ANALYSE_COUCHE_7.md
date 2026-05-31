@@ -212,6 +212,22 @@ xerocr/reports/
 4. **Tests d'archi jour 1** : `layer-deps` (`reports` n'importe que `domain`+`evaluation`+stdlib+`jinja2?`/aucun moteur) ; `no-side-effect-import` ; `file-budgets` ; **golden HTML déterministe** (même `RunResult` → mêmes octets).
 5. **Une section = entière, en budget, en élaguant** : ajoutée avec sa métrique, testée, sans annotation de sprint.
 
+## 2.7 Contrat de câblage métrique↔section & interactivité (enveloppe — périssable)
+
+> Encode le correctif des **deux pires erreurs de Picarones** (métriques déconnectées ; rapport en avance sur sa donnée). À confirmer à S1.
+
+**A. Câblage — rend la déconnexion *impossible*, pas juste déconseillée :**
+- La **`Section` déclare ses `requires`** (les clés de `RunResult` qu'elle consomme).
+- **Test no-orphan-métrique** : toute clé écrite dans `RunResult` est consommée par ≥1 section (ou listée « data-only ») → détecte « calculée mais non affichée » (= « pas de conso = supprimé » à la frontière rapport).
+- **Test no-orphan-section** : tout `requires` pointe vers une métrique réellement enregistrée → détecte « section pour une métrique morte/inexistante ».
+- **Masquage adaptatif** : donnée absente *pour ce run* → la section rend `None` (pas une erreur). Distingue « ce run n'a pas la donnée » de « la métrique n'existe pas ».
+
+**B. Interactivité = pivot, pas re-calcul :**
+- Modèle mental : **le rapport est un pivot sur les lignes par-doc figées de `RunResult`** ; un curseur (ex. seuil d'hallucination) = un **`WHERE`** sur ces lignes. Les *mesures* sont gelées (calculées 1× en couche 3) ; seules l'**agrégation/sélection** bougent.
+- **Descriptif** (moyenne/médiane/taux/count + *support*) → ré-agrégé **en live** ; **inférentiel** (Wilcoxon/Friedman/IC) → **gelé** sur le corpus complet (re-filtrer = re-mesure + 2ᵉ implémentation de scipy).
+- Un **micro-JS déterministe inliné** (pas de framework, pas de routeur, golden-testé) ; **jamais** de re-mesure côté client.
+- **⚠️ Précondition côté `RunResult` (couche 3 — hors périmètre de cette session)** : porter les **composantes décomposables** par doc (num/dénom, ex. `edits`+`longueur_ref` ; counts par classe), **pas les ratios**. Le pivot agrège `Σnum/Σdén` (**micro**) ; **moyenner des ratios par doc = bug** (macro ≠ micro). L'agrégateur canonique = la **même** formule (source unique). → **signalé dans `MIGRATION_COUCHE_3.md §8`**.
+
 ---
 
 # PARTIE 3 — RISQUES DE TRANSFERT & DETTES (+ détection)
@@ -231,13 +247,14 @@ xerocr/reports/
 | **R11** | **Repro perdue** : reports ré-embarque des snapshots au lieu de lire le `RunManifest` | golden `RunManifest` ; revue | reports **affiche** la repro portée par `RunManifest` (domain) |
 | **R12** | **Docstrings/réfs périmées recopiées** (`Sprint S22`, « 22 vues », `RunManifest+view_results` faux) | grep anti-narration | « garder le pourquoi, jeter la datation » |
 | **R13** | **Numérique non rétro-compatible** : normalisation XerOCR ≠ Picarones | goldens **refaits**, pas hérités | aucune « validation » par égalité de chiffres avec Picarones |
+| **R14** | **Pivot interactif faux** : agréger des **ratios** par doc (macro) au lieu des **composantes** (`Σnum/Σdén`, micro) sous filtrage | golden + test : agrégat filtré == `Σnum/Σdén` à plusieurs seuils ; revue « composantes, pas ratios » | `RunResult` porte les composantes décomposables (cf. §2.7-B, `MIGRATION_COUCHE_3 §8`) ; agrégateur unique partagé serveur/client |
 
 ---
 
 ## Résumé pour la session de CONSTRUCTION (3-5 points)
 
 1. **La ligne de partage est DÉJÀ dans la source.** Picarones a **deux chemins** : `generator`(`BenchmarkResult`, Jinja2, data-layer, 37 renderers, SPA, narrative) = **masse accrétée à NE PAS porter** ; `render`/`csv`/`json`(`RunResult` direct) = **germe à garder**. XerOCR garde le **cadre** du chemin propre et rebâtit le **contenu** par sections. La conversion `RunResult→BenchmarkResult` (couche 6) **disparaît** avec les renderers legacy.
-2. **Enveloppe à figer au squelette, plein-scope :** un **`Protocol Section` typé unique** (remplace les 4 `arg_kind` + `section_registry`), **consommation directe de `RunResult`** (zéro data-layer, zéro recalcul — tout calcul vit en `evaluation/runner`), **`ReportRenderer` injecté par `app`**, 1 HTML autonome **déterministe**.
+2. **Enveloppe à figer au squelette, plein-scope :** un **`Protocol Section` typé unique** (remplace les 4 `arg_kind` + `section_registry`), **consommation directe de `RunResult`** (zéro data-layer, zéro recalcul — tout calcul vit en `evaluation/runner`), **`ReportRenderer` injecté par `app`**, 1 HTML autonome **déterministe**. **Câblage métrique↔section** par `requires` + tests no-orphan (§2.7-A) → la déconnexion (erreur n°1 de Picarones) devient **impossible**. **Interactivité = pivot** sur lignes par-doc figées (descriptif en live, inférentiel gelé), **jamais de re-calcul** (§2.7-B) — précondition de forme sur `RunResult` (composantes, pas ratios).
 3. **Surface incrémentale, jamais d'avance :** **1 section par métrique**, ajoutée quand la métrique atterrit en couche 3 (overview/CER au squelette, puis cross_engine/philologie/taxo/structure/longitudinal). Charts = **SVG côté serveur** (déterministe, autonome) ; **supprimer Chart.js + le SPA** (~3 400 LOC JS) — XerOCR est un **document factuel**, pas une application.
 4. **Suppressions nettes :** `narrative/`(2 162 LOC, 3 accroches), `html/data/`(1 614, ré-agrégation), `section_registry`, `generator` legacy, vendor `chart.umd.min.js`, i18n/glossary d'office. « Pas de consommateur = supprimé », budgets <400 (render/crosses/philological/engines_table à splitter).
 5. **Invariants à tenir :** `reports` **lit, ne calcule pas, ne narre pas** (anti-hallucination) ; **clés de métrique = contrat dur** avec les sections/CSV ; **golden HTML byte-stable** (déterminisme §12) ; la repro s'**affiche** depuis le `RunManifest`, ne se ré-embarque pas ; direction de couche `reports→{domain,evaluation}` seulement (jamais `app`/`interfaces`).

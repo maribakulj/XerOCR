@@ -135,6 +135,15 @@ amplifié à l'axe structure (mélange ALTO/PAGE).
 - **Réconciliation note couche 2** : « le jeu de champs fait foi » = même esprit que
   le tidy pour les **ajouts** ; `schema_version` couvre les **changements structurels**
   du document. Ne pas laisser « pas de version » déborder sur le document `RunResult`.
+- **Composantes décomposables par-doc (précondition du rapport interactif)** : pour qu'un
+  rapport **filtrable** (ex. masquer les docs hallucinés → ré-agréger) reste **correct**,
+  le document `RunResult` porte les **composantes décomposables** par doc — num/dénom
+  (ex. `edits`+`longueur_ref`), counts par classe — **pas seulement le ratio** (axe
+  **par-doc intra-run**, distinct du store longitudinal inter-run ci-dessus). Le pivot
+  agrège `Σnum/Σdén` (**micro**-moyenne) ; **moyenner les ratios par doc = bug** (macro ≠
+  micro). L'agrégateur canonique (vue par défaut) = la **même** formule → source unique.
+  **Réserver l'axe par-doc dans l'enveloppe maintenant** (rempli au fil des métriques).
+  *(Issu de `reports/ANALYSE_COUCHE_7.md` §2.7 ; à confirmer au design de `RunResult`.)*
 
 ---
 
@@ -148,6 +157,10 @@ amplifié à l'axe structure (mélange ALTO/PAGE).
   structure…). Jamais de section en avance sur sa donnée.
 - **Pas de `reports/narrative/`** (supprimé, `CLAUDE.md` §6) : chiffres et tableaux
   bruts, aucune prose générée.
+- **Interactivité = pivot, pas re-calcul** (cf. §8 + `reports/ANALYSE_COUCHE_7.md` §2.7) :
+  un curseur = un `WHERE` sur les lignes par-doc figées ; le **descriptif**
+  (moyenne/médiane/taux + support) se ré-agrège en live, l'**inférentiel** (Wilcoxon/IC)
+  reste **gelé** sur le corpus complet. Aucune re-mesure côté client.
 
 ---
 
