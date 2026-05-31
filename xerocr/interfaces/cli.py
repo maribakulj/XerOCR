@@ -63,7 +63,7 @@ _TEXT_VIEW = EvaluationView(
 def _code_version() -> str:
     try:
         return version("xerocr")
-    except PackageNotFoundError:
+    except PackageNotFoundError:  # pragma: no cover (paquet non installé)
         from xerocr.domain._version_fallback import FALLBACK_VERSION
 
         return FALLBACK_VERSION

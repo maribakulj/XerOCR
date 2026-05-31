@@ -103,6 +103,11 @@ class PipelineExecutor:
     def _stamp(
         self, outputs: Mapping[ArtifactType, Artifact], step: PipelineStep
     ) -> dict[ArtifactType, Artifact]:
+        # Déterminisme : l'identité d'un artefact = content_hash + (code_version,
+        # parameters_hash). Le timestamp wall-clock de ProvenanceRecord est de la
+        # métadonnée, EXCLUE de l'identité (cf. ProvenanceRecord.is_compatible_with)
+        # et jamais rendue dans RunResult/HTML. Un cache (T2) compare donc via
+        # is_compatible_with, pas via model_dump_json. (Revue T1 — D-012.)
         provenance = ProvenanceRecord(
             code_version=self._code_version,
             parameters_hash=_parameters_hash(dict(step.params)),
