@@ -1,0 +1,244 @@
+# ANALYSE_COUCHE_5.md — `adapters/` (Picarones → XerOCR)
+
+> **Type** : session d'ANALYSE (ne code rien). Guide de portage **durable**.
+> **Couche** : 5 = `adapters` (cf. `CLAUDE.md` §3 : `domain(1) ← formats(2) ← evaluation(3) ← pipeline(4) ← adapters(5) ← app(6) ← reports(7) ← interfaces(8)`).
+> **Source gelée** : `../Picarones/picarones/adapters/` — **41 fichiers, 9 682 LOC** (mesuré).
+> **Cible** : `xerocr/adapters/`.
+> **Couches amont mergées dont on dépend** : `domain` (mergée), `formats` (mergée), `evaluation` (plan acté `MIGRATION_COUCHE_3.md`), `pipeline` (à venir — porte le **contrat de module**).
+> **Partie 1 = durable** (source figée). **Partie 2 = périssable** (« à confirmer à la tranche »).
+
+---
+
+## 0. Drapeaux à lever AVANT toute construction (lire en premier)
+
+| # | Drapeau | Statut | Action |
+|---|---|---|---|
+| **F-0** | La consigne d'analyse disait « Couche4 », le titre/ livrable disent « couche 5 ». | Coquille. `CLAUDE.md` §3 + `PROMPT_ANALYSE_COUCHE.md` confirment **couche 5 = `adapters`**. | Aucun conflit. Analysé = `adapters`. |
+| **F-1** | `CLAUDE.md` D1 décrit le legacy comme « double contrat **`BaseOCRAdapter`→`BaseModule`** ». **Le code gelé ne contient PAS cet héritage.** | `base.py:58` = `class BaseOCRAdapter(ABC)` ; `llm/base.py:202` = `class BaseLLMAdapter(ABC)` ; **aucun n'hérite de `BaseModule`**. Le vrai contrat runtime est **`StepExecutor`** (`pipeline/protocols.py:42`, `execute(...)`). `BaseModule` (`domain/module_protocol.py`, `process(...)`) est **vestigial** : sa docstring `:24-27` *prétend* (à tort) que les adapters en sont des cas particuliers ; ses seuls usages sont un ré-export dans `__init__` + `evaluation/metrics/module_policy.py` (lui-même classé « mort » par `MIGRATION_COUCHE_3.md` §11). | **Ne PAS s'arrêter** : la *décision* D1 (un seul `Protocol` en couche 4, `BaseModule` supprimé) reste **correcte et même renforcée** — Picarones a déjà ce `Protocol` unique (`StepExecutor`). Seule la *caractérisation factuelle* de la source est à corriger : il s'agit d'un contrat **vestigial parallèle** (`BaseModule.process`), pas d'un emballage. Documenté §1.2. |
+| **F-2** | `CLAUDE.md` §8.8 dit « 8+8+8 adapters LLM/VLM ». | Réalité : **8 OCR + 4 LLM + 4 VLM**. | Direction (« → minimal/starter ») valide ; chiffres rectifiés §1.1. |
+| **F-3** | `_fallback_log.py` n'a qu'un consommateur final : le **détecteur narratif** `IMPORTER_FALLBACK_TRIGGERED`. | Or le **moteur narratif est SUPPRIMÉ** (`CLAUDE.md` §6, D2). | ⇒ « pas de consommateur = supprimé ». Verdict **SUPPRIMER** (remplacé par `logger.warning`). §1.3-corpus. |
+
+Aucun de ces points ne contredit une couche **mergée** ni une décision actée → analyse poursuivie.
+
+---
+
+# PARTIE 1 — ANALYSE DE LA SOURCE PICARONES (durable)
+
+## 1.1 Inventaire exact (41 fichiers / 9 682 LOC)
+
+| Sous-paquet | Fichiers | LOC | Rôle vérifié |
+|---|---|---|---|
+| **`/` (utils racine)** | 6 | **866** | I/O atomique, retry, http(x), downscale image, résolution de chemins. Mutualisés OCR+LLM. |
+| **`ocr/`** | 12 | **3 206** | Contrat `BaseOCRAdapter` + factory + 8 moteurs + sidecar confidences. |
+| **`corpus/`** | 8 | **3 045** | Importeurs de corpus patrimoniaux (IIIF, Gallica, eScriptorium, HTR-United, HuggingFace) + http urllib anti-SSRF + journal fallback. |
+| **`llm/`** | 6 | **1 208** | Post-correction texte (`RAW_TEXT → CORRECTED_TEXT`). Base + 4 providers. |
+| **`storage/`** | 3 | **964** | `ArtifactStore` (cache fichier) + `JobStore` (SQLite jobs web). |
+| **`vlm/`** | 6 | **393** | Transcription `IMAGE → RAW_TEXT` zéro-OCR. Base + 4 manifestes de composition. |
+
+Libs externes (toutes confinées à `adapters/`, conforme `CLAUDE.md` §3) : `pytesseract`+`PIL` (tesseract), `kraken`, `calamari-ocr`+TF, `pero-ocr`+torch, `google-cloud-vision`, `azure-ai-documentintelligence`, `mistralai`, `openai`, `anthropic`, `httpx` (ollama — **dép. cœur**, pas un extra), `datasets` (hf), `yaml`/`tqdm` (corpus). Le **noyau de contrat** (`ocr/base.py`, `factory.py`, `confidences.py`, `llm/base.py`, `vlm/base.py`, utils racine) n'importe **aucune** lib tierce sauf `httpx`/`PIL`.
+
+## 1.2 Le contrat réel (la couture décisive `domain↔pipeline↔adapters`)
+
+**Trois contrats coexistent ; un seul est vivant côté runtime.**
+
+| Contrat | Lieu | Forme | Statut réel |
+|---|---|---|---|
+| `BaseModule` | `domain/module_protocol.py:39` | `process(inputs)→outputs`, types `tuple`, **aucun** concern d'exécution | **Vestigial.** Aucun adapter ne l'hérite ni ne l'implémente. Consommateurs : ré-export `__init__` + `module_policy.py` (mort). |
+| **`StepExecutor`** | `pipeline/protocols.py:42` | `name`,`input_types`/`output_types` (`frozenset`), **`execute(inputs, params, context: RunContext, control: RunControl) → dict[ArtifactType, Artifact]`** | **Contrat vivant.** Porte deadline (`context.deadline`) + annulation (`control`). Satisfait par **duck-typing** (jamais hérité). |
+| `BaseOCRAdapter` / `BaseLLMAdapter` / `BaseVLMAdapter` | `adapters/{ocr,llm,vlm}/base.py` | ABC d'**implémentation** (défauts `input_types`/`output_types`, helpers, `name`/`execute` abstraits) | Ce sont des **mixins d'implémentation**, **pas** un second contrat. `BaseVLMAdapter(BaseLLMAdapter)` ; les deux autres `(ABC)`. |
+
+**Résolution `adapter_name → executor`** : pas de registre. `build_adapter_resolver(engines)` (`app/services/_benchmark_adapter_resolver.py:215`) construit un `dict[str, StepExecutor]` à partir d'**instances** d'engines fabriquées en amont, et lève `PicaronesError` sur collision de `name` à configs distinctes. La factory `ocr_adapter_from_name` (`ocr/factory.py:64`) est une **cascade `if/elif` codée en dur** (anti-OCP). **Aucune découverte de plugins entry-points** (`registry_service.py:39` le dit explicitement). Seule extensibilité « tierce » : `adapter_class: dotted.path` dans le YAML `run_spec` (`app/schemas/run_spec.py:32-62`), classe importable dans le venv.
+
+> ⚠️ **Conséquence pour XerOCR** : le `Protocol` de module que `CLAUDE.md` D1 veut construire en **couche 4** ≈ **`StepExecutor` déjà existant**. Les adapters l'implémentent **directement**. `BaseModule` est **supprimé sans perte**. *(`version` manque dans `StepExecutor`/`BaseOCRAdapter` → à **ajouter** pour la repro `RunManifest`, cf. §2.1.)*
+
+## 1.3 Verdicts fichier par fichier — **PROVISOIRE — à confirmer au build**
+
+Légende verdict : **G**=garder · **M**=modifier · **C**=changer de couche · **S**=supprimer · **I**=incrémental (porter à la tranche qui le consomme, pas avant).
+
+### Utils racine (`adapters/*.py`)
+
+| Fichier | LOC | Rôle vérifié | Consommateurs réels (hors tests) | Bugs / dette | Verdict |
+|---|---|---|---|---|---|
+| `__init__.py` | 28 | Docstring de paquet, `__all__=[]`. | 0 (imports par chemin complet). | — | **G** (mince) |
+| `_atomic_io.py` | 151 | `atomic_write_text` (tmp+`fsync`+`os.replace`). | `atomic_write_text` : **11 adapters**. | `atomic_write_bytes` = **0 conso** (mort). Corps dupliqué text/bytes. | **M** : garder `atomic_write_text`, **S** `atomic_write_bytes`. **`storage/` doit l'utiliser** (cf. infra). |
+| `_httpx_helpers.py` | 213 | Client httpx deadline-aware + cancel cross-thread (`make_httpx_client`, `translate_or_reraise`). | **1** (`llm/ollama_adapter`). | Détection « close » par **heuristique de message** (`:179-190`) fragile. Couple `adapters→pipeline.run_control`. | **G+M** (revoir l'heuristique ; unifier la trad. d'erreur). |
+| `_image.py` | 87 | Downscale image base64 (`PIL` lazy, dégradable). | **3** (ollama/openai/mistral LLM). | Bloc d'appel `if max_edge>0: downscale` **copié 3×** chez les callers. | **G** (factoriser l'appel dans la base LLM). |
+| `_retry.py` | 274 | Retry exponentiel + `Retry-After` + jitter, deadline-aware (`call_with_retry`, `is_retryable`, `compute_retry_wait`). | `call_with_retry` : **3 OCR cloud** ; primitives : `llm/base.py`. | **Bug** : jitter `×[1.0,1.5)` appliqué **après** le plafond → `DEFAULT_MAX_WAIT` (120 s) dépassé jusqu'à **180 s** (`:138-139`). `retry_after_seconds`/`DEFAULT_MAX_WAIT` exportés sans conso externe. **Boucle ré-implémentée** dans `llm/base.py:384-429` ET `corpus/_http.download_url`. | **M** : corriger le jitter ; **unifier les 3 implémentations** ; resserrer l'API publique. |
+| `output_paths.py` | 113 | `resolve_output_path` (segment par pipeline anti-collision). | **9 adapters**. | `context: Any` (duck-typing `RunContext`) → dégrade en silence si attribut absent. | **G**. |
+
+### `ocr/`
+
+| Fichier | LOC | Rôle / sortie | Consommateurs réels | Bugs / dette | Verdict |
+|---|---|---|---|---|---|
+| `__init__.py` | 48 | Façade ; ré-exporte les 8 adapters + base + factory. | traversé par `llm_pipeline_config`. | **Import eager** des 8 classes (sûr car les modules n'importent pas la lib lourde au top-level) mais court-circuite la robustesse lazy de la factory. | **M** (mince ; aligner sur le registre). |
+| `base.py` | 189 | `BaseOCRAdapter(ABC)` + `OCRAdapterError`. **`effective_output_types`** = sous-ensemble **garanti** (vs maximal). | 8 adapters + resolver + factory + cli + robustness. | **Pas d'attribut `version`** (repro). `control` jamais honoré (cf. dette §1.4). | **M** : = mixin d'impl ; **ajouter `version`** ; garder `effective_output_types`. Contrat = `Protocol` couche 4. |
+| `factory.py` | 194 | `ocr_adapter_from_name(name) → BaseOCRAdapter`. | cli + web + `__init__`. | **Cascade `if/elif`** (anti-OCP) ; alias incohérents (`calamari_ocr`→`calamari`, pas de court `kraken`) ; `_SUPPORTED`/`_ALIASES` divergent à la main ; message Azure cite `azure-ai-formrecognizer` ≠ SDK réel. | **C→app** : remplacer par **registre + entry-points** (`CLAUDE.md` §3 : registre = app/adapters, découverte = app). |
+| `confidences.py` | 164 | Sidecar JSON de confidences. `ConfidenceToken`=TypedDict `{text, confidence∈[0,1]}`, **niveau mot**, normalisation Tesseract 0-100→0-1. | **1** (tesseract). Artefact `CONFIDENCES` lu par `evaluation/calibration`. | `model_version:null` toujours sérialisé ; entrée `list[dict]` non typée. | **G+M** : logique en adapters ; **promouvoir `ConfidenceToken`→`domain`** quand la calibration est consommée (backlog domain `CLAUDE.md`). |
+| `precomputed.py` | 221 | **Starter.** Lit `<stem>.<label>.txt`. `IMAGE→RAW_TEXT`. 0 dép externe. | factory + builders. | Nommage `name` = `precomputed_<label>` (`_`) ≠ doc factory (`:`). `control` inutilisé ; double I/O policy `empty`. | **G** (starter) ; corriger nommage. |
+| `tesseract.py` | 548 | **Starter.** `pytesseract` (binaire). `RAW_TEXT` (+`CONFIDENCES`/`ALTO_XML` **opt-in** via `effective_output_types`). | factory + cli + web. | >400 LOC. `control` inutilisé (timeout subprocess compense). | **G** (starter) ; **trim/split <400**. |
+| `kraken.py` | 237 | HTR ML local (torch). `RAW_TEXT`. Extra `[kraken]`. | factory + web. | Deadline **ignorée** (inférence non interruptible) ; API Kraken 4.x fragile vs 5.x. | **G+I** (incrémental). |
+| `calamari.py` | 253 | OCR ligne (TF). `RAW_TEXT`. Extra `[calamari]`. | factory + web. | Parsing résultat fragile (`getattr(...,"sentence","")`) ; deadline ignorée. | **G+I**. |
+| `pero_ocr.py` | 226 | HTR ML local (torch, PAGE aplati). `RAW_TEXT`. | factory + web. | Docstring tronquée (`:1-3`) ; deadline ignorée ; ordre `page_size=(h,w)` à vérifier. | **G+I**. |
+| `google_vision.py` | 330 | Cloud (SDK **ou** REST/urllib). `RAW_TEXT`. | factory + web. | SDK path ignore la deadline ; motif HTTP dupliqué (cf. azure/mistral). | **G+I**. |
+| `azure_doc_intel.py` | 425 | Cloud async + polling (SDK ou REST). `RAW_TEXT`. | factory + web. | >400. **Meilleure gestion deadline** (REST) ; SDK path l'ignore. Backoff maison. | **G+I** ; trim<400. |
+| `mistral_ocr.py` | 371 | `/v1/ocr` (urllib) **ou** chat/vision (SDK). `RAW_TEXT`. | factory + web. | SDK chat ignore deadline. **Importe `adapters.llm.base.normalize_llm_content`** (couplage cross-famille). | **G+I** ; sortir `normalize_*` en helper partagé. |
+
+### `llm/` + `vlm/`
+
+| Fichier | LOC | Rôle / contrat | Consommateurs réels | Bugs / dette | Verdict |
+|---|---|---|---|---|---|
+| `llm/__init__.py` | 16 | Docstring cadrage. | 0. | — | **G**. |
+| `llm/base.py` | 582 | **Cœur.** `BaseLLMAdapter(ABC)`. **Double API** : `complete(prompt, image_b64, *, deadline, control)→LLMResult` (appel + retry) **et** `execute(...)` (orchestration fichier→complete→fichier). `RAW_TEXT→CORRECTED_TEXT`. | pipeline (llm_config/builder) + VLM + `mistral_ocr` (helper). | >400. `LLMResult.tokens_used` **jamais peuplé** (`:194` vs `:396`) → coût non remonté. `except Exception`(`:401`) intentionnel+tracé. | **M** : **split <400** (helpers / `LLMResult` / base / orchestration) ; **peupler ou supprimer `tokens_used`**. |
+| `llm/openai_adapter.py` | 123 | **Starter.** SDK `openai`, extra `[llm]`, `temperature=0`. | web factory. | `del control` (SDK non câblé, documenté). | **G** (starter). |
+| `llm/ollama_adapter.py` | 160 | **Starter.** httpx brut (**dép. cœur**), **seul à câbler `control`** (cancel cross-thread). | web factory. | `except (TimeoutException, HTTPError): pass` (`:131-132`) — re-raise délégué, à mieux commenter. | **G** (starter). |
+| `llm/anthropic_adapter.py` | 129 | Idem motif, extra `[llm]`. | web factory. | `del control`. | **G+I**. |
+| `llm/mistral_adapter.py` | 198 | Idem + table `_TEXT_ONLY_MODELS` (dégradé multimodal). | web factory. | Logs verbeux ; instance client par appel. | **G+I**. |
+| `vlm/__init__.py` | 42 | Façade ré-export. | 0 (hors tests). | — | **G+I**. |
+| `vlm/base.py` | 245 | `BaseVLMAdapter(BaseLLMAdapter)` : `IMAGE→RAW_TEXT`, override `execute` + prompts ; **garde-fou MRO** (`__init_subclass__`). | 0 instanciateur (2 docs). | — | **G+I** (porter à la tranche `zero_shot`). Conserver le garde MRO. |
+| `vlm/openai_vlm.py` | 22 | `(BaseVLMAdapter, OpenAIAdapter)` + `name`. | **0**. | — | **I/S** : ~90 % hérité, **0 conso** → ne **pas** porter spéculativement (porter à la tranche zero_shot). |
+| `vlm/anthropic_vlm.py` | 32 | idem. | **0**. | — | **I/S** idem. |
+| `vlm/mistral_vlm.py` | 26 | idem + `default_model=pixtral`. | **0**. | — | **I/S** idem. |
+| `vlm/ollama_vlm.py` | 26 | idem + `default_model=llava`. | **0**. | — | **I/S** idem. |
+
+### `corpus/`
+
+| Fichier | LOC | Source / sortie | Consommateurs réels | Bugs / dette | Verdict |
+|---|---|---|---|---|---|
+| `__init__.py` | 24 | Docstring « nommer/localiser (image, GT) » ; `__all__=[]`. | 0. | — | **G** (mince). |
+| `_http.py` | 270 | urllib + **anti-SSRF** (`validate_http_url`, blocage IP réservées, revalidation redirects) + retry deadline-aware. | iiif, gallica, escriptorium. | `install_opener` = **effet de bord global au process** (`:159`). Boucle retry ≈ `_retry`. | **G+M** : brique sécurité réutilisable (invariant `CLAUDE.md`) ; retirer l'`install_opener` global ; unifier le retry. |
+| `_fallback_log.py` | 98 | Journal mémoire des dégradations d'importeur. | `consume`←app `_benchmark_converter` → **détecteur narratif**. `record`←htr_united/hf. | Seul débouché = narratif. | **S** (narratif supprimé `CLAUDE.md` §6 → plus de consommateur ; remplacer par `logger.warning`). |
+| `iiif.py` | 567 | Manifeste IIIF v2/v3 → **`Corpus`**. | CLI (`import iiif`) + web + gallica. | >400. **Fuite de fichiers temp** si `output_dir=None` (`NamedTemporaryFile(delete=False)`, `:465`). `tqdm` lazy. | **G+I+M** : trim<400 ; corriger la fuite temp. Référence du contrat « → Corpus ». |
+| `gallica.py` | 563 | SRU+IIIF+OCR brut BnF → **`Corpus`** (délègue à `IIIFImporter`). | web seulement. | >400. **Bug latent** `selected_indices[i]+1` (additionne `IIIFCanvas`+int, `:415`). `_fetch_url` force `retries=1`. Beaucoup de surface morte (`search_gallica`, `get_metadata`…). | **M+I** : corriger le bug ; **S** des fonctions sans conso ; trim<400. |
+| `escriptorium.py` | 571 | API REST eScriptorium → **`Corpus`** + écriture distante (export couche OCR). | web (`import_document` seul). | >400. **BUG dur** `Corpus(source=...)` (champ = `source_path`, `:450`) → `TypeError` au 1ᵉʳ appel réel, **masqué par les mocks**. `image_path:str` ≠ domain `Path`. ~40 % surface API morte. | **M+I** : corriger le bug ; **S** `export_benchmark_as_layer`/`list_*`/`connect_*` (0 conso) ; trim<400. |
+| `htr_united.py` | 488 | Catalogue HTR-United (GitHub) → **dict-manifeste** (pas `Corpus`) + GT extraits (sans images). | web. | >400. **Pas de `_http`** (ni anti-SSRF ni retry). `except (URLError, Exception)`. ZIP **chargé entier en RAM**. `_DEMO_CATALOGUE`=**113 LOC de données fabriquées** dans le code. | **M+I** : sortie unifiée `Corpus` ; **données démo → `data/` (S du code)** ; passer par `_http` ; borner le download. |
+| `huggingface.py` | 464 | HF Hub (lib `datasets`) → **dict-manifeste** + paires `.jpg`/`.gt.txt`. | web. | >400. **Monkey-patch au load** (`_patch_dataset_replace_source`, `:456`). `except (ImportError, Exception): return 0` **muet** (lib absente indistinguable de dataset cassé). GT orphelin si `image.save` échoue. `_REFERENCE_DATASETS`=**109 LOC** en dur. Docstring annonce des fonctions inexistantes. | **M+I** : sortie unifiée `Corpus` ; extra `[hf]` + message clair ; supprimer le monkey-patch ; données → `data/`. |
+
+### `storage/`
+
+| Fichier | LOC | Backend / type | Consommateurs réels | Bugs / dette | Verdict |
+|---|---|---|---|---|---|
+| `__init__.py` | 58 | Façade ré-export. Docstring annonce 2 cibles **non livrées** (migration `web/jobs`, rapatriement history SQLite). | — | — | **G**. |
+| `artifact_store.py` | 417 | **Filesystem** (`index.jsonl` + `artifacts/<key>.json` + `payloads/<key>.bin`) indexé par `ArtifactKey.hash_hex()`. Expose `StoredArtifact{key, artifact, payload}`. | **0 direct** : consommé via le **Protocol `ArtifactCachePort`** (`pipeline/cache_protocol.py`) injecté dans l'executor (inversion de dépendance). | >400. **`put` non atomique** (3 écritures sous simple `Lock`) ; **pas de `fsync`** (réimplémente un écriture inférieure au lieu d'utiliser `_atomic_io`) ; **path-traversal non gardé** (`f"{key}.json"`) ; index non borné ; pas de concurrence multi-process. | **G+M** : **utiliser `_atomic_io`** ; **valider la clé / `validated_path`** (invariant `CLAUDE.md`) ; implémente un **port défini en couche 4**. Tranche *cache*. |
+| `job_store.py` | 489 | **SQLite** (table `jobs`, WAL, `schema_version`). `JobRecord`, `JobStore`. États `pending→running→{complete\|error\|cancelled\|interrupted}`. | **1** : `app/services/job_runner.py`. | >400. **Doublon** : un **2ᵉ `JobStore` legacy** vit en `interfaces/web/jobs.py:103` et c'est **lui** que l'app web tournante câble (`state.py:138`). `LIMIT` interpolé (neutralisé par `int()`). Pas de validation des transitions. | **G+M** : **UN seul** job store (celui-ci) ; **S** le doublon legacy (couche 8, hors périmètre mais à acter) ; valider les transitions. Tranche *web/async*. |
+
+`StoredArtifact` : **non-candidat domain confirmé** (`domain/artifact_key.py:22-24` : « infrastructures, pas des types purs » ; le pipeline le touche via Protocol, pas en direct). Reste en `adapters/storage`.
+
+## 1.4 Dette transverse vérifiée (durable)
+
+| # | Dette | Preuve | Portée |
+|---|---|---|---|
+| **D-A** | **`control: RunControl` jamais honoré** : tous les `execute()` OCR + LLM/VLM cloud le reçoivent mais **n'appellent jamais** `register_cancel_handle`. **Seul `ollama_adapter` câble l'annulation** (via `_httpx_helpers`). | `base.py:82-86` documente le contrat ; aucun adapter ne l'honore sauf ollama. | Gap d'annulation cross-thread généralisé. |
+| **D-B** | **Deadline asymétrique** : Tesseract (timeout subprocess) + Azure-REST (polling clampé) la respectent ; **tous les paths SDK** (Azure SDK, Google SDK, Mistral chat) l'ignorent (limite SDK) ; kraken/calamari/pero l'ignorent totalement. | `azure_doc_intel.py:366-379` (bon) vs `:261` (SDK ignore) ; `mistral_ocr.py:310-316`. | Un run ML local/SDK peut dépasser le budget en silence. |
+| **D-C** | **Retry implémenté 3×** : `_retry.call_with_retry`, `llm/base.py:384-429` (inline), `corpus/_http.download_url`. | grep. | Triple maintenance du même algorithme. |
+| **D-D** | **Deux piles HTTP** dans la même couche : `httpx` (`_httpx_helpers`+`_retry`, pour OCR/LLM cloud) vs `urllib` (`corpus/_http`, anti-SSRF, pour importeurs). Aucune ne réutilise l'autre. | grep : `corpus/*` n'importe jamais `_retry`/`_httpx_helpers`. | Scission lib/menace **assumée** mais coûteuse. |
+| **D-E** | **`__init__` à effet de bord** : `corpus/_http.py:159` fait `install_opener` **global** au process à l'import. | `:153-161`. | Viole l'esprit « `__init__` minces, aucun effet de bord » (`CLAUDE.md` §7). |
+| **D-F** | **Fracture du contrat de sortie corpus** : iiif/gallica/escriptorium → `Corpus` ; **htr_united/huggingface → `dict`-manifeste** + effets disque. 3/5 écrivent des fichiers. | tableaux §1.3-corpus. | Pas de contrat unique d'ingestion. |
+| **D-G** | **Code mort / surface non câblée** : `atomic_write_bytes` ; exports `_retry` sans conso ; ~40 % d'`escriptorium.py` ; commodités `gallica`/`hf` ; `JobRecord.is_terminal/is_live` ; `_MIGRATIONS` vide. | greps agents. | « pas de consommateur = supprimé ». |
+| **D-H** | **Données fabriquées dans le code** : `_DEMO_CATALOGUE` (113 LOC) + `_REFERENCE_DATASETS` (109 LOC) = ~220 LOC de fausses données servies en repli. | `htr_united.py:44`, `huggingface.py`. | Risque d'afficher du faux contenu ; doit être de la **donnée** (`data/`) ou supprimé. |
+| **D-I** | **Bugs latents masqués par les mocks** : `escriptorium Corpus(source=...)` (`:450`) ; `gallica selected_indices[i]+1` (`:415`). | lecture code + tests mockés. | Régression garantie au 1ᵉʳ appel réel → à corriger au portage. |
+| **D-J** | **`execution_mode` : déjà retiré** (« mensonge structurel », commit `5e13c0d`, mai 2026 — attribut décoratif jamais lu par le runner thread-only). 0 occurrence prod ; garde-fou de test anti-résurrection. | git show. | **Leçon** : ne **jamais** réintroduire d'attribut « au cas où » non câblé. |
+
+---
+
+# PARTIE 2 — RÉORGANISATION CIBLE XerOCR (périssable — « à confirmer à la tranche »)
+
+> Conforme `CLAUDE.md` : **deux axes**, **tranches verticales** (jamais « finir la couche de haut en bas »), **budgets <400 LOC**, **rupture nette zéro shim**, **narrative supprimé**, **« pas de consommateur = supprimé »**. La couche 5 se **remplit par tranches** (chaque adapter naît avec le pipeline qui le consomme), pas en bloc.
+
+## 2.1 Enveloppe (axe 1 — dimensionnée plein-scope, mais **définie en couche 4**)
+
+Le **contrat de module exécutable** n'est **pas** un livrable de la couche 5 : il vit en **couche 4** (`pipeline`, cf. `CLAUDE.md` D1). La couche 5 ne fait que **l'implémenter**. À acter quand on conçoit la couche 4 (rappelé ici car il façonne tous les adapters) :
+
+- **`Protocol` unique** ≈ `StepExecutor` de Picarones : `name`, **`version`** (➕ vs Picarones, repro `RunManifest`), `input_types`/`output_types` (`frozenset[ArtifactType]`), `execute(inputs, params, context, control) → dict`.
+- **`BaseModule` supprimé** (vestigial). Les ABC `Base*Adapter` deviennent de **simples mixins d'implémentation** (défauts + helpers + `_write_text_artifact()`), **pas** un contrat.
+- **`effective_output_types`** (garanti ⊂ maximal) **conservé** — sinon `missing_output` casse les steps quand un extra opt-in (Tesseract `CONFIDENCES`/`ALTO_XML`) n'est pas produit.
+- **Trancher la dette d'annulation `control`** (D-A/D-B) : soit honorer `control` partout où l'opération est annulable, soit assumer explicitement « best-effort deadline » (documenté, testé). Ne pas traîner un paramètre non câblé.
+
+**Registre + découverte (couche `app`, cf. `CLAUDE.md` §3)** : remplacer la cascade `if/elif` + les factories CLI/web dispersées par **un registre type-driven `adapter_name → factory`** + **découverte entry-points `xerocr.modules`** + `register()` local. **Seul point d'extension tiers = les briques de pipeline** (OCR/HTR/VLM/post-correction/segmentation/ordre de lecture/NER). **Corpus, métriques, sections, stores = first-party, non pluggables.**
+
+## 2.2 Surface (axe 2 — incrémentale, par tranches)
+
+**Starter pack** (le strict nécessaire au squelette ambulant) :
+
+| Brique | Fichiers source | Extra | Tranche |
+|---|---|---|---|
+| `precomputed` (OCR 0 dép) | `ocr/precomputed.py` | — | **squelette texte** (corpus pré-calculé → CER) |
+| `tesseract` (OCR binaire) | `ocr/tesseract.py` + `confidences.py` | binaire système | tôt (1ᵉʳ vrai moteur) |
+| `openai` + `ollama` (LLM) | `llm/base.py` + `openai_adapter.py` + `ollama_adapter.py` | `[llm]` (openai) ; `httpx`=cœur (ollama) | tranche OCR+LLM `text_only` |
+| utils racine | `_atomic_io`(text), `_retry`(corrigé+unifié), `output_paths`, `_image`, `_httpx_helpers` | — | portés **en bloc** avec le starter |
+
+**Incrémental (porter à la tranche qui le consomme)** : anthropic/mistral (LLM) ; kraken/calamari/pero/google/azure/mistral_ocr (OCR — extras dédiés) ; **VLM** (tranche `zero_shot` — ~90 % gratuit une fois le LLM porté, **0 conso aujourd'hui → ne pas porter avant**) ; importeurs corpus (un par un) ; `artifact_store` (tranche *cache*) ; `job_store` (tranche *web/async*) ; **store longitudinal *tidy*** (tranche *longitudinal*, **rapatrié** de `evaluation/metrics/history.py` → `adapters/storage`, cf. `MIGRATION_COUCHE_3.md` §8).
+
+## 2.3 Arborescence cible proposée (à confirmer)
+
+```
+xerocr/adapters/
+├── _atomic_io.py        atomic_write_text (+fsync)         [G, -atomic_write_bytes]
+├── _retry.py            retry unifié, jitter corrigé       [M, unifie les 3]
+├── _http.py             transport + anti-SSRF + retry      [fusion _httpx_helpers + corpus/_http ?]
+├── _image.py            downscale (PIL lazy)               [G]
+├── output_paths.py      resolve_output_path                [G]
+├── ocr/                 base(mixin)+precomputed+tesseract  [starter] ; reste incrémental
+│   └── confidences.py   (ConfidenceToken→domain à terme)
+├── llm/                 base+openai+ollama [starter] ; anthropic/mistral incrémental
+├── vlm/                 base+manifestes — tranche zero_shot uniquement
+├── corpus/              importeurs first-party, sortie UNIQUE = Corpus, 1 par tranche
+│                        [_fallback_log SUPPRIMÉ ; données démo → data/]
+└── storage/             artifact_store + job_store (UNIQUE) + history tidy (rapatrié)
+```
+*Note* : la **factory/registre** ne vit **pas** ici mais en `app/` (résolution `adapter_name`) ; la couche 5 ne fait qu'exposer des classes implémentant le `Protocol` couche 4.
+
+## 2.4 Application des 5 garde-fous
+
+- **Rupture nette / zéro shim** : un seul `JobStore` (S le legacy `web/jobs.py`) ; un seul contrat de sortie corpus (`Corpus`, S les dict-manifestes) ; pas de `BaseModule` ; une seule pile HTTP si possible (D-D).
+- **Budgets <400** : `llm/base.py`(582), `escriptorium`(571), `iiif`(567), `gallica`(563), `tesseract`(548), `job_store`(489), `htr_united`(488), `huggingface`(464), `azure`(425), `artifact_store`(417) **dépassent**. La plupart **rétrécissent** après retrait du code mort (D-G), des données démo (D-H) et dédup du boilerplate (`_write_text_artifact`, retry, HTTP). Sinon split ou entrée justifiée `test_file_budgets`.
+- **Pas de consommateur = supprimé** : `atomic_write_bytes`, `_fallback_log`, surface morte d'escriptorium/gallica/hf, exports `_retry` inutiles, VLM concrets tant que `zero_shot` n'existe pas.
+- **Tests d'archi jour 1** : whitelist `adapters/` = `domain` + `pipeline` + `formats` (+ `evaluation` pour le type `Corpus` chargé, **à expliciter** — Picarones le tolérait par wildcard) ; `no-side-effect-import` (tue le `install_opener` global D-E) ; `no-broad-except` (htr/hf `except Exception`) ; `file-budgets`.
+- **Feature entière + élaguée** : chaque adapter porté **avec** sa correction de bug (D-I), son extra optionnel, son message clair d'absence de dép, sans annotation de sprint.
+
+## 2.5 Libs cibles & arbitrages (périssable — « à confirmer à la tranche »)
+
+> Rappel : la minceur de la couche vient surtout de l'**élagage** (code mort, données démo, dédup), **pas** de l'ajout de libs. Une lib ne paie que si elle **retire plus de code que le wrapper qu'elle impose**. Contreparties transverses à toute dép : **supply-chain** (cf. `fastapi==0.136.3` / `MAL-2026-4750` exclue dans le `pyproject` Picarones ; `pip-audit` à tenir), **reproductibilité** (`dependencies_lock` du `RunManifest` → **épingler serré**), **code tiers in-process** (entry-points).
+
+| Lib / appel | Verdict | Raison / condition |
+|---|---|---|
+| `httpx` (transport REST unique) | ✅ **conditionnel** | Pour le REST à **auth simple** (ollama, mistral `/v1/ocr`, HF, eScriptorium, htr_united, openai-compatible). Unifie les 2 piles HTTP (D-D), corrige la deadline (D-B). **Garder le SDK** pour Google/Azure (auth JWT service-account / AD lourde). Anti-SSRF toujours à coder (transport dédié, **sans `install_opener` global** — D-E). |
+| Drop dual SDK/REST cloud | ✅ **conditionnel** | Seulement où le SDK n'offre ni timeout-par-appel ni annulation **et** l'auth est simple. Pas systématique. |
+| `huggingface_hub` | ✅ **extra `[hf]`** | Remplace le REST urllib maison de `huggingface.py` (pagination tronquée, `except` muet, monkey-patch — D-G). Lib lourde/mouvante → confinée à l'extra, épinglée. |
+| `importlib.metadata.entry_points` (stdlib) | ✅ **gaté** | Outil du point d'extension `xerocr.modules`. **Désactiver la découverte en mode public** (in-process = sécurité, `CLAUDE.md` §3) ; capter la **version** du plugin pour le `RunManifest`. |
+| `pydantic` v2 | ✅ **configs** / ❌ **par-token** | OK pour les **configs d'adapter** (petites, 1×, aligne le repo). **Pas** pour `ConfidenceToken` (milliers/page → coût de validation, cf. `MIGRATION_COUCHE_2.md` G-D) : `TypedDict`/`dataclass(slots=True)`, valider une fois à la frontière. |
+| `tenacity` (retry) | ❌ **garder maison** | Le retry doit être deadline/cancel-aware (`clamp_to_remaining`, `RunControl`), honorer `Retry-After`, et **testable déterministe** (horloge injectable). Tenacity impose un wrapper custom qui annule le gain. `_retry.py` maison (bug jitter corrigé) reste plus aligné. |
+| anti-SSRF · parseur IIIF · subprocess Tesseract | ❌ **garder maison** | Pas de lib mainstream fiable (SSRF, IIIF) ; le subprocess `pytesseract` est **ce qui honore la deadline** pour Tesseract — un binding C-API (`tesserocr`) la perdrait. |
+| ORM (SQLAlchemy) · async (`anyio`) | ❌ | `sqlite3` brut suffit (2 tables) ; runner **thread-only** acté (retrait `execution_mode`, D-J) → async = rupture injustifiée. |
+
+**Cible LOC** (rappel, périssable) : enveloppe + starter pack utile ≈ **3 700 LOC** ; parité complète nettoyée ≈ **6 500–7 000 LOC** (vs **9 682** Picarones, ≈ **−30 %**). La couche se remplit par tranches — elle n'a jamais besoin de revoir les 9,7k. *(Détail des leviers de coupe : §1.4 + §2.4.)*
+
+---
+
+# PARTIE 3 — RISQUES DE TRANSFERT & DETTES (avec détection)
+
+| Risque | Détail | Comment détecter / désamorcer |
+|---|---|---|
+| **R-1 Contrat couche 4 manquant** | La couche 5 ne peut être portée **qu'après** le `Protocol` de module (couche 4) + `RunContext`/`RunControl`/`Deadline`. | Construire d'abord la tranche pipeline minimale ; un adapter starter (`precomputed`) sert de **premier client** du `Protocol`. |
+| **R-2 `version` absent** | Picarones n'a pas d'attribut `version` sur les adapters → repro `RunManifest` incomplète. | Test : `RunManifest` doit capter `name+version` de chaque step ; refuser un module sans `version`. |
+| **R-3 Annulation/deadline (D-A/D-B)** | `control` non câblé partout sauf ollama ; deadline ignorée par SDK/ML local. | Test d'annulation : lancer un step long, déclencher `control.cancel()`, vérifier l'arrêt < N s. Décider par adapter : annulable ou « best-effort » documenté. |
+| **R-4 `ConfidenceToken`** | TypedDict local mot-niveau, échelle [0,1], normalisation Tesseract. À promouvoir en `domain` **quand** la métrique calibration le consomme. | Ne pas figer la forme avant le consommateur (backlog domain). Test de normalisation 0-100→0-1 + rejet <0/>100. |
+| **R-5 Sortie corpus non uniforme (D-F)** | Choisir **`Corpus`** comme sortie unique ; pousser l'**orchestration disque** (download→write→manifest) en **service `app`**, garder en couche 5 le **transport + parsing schéma**. | Test : tout importeur retourne un `Corpus` valide (pas de `dict`). Séparer « localiser » (adapter) de « matérialiser » (app). |
+| **R-6 Sécurité (anti-SSRF + chemins)** | `corpus/_http` porte l'anti-SSRF ; `artifact_store`/eScriptorium ne valident pas les chemins/URL. Invariant `CLAUDE.md` : `validated_path()` + URL contrôlée. | Test : URL loopback/IP réservée rejetée ; clé d'artefact `../` rejetée ; pas d'`install_opener` global (no-side-effect-import). |
+| **R-7 Bugs latents (D-I)** | `Corpus(source=)` eScriptorium, `selected_indices+1` Gallica — invisibles car mockés. | **Test d'intégration non-mocké** (marker `network`/`live`) sur au moins un import réel par source portée. |
+| **R-8 Dérive de budget** | Fichiers riches >400. | `test_file_budgets` actif dès le 1ᵉʳ commit d'adapters ; budgets honnêtes, pas de gonflement silencieux. |
+| **R-9 Couplage cross-famille** | `mistral_ocr` importe `llm.base.normalize_llm_content`. | Extraire la normalisation de contenu LLM en helper neutre partagé ; test d'archi sur les imports inter-sous-paquets. |
+| **R-10 Deux JobStores** | Le legacy `interfaces/web/jobs.py` est celui réellement câblé. | Au portage : un seul store (`adapters/storage`), l'app web le consomme ; supprimer le legacy ; test qu'aucun `JobStore` ne vit hors `adapters/storage`. |
+| **R-11 Données démo en dur (D-H)** | ~220 LOC de faux catalogues. | Les sortir en `data/*.yaml` **ou** supprimer ; un repli démo ne doit jamais se faire passer pour de la vraie donnée (champ `is_demo` explicite). |
+| **R-12 Numérique non rétro-compatible** | Comme la couche 2 (`MIGRATION_COUCHE_2.md` MIG-2) : XerOCR change normalisation/contrats → **toute « validation » par égalité de chiffres avec Picarones est invalide**. | Goldens **refaits**, pas hérités. |
+
+---
+
+## Résumé pour la session de CONSTRUCTION (3-5 points)
+
+1. **Le « double contrat » à tuer n'est pas un héritage** : Picarones a déjà **un** contrat runtime unique = `StepExecutor` (`pipeline/protocols.py`, `execute(inputs, params, context, control)`), que les adapters implémentent par duck-typing. `BaseModule` est **vestigial** (à supprimer sans perte). ⇒ Le `Protocol` couche 4 de XerOCR ≈ `StepExecutor` **+ un attribut `version`** ; les `Base*Adapter` deviennent de simples **mixins d'implémentation**.
+2. **Construire par tranches, starter pack d'abord** : `precomputed` + `tesseract`(+`confidences`) + `openai`+`ollama`, avec les utils racine (`_atomic_io`/`_retry` corrigé/`output_paths`/`_image`/`_httpx_helpers`) portés **en bloc**. Tout le reste (kraken/calamari/pero/cloud OCR, anthropic/mistral, **VLM**, importeurs, stores) est **incrémental — porté à la tranche qui le consomme**, jamais d'avance. **VLM = 0 consommateur aujourd'hui → ne pas porter avant la tranche `zero_shot`.**
+3. **Dettes à corriger AU portage (pas après)** : annulation `control` non câblée (D-A) + deadline asymétrique (D-B) à trancher ; **3 implémentations de retry à unifier** + bug jitter>plafond ; **bugs latents** `Corpus(source=)`/Gallica masqués par les mocks ; `artifact_store` doit utiliser `_atomic_io`+`fsync` et **valider les chemins** ; **un seul `JobStore`**.
+4. **Élagage discipliné** : **SUPPRIMER** `_fallback_log` (son seul débouché, le narratif, est supprimé), `atomic_write_bytes`, la surface morte (escriptorium/gallica/hf), `execution_mode` (déjà parti) ; **sortir** les ~220 LOC de données démo en `data/` ; **sortie corpus unique = `Corpus`** (fin des dict-manifestes). Registre/découverte = **couche `app`** (entry-points `xerocr.modules`), **seul point d'extension tiers = les briques de pipeline**.
+5. **Placement & dépendances** : les importeurs de corpus restent **first-party en couche 5** (transport + parsing → `Corpus`), l'**orchestration disque** remonte en service `app` ; le **store SQLite longitudinal/tidy** est **rapatrié** de `evaluation/` vers `adapters/storage` (cf. `MIGRATION_COUCHE_3.md`). Whitelist d'archi `adapters/` à **expliciter** (inclut `evaluation` pour le type `Corpus` chargé).
+
+*Tous les verdicts de la Partie 1 sont marqués **PROVISOIRE — à confirmer au build** : le contact du code corrige souvent l'analyse.*
