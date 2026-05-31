@@ -38,6 +38,15 @@ PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
 #: Signature d'entrée d'une métrique : ``(type_référence, type_hypothèse)``.
 _Signature = tuple[ArtifactType, ArtifactType]
 
+#: Précédence **explicite** de sélection du candidat quand une vue déclare
+#: plusieurs ``candidate_types`` : du plus **aval** (corrigé) au plus brut — on
+#: évalue la sortie la plus aboutie du pipeline. Jamais l'ordre alphabétique des
+#: valeurs d'enum (qui ne coïncide avec l'intention que par hasard).
+_CANDIDATE_PRECEDENCE: tuple[ArtifactType, ...] = (
+    ArtifactType.CORRECTED_TEXT,
+    ArtifactType.RAW_TEXT,
+)
+
 #: { métrique : { pipeline : [score par doc, aligné, ``None`` inclus] } }
 _Series = dict[str, dict[str, list[MetricScore]]]
 
@@ -155,7 +164,14 @@ def _candidate_for(
         pipeline_outputs.get(pipeline_name, {})
     )
     outputs: Mapping[ArtifactType, Artifact] = by_document.get(document_id, {})
-    for artifact_type in sorted(candidate_types, key=lambda t: t.value):
+    ordered = [t for t in _CANDIDATE_PRECEDENCE if t in candidate_types]
+    ordered.extend(
+        sorted(
+            (t for t in candidate_types if t not in _CANDIDATE_PRECEDENCE),
+            key=lambda t: t.value,
+        )
+    )
+    for artifact_type in ordered:
         if artifact_type in outputs:
             return outputs[artifact_type]
     return None

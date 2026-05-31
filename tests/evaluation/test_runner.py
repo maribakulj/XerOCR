@@ -158,6 +158,43 @@ def test_unknown_normalization_profile_raises(tmp_path: Path) -> None:
         )
 
 
+def test_candidate_precedence_prefers_corrected(tmp_path: Path) -> None:
+    # Vue à 2 candidats : la précédence EXPLICITE choisit CORRECTED_TEXT (aval),
+    # pas l'ordre alphabétique des valeurs d'enum.
+    gt = _write(tmp_path / "d.gt.txt", "alpha")
+    raw = _write(tmp_path / "d.raw.txt", "beta")  # CER > 0 si choisi
+    corrected = _write(tmp_path / "d.corr.txt", "alpha")  # CER 0 si choisi
+    corpus = CorpusSpec(name="c", documents=(_doc("d", gt),))
+    view = EvaluationView(
+        name="multi",
+        candidate_types=frozenset(
+            {ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT}
+        ),
+        metric_names=("cer",),
+    )
+    outputs = {
+        "eng": {
+            "d": {
+                ArtifactType.RAW_TEXT: _candidate("d", raw),
+                ArtifactType.CORRECTED_TEXT: Artifact(
+                    id="d:llm:corrected_text",
+                    document_id="d",
+                    type=ArtifactType.CORRECTED_TEXT,
+                    uri=str(corrected),
+                ),
+            }
+        }
+    }
+    result = evaluate_run(
+        corpus=corpus,
+        evaluation=EvaluationSpec(views=(view,)),
+        pipeline_outputs=outputs,
+        registry=_registry(),
+        manifest=_manifest(1),
+    )
+    assert result.pipelines[0].aggregate[0].value == 0.0  # CORRECTED choisi
+
+
 def test_cross_engine_significance_written(tmp_path: Path) -> None:
     # 2 pipelines (a parfait, b avec erreurs) → RunResult.cross_engine peuplé
     gt1 = _write(tmp_path / "d1.gt.txt", "abcd")

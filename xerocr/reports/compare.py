@@ -85,10 +85,14 @@ def render_comparison(
         f'<td class="num">{_format_delta(delta.delta)}</td></tr>'
         for delta in compare_runs(run_a, run_b)
     )
+    # NB : le sens « mieux » dépend de la métrique. Les métriques livrées
+    # (CER/WER/MER) sont **toutes** des taux d'erreur → on l'annonce explicitement
+    # plutôt qu'en supposant l'universalité. Porter `higher_is_better` jusque dans
+    # `RunResult` est différé tant qu'aucune métrique « plus haut = mieux » n'existe.
     body = Html(
         f'<p class="muted">A = {escape(run_a.manifest.run_id)} · '
         f"B = {escape(run_b.manifest.run_id)} · Δ = B − A "
-        "(métriques d'erreur : Δ &lt; 0 = mieux).</p>\n"
+        "(taux d'erreur CER/WER/MER : Δ &lt; 0 = amélioration).</p>\n"
         "<table>\n<thead><tr><th>Pipeline</th><th>Vue</th><th>Métrique</th>"
         "<th>A</th><th>B</th><th>Δ</th></tr></thead>\n"
         f"<tbody>{rows}</tbody>\n</table>\n"

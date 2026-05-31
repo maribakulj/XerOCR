@@ -23,6 +23,9 @@ class MetricScore(BaseModel):
 
     metric: str = Field(min_length=1, max_length=128)
     value: float | None = None
+    #: « Poids de preuve » de ``value`` : par-document = le **dénominateur** de la
+    #: métrique (longueur de réf…), qui pondère le micro-agrégat ; en agrégat = le
+    #: **nombre de documents** applicables. Deux lectures, même intention (taille).
     support: int | None = Field(default=None, ge=0)
 
 

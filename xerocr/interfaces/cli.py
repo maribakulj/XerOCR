@@ -9,6 +9,7 @@ Les verbes ``run``/``compare``/``serve`` arrivent à leurs tranches (T2/T4).
 from __future__ import annotations
 
 import argparse
+import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -19,6 +20,7 @@ from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
+from xerocr.domain.errors import XerOCRError
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
 from xerocr.domain.run_spec import RunSpec
@@ -212,12 +214,18 @@ def main(argv: list[str] | None = None) -> int:
         "-o", "--output", default="comparaison.html", help="Fichier HTML de sortie."
     )
     args = parser.parse_args(argv)
-    if args.command == "demo":
-        return _run_demo(args.output)
-    if args.command == "run":
-        return _run_config(args.config, args.output, args.json_output)
-    if args.command == "compare":
-        return _compare_command(args.run_a, args.run_b, args.output)
+    # Les erreurs métier (spec invalide, chemin hors zone…) et d'E/S sont
+    # rapportées proprement sur stderr + code de sortie 1 — jamais une trace nue.
+    try:
+        if args.command == "demo":
+            return _run_demo(args.output)
+        if args.command == "run":
+            return _run_config(args.config, args.output, args.json_output)
+        if args.command == "compare":
+            return _compare_command(args.run_a, args.run_b, args.output)
+    except (XerOCRError, OSError) as exc:
+        print(f"Erreur : {exc}", file=sys.stderr)
+        return 1
     return 1  # pragma: no cover (sous-commande requise)
 
 

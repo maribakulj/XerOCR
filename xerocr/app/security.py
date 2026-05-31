@@ -30,9 +30,11 @@ def validated_path(user_path: str, base: Path, *, must_exist: bool = False) -> P
         raise PathSecurityError("chemin contient un octet nul.")
     base_resolved = base.expanduser().resolve()
     candidate = Path(user_path)
+    # ``target`` est toujours absolu (candidat absolu, sinon préfixé par ``base``
+    # déjà résolu) → pas de ``~`` en tête : aucun ``expanduser`` à refaire ici.
     target = candidate if candidate.is_absolute() else base_resolved / candidate
     try:
-        resolved = target.expanduser().resolve()
+        resolved = target.resolve()
     except (OSError, RuntimeError) as exc:
         raise PathSecurityError(
             f"chemin invalide : {user_path!r} ({exc})."

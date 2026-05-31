@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from xerocr.adapters._workspace import workspace_artifact_path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.formats.text import read_plaintext
@@ -78,9 +79,8 @@ def write_corrected(
     adapter_name: str,
     text: str,
 ) -> dict[ArtifactType, Artifact]:
-    output_path = (
-        Path(workspace_uri)
-        / f"{document_id.replace('/', '_')}.{label}.corrected.txt"
+    output_path = workspace_artifact_path(
+        workspace_uri, document_id, label, "corrected.txt"
     )
     output_path.write_text(text, encoding="utf-8")
     return {

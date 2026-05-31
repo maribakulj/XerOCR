@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from xerocr.app.results import load_run_result
 from xerocr.interfaces.cli import main
 
@@ -62,3 +64,14 @@ def test_run_command_writes_json(tmp_path: Path) -> None:
     assert code == 0
     assert json_out.is_file()
     assert load_run_result(json_out).pipelines[0].aggregate[0].value == 0.25
+
+
+def test_run_command_reports_errors_cleanly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # config inexistante → erreur typée → code 1 + message sur stderr (pas de trace).
+    code = main(
+        ["run", str(tmp_path / "absent.yaml"), "-o", str(tmp_path / "r.html")]
+    )
+    assert code == 1
+    assert "Erreur" in capsys.readouterr().err

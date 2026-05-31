@@ -14,8 +14,8 @@ Confidences et ALTO natif sont **différés** (pas de consommateur en T2).
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
+from xerocr.adapters._workspace import workspace_artifact_path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.pipeline.protocols import ParamValue
@@ -124,9 +124,8 @@ class TesseractAdapter:
             oem=self._oem,
             timeout=timeout,
         )
-        output_path = (
-            Path(context.workspace_uri)
-            / f"{context.document_id.replace('/', '_')}.{self._label}.txt"
+        output_path = workspace_artifact_path(
+            context.workspace_uri, context.document_id, self._label, "txt"
         )
         output_path.write_text(text, encoding="utf-8")
         return {
