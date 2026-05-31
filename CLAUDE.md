@@ -9,11 +9,21 @@ avant d'écrire la moindre ligne.**
 
 ## 0. Statut actuel
 
-- Dépôt vierge, branche de travail : `claude/focused-gates-6737Q`.
-- Échafaudage posé : `xerocr/` avec 8 packages (un `__init__.py` vide par couche).
-- Couche 1 (`domain`) : plan de migration prêt dans
-  [`xerocr/domain/MIGRATION_COUCHE_1.md`](xerocr/domain/MIGRATION_COUCHE_1.md).
-- Aucune couche encore implémentée.
+- **Couches 1-2 construites et vertes** : `domain` (13 fichiers) + `formats`
+  (ALTO/PAGE/text, sécurité XML, normalisation). `pytest` vert (~158 tests, ~95 %
+  couverture), `mypy --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
+- **Couches 3-8 analysées, pas encore codées** : guides de portage durables dans
+  `xerocr/<couche>/{MIGRATION,ANALYSE}_COUCHE_*.md` (evaluation a un plan ;
+  pipeline/adapters/app/reports/interfaces ont une analyse).
+- **Garde-fous d'archi actifs** : `tests/architecture/` —
+  `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
+  `file_budgets`, `no_broad_except`, `single_version_source`.
+- **Parcours global** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) (tranches T1→T7 +
+  invariants d'enveloppe + statut T0 détaillé).
+- **Prochaine étape = T1, le squelette ambulant** (corpus pré-calculé → 1 CER →
+  `RunResult` → HTML basique → CLI `demo`), pas une couche horizontale.
+- Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
+  consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 
 ---
 
