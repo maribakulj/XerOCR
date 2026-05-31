@@ -24,8 +24,8 @@
 | 1 `domain` | ✅ **vert** | `xerocr/domain/MIGRATION_COUCHE_1.md` §DoD |
 | 2 `formats` | ✅ **vert** | `xerocr/formats/MIGRATION_COUCHE_2.md` §DoD |
 | 3 `evaluation` | 📋 plan, 0 code | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
-| 4 `pipeline` | 📋 analyse | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
-| 5 `adapters` | 📋 analyse | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
+| 4 `pipeline` | 🔨 **T1** (Protocol + exécuteur verts) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
+| 5 `adapters` | 🔨 **T1** (`precomputed` vert) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | 📋 analyse | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
 | 7 `reports` | 📋 analyse | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
 | 8 `interfaces` | 📋 analyse | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
@@ -322,6 +322,8 @@ sa v1 ; et comme **ton code tourne avec la clé d'autrui en mode dupliqué**, l'
 | D-004 | 2026-05-31 | méthode | Où vit la DoD vivante ? | **Dans chaque `COUCHE` doc** + plan = roll-up/orchestration/journal | Redondance plan↔couche = **détection d'erreur** (réconciliation forcée), pas duplication ; les deux sont complémentaires | — |
 | D-005 | 2026-05-31 | méthode | Granularité des cases par tranche | **Enveloppe + garde-fous + validation** | Signal porteur sans bruit (≠ case par fichier) | — |
 | D-006 | 2026-05-31 | distribution | Comment partager / qui peut l'utiliser ? | **Vitrine hébergée non-optionnelle (T4), duplicable par construction** ; desktop écarté | Découpler calcul (local, tes clés) / vitrine (sans clé) ; BYO-key par *duplication* HF = doc, pas un chantier (custodie de secrets hors de ton assiette) ; rapport autonome **interactif** = artefact T1 | crée §Cibles de distribution |
+| D-007 | 2026-05-31 | T1 | Outillage métrique & CLI (deps minimales) | **CER = impl maison déterministe** (jiwer = oracle de parité à T2) ; **CLI = argparse** (stdlib) | `pyproject` n'a ni `jiwer` ni `click` ; squelette **sans dépendance ajoutée** + contrôle du déterminisme ; cadre le T2 « parité vs jiwer » | — |
+| D-008 | 2026-05-31 | T1 | `RunControl` : `raise_if_cancelled` à garder ou retirer ? | **Conservé** (et devient le mécanisme d'annulation coopératif) ; `register_cancel_handle` **omis** (0 conso) | L'analyse couche 4 disait « retirer, 0 conso » — **corrigé** : en T1, executor + `precomputed` l'appellent (tests verts), donc il A un consommateur. Le handle SDK, lui, reste omis jusqu'à l'adapter LLM (T3/T4) | corrige verdict ANALYSE_COUCHE_4 (`run_control`) |
 
 *Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
 

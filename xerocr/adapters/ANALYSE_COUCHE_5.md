@@ -244,14 +244,15 @@ xerocr/adapters/
 ## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Se remplit **par tranches** (chaque adapter naît avec son pipeline).
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — `precomputed` vert (1ᵉʳ `Module` du starter pack) ; reste **par tranches**.
 
 **Enveloppe :**
-- [ ] Les `Base*Adapter` = **mixins d'impl** (pas un 2ᵉ contrat) ; implémentent le `Module` Protocol (couche 4) **directement**, avec **`version`**. — *gate : `RunManifest` capte name+version de chaque step*
+- [x] `precomputed` implémente le `Module` Protocol (couche 4) **directement**, avec `name`/`version`. — *preuve : `tests/adapters/test_precomputed.py` (`isinstance(.., Module)` ; lecture `<stem>.<label>.txt` → `RAW_TEXT` + `content_hash` ; UTF-8 strict ; annulation)*
+- [ ] Les `Base*Adapter` = **mixins d'impl** (pas un 2ᵉ contrat) ; `RunManifest` capte name+version de chaque step. — *à la 1ᵉʳ vrai moteur (T2) + assemblage manifest (app)*
 - [ ] `effective_output_types` conservé · utils racine portés en bloc (`_atomic_io`/`_retry` jitter corrigé/`output_paths`/`_image`/`_http`).
 
 **Garde-fous :**
-- [ ] `layer_dependencies` : whitelist `adapters` **explicitée** (domain+pipeline+formats+evaluation pour `Corpus`) · `no_side_effect_imports` (**tue `install_opener` global** D-E) · `no_broad_except` (htr/hf) · `file_budgets` (llm/base, escriptorium, iiif… à dégraisser <400).
+- [x] `layer_dependencies` (whitelist `adapters` explicitée : domain+pipeline+formats) · `no_side_effect_imports` · `no_broad_except` · `file_budgets`. — *preuve : `test_adapters_imports_are_allowed` + suite archi verte.* `[~]` `install_opener` global (D-E) : tué à la tranche HTTP.
 
 **Validation par tranche :** `MIGRATION_PLAN.md` §3 — starter pack via `Module` (T1-T3) · **1 seul `JobStore` avec SSE/`job_events` réabsorbés** (T4, cf. §0/D-γ) · bugs latents `Corpus(source=)`/`selected_indices+1` corrigés + test `live` (T7).
 

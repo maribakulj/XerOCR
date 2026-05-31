@@ -52,4 +52,9 @@ markers = [
 omit = ["*/_version.py"]
 
 [tool.coverage.report]
-exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "^\\s*\\.\\.\\.$",
+    "^\\s*\\.\\.\\.\\s*#",
+]

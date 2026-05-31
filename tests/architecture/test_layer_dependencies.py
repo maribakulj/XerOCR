@@ -64,3 +64,54 @@ def test_formats_imports_are_allowed():
         if bad:
             offenders[str(path.relative_to(ROOT))] = bad
     assert not offenders, f"imports interdits dans formats : {offenders}"
+
+
+def test_pipeline_imports_are_allowed():
+    """pipeline (couche 4) n'importe que stdlib + pydantic + domain (+ pipeline).
+    Aucune lib de moteur ni de métrique : l'exécution est agnostique."""
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "pipeline").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if (
+                mod == "xerocr"
+                or mod.startswith("xerocr.domain")
+                or mod.startswith("xerocr.pipeline")
+            ):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans pipeline : {offenders}"
+
+
+#: La couche adapters traduit des libs externes (moteurs OCR/LLM) vers le
+#: ``Module`` Protocol ; elle peut donc parler domain + pipeline + formats, et
+#: ses extras moteur seront ajoutés ici au fil des tranches.
+ADAPTERS_ALLOWED_PKG = (
+    "xerocr.domain",
+    "xerocr.pipeline",
+    "xerocr.formats",
+    "xerocr.adapters",
+)
+
+
+def test_adapters_imports_are_allowed():
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "adapters").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or any(
+                mod.startswith(pkg) for pkg in ADAPTERS_ALLOWED_PKG
+            ):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans adapters : {offenders}"

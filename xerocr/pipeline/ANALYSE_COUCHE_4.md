@@ -279,16 +279,17 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 ## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Démarre en **T1**.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — spine verte (`Module` Protocol + exécuteur) ; reste : runner N-docs, planner.
 
 **Enveloppe (plein-scope dès T1) :**
-- [ ] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *gate : `precomputed` l'implémente et tourne (T1)*
-- [ ] Split `RunContext`(sérialisable)/`RunControl`(runtime)/`Deadline`(domain). — *gate : test sérialisation `RunContext`*
-- [ ] `PipelineExecutor` mono-doc (provenance câblée) + `CorpusRunner` N-docs (threads/timeout/cancel/backpressure). — *gate : provenance présente dans `RunManifest`*
+- [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*
+- [x] Split `RunContext`(domain `Deadline`) / `RunControl`(runtime), câblés par l'exécuteur. — *preuve : `tests/pipeline/test_run_control.py` + `test_executor.py` verts.* `[~]` round-trip (dé)sérialisation `RunContext` : test dédié à ajouter.
+- [x] `PipelineExecutor` mono-doc, **provenance estampillée** (`code_version` + `parameters_hash` + `produced_by_step`). — *preuve : `test_executor::test_runs_single_step_and_stamps_provenance`*
+- [ ] `CorpusRunner` N-docs (threads/timeout/cancel/backpressure). — *T1 (app) / T2*
 - [ ] `planner`+`validation` fusionnés (`SpecError`, pas d'homonyme pydantic) ; port de cache.
 
-**Garde-fous :**
-- [ ] `layer_dependencies` : `pipeline` n'importe **pas** `evaluation` (chaîne `MetricJunction` morte retirée) · `no_side_effect_imports` (`__init__` mince) · `file_budgets` (executor/runner à splitter <400) · `no_broad_except`.
+**Garde-fous (verts dès la 1ʳᵉ tranche) :**
+- [x] `layer_dependencies` (`pipeline` → domain seulement, **pas** `evaluation`) · `no_side_effect_imports` (`__init__` mince) · `file_budgets` · `no_broad_except`. — *preuve : `test_pipeline_imports_are_allowed` + suite archi verte*
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
 
