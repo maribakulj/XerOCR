@@ -1,0 +1,234 @@
+# ANALYSE_COUCHE_6.md — `app` (Picarones → XerOCR)
+
+> **Type** : session d'ANALYSE (guide de portage durable). **Aucun code XerOCR écrit.**
+> **Couche 6 = `app`** (orchestration applicative) dans
+> `domain(1) ← formats(2) ← evaluation(3) ← pipeline(4) ← adapters(5) ← app(6) ← reports(7) ← interfaces(8)`.
+> **Source figée** : `Picarones/picarones/app/` — **27 fichiers, 6 648 LOC**.
+> **Méthode** : 4 sous-agents d'exploration en parallèle (un par cluster), synthèse + recoupement
+> personnel des points décisifs dans le code (couplages inter-couches, sécurité, code mort, shim).
+> **Deux natures de savoir** (CLAUDE.md §9) : **Partie 1** = analyse source (durable) ;
+> **Partie 2** = réorg cible (périssable, « à confirmer à la tranche »). Verdicts **PROVISOIRES**.
+
+---
+
+## PARTIE 0 — Vérification anti-contradiction (obligatoire)
+
+Aucune conclusion ne contredit `CLAUDE.md` ni une couche mergée (domain ✅, formats ✅ ; evaluation = plan). Au contraire, l'analyse **confirme** trois décisions déjà actées ailleurs :
+
+| Décision actée (où) | Confirmé dans le code Picarones |
+|---|---|
+| `RunSpec`/`StepSpec` → `domain`, **séparés du loader YAML** (backlog domain ; couche 1 §9) | `run_spec.py` mêle effectivement type déclaratif + loader YAML + résolution dotted-path → split nécessaire |
+| `_benchmark_*` : double format `BenchmarkResult↔RunResult` supprimé + calcul rapatrié en `evaluation/runner` (CLAUDE.md §8.1 ; couche 3 §6,§11,§12-4) | `_benchmark_converter` calcule (compute_metrics, hooks, aggregate) ; `_benchmark_ner` calcule du NER ; les deux vivent à tort en `app/` |
+| Persistance / store → `adapters/storage` (couche 3 §8) | `benchmark_service.persist()` écrit du JSONL ; `job_runner` parle à `adapters.storage.JobStore` |
+| Registre + factory + **découverte entry-points en `app`** (CLAUDE.md §3) | `registry_service.bootstrap_default_registries()` + `resolve_adapter_class()` + `_resolve_entity_extractor()` = les **germes** (mais enregistrement codé en dur, **pas** d'entry-points) |
+
+**Nuance importante à ne pas violer** (CLAUDE.md §3) : le **seul** point d'extension tiers = les **briques de pipeline**. Métriques, projecteurs, importeurs restent **internes**. Or `registry_service` mélange aujourd'hui registre de **métriques** (interne) et résolution d'**adapters** (extensible) — à scinder en cible.
+
+---
+
+# PARTIE 1 — ANALYSE DE LA SOURCE PICARONES (durable)
+
+## 1.1 Inventaire par cluster (27 fichiers / 6 648 LOC)
+
+| Cluster | Fichiers | LOC | Rôle global vérifié |
+|---|---|---|---|
+| **A. Colonne vertébrale + API** | `__init__.py`(27), `results.py`(24), `services/__init__.py`(96), `schemas/__init__.py`(49), `schemas/run_spec.py`(559) | **755** | Headers de paquet, façades de re-export, DTO YAML + loader |
+| **B. Shim double-format `_benchmark_*`** | `_benchmark_adapter_resolver.py`(313), `_benchmark_conversions.py`(255), `_benchmark_converter.py`(236), `_benchmark_helpers.py`(266), `_benchmark_ner.py`(189), `_benchmark_persistence.py`(55), `benchmark_service.py`(407) | **1 721** | Conversion `RunResult`↔`BenchmarkResult` (legacy) + calcul de métriques mal placé + runner v2 |
+| **C. Orchestration / jobs / reprise** | `run_orchestrator.py`(500), `run_orchestrator_execution.py`(310), `run_orchestrator_helpers/{__init__(55),builders(241),factories(119),legacy(308),loaders(43)}`, `_orchestrator_partial.py`(256), `job_runner.py`(267), `partial_store.py`(360) | **2 459** | `RunOrchestrator`, exécution asynchrone, reprise partielle (fingerprint SHA-256) |
+| **D. Services transverses** | `path_security.py`(454), `corpus_service.py`(541), `registry_service.py`(327), `python_helpers.py`(277), `dependencies.py`(114) | **1 713** | Sécurité chemins (invariant §12), import ZIP corpus, bootstrap registres, bridge Python, capture deps |
+
+**5 fichiers > 400 LOC** (budget XerOCR) : `run_spec`(559), `corpus_service`(541), `run_orchestrator`(500), `path_security`(454), `benchmark_service`(407).
+
+## 1.2 Couplages inter-couches & consommateurs réels
+
+**`app/` importe** (orientation **respectée** : que des couches internes ; **jamais** `reports/` ni `interfaces/`) :
+
+| Vers | Symboles principaux | Cluster qui couple |
+|---|---|---|
+| `domain` | errors, artifacts (ArtifactType/Artifact), corpus (CorpusSpec), documents (DocumentRef/GroundTruthRef), pipeline_spec, evaluation_spec, run_manifest | tous |
+| `evaluation` | **benchmark_result, metric_hooks, metric_result, metrics.{text,ner,over_normalization,search,alto_structural}, views, projectors, registry, corpus** | **B** (calcul/shim) + **D** (registry_service) |
+| `pipeline` | runner.CorpusRunner, types.{PipelineResult,RunContext}, run_result.RunResult, llm_pipeline_builder | B, C |
+| `formats` | alto.parser.parse_alto, text.normalization.get_builtin_profile | C (loaders), legacy |
+| `adapters` | storage.JobStore, ocr.base.BaseOCRAdapter, corpus._fallback_log | B, C |
+
+**Qui consomme `app/`** (grep hors `tests/`) — seulement **2 frontières** (sain) :
+
+| Consommateur | Importe | Usage |
+|---|---|---|
+| `picarones/__init__.py` (API top-level) | `RunSpec`, `RunSpecLoadError`, `load_run_spec_from_yaml`, `RunOrchestrator`, `OrchestrationResult`, `prepare_preset_args`, `run_result_to_benchmark_result` | API publique + ⚠️ auto-déclenche `register_default_metrics()` à l'import (effet de bord) |
+| `interfaces/cli/_workflows.py` | `RunOrchestrator`, `prepare_preset_args`, `run_result_to_benchmark_result` | `prepare → execute_preset → convertir en BenchmarkResult` |
+| `interfaces/web/{benchmark_utils,_path_helpers,security_paths}.py` | `path_security.*`, `RunOrchestrator`, `prepare_preset_args`, `run_result_to_benchmark_result` | endpoints `/api/benchmark/start`, sandbox chemins |
+
+> **Pattern consommateur clé** : CLI et web font tous deux
+> `RunResult → run_result_to_benchmark_result() → BenchmarkResult` **parce que les renderers
+> (couche 7) consomment `BenchmarkResult`, pas `RunResult`**. C'est la racine du double format.
+> En XerOCR (format unique `RunResult`, reports le lit direct) **cette conversion disparaît entièrement**.
+
+## 1.3 La dette centrale : double format de sortie + god-module éclaté
+
+- Picarones produit **deux** formats : `RunResult` (couche 4, `pipeline/run_result.py`) **et** `BenchmarkResult` (couche 3, `evaluation/benchmark_result.py`). Le cluster B est presque entièrement le **pont** entre les deux.
+- Historique vérifié : un god-module **`benchmark_runner.py` (~1 700 LOC)** a été éclaté en `_benchmark_*` lors d'une « Phase 6 audit code-quality ». **`benchmark_runner.py` n'existe plus** — toutes les docstrings qui le citent (≈ 15 fichiers) sont **périmées**. Idem `report_service.py` (cité, inexistant).
+- Réconciliation du « ~1 570 LOC de shim » (CLAUDE.md §8.1) : shim strict ≈ `_benchmark_converter`(236) + `_benchmark_helpers`(266) + `_benchmark_persistence`(55) + ~½ `_benchmark_conversions`(255) + ~½ `_benchmark_adapter_resolver`(313) ≈ **950–1 000 LOC**, + le pont `run_orchestrator_helpers/legacy.py`(308) + le mort `partial_store.py`(360, legacy) → **~1 600 LOC de code legacy/shim/double-format** au total. ✅ cohérent.
+
+## 1.4 Code mort & doc morte confirmés (recoupés dans le code)
+
+| Élément | Preuve | Note |
+|---|---|---|
+| **`partial_store.py` : `_load_partial`, `_save_partial_line`, `_delete_partial`, `partial_path_for_engine`** | **0 consommateur hors-tests** ; servaient `run_benchmark_via_service` | ⚠️ ~½ du fichier est **mort** depuis la suppression de cette fonction |
+| **`run_benchmark_via_service`** | **aucun `def`** dans `picarones/` ; ne subsistent que docstrings/commentaires (dont l'avis de dépréciation de `__init__.py`) | fonction **supprimée** mais « fantôme » partout en prose |
+| Réfs à **`benchmark_runner.py`** (~15 fichiers) | `find` → inexistant | doc morte (god-module éclaté) |
+| Réfs à **`_benchmark_execution.py`** (factories/builders) | inexistant | pattern copié-commenté, pas importé |
+| Réf à **`report_service.py`** (`services/__init__` docstring) | inexistant | doc morte |
+| `run_orchestrator._build_pipelines`/`_load_corpus` (staticmethods l.472-494) | wrappers qui ne délèguent qu'aux fonctions globales | conservés **pour un test** uniquement |
+
+## 1.5 Bugs / fragilités notables (vérifiés)
+
+| Fichier | Problème | Gravité |
+|---|---|---|
+| `run_orchestrator.py` | `progress_callback`/`cancel_event` **acceptés mais ignorés** sur le chemin `bench.run()` (consommés seulement si `partial_dir`) — le caller croit son callback branché | moyen (silencieux) |
+| `run_orchestrator_execution.py` | appelle `BenchmarkService._evaluate_document_in_views()` (**privée**) pour recalculer les vues des docs repris | fragile (couplage privé) |
+| `factories.py` | `counter_state` (lock+dict) partagé par closure ; OK seulement si chaque run a une factory fraîche | risque multithread |
+| `partial_store.py` / `_orchestrator_partial.py` | fingerprint = path+size+mtime (pas de hash de contenu) → ne détecte pas une modif d'image à id constant | acceptable (documenté) |
+| `run_spec.py` | 9 champs « Phase B » (`char_exclude`, `normalization_profile`, `partial_dir`, `entity_extractor`, `profile`, `output_json`, `timeout_seconds_per_doc`, `max_in_flight`, `poll_interval_seconds`) **validés mais à demi-consommés** (migration B1→B2.x inachevée) | dette de migration |
+| `python_helpers.py` | `_dummy_pipeline_yaml()` = pipeline **bidon** juste pour satisfaire `RunSpec.pipelines (min_len=1)` en mode preset ; `adapter_kwargs` vide → `RunManifest` non reproductible sans le code Python | hack |
+| `picarones/__init__.py` | `register_default_metrics()` **auto-déclenché à l'import** | anti-pattern (interdit XerOCR §7) |
+
+## 1.6 Verdicts par fichier — **PROVISOIRES — à confirmer au build**
+
+> Légende : **GARDER** (concept à reporter ~tel quel) · **MODIFIER** (concept gardé, forme à revoir/dégonfler/splitter) · **DÉPLACER** (change de couche) · **SUPPRIMER**.
+> Le verdict décrit l'intention **pour le port XerOCR** ; les faits (rôle/conso) sont, eux, durables.
+
+### Cluster A — colonne vertébrale (755 LOC)
+| Fichier | LOC | Rôle réel vérifié | Verdict PROVISOIRE + raison |
+|---|---|---|---|
+| `__init__.py` | 27 | header paquet, `__all__` vide, sans effet de bord | **GARDER** — réécrire docstring, purger « 6 P0 du S1 » |
+| `results.py` | 24 | **shim** re-export `RunResult/RunDocumentResult/ReportRenderer` ← `pipeline/run_result` | **SUPPRIMER** — en XerOCR `RunResult` vit en `evaluation/result.py`, reports le lit direct (zéro shim §5.1) |
+| `services/__init__.py` | 96 | façade re-export (dont le converter `run_result_to_benchmark_result`) | **MODIFIER** — `__init__` mince §7 ; ne pas ré-exporter de shim |
+| `schemas/__init__.py` | 49 | façade re-export `run_spec` | **MODIFIER/fusionner** avec le split ci-dessous |
+| `schemas/run_spec.py` | 559 | `RunSpec`/`StepSpec`/`PipelineSpecYaml` (DTO YAML, 7 validators) + `load_run_spec_from_yaml` + `resolve_adapter_class` (importlib dotted-path) + `CANONICAL_VIEW_NAMES` | **DÉPLACER (split)** — type déclaratif `RunSpec`/`StepSpec` → **`domain`** (backlog confirmé) ; **loader YAML + `resolve_adapter_class`** → restent **`app`** ; **purger les 9 champs Phase B** (implémenter pour de vrai ou retirer) ; budget <400 |
+
+### Cluster B — shim double-format (1 721 LOC)
+| Fichier | LOC | Rôle réel vérifié | Verdict PROVISOIRE + raison |
+|---|---|---|---|
+| `benchmark_service.py` | 407 | **runner v2 propre** : orchestre `CorpusRunner`(4) + `view_executor`(3), assemble `RunResult`, persiste JSONL ; 0 import `_benchmark_*` | **MODIFIER (split)** — *pas « garder tel quel »* : assemblage `RunResult` + éval vues → **`evaluation/runner`** (3) ; persistance JSONL → **`adapters/storage`** (5) ; il ne reste en `app` qu'une coquille d'orchestration mince |
+| `_benchmark_converter.py` | 236 | cœur du shim `RunResult→BenchmarkResult` ; **calcule** CER/WER + hooks + agrégation | **SUPPRIMER** — double format éliminé ; le calcul est déjà en `evaluation/`, juste appelé d'ici |
+| `_benchmark_helpers.py` | 266 | extracteurs de texte + fingerprint pour le converter | **SUPPRIMER** — récupérer au plus 1-2 extracteurs `Artifact→texte` utiles → `pipeline`/`evaluation` |
+| `_benchmark_persistence.py` | 55 | `asdict(BenchmarkResult)→JSON` | **SUPPRIMER** — pas de `BenchmarkResult` ; persistance `RunResult` → `adapters/storage` |
+| `_benchmark_ner.py` | 189 | **calcule** NER (`compute_ner_metrics`) puis l'attache au `BenchmarkResult` | **DÉPLACER → `evaluation`** — le NER est une métrique (couche 3) |
+| `_benchmark_conversions.py` | 255 | `Corpus`(3, chargé) → `CorpusSpec`(1, déclaratif) + `Document→DocumentRef` ; `_safe_doc_id` (normalisation) | **MODIFIER** — pont qui dépend du modèle corpus XerOCR (à confirmer) ; **garder la normalisation `doc_id`** (utile, réutilisée par NER + corpus_service) |
+| `_benchmark_adapter_resolver.py` | 313 | `engine(BaseOCRAdapter / OCRLLMPipelineConfig) → PipelineSpec` + `build_adapter_resolver` (`name→StepExecutor`) | **MODIFIER** — le **resolver `name→executor` = germe du registre/factory** (garder, → registre `app`) ; la conversion `engine→spec` legacy disparaît (en XerOCR on déclare `PipelineSpec` direct) |
+
+### Cluster C — orchestration / jobs / reprise (2 459 LOC)
+| Fichier | LOC | Rôle réel vérifié | Verdict PROVISOIRE + raison |
+|---|---|---|---|
+| `run_orchestrator.py` | 500 | `RunOrchestrator.execute()` **et** `execute_preset()` → `OrchestrationResult` ; orchestre vraiment (corpus→registres→pipelines→service) | **MODIFIER** — concept d'orchestrateur `app` à **garder** ; dégonfler : fusionner `execute`/`execute_preset` (le 2ᵉ existe pour les engines en mémoire legacy), retirer la persistance `output_json` legacy + les callbacks « acceptés-ignorés » ; budget <400 |
+| `run_orchestrator_execution.py` | 310 | `execute_with_partial()` (reprise par pipeline) ; recalcule les vues via méthode **privée** du service | **MODIFIER/différer** — feature réelle mais couplage fragile ; à reconcevoir proprement **à la tranche reprise** (≠ MVP) |
+| `run_orchestrator_helpers/__init__.py` | 55 | re-export pour préserver l'API historique | **SUPPRIMER** — pas d'API historique à préserver (zéro shim) |
+| `…/builders.py` | 241 | `_load_corpus`/`_build_pipelines`/`_build_views`/`_build_benchmark_service` | **MODIFIER** — helpers d'assemblage à **garder** mais replier dans l'orchestrateur/registre |
+| `…/factories.py` | 119 | `_default_gt_factory`/`_default_inputs_factory`/`_make_context_factory` (closure progress, thread-safe) | **GARDER (concept)** — frontière « doc → artefacts » + `RunContext` par doc |
+| `…/legacy.py` | 308 | pont `BenchmarkResult` : `_PipelineEngineProxy`, `_resolve_entity_extractor` (dotted-path→callable NER), `_persist_legacy_benchmark_json` | **SUPPRIMER** — `BenchmarkResult` disparu ; **garder le concept** `_resolve_entity_extractor` = résolution de module tiers (→ entry-points `app`) |
+| `…/loaders.py` | 43 | `_filesystem_payload_loader` (disque→payload ALTO/texte) + `_kwargs_signature` | **GARDER (concept)** — chargement payload = I/O (`app` ou `adapters/storage`) |
+| `_orchestrator_partial.py` | 256 | reprise **par pipeline** (fingerprint, load/append/delete/filter) ; système **vivant** | **MODIFIER** — devenir le **seul** mécanisme de reprise (différer à sa tranche) |
+| `job_runner.py` | 267 | `JobRunner` thread daemon + `JobStore` ; annulation **best-effort non branchée** | **GARDER (concept)** pour `serve` — mais brancher une vraie annulation via `Deadline`/`RunControl` (couche 4, invariant §12) ; couple à `adapters/storage` |
+| `partial_store.py` | 360 | reprise **par engine** (legacy) ; **~½ mort** ; seuls `compute_run_fingerprint`+`_partial_path` vivants | **SUPPRIMER** — garder seulement le **concept fingerprint**, fusionné dans le mécanisme partial unique |
+
+### Cluster D — services transverses (1 713 LOC)
+| Fichier | LOC | Rôle réel vérifié | Verdict PROVISOIRE + raison |
+|---|---|---|---|
+| `path_security.py` | 454 | **invariant §12** : `validated_path` (resolve+`is_relative_to`), `WorkspaceManager` (sandbox/session, anti-symlink post-mkdir), `safe_report_name`, `validated_prompt_filename` | **GARDER** — porter **fidèlement** (→ package `security/` §8.5) ; dédupliquer `prompt_filename`/`report_name`, moderniser (`is_relative_to` natif 3.11), splitter <400 |
+| `corpus_service.py` | 541 | import ZIP sandboxé (anti zip-bomb/traversal/symlink) + appariement image/GT (`.gt.alto.xml`…) → `CorpusSpec` | **GARDER/DÉPLACER ?** — défenses à garder ; place à confirmer (`app` vs `adapters/corpus` qui porte déjà IIIF/Gallica/…) ; splitter <400 (extraction · catalogage · appariement) |
+| `registry_service.py` | 327 | `bootstrap_default_registries()` (boucle **codée en dur** sur métriques+projecteurs), `RegistriesBundle` ; **pas** d'entry-points | **MODIFIER (scinder)** — registre **métriques/projecteurs** = interne (couche 3) ; registre **modules de pipeline** + **découverte entry-points** (`xerocr.modules`) + `register()` = couche `app` (CLAUDE.md §3) |
+| `python_helpers.py` | 277 | `prepare_preset_args`/`PresetArgs` : bridge engines-en-mémoire→`RunSpec` ; `_dummy_pipeline_yaml` (hack) | **SUPPRIMER/reconcevoir** — existe pour les objets engine legacy ; en XerOCR on déclare `PipelineSpec` direct ; si une API Python est voulue, la rebâtir proprement |
+| `dependencies.py` | 114 | `capture_dependencies_lock` + `capture_system_binaries_lock` → `RunManifest` (reproductibilité §12) ; pur, stateless | **GARDER** — invariant repro ; étendre la table binaires au-delà de Tesseract (starter pack) ; place `app` vs `adapters` à confirmer |
+
+---
+
+# PARTIE 2 — RÉORGANISATION CIBLE XerOCR (périssable — à confirmer à la tranche)
+
+> ⚠️ Périssable. Le contact du code amont (evaluation/pipeline/adapters non encore mergés) corrigera ces formes.
+> **On ne construit PAS la couche `app` de haut en bas** : elle **apparaît par tranches verticales**, au fur et à mesure que `interfaces` en a besoin.
+
+## 2.1 Rôle d'`app` en XerOCR = **coquille mince** (les deux axes, CLAUDE.md §2)
+
+`app` orchestre, **ne calcule jamais** (« l'app appelle, ne calcule plus »). Elle :
+1. charge/valide une spec (`RunSpec`) et résout les modules par nom ;
+2. appelle `pipeline`(4) puis `evaluation`(3) ; l'assemblage de `RunResult` est fait **par `evaluation`** ;
+3. délègue la persistance à `adapters/storage`(5) et le rendu à `reports`(7, via callable injecté) ;
+4. applique les invariants transverses : **sécurité chemins** (§12), **reproductibilité** (deps/binaires → `RunManifest`), **annulation/timeout** (`Deadline`/`RunControl`).
+
+| Axe | Contenu `app` | Quand |
+|---|---|---|
+| **Enveloppe (plein-scope, maintenant)** | contrat d'orchestration ; **registre de modules + factory + découverte entry-points** (`xerocr.modules`) + `register()` ; `RunSpec` (en `domain`) + loader YAML (en `app`) ; sécurité chemins | conçu d'office |
+| **Surface (incrémentale, élaguée)** | quels workflows CLI (`run/report/compare/demo/serve`), quels importeurs branchés, le job-runner web, la reprise partielle | une tranche à la fois |
+
+## 2.2 Où va chaque concept Picarones (table de transfert)
+
+| Concept Picarones (app) | Destination XerOCR | Note |
+|---|---|---|
+| `RunSpec`/`StepSpec` (déclaratif) | **`domain`** (couche 1) | frère de `PipelineSpec`/`EvaluationSpec` ; backlog confirmé |
+| `load_run_spec_from_yaml` + `resolve_adapter_class` | **`app`** (loader/résolution = I/O + import dynamique) | « séparer du loader YAML » |
+| `RunOrchestrator` (mince) + builders/factories | **`app`** | un seul `execute`, pas de `execute_preset` |
+| assemblage `RunResult` + éval vues (`benchmark_service`) | **`evaluation/runner`** (couche 3) | RunResult = sortie d'évaluation |
+| persistance JSONL / store longitudinal | **`adapters/storage`** (couche 5) | tidy store (couche 3 §8) |
+| `_benchmark_ner` (calcul NER) | **`evaluation/metrics`** (couche 3) | NER = métrique |
+| `path_security` | **`app/security/`** (package, §8.5) | invariant §12, port fidèle |
+| `corpus_service` (import ZIP + appariement) | **`app`** ou **`adapters/corpus`** | à confirmer (adapters/corpus porte déjà les importeurs) |
+| `dependencies` (capture deps/binaires) | **`app`** (ou `adapters`) | reproductibilité |
+| `registry_service` (modules de pipeline) | **`app`** (+ entry-points) | seul point d'extension tiers |
+| `job_runner` | **`app`** | pour `serve` ; annulation réelle via `RunControl` |
+| `_orchestrator_partial` (reprise) | **`app`** (1 seul système) | à la tranche reprise |
+| `results.py`, `legacy.py`, `_benchmark_{converter,helpers,persistence}`, `partial_store` (mort), `python_helpers` (preset), `…helpers/__init__` re-export | **SUPPRIMÉ** | shim/double-format/legacy/mort |
+
+## 2.3 Esquisse d'arborescence cible (à confirmer)
+
+```
+xerocr/app/
+├── __init__.py            mince, zéro effet de bord (pas de register_* auto)
+├── orchestrator.py        RunOrchestrator unique → appelle pipeline + evaluation, assemble via eval
+├── spec_loader.py         load_run_spec_from_yaml + resolve dotted-path/entry-point (RunSpec vit en domain)
+├── modules/               registre + factory + découverte entry-points (xerocr.modules) + register()
+├── security/              validated_path, WorkspaceManager, safe_* (invariant §12)
+├── corpus_import.py       (?) import ZIP + appariement image/GT → CorpusSpec  [ou adapters/corpus]
+├── reproducibility.py     (?) capture deps + binaires → RunManifest            [ou adapters]
+└── jobs.py                JobRunner (serve) + annulation coopérative
+```
+*(Tous < 400 LOC ; `corpus_import`/`reproducibility` peut-être en `adapters` — décidé à la tranche.)*
+
+## 2.4 Apparition par tranches (≠ couche complète)
+
+| Tranche (cf. couche 3 §15) | Ce que `app` matérialise alors |
+|---|---|
+| **1. Squelette `demo`** (corpus pré-calculé → CER → RunResult → HTML → CLI) | orchestrateur **minimal** + registre de modules (1 module `precomputed`) + `RunSpec` minimal. Prouve que la coquille tient. |
+| **2. Épaississement texte** (`run`, profils, `compare`) | loader YAML complet, sécurité chemins, capture repro, plus de modules au registre |
+| **3. `serve`** | `JobRunner` + sandbox session + annulation |
+| **4. reprise partielle** | mécanisme partial unique (fingerprint), si justifié par un consommateur réel |
+
+---
+
+# PARTIE 3 — RISQUES DE TRANSFERT & DETTES (comment détecter / désamorcer)
+
+| # | Risque / dette | Détection | Désamorçage |
+|---|---|---|---|
+| **R1** | **Réintroduire le double format** en gardant un `BenchmarkResult` ou un converter « le temps de migrer » | test `no-legacy-imports` (interdire `benchmark_result`, `run_result_to_benchmark_result`) ; 1 seul type de sortie | tout consommateur lit `RunResult` direct ; **reports + web + compare migrés en bloc** (couche 3 §12-4 : ~30 conso) |
+| **R2** | **Calcul qui reste en `app`** (NER, hooks, agrégation) | `test_layer_dependencies` : `app` n'importe **pas** `evaluation/metrics*` pour calculer ; revue « app appelle, ne calcule pas » | NER/hooks/agrégation → `evaluation/runner` |
+| **R3** | **Mélanger registre interne (métriques) et registre extensible (modules)** → ouvrir une prise de trop | revue : entry-points `xerocr.modules` **uniquement** pour briques de pipeline (CLAUDE.md §3) | deux registres distincts ; métriques/projecteurs non pluggables |
+| **R4** | **Sécurité chemins affaiblie au portage** (path-traversal/symlink/zip-bomb) | tests obligatoires : `..`, chemin absolu, symlink, zip-bomb, octet nul **doivent échouer** ; `validated_path` partout | porter `path_security` + `corpus_service._extract_safely` **fidèlement**, tester d'abord |
+| **R5** | **Champs de spec à demi-câblés** (les 9 « Phase B ») recopiés tels quels | revue : tout champ `RunSpec` a un consommateur réel en CI (« pas de conso = supprimé ») | n'ajouter un champ que quand sa tranche le consomme |
+| **R6** | **Reproductibilité perdue** (mode preset Picarones perdait `adapter_kwargs`) | golden `RunManifest` byte-stable ; test : run reproductible **depuis le manifest seul** | pas de chemin « engines en mémoire » ; toute brique déclare `version` (§3) |
+| **R7** | **Annulation/timeout fantômes** (Picarones : callbacks acceptés-ignorés, cancel best-effort) | test : un `Deadline` dépassé **interrompt** ; annulation observable | brancher `Deadline`/`RunControl` (couche 4) dès `job_runner` |
+| **R8** | **Doc/commentaires périmés recopiés** (`benchmark_runner.py`, `report_service.py`, `run_benchmark_via_service`, sprints S/A/Phase) | grep anti-narration ; `test_no_legacy_imports` | « garder le pourquoi, jeter la datation » (couche 2 MIG-3) |
+| **R9** | **Code mort transféré** (½ `partial_store`, staticmethods test-only, `_dummy_pipeline_yaml`) | couverture CI ; « pas de conso = supprimé » | ne pas porter ; reprise = 1 seul système |
+| **R10** | **Budgets explosés** (5 fichiers >400) | `test_file_budgets` strict | splitter dès l'écriture (orchestrateur / sécurité / corpus) |
+| **R11** | **Effet de bord à l'import** (`register_default_metrics()` auto) | `test_no_side_effect_imports` | enregistrement **explicite, idempotent, testable** (§7) |
+
+---
+
+## Résumé pour la future session de CONSTRUCTION (3–5 points)
+
+1. **`app` = coquille d'orchestration mince qui NE CALCULE PAS.** Elle appelle `pipeline`(4) puis `evaluation`(3) ; l'assemblage de `RunResult` se fait **dans `evaluation/runner`**, la persistance dans **`adapters/storage`**. Le seul « gros » runner sain de Picarones (`benchmark_service.py`) se **scinde** entre ces couches — ce n'est pas un « garder tel quel ».
+2. **Tout le cluster `_benchmark_*` + `results.py` + `legacy.py` + ½ `partial_store` + `python_helpers`(preset) = SUPPRIMÉ** : c'est le double format `BenchmarkResult↔RunResult` (+ un god-module éclaté, + une fonction `run_benchmark_via_service` déjà morte qui laisse du code orphelin). En XerOCR, `RunResult` est unique et **les reports le lisent direct** → la conversion n'existe plus. Le **NER** part en `evaluation` (c'est une métrique).
+3. **Deux germes d'enveloppe à concevoir plein-scope, sans les remplir** : (a) `RunSpec`/`StepSpec` **en `domain`** + loader YAML/résolution **en `app`** (split « séparer du loader ») ; (b) **registre de modules de pipeline + factory + découverte entry-points** (`xerocr.modules`) — **uniquement** pour les briques de pipeline, jamais les métriques/importeurs.
+4. **Invariants à porter fidèlement et à tester EN PREMIER** : sécurité chemins (`validated_path`/`WorkspaceManager`/anti zip-bomb-traversal-symlink, §12), reproductibilité (`dependencies` → `RunManifest`), annulation coopérative (`Deadline`/`RunControl` — Picarones ne la branche pas vraiment, à corriger).
+5. **Ne pas bâtir `app` en bloc** : elle naît par tranches. Tranche 1 (`demo`) = orchestrateur minimal + registre (1 module `precomputed`) + `RunSpec` minimal — juste assez pour prouver que la coquille tient. Budgets <400, zéro shim, zéro effet de bord à l'import, zéro champ de spec sans consommateur.
+
+*(Tous les verdicts ci-dessus sont **PROVISOIRES — à confirmer au build** ; le contact du code amont non encore mergé prévaut.)*
