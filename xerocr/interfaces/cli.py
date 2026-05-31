@@ -56,7 +56,7 @@ _DEMO_DOCS: tuple[tuple[str, str, dict[str, str]], ...] = (
 _TEXT_VIEW = EvaluationView(
     name="text",
     candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-    metric_names=("cer",),
+    metric_names=("cer", "wer", "mer"),
 )
 
 

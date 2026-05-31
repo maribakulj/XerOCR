@@ -283,7 +283,7 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 ## DoD vivante (couche 3) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — `RunResult` + registre type-driven + runner (CER) verts ; passe inter-moteurs à T2.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — `RunResult` + registre + runner verts ; métriques **CER/WER/MER** (parité jiwer) ; profils/stats/cross-engine à T2.
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*
@@ -297,7 +297,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 
 **Validation inter-couches :** voir `MIGRATION_PLAN.md` §3-T1 (1 CER → `RunResult` → HTML déterministe de bout en bout).
 
-- [~] **Surface différée** : WER/MER/profils/stats (T2), structure (T5), longitudinal/philologie/taxo/économie (T7). — *cases créées au démarrage de chaque tranche, pas d'avance.*
+- [x] **WER/MER** (impl maison déterministe + **parité jiwer**, 15 cas) au socle texte. — *preuve : `test_metrics_text` (valeurs main) + `test_metrics_parity` (vs jiwer)*
+- [~] **Surface encore différée** : profils de normalisation/`char_exclude`, stats `scipy`, `cross_engine` (T2) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
 
 ---
 
