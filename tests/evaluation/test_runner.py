@@ -191,4 +191,4 @@ def test_cross_engine_significance_written(tmp_path: Path) -> None:
         manifest=manifest,
     )
     keys = {score.metric for score in result.cross_engine}
-    assert "cer:significance_p" in keys
+    assert "text:cer:significance_p" in keys

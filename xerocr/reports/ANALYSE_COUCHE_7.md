@@ -261,7 +261,7 @@ xerocr/reports/
 ## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — cadre `Protocol Section` + assembleur autonome + section overview verts ; sections incrémentales à T2+.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — cadre + assembleur autonome + sections **overview** & **cross_engine** (significativité visible) verts ; sections incrémentales.
 
 **Enveloppe (cadre, plein-scope dès T1) :**
 - [x] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés ; `Html` NewType anti-XSS) ; 0 registry. — *preuve : `reports/section.py` ; `isinstance(OverviewSection(), Section)`*

@@ -119,7 +119,7 @@ def _cross_engine_scores(
             value, support = metric.fn(context)
             scores.append(
                 MetricScore(
-                    metric=f"{base_metric}:{metric.name}",
+                    metric=f"{view.name}:{base_metric}:{metric.name}",
                     value=value,
                     support=support,
                 )
