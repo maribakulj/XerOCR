@@ -13,6 +13,7 @@ loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
 from __future__ import annotations
 
 from datetime import datetime
+from tempfile import TemporaryDirectory
 
 from xerocr.app.modules.registry import ModuleRegistry
 from xerocr.domain.artifacts import Artifact, ArtifactType
@@ -48,32 +49,35 @@ def run(
         for name in needed
     }
     executor = PipelineExecutor(code_version)
-
-    pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
-    for pipeline in spec.pipelines:
-        per_document: dict[str, dict[ArtifactType, Artifact]] = {}
-        for document in spec.corpus.documents:
-            per_document[document.id] = executor.execute_document(
-                pipeline,
-                modules,
-                _initial_inputs(document),
-                document_id=document.id,
-                deadline=deadline,
-            )
-        pipeline_outputs[pipeline.name] = per_document
-
-    completed_at = utcnow()
-    manifest = _manifest(spec, needed, code_version, started_at, completed_at)
-
     metric_registry = MetricRegistry()
     register_default_metrics(metric_registry)
-    return evaluate_run(
-        corpus=spec.corpus,
-        evaluation=spec.evaluation,
-        pipeline_outputs=pipeline_outputs,
-        registry=metric_registry,
-        manifest=manifest,
-    )
+
+    # Workspace temporaire par run : les modules qui produisent des artefacts
+    # (tesseract…) y écrivent ; le runner lit ces sorties avant le nettoyage.
+    with TemporaryDirectory(prefix="xerocr-run-") as workspace:
+        pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
+        for pipeline in spec.pipelines:
+            per_document: dict[str, dict[ArtifactType, Artifact]] = {}
+            for document in spec.corpus.documents:
+                per_document[document.id] = executor.execute_document(
+                    pipeline,
+                    modules,
+                    _initial_inputs(document),
+                    document_id=document.id,
+                    deadline=deadline,
+                    workspace_uri=workspace,
+                )
+            pipeline_outputs[pipeline.name] = per_document
+
+        completed_at = utcnow()
+        manifest = _manifest(spec, needed, code_version, started_at, completed_at)
+        return evaluate_run(
+            corpus=spec.corpus,
+            evaluation=spec.evaluation,
+            pipeline_outputs=pipeline_outputs,
+            registry=metric_registry,
+            manifest=manifest,
+        )
 
 
 def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:

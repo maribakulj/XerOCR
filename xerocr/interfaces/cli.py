@@ -13,6 +13,7 @@ from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from xerocr.app import load_run_spec
 from xerocr.app import run as run_orchestrator
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.domain.artifacts import ArtifactType
@@ -149,6 +150,23 @@ def _run_demo(output: str) -> int:
     return 0
 
 
+def _run_config(config_path: str, output: str) -> int:
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    spec = load_run_spec(config_path)
+    result = run_orchestrator(
+        spec, registry=registry, code_version=_code_version()
+    )
+    Path(output).write_text(
+        default_report_renderer().render(
+            result, title=f"XerOCR — {spec.corpus.name}"
+        ),
+        encoding="utf-8",
+    )
+    print(f"Rapport écrit : {output}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="xerocr",
@@ -162,9 +180,18 @@ def main(argv: list[str] | None = None) -> int:
     demo.add_argument(
         "-o", "--output", default="rapport_demo.html", help="Fichier HTML de sortie."
     )
+    run_cmd = subparsers.add_parser(
+        "run", help="Exécute un run décrit dans un fichier YAML."
+    )
+    run_cmd.add_argument("config", help="Fichier YAML décrivant le run.")
+    run_cmd.add_argument(
+        "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
+    )
     args = parser.parse_args(argv)
     if args.command == "demo":
         return _run_demo(args.output)
+    if args.command == "run":
+        return _run_config(args.config, args.output)
     return 1  # pragma: no cover (sous-commande requise)
 
 
