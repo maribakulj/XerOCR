@@ -283,16 +283,17 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 ## DoD vivante (couche 3) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 plan acté, 0 code.** Démarre en **T1** (squelette).
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — `RunResult` + registre type-driven + runner (CER) verts ; passe inter-moteurs à T2.
 
 **Enveloppe (plein-scope dès T1) :**
-- [ ] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (porte structure/NER/taxonomy + par-doc + `schema_version`). — *gate : golden `RunResult` canonique*
-- [ ] Registre **type-driven** unique (sélection par `input_types`) ; 0 des 4 registres Picarones. — *gate : `test_no_legacy_imports` (pas de `register_lever`/hooks)*
-- [ ] `DocContext`/`CrossEngineContext` + runner 2 passes + `safe_*` (vide→`None`). — *gate : test entrées dégénérées*
+- [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*
+- [x] Registre **type-driven** unique (sélection par `input_types`) ; 0 ancien registre. — *preuve : `test_registry::test_get_and_select_by_input_types` + `test_no_forbidden_tokens` vert*
+- [x] `DocContext` + runner (par-document → agrégat, `safe_mean` vide→`None` + support). — *preuve : `test_runner` (agrégat 0.125 / support 2 ; GT absente → `None`)*
+- [ ] `CrossEngineContext` + passe inter-moteurs (`cross_engine` écrit dans `RunResult`). — *T2*
 
 **Garde-fous :**
-- [ ] `layer_dependencies` : whitelist `evaluation` = domain+formats+`scipy` (+ jiwer/rapidfuzz/numpy/shapely **au fil des tranches**).
-- [ ] `no_side_effect_imports` (décorateur = valeur pure, pas d'enregistrement à l'import) · `file_budgets` · **`no-orphan métrique↔section`**.
+- [x] `layer_dependencies` (`evaluation` → domain+formats ; `scipy` whitelisté) · `no_side_effect_imports` (décorateur **pur**, registre non auto-peuplé) · `file_budgets`. — *preuve : `test_evaluation_imports_are_allowed` + `test_fresh_registry_is_empty` + suite archi verte*
+- [~] **`no-orphan métrique↔section`** : à la 1ʳᵉ section (couche 7, T1).
 
 **Validation inter-couches :** voir `MIGRATION_PLAN.md` §3-T1 (1 CER → `RunResult` → HTML déterministe de bout en bout).
 

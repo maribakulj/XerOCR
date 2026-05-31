@@ -182,7 +182,7 @@ backlog inexistant. **Aucune logique ne change.**
 - [x] `ruff check` vert. — *preuve : `ruff check xerocr/` → All checks passed*
 - [x] Tests domain + architecture verts. — *preuve : `pytest` 163 passed / 95 % cov*
 - [x] Import sans effet de bord. — *preuve : `tests/architecture/test_no_side_effect_imports.py` vert*
-- [~] **Réserve ouverte** : `EvaluationSpec`/`ProjectionSpec` (`evaluation.py`/`projection.py`) **sans consommateur** (couche 3 vide). — *à arbitrer à la tranche couche 3 : confirmer comme vocabulaire déclaratif (garder) ou différer ; tension avec « pas de consommateur = supprimé ». Tracé : `MIGRATION_PLAN.md` §9.*
+- [~] **Réserve partiellement levée (T1)** : `MetricSpec`/`EvaluationView`/`EvaluationSpec` ont un consommateur (registre + runner couche 3) → **confirmés, gardés**. `ProjectionSpec` reste **sans consommateur** → différé à T2 (projections). — *cf. journal D-009.*
 - [~] **Différé-par-design** : backlog domain (`RunSpec`/`ProjectionReport`/`ConfidenceToken`), `CanonicalLayout`. — *anti-spéculatif : créés à la tranche de leur 1ᵉʳ consommateur (§9).*
 
 ---

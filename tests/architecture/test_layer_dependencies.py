@@ -115,3 +115,29 @@ def test_adapters_imports_are_allowed():
         if bad:
             offenders[str(path.relative_to(ROOT))] = bad
     assert not offenders, f"imports interdits dans adapters : {offenders}"
+
+
+#: evaluation parle domain + formats + scipy (Wilcoxon/Friedman, dette dure) ;
+#: jiwer/rapidfuzz/numpy/shapely/PIL s'ajoutent à la tranche qui les introduit.
+EVAL_ALLOWED_EXT = ALLOWED_EXT | {"scipy"}
+
+
+def test_evaluation_imports_are_allowed():
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "evaluation").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if (
+                mod == "xerocr"
+                or mod.startswith("xerocr.domain")
+                or mod.startswith("xerocr.formats")
+                or mod.startswith("xerocr.evaluation")
+            ):
+                continue
+            if mod == "__future__" or top in EVAL_ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans evaluation : {offenders}"
