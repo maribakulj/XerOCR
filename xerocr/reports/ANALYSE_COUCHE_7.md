@@ -261,16 +261,17 @@ xerocr/reports/
 ## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** Cadre en **T1**, sections **incrémentales**.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — cadre `Protocol Section` + assembleur autonome + section overview verts ; sections incrémentales à T2+.
 
 **Enveloppe (cadre, plein-scope dès T1) :**
-- [ ] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés) ; 0 des 4 `arg_kind` + 0 `section_registry`. — *gate : grep, 1 seule signature*
-- [ ] Consommation **directe de `RunResult`**, **zéro data-layer** qui ré-agrège. — *gate : `layer_dependencies` — `reports` n'appelle pas `evaluation.statistics`/`metrics` pour calculer*
-- [ ] `ReportRenderer` **injecté par `app`** (reports ne connaît pas `app`) · charts **SVG serveur** déterministes (pas de Chart.js/CDN).
-- [ ] **Rapport = artefact autonome partageable** (canal « vitrine », plan §Cibles) : HTML déterministe **sans backend ni CDN**, mais **interactif côté navigateur** (repli/tri/filtre/comparaison de runs **déjà calculés** ; jamais de re-mesure). — *gate : ouvrir le HTML hors-ligne = pleinement fonctionnel*
+- [x] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés ; `Html` NewType anti-XSS) ; 0 registry. — *preuve : `reports/section.py` ; `isinstance(OverviewSection(), Section)`*
+- [x] Consommation **directe de `RunResult`**, **zéro data-layer**. — *preuve : `test_reports_imports_are_allowed` (`reports → {domain, evaluation}`)*
+- [x] `ReportRenderer` **injectable** (sections en paramètre ; `default_report_renderer` = socle). — *preuve : `test_renderer`*
+- [ ] charts **SVG serveur** déterministes (pas de Chart.js/CDN). — *avec la 1ʳᵉ section graphique (T2+)*
+- [x] **Rapport = artefact autonome** : HTML déterministe **sans backend ni CDN** (ouvrable hors-ligne). — *preuve : `xerocr demo` (811 o, octet-stable) + `test_cli_demo`.* `[~]` interactivité client-side : avec les sections (surface).
 
 **Garde-fous :**
-- [ ] `layer_dependencies` (`reports → {domain, evaluation}` seulement) · **`no-orphan section↔métrique`** (`requires` ↔ clé `RunResult`) · **golden HTML byte-stable** · `file_budgets` (render/crosses/philological à splitter).
+- [x] `layer_dependencies` (`reports → {domain, evaluation}`) · **`no-orphan section↔métrique`** (le renderer saute les `requires` non couverts) · **golden HTML byte-stable** (2 runs identiques) · `file_budgets`. — *preuve : `test_renderer` (no-orphan + déterminisme) + suite archi*
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (1 section overview/CER lit `RunResult` → HTML déterministe).
 

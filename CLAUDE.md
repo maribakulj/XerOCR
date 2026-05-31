@@ -12,16 +12,18 @@ avant d'écrire la moindre ligne.**
 - **Couches 1-2 construites et vertes** : `domain` (13 fichiers) + `formats`
   (ALTO/PAGE/text, sécurité XML, normalisation). `pytest` vert (~158 tests, ~95 %
   couverture), `mypy --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
-- **Couches 3-8 analysées, pas encore codées** : guides de portage durables dans
-  `xerocr/<couche>/{MIGRATION,ANALYSE}_COUCHE_*.md` (evaluation a un plan ;
-  pipeline/adapters/app/reports/interfaces ont une analyse).
+- **T1 (squelette ambulant) CONSTRUIT** : tranche verticale fine à travers les
+  couches 3→8 — `xerocr demo` marche (rapport HTML autonome, **octet-stable**).
+  Couches 3-6 remplies de leur part T1, 7-8 = cadre `Section` + CLI `demo`. État
+  détaillé vivant : roll-up de `MIGRATION_PLAN.md`. Analyses durables toujours
+  dans `xerocr/<couche>/{MIGRATION,ANALYSE}_COUCHE_*.md`.
 - **Garde-fous d'archi actifs** : `tests/architecture/` —
   `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
   `file_budgets`, `no_broad_except`, `single_version_source`.
 - **Parcours global** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) (tranches T1→T7 +
   invariants d'enveloppe + statut T0 détaillé).
-- **Prochaine étape = T1, le squelette ambulant** (corpus pré-calculé → 1 CER →
-  `RunResult` → HTML basique → CLI `demo`), pas une couche horizontale.
+- **Prochaine étape = T2** (axe texte) : moteur `tesseract` réel, WER/MER, stats
+  `scipy`, `cross_engine`, commandes `run`/`compare`. Toujours par tranche.
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

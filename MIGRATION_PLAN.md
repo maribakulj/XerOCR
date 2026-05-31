@@ -27,11 +27,11 @@
 | 4 `pipeline` | 🔨 **T1** (Protocol + exécuteur verts) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
 | 5 `adapters` | 🔨 **T1** (`precomputed` vert) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | 🔨 **T1** (orchestrateur + registre/factory + RunSpec) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
-| 7 `reports` | 📋 analyse | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 📋 analyse | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 7 `reports` | 🔨 **T1** (Section + assembleur + overview) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 🔨 **T1** (CLI `demo`) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
-| **T1 squelette ambulant** | ⏳ pas commencé | critère inter-couches §3-T1 |
-| **Rapport autonome interactif** | ⏳ livrable **T1** | artefact partageable sans backend — §Cibles de distribution |
+| **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
+| **Rapport autonome interactif** | ✅ HTML autonome déterministe (interactivité client-side = surface ult.) | §Cibles de distribution |
 | **Space hébergé (vitrine, mode public)** | ⏳ **non-optionnel** — T4 | §Cibles de distribution |
 
 ### Rituel de réconciliation (NON négociable — c'est ce qui rend la redondance utile)
@@ -326,6 +326,7 @@ sa v1 ; et comme **ton code tourne avec la clé d'autrui en mode dupliqué**, l'
 | D-008 | 2026-05-31 | T1 | `RunControl` : `raise_if_cancelled` à garder ou retirer ? | **Conservé** (et devient le mécanisme d'annulation coopératif) ; `register_cancel_handle` **omis** (0 conso) | L'analyse couche 4 disait « retirer, 0 conso » — **corrigé** : en T1, executor + `precomputed` l'appellent (tests verts), donc il A un consommateur. Le handle SDK, lui, reste omis jusqu'à l'adapter LLM (T3/T4) | corrige verdict ANALYSE_COUCHE_4 (`run_control`) |
 | D-009 | 2026-05-31 | T1 (couche 3) | Réserve T0 : `EvaluationSpec`/`ProjectionSpec` sans consommateur | `MetricSpec`/`EvaluationView`/`EvaluationSpec` **confirmés** (registre + runner les consomment) ; `ProjectionSpec` **différé** (T2, projections) | T1 leur donne enfin un consommateur → lève la tension « pas de conso = supprimé » pour les 3 ; `ProjectionSpec` attend sa tranche | lève partiellement la réserve couche 1 §8 |
 | D-010 | 2026-05-31 | T1 (couche 6) | `RunSpec` : reprendre le `StepSpec` de l'héritage ? | **Non** — `RunSpec` compose `PipelineSpec`/`PipelineStep` (domain) directement ; **pas de `StepSpec`** | Un `StepSpec` distinct = **2ᵉ représentation de pipeline** (la dette qu'on tue) ; `PipelineStep` déclaratif suffit. La factory résout `<kind>:<label>` via un **builder enregistré** (pas d'import de chemin pointé) | raffine le backlog CLAUDE (`RunSpec (+StepSpec)`) |
+| D-011 | 2026-05-31 | T1 (clôture) | Golden du rapport : snapshot stocké ou déterminisme par construction ? | **Déterminisme par construction** : la section overview ne rend **ni timestamp ni chemin ni version** → HTML naturellement octet-stable | Un snapshot HTML stocké casse à chaque retouche CSS (fragile) ; « 2 runs == identiques » tient l'invariant §12 sans ce fardeau | clôt T1 (`xerocr demo` octet-stable) |
 
 *Prochaines entrées : à ajouter au fil des tranches, dans le même commit que le code.*
 

@@ -1,0 +1,65 @@
+"""Renderer : structure du document, déterminisme, no-orphan."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from xerocr.domain.run import RunManifest
+from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
+from xerocr.reports.renderer import ReportRenderer, default_report_renderer
+from xerocr.reports.section import Html, SectionContext
+
+FIXED = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def _result() -> RunResult:
+    manifest = RunManifest(
+        run_id="r",
+        corpus_name="demo",
+        n_documents=1,
+        code_version="1.0",
+        started_at=FIXED,
+        completed_at=FIXED,
+    )
+    return RunResult(
+        manifest=manifest,
+        pipelines=(
+            PipelineResult(
+                pipeline="p",
+                view="text",
+                aggregate=(MetricScore(metric="cer", value=0.1, support=1),),
+            ),
+        ),
+    )
+
+
+def test_document_structure_and_determinism() -> None:
+    renderer = default_report_renderer()
+    html1 = renderer.render(_result())
+    html2 = renderer.render(_result())
+    assert html1 == html2  # octet-stable
+    assert html1.startswith("<!DOCTYPE html>")
+    assert "<title>" in html1
+    assert "</html>" in html1
+
+
+class _NeedsWer:
+    name = "wer_section"
+    requires = ("wer",)
+
+    def render(self, result: RunResult, ctx: SectionContext) -> Html:
+        return Html("<p>WER</p>")
+
+
+class _Always:
+    name = "always"
+    requires: tuple[str, ...] = ()
+
+    def render(self, result: RunResult, ctx: SectionContext) -> Html:
+        return Html("<p>ALWAYS</p>")
+
+
+def test_no_orphan_skips_section_with_unmet_requires() -> None:
+    html = ReportRenderer((_NeedsWer(), _Always())).render(_result())
+    assert "ALWAYS" in html  # requires=() rendu
+    assert "WER" not in html  # requires=("wer",) sauté (seul cer présent)

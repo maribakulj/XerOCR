@@ -18,6 +18,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML"]
 
+[project.scripts]
+xerocr = "xerocr.interfaces.cli:main"
+
 [tool.setuptools.packages.find]
 include = ["xerocr*"]
 

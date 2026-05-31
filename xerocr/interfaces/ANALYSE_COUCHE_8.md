@@ -264,17 +264,18 @@ xerocr/interfaces/
 ## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 📋 analyse, 0 code.** CLI `demo` en **T1**, `serve` en **T4**.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — CLI `demo` verte ; `serve`/`create_app`/sécurité à T4.
 
 **Enveloppe :**
-- [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` au niveau module). — *gate : `no_side_effect_imports` (importer `interfaces.web.app` n'ouvre aucune SQLite)*
-- [ ] **Contrat de commande CLI** = 5 verbes `run/report/compare/demo/serve` (le reste non porté). · DTO de transport (réf. types canoniques, pas de copie de regex).
-- [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) qui **importe** la validation de chemin d'`app/security` (pas de duplication). · SSE + annulation `RunControl`/`Deadline` branchés réellement.
-- [ ] **Duplicable par construction** (cible vitrine, plan §Cibles) : config **par secrets/env** (zéro chemin en dur), **boot sans aucun secret** (le mode public démarre nu), déblocage moteurs **fail-closed** dès qu'une clé apparaît. — *gate : conteneur démarré sans secret → vitrine OK, moteurs à clé masqués*
+- [x] **Contrat de commande CLI** (`argparse`, D-007) — verbe **`demo`** câblé (1ᵉʳ des 5), console-script `xerocr`. — *preuve : `test_cli_demo` (déterministe + écrit le fichier)*
+- [ ] `run` / `report` / `compare` (T2) · `serve` (T4).
+- [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` module-level). — *T4 ; gate `no_side_effect_imports`*
+- [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) + SSE + annulation `RunControl`/`Deadline` réelle. — *T4*
+- [ ] **Duplicable par construction** (config par secrets/env, boot sans secret, déblocage **fail-closed**). — *T4*
 
 **Garde-fous :**
-- [ ] `no_side_effect_imports` (factory, pas de singleton module-level) · `layer_dependencies` · `file_budgets` (`_workflows`/`benchmark_utils`/`models` <400) · `no_broad_except` (28 `except Exception` → `logger.warning`) · **tests sécurité obligatoires** (CSRF→403, `..`/symlink→rejet, zip-bomb→échec, cloud en mode public→403).
-- [ ] **Hygiène des clés = invariant testé** (vaut aussi en **mode dupliqué**, où le code tourne avec la clé d'autrui) : clé en **mémoire-seule**, **jamais** journalisée / persistée (JobStore, `RunManifest`) / rendue (HTML). — *gate : test « la clé n'apparaît dans aucun log, artefact ou réponse »*
+- [x] `no_side_effect_imports` (la CLI construit tout dans `main`) · `layer_dependencies` (interfaces → couches internes) · `file_budgets`. — *preuve : `test_interfaces_imports_are_allowed` + suite archi*
+- [ ] `no_broad_except` · **tests sécurité** (CSRF→403, `..`/symlink→rejet, zip-bomb→échec, cloud en mode public→403) · **hygiène des clés = invariant testé** (mémoire-seule, jamais loggée/persistée/rendue, même en mode dupliqué). — *T4*
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3 — `demo` bout-en-bout **sans serveur** (T1) · `serve` avec sécurité complète + un `cancel` qui interrompt réellement + reprise SSE `Last-Event-ID` (T4).
 

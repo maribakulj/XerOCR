@@ -171,3 +171,49 @@ def test_app_imports_are_allowed():
         if bad:
             offenders[str(path.relative_to(ROOT))] = bad
     assert not offenders, f"imports interdits dans app : {offenders}"
+
+
+def test_reports_imports_are_allowed():
+    """reports lit le RunResult : domain + evaluation seulement (jamais app/
+    pipeline/adapters). Pas de data-layer, pas de moteur."""
+    allowed = ("xerocr.domain", "xerocr.evaluation", "xerocr.reports")
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "reports").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans reports : {offenders}"
+
+
+def test_interfaces_imports_are_allowed():
+    """interfaces = feuille : peut câbler toutes les couches internes."""
+    allowed = (
+        "xerocr.domain",
+        "xerocr.formats",
+        "xerocr.evaluation",
+        "xerocr.pipeline",
+        "xerocr.adapters",
+        "xerocr.app",
+        "xerocr.reports",
+        "xerocr.interfaces",
+    )
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "interfaces").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans interfaces : {offenders}"
