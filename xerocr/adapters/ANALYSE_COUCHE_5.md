@@ -195,6 +195,23 @@ xerocr/adapters/
 - **Tests d'archi jour 1** : whitelist `adapters/` = `domain` + `pipeline` + `formats` (+ `evaluation` pour le type `Corpus` chargé, **à expliciter** — Picarones le tolérait par wildcard) ; `no-side-effect-import` (tue le `install_opener` global D-E) ; `no-broad-except` (htr/hf `except Exception`) ; `file-budgets`.
 - **Feature entière + élaguée** : chaque adapter porté **avec** sa correction de bug (D-I), son extra optionnel, son message clair d'absence de dép, sans annotation de sprint.
 
+## 2.5 Libs cibles & arbitrages (périssable — « à confirmer à la tranche »)
+
+> Rappel : la minceur de la couche vient surtout de l'**élagage** (code mort, données démo, dédup), **pas** de l'ajout de libs. Une lib ne paie que si elle **retire plus de code que le wrapper qu'elle impose**. Contreparties transverses à toute dép : **supply-chain** (cf. `fastapi==0.136.3` / `MAL-2026-4750` exclue dans le `pyproject` Picarones ; `pip-audit` à tenir), **reproductibilité** (`dependencies_lock` du `RunManifest` → **épingler serré**), **code tiers in-process** (entry-points).
+
+| Lib / appel | Verdict | Raison / condition |
+|---|---|---|
+| `httpx` (transport REST unique) | ✅ **conditionnel** | Pour le REST à **auth simple** (ollama, mistral `/v1/ocr`, HF, eScriptorium, htr_united, openai-compatible). Unifie les 2 piles HTTP (D-D), corrige la deadline (D-B). **Garder le SDK** pour Google/Azure (auth JWT service-account / AD lourde). Anti-SSRF toujours à coder (transport dédié, **sans `install_opener` global** — D-E). |
+| Drop dual SDK/REST cloud | ✅ **conditionnel** | Seulement où le SDK n'offre ni timeout-par-appel ni annulation **et** l'auth est simple. Pas systématique. |
+| `huggingface_hub` | ✅ **extra `[hf]`** | Remplace le REST urllib maison de `huggingface.py` (pagination tronquée, `except` muet, monkey-patch — D-G). Lib lourde/mouvante → confinée à l'extra, épinglée. |
+| `importlib.metadata.entry_points` (stdlib) | ✅ **gaté** | Outil du point d'extension `xerocr.modules`. **Désactiver la découverte en mode public** (in-process = sécurité, `CLAUDE.md` §3) ; capter la **version** du plugin pour le `RunManifest`. |
+| `pydantic` v2 | ✅ **configs** / ❌ **par-token** | OK pour les **configs d'adapter** (petites, 1×, aligne le repo). **Pas** pour `ConfidenceToken` (milliers/page → coût de validation, cf. `MIGRATION_COUCHE_2.md` G-D) : `TypedDict`/`dataclass(slots=True)`, valider une fois à la frontière. |
+| `tenacity` (retry) | ❌ **garder maison** | Le retry doit être deadline/cancel-aware (`clamp_to_remaining`, `RunControl`), honorer `Retry-After`, et **testable déterministe** (horloge injectable). Tenacity impose un wrapper custom qui annule le gain. `_retry.py` maison (bug jitter corrigé) reste plus aligné. |
+| anti-SSRF · parseur IIIF · subprocess Tesseract | ❌ **garder maison** | Pas de lib mainstream fiable (SSRF, IIIF) ; le subprocess `pytesseract` est **ce qui honore la deadline** pour Tesseract — un binding C-API (`tesserocr`) la perdrait. |
+| ORM (SQLAlchemy) · async (`anyio`) | ❌ | `sqlite3` brut suffit (2 tables) ; runner **thread-only** acté (retrait `execution_mode`, D-J) → async = rupture injustifiée. |
+
+**Cible LOC** (rappel, périssable) : enveloppe + starter pack utile ≈ **3 700 LOC** ; parité complète nettoyée ≈ **6 500–7 000 LOC** (vs **9 682** Picarones, ≈ **−30 %**). La couche se remplit par tranches — elle n'a jamais besoin de revoir les 9,7k. *(Détail des leviers de coupe : §1.4 + §2.4.)*
+
 ---
 
 # PARTIE 3 — RISQUES DE TRANSFERT & DETTES (avec détection)
