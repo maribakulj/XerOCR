@@ -4,7 +4,12 @@ Reçoit des **artefacts déjà produits** (par l'exécuteur de la couche 4, via
 l'app) : il n'exécute aucun moteur et n'importe pas ``pipeline`` (couche plus
 externe). Deux passes : (1) par-document, ``None`` = non applicable ; (2) agrégat
 par pipeline, ``None`` **exclu**, **support** exposé. La passe inter-moteurs
-(``cross_engine``) arrive en T2.
+(``cross_engine``) arrive plus tard en T2.
+
+Le runner applique la **normalisation déclarée par la vue**
+(``normalization_profile`` + ``char_exclude``), symétriquement à la référence et
+à l'hypothèse (couche 2 ``formats/text``), et **charge chaque représentation une
+seule fois** par signature ``(ref, hyp)`` — les métriques texte la partagent.
 """
 
 from __future__ import annotations
@@ -27,9 +32,13 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
+from xerocr.formats.text import get_builtin_profile
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
 PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
+
+#: Signature d'entrée d'une métrique : ``(type_référence, type_hypothèse)``.
+_Signature = tuple[ArtifactType, ArtifactType]
 
 
 def evaluate_run(
@@ -103,28 +112,57 @@ def _score_document(
     registry: MetricRegistry,
     collected: dict[str, list[float]],
 ) -> tuple[MetricScore, ...]:
+    # Représentation chargée + normalisée une seule fois par signature, partagée
+    # par toutes les métriques qui la consomment (CER/WER/MER).
+    contexts: dict[_Signature, DocContext | None] = {}
     scores: list[MetricScore] = []
     for name in view.metric_names:
         metric = registry.document_metric(name)
         if metric is None:
             raise EvaluationError(f"métrique inconnue : {name!r}.")
-        reference_type, hypothesis_type = metric.input_types
-        ground_truth = document.gt_for(reference_type)
-        value: float | None
-        if candidate is None or candidate.uri is None or ground_truth is None:
-            value = None
-        else:
-            value = metric.fn(
-                DocContext(
-                    document_id=document.id,
-                    reference=load_representation(ground_truth.uri, reference_type),
-                    hypothesis=load_representation(candidate.uri, hypothesis_type),
-                )
-            )
+        signature = metric.input_types
+        if signature not in contexts:
+            contexts[signature] = _context_for(view, document, candidate, signature)
+        context = contexts[signature]
+        value = metric.fn(context) if context is not None else None
         if value is not None:
             collected[name].append(value)
         scores.append(MetricScore(metric=name, value=value))
     return tuple(scores)
+
+
+def _context_for(
+    view: EvaluationView,
+    document: DocumentRef,
+    candidate: Artifact | None,
+    signature: _Signature,
+) -> DocContext | None:
+    reference_type, hypothesis_type = signature
+    ground_truth = document.gt_for(reference_type)
+    if candidate is None or candidate.uri is None or ground_truth is None:
+        return None
+    reference = _prepare(load_representation(ground_truth.uri, reference_type), view)
+    hypothesis = _prepare(load_representation(candidate.uri, hypothesis_type), view)
+    return DocContext(
+        document_id=document.id, reference=reference, hypothesis=hypothesis
+    )
+
+
+def _prepare(representation: object, view: EvaluationView) -> object:
+    """Applique la normalisation de la vue (profil + ``char_exclude``) au texte."""
+    if not isinstance(representation, str):
+        return representation
+    text = representation
+    if view.normalization_profile is not None:
+        try:
+            profile = get_builtin_profile(view.normalization_profile)
+        except KeyError as exc:
+            raise EvaluationError(str(exc)) from exc
+        text = profile.normalize(text)
+    if view.char_exclude:
+        excluded = set(view.char_exclude)
+        text = "".join(char for char in text if char not in excluded)
+    return text
 
 
 __all__ = ["PipelineOutputs", "evaluate_run"]

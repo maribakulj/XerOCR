@@ -298,7 +298,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 **Validation inter-couches :** voir `MIGRATION_PLAN.md` §3-T1 (1 CER → `RunResult` → HTML déterministe de bout en bout).
 
 - [x] **WER/MER** (impl maison déterministe + **parité jiwer**, 15 cas) au socle texte. — *preuve : `test_metrics_text` (valeurs main) + `test_metrics_parity` (vs jiwer)*
-- [~] **Surface encore différée** : profils de normalisation/`char_exclude`, stats `scipy`, `cross_engine` (T2) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
+- [x] **Profils de normalisation** (`normalization_profile`/`char_exclude`) honorés par le runner (couche 2 `formats/text`), symétriques GT/hyp ; **1 chargement par signature**. — *preuve : `test_runner` (caseless→0 ; profil inconnu→erreur) ; démo : vue `francais_medieval`*
+- [~] **Surface encore différée** : stats `scipy`, `cross_engine` (T2) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
 
 ---
 

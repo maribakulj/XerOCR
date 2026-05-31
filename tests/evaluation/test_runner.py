@@ -13,6 +13,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.pipeline import PipelineSpec
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
 from xerocr.evaluation.runner import evaluate_run
 
@@ -106,3 +107,46 @@ def test_missing_ground_truth_is_not_applicable(tmp_path: Path) -> None:
     assert aggregate.value is None
     assert aggregate.support == 0
     assert result.documents[0].scores[0].value is None
+
+
+def test_normalization_profile_neutralises_case(tmp_path: Path) -> None:
+    # vue "caseless" : "ABC DEF" (GT) vs "abc def" (hyp) → CER 0 (casse neutralisée)
+    gt = _write(tmp_path / "doc1.gt.txt", "ABC DEF")
+    hyp = _write(tmp_path / "doc1.eng.txt", "abc def")
+    corpus = CorpusSpec(name="c", documents=(_doc("doc1", gt),))
+    view = EvaluationView(
+        name="caseless",
+        candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+        metric_names=("cer",),
+        normalization_profile="caseless",
+    )
+    outputs = {"eng": {"doc1": {ArtifactType.RAW_TEXT: _candidate("doc1", hyp)}}}
+    result = evaluate_run(
+        corpus=corpus,
+        evaluation=EvaluationSpec(views=(view,)),
+        pipeline_outputs=outputs,
+        registry=_registry(),
+        manifest=_manifest(1),
+    )
+    assert result.pipelines[0].aggregate[0].value == 0.0
+
+
+def test_unknown_normalization_profile_raises(tmp_path: Path) -> None:
+    gt = _write(tmp_path / "doc1.gt.txt", "x")
+    hyp = _write(tmp_path / "doc1.eng.txt", "x")
+    corpus = CorpusSpec(name="c", documents=(_doc("doc1", gt),))
+    view = EvaluationView(
+        name="bad",
+        candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+        metric_names=("cer",),
+        normalization_profile="does_not_exist",
+    )
+    outputs = {"eng": {"doc1": {ArtifactType.RAW_TEXT: _candidate("doc1", hyp)}}}
+    with pytest.raises(EvaluationError):
+        evaluate_run(
+            corpus=corpus,
+            evaluation=EvaluationSpec(views=(view,)),
+            pipeline_outputs=outputs,
+            registry=_registry(),
+            manifest=_manifest(1),
+        )

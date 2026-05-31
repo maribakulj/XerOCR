@@ -59,6 +59,15 @@ _TEXT_VIEW = EvaluationView(
     metric_names=("cer", "wer", "mer"),
 )
 
+#: Même corpus, sous équivalence orthographique du français médiéval (ſ=s, u=v,
+#: i=j…) appliquée des deux côtés : les « erreurs » purement graphiques tombent.
+_DIPLOMATIC_VIEW = EvaluationView(
+    name="francais_medieval",
+    candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+    metric_names=("cer", "wer", "mer"),
+    normalization_profile="medieval_french",
+)
+
 
 def _code_version() -> str:
     try:
@@ -113,7 +122,7 @@ def _demo_run_spec(corpus: CorpusSpec) -> RunSpec:
     return RunSpec(
         corpus=corpus,
         pipelines=pipelines,
-        evaluation=EvaluationSpec(views=(_TEXT_VIEW,)),
+        evaluation=EvaluationSpec(views=(_TEXT_VIEW, _DIPLOMATIC_VIEW)),
         adapter_kwargs=adapter_kwargs,
         run_id="demo",
     )
