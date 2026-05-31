@@ -135,15 +135,19 @@ amplifié à l'axe structure (mélange ALTO/PAGE).
 - **Réconciliation note couche 2** : « le jeu de champs fait foi » = même esprit que
   le tidy pour les **ajouts** ; `schema_version` couvre les **changements structurels**
   du document. Ne pas laisser « pas de version » déborder sur le document `RunResult`.
-- **Composantes décomposables par-doc (précondition du rapport interactif)** : pour qu'un
-  rapport **filtrable** (ex. masquer les docs hallucinés → ré-agréger) reste **correct**,
-  le document `RunResult` porte les **composantes décomposables** par doc — num/dénom
-  (ex. `edits`+`longueur_ref`), counts par classe — **pas seulement le ratio** (axe
-  **par-doc intra-run**, distinct du store longitudinal inter-run ci-dessus). Le pivot
-  agrège `Σnum/Σdén` (**micro**-moyenne) ; **moyenner les ratios par doc = bug** (macro ≠
-  micro). L'agrégateur canonique (vue par défaut) = la **même** formule → source unique.
-  **Réserver l'axe par-doc dans l'enveloppe maintenant** (rempli au fil des métriques).
-  *(Issu de `reports/ANALYSE_COUCHE_7.md` §2.7 ; à confirmer au design de `RunResult`.)*
+- **Ré-agrégation filtrable = ré-exécuter l'agrégateur canonique sur un sous-ensemble
+  (précondition du rapport interactif)** : un rapport **filtrable** (ex. masquer les docs
+  hallucinés → ré-agréger) **ré-exécute l'agrégateur par-moteur déjà défini** (§6.2 :
+  générique `safe_mean` sur scalaires, **ou** custom sur structs) sur le **sous-ensemble**
+  de docs retenu → **source unique**, pas de 2ᵉ agrégateur. Seule conséquence sur le
+  **document `RunResult`** : **persister les valeurs `DocumentMetric` par-doc** (§6.1), pas
+  seulement les agrégats par-moteur, pour les métriques qu'une section filtre (axe
+  **par-doc intra-run**, distinct du store longitudinal inter-run ci-dessus). **Le choix
+  macro (générique) / micro-pondéré (custom) reste au codage (§13)** — le rapport
+  *réutilise* l'agrégateur du runner, ne le redéfinit pas. **Réserver l'axe par-doc dans
+  l'enveloppe maintenant, rempli *uniquement* pour les métriques consommées par une section
+  interactive** (incrémental). *(Issu de `reports/ANALYSE_COUCHE_7.md` §2.7 ; à confirmer au
+  design de `RunResult`.)*
 
 ---
 
