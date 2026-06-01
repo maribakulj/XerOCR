@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from xerocr.adapters.storage import JobStore
+from xerocr.adapters.storage.publisher import resolve_publisher
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import EngineStatus, engine_statuses
@@ -130,6 +131,9 @@ def create_app(
         registry=registry,
         reports_dir=catalog_dir,
         code_version=resolve_code_version(),
+        # Persistance (S3) : actif uniquement si dépôt + jeton sont en secrets ;
+        # sinon NoopPublisher → la vitrine read-only ne fait aucune sortie réseau.
+        publisher=resolve_publisher(),
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 

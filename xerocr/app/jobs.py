@@ -22,6 +22,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from xerocr.adapters.storage.job_store import JobState, JobStore
+from xerocr.adapters.storage.publisher import NoopPublisher, ResultPublisher
 from xerocr.app.modules.registry import ModuleRegistry
 from xerocr.app.orchestrator import run as run_orchestrator
 from xerocr.app.results import dump_run_result
@@ -46,11 +47,15 @@ class JobRunner:
         registry: ModuleRegistry,
         reports_dir: Path,
         code_version: str,
+        publisher: ResultPublisher | None = None,
     ) -> None:
         self._store = store
         self._registry = registry
         self._reports_dir = reports_dir
         self._code_version = code_version
+        #: Persistance (S3) : pousse le RunResult vers un dépôt distant. Inactif
+        #: par défaut (``NoopPublisher``) → aucun effet réseau sans secret.
+        self._publisher = publisher if publisher is not None else NoopPublisher()
         self._controls: dict[str, RunControl] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
@@ -110,7 +115,9 @@ class JobRunner:
                 )
                 self._reports_dir.mkdir(parents=True, exist_ok=True)
                 run_id = result.manifest.run_id
-                dump_run_result(result, self._reports_dir / f"{run_id}.json")
+                result_path = self._reports_dir / f"{run_id}.json"
+                dump_run_result(result, result_path)
+                published_url = self._publish_safe(run_id, result_path)
         except RunCancelledError:
             self._store.update(job_id, state=JobState.CANCELLED)
         except XerOCRError as exc:
@@ -120,7 +127,21 @@ class JobRunner:
             logger.warning("[jobs] run %s erreur inattendue : %s", job_id, exc)
             self._store.update(job_id, state=JobState.FAILED, error=str(exc))
         else:
-            self._store.update(job_id, state=JobState.DONE, report_name=run_id)
+            self._store.update(
+                job_id,
+                state=JobState.DONE,
+                report_name=run_id,
+                published_url=published_url,
+            )
+
+    def _publish_safe(self, run_id: str, result_path: Path) -> str | None:
+        """Publie le résultat (best-effort) : un échec réseau ne fait PAS échouer
+        le run — le résultat local est déjà écrit."""
+        try:
+            return self._publisher.publish(run_id, result_path)
+        except Exception as exc:  # best-effort : on trace, on n'échoue pas
+            logger.warning("[jobs] publication de %s échouée : %s", run_id, exc)
+            return None
 
 
 __all__ = ["JobRunner", "SpecBuilder"]
