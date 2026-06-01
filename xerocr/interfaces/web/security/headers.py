@@ -6,33 +6,95 @@ porte qu'un ``<style>`` inline — **aucun script, aucune ressource externe** (c
 on n'autorise que le style inline et les images self/data. Si un futur rapport
 introduisait du script, **cette politique le casserait** — c'est volontaire : la
 CSP est un contrat, pas un confort.
+
+**Adaptation HuggingFace Space.** Un Space est servi dans une ``<iframe>`` côté
+``huggingface.co`` / ``*.hf.space``. Or ``frame-ancestors 'none'`` +
+``X-Frame-Options: DENY`` y rendent la vitrine **invisible** (page blanche bien
+que le serveur réponde ``200`` — c'est exactement le « ne peut pas afficher la
+page dans un cadre » des navigateurs). On détecte le Space via ``SPACE_ID``
+(injecté par HF) et on bascule ``frame-ancestors`` sur les origines du Hub, en
+**omettant** ``X-Frame-Options`` (qui a priorité absolue sur ``frame-ancestors``
+dans les vieux navigateurs → annulerait la permission d'embed). Hors Space
+(local / institutionnel), on garde le **verrou total** : ``'none'`` + ``DENY``.
 """
 
 from __future__ import annotations
 
+import os
+
 from starlette.responses import Response
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-#: Politique de sécurité du contenu. ``frame-ancestors 'none'`` = anti-clickjacking ;
-#: ``style-src 'unsafe-inline'`` est requis par le CSS inline du rapport (le seul
-#: inline toléré) ; tout le reste (``script``/``object``/``base``) est verrouillé.
-CONTENT_SECURITY_POLICY = (
+#: CSP de base — tout sauf ``frame-ancestors`` (composée dynamiquement selon le
+#: déploiement par :func:`get_csp_policy`). ``style-src 'unsafe-inline'`` est
+#: requis par le CSS inline du rapport (le seul inline toléré) ; tout le reste
+#: (``script``/``object``/``base``) tombe sur ``default-src 'none'``, verrouillé.
+_CSP_BASE = (
     "default-src 'none'; "
     "style-src 'unsafe-inline'; "
     "img-src 'self' data:; "
     "base-uri 'none'; "
-    "form-action 'none'; "
-    "frame-ancestors 'none'"
+    "form-action 'none'"
 )
 
-#: En-têtes appliqués à **toute** réponse. Durcissement standard, sans état.
-_HEADERS = {
-    "Content-Security-Policy": CONTENT_SECURITY_POLICY,
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-    "Referrer-Policy": "no-referrer",
-    "Cross-Origin-Opener-Policy": "same-origin",
-}
+#: Origines autorisées à embarquer la vitrine quand on tourne dans un HF Space.
+#: ``huggingface.co`` rend la page parente ; ``*.hf.space`` expose le conteneur
+#: (rendus directs / liens partageables).
+_HF_FRAME_ANCESTORS = "'self' https://huggingface.co https://*.hf.space"
+
+
+def is_huggingface_space() -> bool:
+    """Vrai si l'instance tourne dans un HuggingFace Space.
+
+    HF injecte ``SPACE_ID`` (au format ``user/space``) dans l'environnement du
+    conteneur — marqueur canonique documenté, présent quel que soit le SDK
+    (Docker ici). On l'utilise pour adapter ``frame-ancestors`` : sans ça, la
+    vitrine est invisible dans l'iframe du Hub.
+    """
+    return bool(os.environ.get("SPACE_ID", "").strip())
+
+
+def _frame_ancestors_directive() -> str:
+    """Directive ``frame-ancestors`` adaptée au déploiement détecté.
+
+    - Local / institutionnel : ``'none'`` (aucun embed possible).
+    - HuggingFace Space : autorise ``huggingface.co`` et ``*.hf.space`` pour que
+      la vitrine s'affiche dans l'iframe du Space sans tomber en page blanche.
+    """
+    if is_huggingface_space():
+        return f"frame-ancestors {_HF_FRAME_ANCESTORS}"
+    return "frame-ancestors 'none'"
+
+
+#: CSP locale/institutionnelle (verrou total anti-cadrage). Exposée comme valeur
+#: par défaut et attendue **hors** Space ; en Space, :func:`get_csp_policy` la
+#: recompose avec un ``frame-ancestors`` permissif.
+CONTENT_SECURITY_POLICY = f"{_CSP_BASE}; frame-ancestors 'none'"
+
+
+def get_csp_policy() -> str:
+    """CSP à appliquer : base + ``frame-ancestors`` selon l'environnement."""
+    return f"{_CSP_BASE}; {_frame_ancestors_directive()}"
+
+
+def security_headers() -> dict[str, str]:
+    """En-têtes de sécurité de la réponse, **calculés selon le déploiement**.
+
+    ``X-Frame-Options: DENY`` est sciemment **omis sur HF Space** : ce header a
+    priorité absolue sur ``frame-ancestors`` (et sert de fallback quand le
+    navigateur ignore la CSP), donc un ``DENY`` annulerait la permission d'embed
+    du Hub. Le contrôle d'embed est alors entièrement délégué à
+    ``frame-ancestors``.
+    """
+    headers = {
+        "Content-Security-Policy": get_csp_policy(),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Opener-Policy": "same-origin",
+    }
+    if not is_huggingface_space():
+        headers["X-Frame-Options"] = "DENY"
+    return headers
 
 
 class SecurityHeadersMiddleware:
@@ -49,7 +111,7 @@ class SecurityHeadersMiddleware:
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
                 raw = list(message.get("headers", []))
-                for key, value in _HEADERS.items():
+                for key, value in security_headers().items():
                     raw.append((key.encode("latin-1"), value.encode("latin-1")))
                 message = {**message, "headers": raw}
             await send(message)
@@ -59,7 +121,7 @@ class SecurityHeadersMiddleware:
 
 def apply_security_headers(response: Response) -> Response:
     """Variante utilitaire (tests / réponses construites à la main)."""
-    for key, value in _HEADERS.items():
+    for key, value in security_headers().items():
         response.headers[key] = value
     return response
 
@@ -68,4 +130,7 @@ __all__ = [
     "CONTENT_SECURITY_POLICY",
     "SecurityHeadersMiddleware",
     "apply_security_headers",
+    "get_csp_policy",
+    "is_huggingface_space",
+    "security_headers",
 ]

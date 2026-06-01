@@ -12,6 +12,8 @@ from xerocr.interfaces.web.app import create_app
 from xerocr.interfaces.web.security.headers import (
     CONTENT_SECURITY_POLICY,
     SecurityHeadersMiddleware,
+    get_csp_policy,
+    is_huggingface_space,
 )
 from xerocr.interfaces.web.security.rate_limit import RateLimitMiddleware
 
@@ -33,6 +35,52 @@ def test_csp_is_strict() -> None:
     assert "default-src 'none'" in CONTENT_SECURITY_POLICY
     assert "frame-ancestors 'none'" in CONTENT_SECURITY_POLICY
     assert "script-src" not in CONTENT_SECURITY_POLICY  # → tombe sur default 'none'
+
+
+def test_is_huggingface_space_reads_space_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    # SPACE_ID injecté par HF = marqueur de Space ; absent/blanc = local.
+    monkeypatch.delenv("SPACE_ID", raising=False)
+    assert is_huggingface_space() is False
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    assert is_huggingface_space() is True
+    monkeypatch.setenv("SPACE_ID", "   ")  # valeur blanche ⇒ pas un Space
+    assert is_huggingface_space() is False
+
+
+def test_headers_locked_without_space_id(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Hors Space : verrou total anti-cadrage ('none' + X-Frame-Options: DENY).
+    monkeypatch.delenv("SPACE_ID", raising=False)
+    resp = _client(tmp_path).get("/health")
+    assert "frame-ancestors 'none'" in resp.headers["content-security-policy"]
+    assert resp.headers["x-frame-options"] == "DENY"
+
+
+def test_csp_relaxes_frame_ancestors_on_hf_space(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Sur HF Space, la vitrine doit être embarquable dans l'iframe du Hub :
+    # frame-ancestors ouvre huggingface.co / *.hf.space, sans 'none'.
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    resp = _client(tmp_path).get("/health")
+    csp = resp.headers["content-security-policy"]
+    assert csp == get_csp_policy()
+    assert "huggingface.co" in csp and "*.hf.space" in csp
+    # le verrou 'none' ne doit plus s'appliquer à frame-ancestors
+    assert "'none'" not in csp.split("frame-ancestors", 1)[1]
+    # le reste de la CSP stricte est intact (aucune ressource externe tolérée)
+    assert "default-src 'none'" in csp
+
+
+def test_x_frame_options_omitted_on_hf_space(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # X-Frame-Options: DENY a priorité absolue sur frame-ancestors dans les
+    # vieux navigateurs → il est omis en Space pour ne pas annuler l'embed.
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    resp = _client(tmp_path).get("/health")
+    assert "x-frame-options" not in resp.headers
 
 
 def test_headers_on_html_report(tmp_path: Path) -> None:
