@@ -117,6 +117,24 @@ def test_no_image_rejected(tmp_path: Path) -> None:
         extract_corpus_zip(_zip({"only.txt": b"gt"}), tmp_path / "c", name="c")
 
 
+_JPEG = b"\xff\xd8\xff" + b"\x00" * 32
+
+
+def test_stem_collision_across_extensions_is_clean_reject(tmp_path: Path) -> None:
+    # a.png + a.jpg → deux DocumentRef id="a" → le domaine lèverait CorpusSpecError ;
+    # ce doit être un rejet PROPRE (CorpusUploadError), jamais une 500.
+    data = _zip({"a.png": _PNG, "a.jpg": _JPEG})
+    with pytest.raises(CorpusUploadError, match="corpus invalide"):
+        extract_corpus_zip(data, tmp_path / "c", name="c")
+
+
+def test_invalid_stem_is_clean_reject(tmp_path: Path) -> None:
+    # « ...png » passe le charset mais donne le radical « .. » → id invalide ;
+    # traduit en CorpusUploadError, pas en CorpusSpecError nue.
+    with pytest.raises(CorpusUploadError, match="corpus invalide"):
+        extract_corpus_zip(_zip({"...png": _PNG}), tmp_path / "c", name="c")
+
+
 # --- Store -------------------------------------------------------------------
 
 

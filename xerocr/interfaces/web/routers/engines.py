@@ -7,14 +7,9 @@ public reflété). Aucune écriture → pas de CSRF.
 
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from fastapi import APIRouter
 
-from xerocr.app.engines import EngineStatus
-
-#: Fournit l'état courant des moteurs (capturé par ``create_app`` avec le mode).
-StatusProvider = Callable[[], tuple[EngineStatus, ...]]
+from xerocr.app.engines import StatusProvider
 
 
 def build_engines_router(provider: StatusProvider) -> APIRouter:

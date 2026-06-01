@@ -27,10 +27,6 @@ from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
 
 
-def _code_version() -> str:
-    return resolve_code_version()
-
-
 def demo_to_html() -> str:
     """Exécute la démo et renvoie le rapport HTML (déterministe)."""
     registry = ModuleRegistry()
@@ -40,7 +36,7 @@ def demo_to_html() -> str:
         result = run_orchestrator(
             demo_run_spec(corpus),
             registry=registry,
-            code_version=_code_version(),
+            code_version=resolve_code_version(),
         )
     return default_report_renderer().render(result, title="XerOCR — démonstration")
 
@@ -57,7 +53,7 @@ def _run_config(config_path: str, output: str, json_output: str | None) -> int:
     register_default_modules(registry)
     spec = load_run_spec(config_path)
     result = run_orchestrator(
-        spec, registry=registry, code_version=_code_version()
+        spec, registry=registry, code_version=resolve_code_version()
     )
     Path(output).write_text(
         default_report_renderer().render(

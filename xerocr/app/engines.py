@@ -39,6 +39,11 @@ class EngineStatus(BaseModel):
     detail: str
 
 
+#: Fournit l'état courant des moteurs (capturé par ``create_app`` avec le mode).
+#: Source unique du contrat ; les routeurs (couche 8) l'importent — pas de copie.
+StatusProvider = Callable[[], tuple[EngineStatus, ...]]
+
+
 def _module_present(name: str) -> bool:
     try:
         return importlib.util.find_spec(name) is not None
@@ -101,4 +106,4 @@ def _ollama_status(has_module: ModuleProbe) -> EngineStatus:
     return EngineStatus(kind="ollama", label="Ollama", available=ok, detail=detail)
 
 
-__all__ = ["CLOUD_KINDS", "EngineStatus", "engine_statuses"]
+__all__ = ["CLOUD_KINDS", "EngineStatus", "StatusProvider", "engine_statuses"]

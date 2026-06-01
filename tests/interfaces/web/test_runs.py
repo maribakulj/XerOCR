@@ -10,7 +10,6 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.routers.runs import blocked_cloud_kinds
 from xerocr.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
@@ -78,11 +77,6 @@ def test_cancel_unknown_job_is_404(tmp_path: Path) -> None:
 
 
 # --- Mode public : la gate ---------------------------------------------------
-
-
-def test_blocked_cloud_kinds_intersects_cloud_only() -> None:
-    assert blocked_cloud_kinds(["precomputed", "tesseract", "ollama"]) == frozenset()
-    assert blocked_cloud_kinds(["openai", "precomputed"]) == frozenset({"openai"})
 
 
 def test_public_mode_allows_local_demo(tmp_path: Path) -> None:

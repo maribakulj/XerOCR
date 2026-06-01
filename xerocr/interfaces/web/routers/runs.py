@@ -22,7 +22,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -30,7 +30,7 @@ from pydantic import BaseModel, ConfigDict
 
 from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import EngineStatus
+from xerocr.app.engines import CLOUD_KINDS, StatusProvider
 from xerocr.app.jobs import JobRunner, SpecBuilder
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
@@ -40,9 +40,9 @@ from xerocr.domain.run_spec import RunSpec
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
-#: Kinds *cloud* (clé API) refusés en mode public.
-PUBLIC_BLOCKED_KINDS = frozenset({"openai"})
 #: Kinds de **post-correction** LLM : pas de run autonome (chaîne OCR→LLM = TU3+).
+#: (Les kinds *cloud* bloqués en mode public sont ``CLOUD_KINDS`` — source unique
+#: en couche 6, ``app.engines`` ; on ne les redéclare pas ici.)
 LLM_KINDS = frozenset({"openai", "ollama"})
 
 _OCR_VIEW = EvaluationView(
@@ -50,14 +50,6 @@ _OCR_VIEW = EvaluationView(
     candidate_types=frozenset({ArtifactType.RAW_TEXT}),
     metric_names=("cer", "wer", "mer"),
 )
-
-#: Fournit l'état courant des moteurs (capturé par ``create_app`` avec le mode).
-StatusProvider = Callable[[], tuple[EngineStatus, ...]]
-
-
-def blocked_cloud_kinds(kinds: Iterable[str]) -> frozenset[str]:
-    """Sous-ensemble de ``kinds`` interdit en mode public (intersection cloud)."""
-    return frozenset(kinds) & PUBLIC_BLOCKED_KINDS
 
 
 class LaunchRequest(BaseModel):
@@ -165,7 +157,7 @@ def build_runs_router(
             raise HTTPException(
                 status_code=422, detail=f"moteur inconnu : {req.engine!r}"
             )
-        if public_mode and req.engine in PUBLIC_BLOCKED_KINDS:
+        if public_mode and req.engine in CLOUD_KINDS:
             raise HTTPException(
                 status_code=403,
                 detail=f"moteur cloud refusé (mode public) : {req.engine!r}",
@@ -217,10 +209,4 @@ def build_runs_router(
     return router
 
 
-__all__ = [
-    "LLM_KINDS",
-    "PUBLIC_BLOCKED_KINDS",
-    "LaunchRequest",
-    "blocked_cloud_kinds",
-    "build_runs_router",
-]
+__all__ = ["LLM_KINDS", "LaunchRequest", "build_runs_router"]

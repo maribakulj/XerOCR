@@ -27,11 +27,13 @@ import uuid
 import zipfile
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from xerocr.app.security import validated_path
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.errors import XerOCRError
+from xerocr.domain.errors import CorpusSpecError, XerOCRError
 
 #: Quotas (généreux mais bornés) — un Space gratuit n'est pas un entrepôt.
 MAX_ZIP_BYTES = 25 * 1024 * 1024
@@ -85,10 +87,18 @@ def extract_corpus_zip(data: bytes, dest: Path, *, name: str) -> CorpusSpec:
         target.write_bytes(payload)
         written[base] = target
 
-    documents = _pair_documents(written)
-    if not documents:
-        raise CorpusUploadError("aucune image dans l'archive.")
-    return CorpusSpec(name=name, documents=documents)
+    # Les radicaux d'image deviennent des `DocumentRef.id` et le nom de fichier
+    # devient le nom de corpus : deux images de même radical (`a.png`+`a.jpg`),
+    # un radical invalide (`..`) ou un nom trop long font lever le `domain`
+    # (`CorpusSpecError` / `ValidationError`). On les **traduit** en rejet propre
+    # (→ 422), jamais en 500 : une archive « sûre mais bancale » reste une entrée.
+    try:
+        documents = _pair_documents(written)
+        if not documents:
+            raise CorpusUploadError("aucune image dans l'archive.")
+        return CorpusSpec(name=name, documents=documents)
+    except (CorpusSpecError, ValidationError) as exc:
+        raise CorpusUploadError(f"corpus invalide : {exc}") from exc
 
 
 def _safe_basename(raw_name: str) -> str:

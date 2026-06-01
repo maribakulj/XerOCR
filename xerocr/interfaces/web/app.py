@@ -26,7 +26,7 @@ from fastapi.templating import Jinja2Templates
 from xerocr.adapters.storage import JobStore
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import engine_statuses
+from xerocr.app.engines import EngineStatus, engine_statuses
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
@@ -133,6 +133,11 @@ def create_app(
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 
+    # Un seul fournisseur de statuts moteurs (même mode) partagé par le lanceur
+    # et l'onglet Moteurs → pas de closures jumelles qui pourraient diverger.
+    def engine_status_provider() -> tuple[EngineStatus, ...]:
+        return engine_statuses(public_mode=is_public)
+
     app.include_router(build_home_router(catalog_dir, templates))
     app.include_router(build_reports_router(catalog_dir))
     app.include_router(
@@ -140,12 +145,10 @@ def create_app(
             runner,
             corpus_store,
             public_mode=is_public,
-            statuses=lambda: engine_statuses(public_mode=is_public),
+            statuses=engine_status_provider,
         )
     )
-    app.include_router(
-        build_engines_router(lambda: engine_statuses(public_mode=is_public))
-    )
+    app.include_router(build_engines_router(engine_status_provider))
     app.include_router(build_corpus_router(corpus_store))
     return app
 

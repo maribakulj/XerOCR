@@ -64,3 +64,10 @@ def test_bad_zip_is_422(tmp_path: Path) -> None:
 
 def test_unknown_corpus_is_404(tmp_path: Path) -> None:
     assert _client(tmp_path).get("/api/corpus/absent").status_code == 404
+
+
+def test_stem_collision_is_422_not_500(tmp_path: Path) -> None:
+    # archive « sûre mais bancale » (deux images de même radical) → 422, jamais 500.
+    jpeg = b"\xff\xd8\xff" + b"\x00" * 32
+    resp = _upload(_client(tmp_path), _zip({"a.png": _PNG, "a.jpg": jpeg}))
+    assert resp.status_code == 422
