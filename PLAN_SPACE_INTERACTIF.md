@@ -1,6 +1,12 @@
-# Plan — application interactive dans le Space (calcul → vitrine)
+# Spec UX/produit — application interactive dans le Space (calcul → vitrine)
 
-> **Statut** : enveloppe **PROVISOIRE** (à confirmer au build, cf. `CLAUDE.md` §9).
+> **Rôle de ce document : spec UX/produit de la couche 8 (le Space).** Il porte le
+> *cap*, les décisions UX et le découpage `TU#`. **Il ne fait PAS autorité sur le
+> statut** : le tableau de bord unique est celui de
+> [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md), qui établit que **les `TU#` sont la
+> décomposition de la couche 8 sous T4+** (table de correspondance T⇄TU là-bas).
+> Si une ligne d'ici contredit ce tableau, **le tableau gagne** (cf. `CLAUDE.md` §9).
+>
 > Mémoire durable d'une décision de cap : la vitrine lecture seule devient une
 > **application complète qui calcule dans le Space**, puis bascule en vitrine
 > publique. Construire **par tranches verticales**, jamais tout d'un coup.
@@ -55,6 +61,10 @@ accents `oklch` fern/slate/clay/butter, chrome pilule, hero éditorial, tables �
 synthesis. **Manque : segmentation** (cf. §8).
 
 ## 6. Roadmap par tranches (proposée)
+
+> **Scope/UX de chaque `TU#`.** Le **statut fait foi** dans le tableau de bord de
+> `MIGRATION_PLAN.md` (table T⇄TU) — pas ici. Les mentions « fait » ci-dessous
+> sont un repère de lecture, pas l'autorité.
 
 | Tranche | Livre | Note |
 |---|---|---|

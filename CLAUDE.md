@@ -28,8 +28,11 @@ avant d'écrire la moindre ligne.**
 - **Garde-fous d'archi actifs** : `tests/architecture/` —
   `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
   `file_budgets`, `no_broad_except`, `single_version_source`, `status_freshness`.
-- **Parcours global** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) (tranches T1→T7 +
-  invariants d'enveloppe + statut détaillé).
+- **Parcours global + tableau de bord unique** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md)
+  (tranches T1→T7 + invariants d'enveloppe + statut). **Il fait autorité sur le
+  statut** et porte la **table de correspondance `T#` ⇄ `TU#`** (les `TU#` = la
+  décomposition de la couche 8 / Space sous T4+). `PLAN_SPACE_INTERACTIF.md` =
+  **spec UX**, pas autorité de statut.
 - **Prochaine étape = TU2** (≡ **T4f** côté couche 8) : le **lanceur web
   interactif** — `POST` run + upload corpus + **SSE** + onglet Moteurs + mode
   public/sécurité d'exécution (clés en secrets). Seul gros morceau restant ; le
@@ -203,9 +206,14 @@ les sens ». Ils étaient absents de Picarones.
 2. **Budgets par fichier.** Pas de fichier > 400 LOC sans entrée justifiée dans
    `test_file_budgets`. Un fichier ne peut pas enfler en silence.
 3. **Pas de consommateur = supprimé.** Tout symbole/fichier sans usage réel en
-   CI est retiré. Aucune feature spéculative « au cas où ».
+   CI est retiré. Aucune feature spéculative « au cas où ». **Y compris une API
+   créée en anticipation d'une *sous-tranche future*** : chaque (sous-)tranche ne
+   livre **que** ce que **son** consommateur exige ; une API posée d'avance est
+   spéculative et s'élague à la revue (cf. dérive `blocked_cloud_kinds`/`CLOUD_KINDS`,
+   corrigée — `MIGRATION_PLAN.md` §roll-up « Règle anti-dérive »).
 4. **Tests d'architecture dès le jour 1.** layer-deps, no-legacy-imports,
-   file-budgets, no-broad-except, no-side-effect-imports, single-version-source.
+   file-budgets, no-broad-except, no-side-effect-imports, single-version-source,
+   status-freshness.
 5. **Une feature = ajoutée entièrement, dans un budget, en élaguant.** On
    n'empile pas ; on intègre proprement.
 
