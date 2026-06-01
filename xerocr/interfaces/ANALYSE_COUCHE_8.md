@@ -264,7 +264,7 @@ xerocr/interfaces/
 ## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 T4e** — vitrine + sécurité HTTP + **`serve`** (uvicorn←factory) + **packaging Docker/Space** (lecture seule, sans clé). Reste : déploiement HF effectif ; CSRF/uploads/mode public + SSE/annulation **avec le lanceur** (T4f).
+> Maj dans le **même commit** que le code. **Statut : 🔨 T4f (TU2.a faite)** — vitrine + sécurité HTTP + **`serve`** + packaging Docker/Space (read-only) [T4e] ; **+ lanceur walking-skeleton (TU2.a)** : `POST/GET/cancel /api/runs` → `JobRunner` (couche 6, thread + annulation coopérative) → `JobStore` (couche 5, en mémoire) → `RunResult` écrit (démo `precomputed`), **CSRF** (en-tête custom) + **gate mode public** (kinds cloud refusés). Reste T4f : **SSE** de progression + reprise `Last-Event-ID` (TU2.c), **upload** corpus ZIP (TU2.b), **sélection de moteur** + 403 cloud HTTP (TU2.b), **persistance** (TU3), formulaire UI au design (TU2.e), déploiement HF effectif.
 
 **Enveloppe :**
 - [x] **Contrat de commande CLI** (`argparse`, D-007) — verbes **`demo`** + **`run`** (YAML → orchestrateur → rapport) câblés, console-script `xerocr`. — *preuve : `test_cli_demo` + `test_cli_run` (bout en bout)*

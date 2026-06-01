@@ -29,6 +29,7 @@ from xerocr.evaluation.result import RunResult
 from xerocr.evaluation.runner import evaluate_run
 from xerocr.pipeline.executor import PipelineExecutor
 from xerocr.pipeline.protocols import Module
+from xerocr.pipeline.run_control import RunControl
 
 
 class OrchestrationError(XerOCRError):
@@ -41,8 +42,14 @@ def run(
     registry: ModuleRegistry,
     code_version: str,
     deadline: Deadline | None = None,
+    control: RunControl | None = None,
 ) -> RunResult:
-    """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques)."""
+    """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques).
+
+    ``control`` (optionnel) porte l'**annulation coopérative** de bout en bout :
+    le worker d'un job (``JobRunner``, couche 6) le déclenche, l'exécuteur le
+    sonde avant chaque étape. Absent → un ``RunControl`` neutre est utilisé.
+    """
     started_at = utcnow()
     needed = sorted(
         {step.adapter_name for pipeline in spec.pipelines for step in pipeline.steps}
@@ -75,6 +82,7 @@ def run(
                     _initial_inputs(document),
                     document_id=document.id,
                     deadline=deadline,
+                    control=control,
                     workspace_uri=str(pipeline_workspace),
                 )
             pipeline_outputs[pipeline.name] = per_document

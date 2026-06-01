@@ -1,10 +1,30 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 (coquille au design) faite ✅.** T1→T4e + T2/T3
-> **déjà faits** (moteur texte, OCR→LLM, vitrine read-only) → **prochaine = TU2
-> (= T4f)** : le lanceur web (POST run + upload + SSE + Moteurs + mode public).
-> Cf. `PLAN_SPACE_INTERACTIF.md §10` + `xerocr/interfaces/ANALYSE_COUCHE_8.md`.
+> jour à chaque tranche. **TU1 (coquille) ✅ ; TU2.a (lanceur, walking skeleton)
+> ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine = TU2.b** (sélection de moteur +
+> upload corpus ZIP + 403 cloud HTTP), puis **TU2.c** (SSE), **TU2.e** (formulaire
+> au design). Cf. `PLAN_SPACE_INTERACTIF.md §6` + `xerocr/interfaces/ANALYSE_COUCHE_8.md`.
+
+## TU2.a — fait (lanceur, walking skeleton)
+Le calcul tourne **dans le web**, de bout en bout : `POST /api/runs` lance le run
+de démonstration (`precomputed`, sans clé) en arrière-plan via `JobRunner`
+(couche 6, thread + **annulation coopérative** `RunControl`) ; `GET /api/runs/{id}`
+suit l'état ; `POST .../cancel` interrompt. État dans `JobStore` (couche 5, en
+mémoire, thread-safe). Le `RunResult` produit est écrit dans le dossier de la
+vitrine → **listé et rendu** par les routes read-only existantes (preuve
+bout-en-bout). **Sécurité d'abord** : écritures **CSRF** (en-tête custom
+`X-XeroCR-CSRF`) ; **mode public** (`XEROCR_PUBLIC_MODE`) refuse les kinds cloud
+(`blocked_cloud_kinds`, démo `precomputed` = safe). Fichiers : `adapters/storage/`
+(`job_store.py`), `app/jobs.py`, `app/versioning.py` (version unifiée),
+`interfaces/web/routers/runs.py`, `interfaces/web/security/csrf.py`,
+`interfaces/demo.py` (corpus démo partagé CLI⇄web) ; `orchestrator.run(control=…)`.
+Suite : **379 verts**, archi + deploy gate verts, fumé via vrai uvicorn.
+
+> **Hors TU2.a (volontaire)** : SSE/progression fine, upload de corpus, sélection
+> de moteur (et donc le **403 cloud au niveau HTTP**), persistance (HF éphémère),
+> formulaire « Banc d'essai » au design. La gate mode-public est **unit-testée**
+> pour le blocage cloud ; son chemin HTTP arrive avec la sélection de moteur (TU2.b).
 
 ## TU1 — fait (coquille au design)
 Livré sur la branche de session : coquille rendue **serveur** (Jinja2 + CSS, JS

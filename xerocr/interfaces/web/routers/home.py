@@ -10,7 +10,6 @@ autres sont des placeholders honnêtes (badge « à venir »), sans fausse donn�
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from urllib.parse import quote
 
@@ -18,6 +17,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from xerocr.app import resolve_code_version
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
 
@@ -27,19 +27,10 @@ _NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engin
 _ACTIVE_NAV = "reports"
 
 
-def _resolve_version() -> str:
-    try:
-        return version("xerocr")
-    except PackageNotFoundError:  # pragma: no cover (paquet non installé)
-        from xerocr.domain._version_fallback import FALLBACK_VERSION
-
-        return FALLBACK_VERSION
-
-
 def build_home_router(reports_dir: Path, templates: Jinja2Templates) -> APIRouter:
     """Construit le routeur d'accueil (monté par ``create_app``)."""
     router = APIRouter()
-    app_version = _resolve_version()
+    app_version = resolve_code_version()
 
     @router.get("/", response_class=HTMLResponse)
     def home(request: Request, lang: str = "fr") -> HTMLResponse:
