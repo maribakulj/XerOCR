@@ -24,8 +24,10 @@ from fastapi.templating import Jinja2Templates
 
 from xerocr.adapters.storage import JobStore
 from xerocr.app import resolve_code_version
+from xerocr.app.engines import engine_statuses
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
+from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
 from xerocr.interfaces.web.routers.runs import build_runs_router
@@ -119,6 +121,9 @@ def create_app(
     app.include_router(build_home_router(catalog_dir, templates))
     app.include_router(build_reports_router(catalog_dir))
     app.include_router(build_runs_router(runner, public_mode=is_public))
+    app.include_router(
+        build_engines_router(lambda: engine_statuses(public_mode=is_public))
+    )
     return app
 
 

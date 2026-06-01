@@ -1,10 +1,21 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 (coquille) ✅ ; TU2.a (lanceur, walking skeleton)
-> ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine = TU2.b** (sélection de moteur +
-> upload corpus ZIP + 403 cloud HTTP), puis **TU2.c** (SSE), **TU2.e** (formulaire
-> au design). Cf. `PLAN_SPACE_INTERACTIF.md §6` + `xerocr/interfaces/ANALYSE_COUCHE_8.md`.
+> jour à chaque tranche. **TU1 (coquille) ✅ ; TU2.a (lanceur) ✅ ; TU2.b (onglet
+> Moteurs : `GET /api/engines`) ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine =
+> TU2.c** (upload corpus ZIP : validation, anti-traversal, dédup), puis **TU2.d**
+> (sélection de moteur au lancement + 403 cloud/409 indispo HTTP, sur corpus réel),
+> **TU2.e** (SSE), **TU2.f** (formulaires au design). Cf. `PLAN_SPACE_INTERACTIF.md §6`.
+
+## TU2.b — fait (onglet « Moteurs » : disponibilité runtime)
+`GET /api/engines` (read-only) restitue, pour chaque kind du socle (`precomputed`,
+`tesseract`, `openai`, `ollama`), s'il est **utilisable ici** et *pourquoi pas* :
+sondes **bon marché et sans effet de bord** — binaire (`shutil.which`), SDK
+(`importlib.util.find_spec`, **sans importer**), clé d'API (env). Le **mode public**
+masque les moteurs cloud. Sondes **injectables** → détection déterministe en test,
+indépendante de la CI. Fichiers : `app/engines.py` (`engine_statuses`,
+`EngineStatus`), `interfaces/web/routers/engines.py`. La **page** Moteurs au design
+(rendu) arrive avec les formulaires UI (TU2.f) ; ici c'est la capacité backend.
 
 ## TU2.a — fait (lanceur, walking skeleton)
 Le calcul tourne **dans le web**, de bout en bout : `POST /api/runs` lance le run
