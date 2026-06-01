@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1320" />
+  <title>Picarones · XerOCR redesign</title>
+  <link rel="stylesheet" href="css/picarones.css" />
+  <style id="density-tweaks">
+    html[data-density="dense"]   .sec { padding: 18px 20px 22px; }
+    html[data-density="dense"]   .sec-head { margin-bottom: 12px; }
+    html[data-density="airy"]    .sec { padding: 42px 32px 48px; }
+    html[data-density="airy"]    .sec-head { margin-bottom: 26px; }
+    html[data-accent="blue-only"] .tag-green { border-color: var(--blue); color: var(--blue-deep); background: var(--blue-soft); }
+    html[data-accent="blue-only"] .b-fill.green, html[data-accent="blue-only"] .progress.green .progress-bar { background: var(--blue); }
+    html[data-accent="blue-only"] .c-id.green { background: var(--blue-deep); }
+    html[data-accent="blue-only"] .readout.green { border-color: var(--blue); }
+    html[data-accent="blue-only"] .dot.on { background: var(--blue); border-color: var(--blue-deep); }
+    html[data-accent="mono"] .tag-green, html[data-accent="mono"] .tag-blue { border-color: var(--ink); color: var(--ink); background: var(--g-50); }
+    html[data-accent="mono"] .b-fill.green, html[data-accent="mono"] .b-fill.blue { background: var(--ink); }
+    html[data-accent="mono"] .c-id.green, html[data-accent="mono"] .c-id.blue { background: var(--ink); }
+    html[data-accent="mono"] .readout.green, html[data-accent="mono"] .readout.blue { border-color: var(--ink); }
+    html[data-accent="mono"] .dot.on, html[data-accent="mono"] .dot.busy { background: var(--ink); border-color: var(--ink); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="js/i18n.jsx"></script>
+  <script type="text/babel" src="js/data.jsx"></script>
+  <script type="text/babel" src="js/components.jsx"></script>
+  <script type="text/babel" src="js/view-benchmark.jsx"></script>
+  <script type="text/babel" src="js/view-other.jsx"></script>
+  <script type="text/babel" src="js/app.jsx"></script>
+</body>
+</html>
