@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t.engines_title }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div>
+    <div class="view-hero-eyebrow">{{ t.engines_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.engines_title }}</div>
+    <div class="view-hero-desc">{{ t.engines_desc }}</div>
+  </div>
+  <div class="hero-stat">
+    <div class="v">{{ n_ready }}<span style="color:var(--g-300)">/{{ n_engines }}</span></div>
+    <div class="k">{{ t.stat_ready }}</div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.engines_title }}</div>
+    <div class="sec-sub">{{ t.engines_desc }}</div>
+  </div>
+  <table class="engines">
+    <thead>
+      <tr>
+        <th>{{ t.engines_col_engine }}</th>
+        <th>{{ t.engines_col_status }}</th>
+        <th>{{ t.engines_col_detail }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in engines %}
+      <tr>
+        <td class="eng-name">{{ e.label }} <span class="eng-kind">{{ e.kind }}</span></td>
+        <td>
+          <span class="dot {{ 'on' if e.available else 'off' }}"></span>
+          {{ t.engine_available if e.available else t.engine_unavailable }}
+        </td>
+        <td class="eng-detail">{{ e.detail }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}
