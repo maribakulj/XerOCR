@@ -5,49 +5,9 @@
    Palette: grey gradient + one whisper of fern.
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap');
-
-/* === OCR-A — actual 1968 ANSI X3.17, opensourcedesign mirror via jsdelivr === */
-@font-face {
-  font-family: 'OCR-A';
-  src: url('https://cdn.jsdelivr.net/gh/opensourcedesign/fonts@master/OCR/OCRA.otf') format('opentype');
-  font-display: swap;
-}
-
-/* === Apfel Grotezk by Lucas Le Bihan / Collletttivo — free, selectype-adjacent humanist grotesque === */
-@font-face {
-  font-family: 'Apfel Grotezk';
-  src: url('fonts/ApfelGrotezk-Regular.woff2') format('woff2'),
-       url('fonts/ApfelGrotezk-Regular.woff') format('woff'),
-       url('fonts/ApfelGrotezk-Regular.otf') format('opentype'),
-       url('https://cdn.jsdelivr.net/gh/collletttivo/Apfel-Grotezk@main/fonts/webfonts/ApfelGrotezk-Regular.woff2') format('woff2'),
-       url('https://cdn.jsdelivr.net/gh/collletttivo/Apfel-Grotezk@master/fonts/ApfelGrotezk-Regular.otf') format('opentype');
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Apfel Grotezk';
-  src: url('fonts/ApfelGrotezk-Mittel.woff2') format('woff2'),
-       url('fonts/ApfelGrotezk-Mittel.otf') format('opentype'),
-       url('https://cdn.jsdelivr.net/gh/collletttivo/Apfel-Grotezk@main/fonts/webfonts/ApfelGrotezk-Mittel.woff2') format('woff2');
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Apfel Grotezk';
-  src: url('fonts/ApfelGrotezk-Fett.woff2') format('woff2'),
-       url('fonts/ApfelGrotezk-Fett.otf') format('opentype'),
-       url('https://cdn.jsdelivr.net/gh/collletttivo/Apfel-Grotezk@main/fonts/webfonts/ApfelGrotezk-Fett.woff2') format('woff2');
-  font-weight: 700;
-  font-display: swap;
-}
-
-/* === jgs font (kept as fallback) === */
-@font-face {
-  font-family: 'jgs';
-  src: url('../fonts/jgs.ttf') format('truetype');
-  font-display: swap;
-}
+/* Typographie : définie UNE seule fois dans tokens.css (Fluxisch Else + OCRA,
+   self-hosted, zéro CDN). picarones.css n'(re)définit plus aucune police —
+   il consomme les variables --display/--sans/--mono/--serif héritées. */
 
 :root {
   /* === Greyscale (warm, tight gradient) === */
@@ -89,10 +49,7 @@
   --warn: var(--butter-deep);
   --err: oklch(0.55 0.14 28);
 
-  --sans: 'Apfel Grotezk', 'IBM Plex Sans', system-ui, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --serif: 'IBM Plex Serif', Georgia, serif;
-  --display: 'OCR-A', 'Courier New', monospace;
+  /* --display/--sans/--mono/--serif : hérités de tokens.css (source unique). */
 
   --r-sm: 8px;
   --r-md: 14px;

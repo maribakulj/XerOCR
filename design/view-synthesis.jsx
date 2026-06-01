@@ -30,7 +30,7 @@ function ViewOverview() {
               {[
                 ['nom du corpus',           'gallica_presse_xix_42'],
                 ['date d\u2019exécution',   '2026-05-21 · 14:32 UTC'],
-                ['picarones',               'v2.0.4 · sha 7f3a1c2'],
+                ['xerocr',               'v2.0.4 · sha 7f3a1c2'],
                 ['python',                  '3.11.8 · linux-x86_64'],
                 ['profil normalisation',    'diplomatic_modern_fr'],
                 ['glossaire',               'fr · 184 entrées'],
@@ -97,7 +97,7 @@ function ViewOverview() {
             </div>
             <div className="help" style={{marginTop:'14px'}}>
               Strates issues du champ <code style={{fontFamily:'var(--mono)',fontSize:'12px'}}>script_type</code> du
-              corpus Picarones. La répartition est figée à la création du run.
+              corpus XerOCR. La répartition est figée à la création du run.
             </div>
           </div>
         </div>

@@ -68,8 +68,8 @@ function App() {
         <aside className="rail">
           <div className="wordmark-card">
             <div className="wordmark">
-              <span className="mark">P</span>
-              <span>Picarones</span>
+              <span className="mark">X</span>
+              <span>XerOCR</span>
             </div>
             <div className="wordmark-sub">OCR · HTR · VLM benchmark</div>
           </div>

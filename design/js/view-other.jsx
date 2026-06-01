@@ -188,7 +188,7 @@ function LibraryView({ t, lang }) {
                   </div>
                 </div>
                 <HelpR>
-                  IIIF manifests describe digitised objects (canvases, ranges, annotations). Picarones pulls images + textual
+                  IIIF manifests describe digitised objects (canvases, ranges, annotations). XerOCR pulls images + textual
                   annotations (if present) and writes them into a local corpus folder.
                 </HelpR>
               </div>
