@@ -9,10 +9,11 @@
 > Space **S1** ✅ (coquille) · **S2** ✅ (lanceur complet) · **S3** ✅ (persistance :
 > `ResultPublisher` pousse le `RunResult` JSON vers un dépôt GitHub après run —
 > opt-in via secrets `XEROCR_PUBLISH_REPO`/`_TOKEN`, best-effort, `published_url`
-> sur le Job). **Prochaine = S4** : **vues rapport au design** (overview/by-engine/
-> by-document/crosses/synthesis ; consomme `RunResult`, zéro data-layer). Débloqué
-> aussi : **S5** (durcissement public). **S6** attend l'axe moteur **T5/T7**.
-> *(Run moteur réel + push réel = tests `live` / Phase A privée.)*
+> sur le Job) · **S4.a** ✅ (rapport autonome **restylé au design** : chrome gris
+> chaud + cartes, CSS inline + polices système → autonome + octet-stable, couche 7
+> `reports/html.py`). **Prochaine = S4.b** : enrichir les vues (readouts/data-bars
+> + by-engine/by-document/crosses/synthesis). Débloqué aussi : **S5** (durcissement
+> public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +

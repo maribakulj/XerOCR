@@ -41,6 +41,16 @@ def test_document_structure_and_determinism() -> None:
     assert html1.startswith("<!DOCTYPE html>")
     assert "<title>" in html1
     assert "</html>" in html1
+    # S4.a : le rapport porte le chrome au design (carte gris chaud + en-tête pilule)
+    assert 'class="report-board"' in html1
+    assert 'class="report-chrome"' in html1
+    assert 'class="sec"' in html1
+    # trame de points (halftone Xerox) en fond, via data: URI inline
+    assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
+    # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
+    assert "@import" not in html1
+    assert "https://" not in html1
+    assert "<link" not in html1
 
 
 class _NeedsWer:
