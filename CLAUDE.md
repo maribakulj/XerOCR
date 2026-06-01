@@ -9,21 +9,33 @@ avant d'écrire la moindre ligne.**
 
 ## 0. Statut actuel
 
-- **Couches 1-2 construites et vertes** : `domain` (13 fichiers) + `formats`
-  (ALTO/PAGE/text, sécurité XML, normalisation). `pytest` vert (~158 tests, ~95 %
-  couverture), `mypy --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
-- **T1 (squelette ambulant) CONSTRUIT** : tranche verticale fine à travers les
-  couches 3→8 — `xerocr demo` marche (rapport HTML autonome, **octet-stable**).
-  Couches 3-6 remplies de leur part T1, 7-8 = cadre `Section` + CLI `demo`. État
-  détaillé vivant : roll-up de `MIGRATION_PLAN.md`. Analyses durables toujours
-  dans `xerocr/<couche>/{MIGRATION,ANALYSE}_COUCHE_*.md`.
+> **Source de vérité du détail = le roll-up de [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md)
+> + la `DoD vivante` de chaque couche.** Ce bloc donne le *cap*, jamais un statut
+> chiffré couche-par-couche : c'est précisément en redupliquant un statut ici
+> (figé à l'ère T1 : « prochaine = T2 », un compte de tests périmé) qu'on a laissé
+> traîner une consigne fausse **après** que T2→T4e furent livrés, puis propagée
+> aux plans UI. Verrouillé par `tests/architecture/test_status_freshness.py`.
+
+- **Couches 1-2 (`domain`, `formats`) : vertes.** Fondations sans dépendance
+  externe (ALTO/PAGE/text, sécurité XML, 12 profils de normalisation). `mypy
+  --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
+- **Tranches T1→T4e construites** (axe **texte** + **OCR/LLM** + **vitrine web
+  lecture seule**) : `tesseract` réel, CER/WER/MER (parité `jiwer`), stats
+  `scipy`, `cross_engine`, pipeline 2 étapes OCR→LLM (`openai`+`ollama`),
+  commandes `demo`/`run`/`compare`/`serve`, vitrine `GET`-only + Docker/Space ;
+  **TU1** (coquille au design, rendu serveur) posée par-dessus. Suite verte
+  (compte à jour dans le roll-up). Détail vivant : roll-up + `DoD` par couche.
 - **Garde-fous d'archi actifs** : `tests/architecture/` —
   `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
-  `file_budgets`, `no_broad_except`, `single_version_source`.
+  `file_budgets`, `no_broad_except`, `single_version_source`, `status_freshness`.
 - **Parcours global** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) (tranches T1→T7 +
-  invariants d'enveloppe + statut T0 détaillé).
-- **Prochaine étape = T2** (axe texte) : moteur `tesseract` réel, WER/MER, stats
-  `scipy`, `cross_engine`, commandes `run`/`compare`. Toujours par tranche.
+  invariants d'enveloppe + statut détaillé).
+- **Prochaine étape = TU2** (≡ **T4f** côté couche 8) : le **lanceur web
+  interactif** — `POST` run + upload corpus + **SSE** + onglet Moteurs + mode
+  public/sécurité d'exécution (clés en secrets). Seul gros morceau restant ; le
+  cœur moteur (T1-T3) est prêt à être consommé. Cf. `PLAN_SPACE_INTERACTIF.md`
+  (TU2) ≡ `xerocr/interfaces/ANALYSE_COUCHE_8.md` (T4f). Ensuite : T5
+  (structure/segmentation), T6 (extensibilité tierce).
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

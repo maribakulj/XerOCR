@@ -1,8 +1,10 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 (coquille au design) faite ✅ — prochaine = T2**
-> (tesseract réel) puis **TU2** (lanceur), cf. `PLAN_SPACE_INTERACTIF.md §10`.
+> jour à chaque tranche. **TU1 (coquille au design) faite ✅.** T1→T4e + T2/T3
+> **déjà faits** (moteur texte, OCR→LLM, vitrine read-only) → **prochaine = TU2
+> (= T4f)** : le lanceur web (POST run + upload + SSE + Moteurs + mode public).
+> Cf. `PLAN_SPACE_INTERACTIF.md §10` + `xerocr/interfaces/ANALYSE_COUCHE_8.md`.
 
 ## TU1 — fait (coquille au design)
 Livré sur la branche de session : coquille rendue **serveur** (Jinja2 + CSS, JS

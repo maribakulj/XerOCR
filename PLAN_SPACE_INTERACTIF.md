@@ -91,8 +91,11 @@ pas tout faire dans une seule conversation**.
 ## 10. Rapport avec la migration T1–T7 (ne pas confondre les numéros)
 
 `CLAUDE.md` décrit la **migration du moteur** (bibliothèque/CLI) par tranches
-**T1→T7**, bâties **intérieur → extérieur** (couches 1→8) ; statut : T1
-(squelette) fait, **prochaine = T2** (tesseract réel, WER/MER…).
+**T1→T7**, bâties **intérieur → extérieur** (couches 1→8) ; statut réel :
+**T1→T4e faits** (tesseract réel, CER/WER/MER, stats, OCR→LLM, `serve`/vitrine
+read-only). **Le calcul est déjà débloqué côté bibliothèque** — il reste à
+l'exposer dans le web (T4f). ⚠️ Une version périmée de ce plan disait « prochaine
+= T2 » (recopiée d'un `CLAUDE.md §0` non réconcilié) : **T2/T3 sont faits**.
 
 Les **TU1→TU7** de ce plan sont l'autre extrémité : **couche 8 (interfaces) +
 déploiement** — l'app web du Space. Donc :
@@ -105,5 +108,6 @@ déploiement** — l'app web du Space. Donc :
 - **Numérotation** : `T#` = migration moteur ; `TU#` = tranches UI/interfaces.
 
 **Décidé (mainteneur)** : **TU1 d'abord** (coquille au design, indépendante du
-moteur), **puis reprendre T2** pour débloquer le calcul, **puis TU2**.
-Entrelacement migration ⇄ UI dans cet ordre.
+moteur) — **fait**. T2/T3 étant déjà livrés, le calcul est débloqué côté
+bibliothèque → **prochaine = TU2 (= T4f)** : le lanceur web qui exécute un run
+dans le Space.

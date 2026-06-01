@@ -23,12 +23,12 @@
 |---|---|---|
 | 1 `domain` | ✅ **vert** | `xerocr/domain/MIGRATION_COUCHE_1.md` §DoD |
 | 2 `formats` | ✅ **vert** | `xerocr/formats/MIGRATION_COUCHE_2.md` §DoD |
-| 3 `evaluation` | 🔨 **T2** (WER/MER · stats `scipy` · `cross_engine`) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
-| 4 `pipeline` | 🔨 **T3** (Protocol + exécuteur · `register_cancel_handle`) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
-| 5 `adapters` | 🔨 **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
-| 6 `app` | 🔨 **T3** (orchestrateur · loader/sécurité · 4 builders) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
-| 7 `reports` | 🔨 **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T2** (CLI `demo`/`run`/`compare`) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 3 `evaluation` | ✅ **T2** (CER/WER/MER · stats `scipy` · `cross_engine`) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
+| 4 `pipeline` | ✅ **T3** (Protocol + exécuteur · annulation câblée) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
+| 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
+| 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
+| 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 🔨 **T4e→T4f** (CLI + `serve`/vitrine read-only faits ; reste **lanceur**) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
 | **T2 axe texte** | ✅ **fait** — `tesseract` réel · WER/MER · stats · `run`/`compare` · round-trip JSON | §3-T2 |

@@ -279,7 +279,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 ## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — spine verte (`Module` Protocol + exécuteur) ; reste : runner N-docs, planner.
+> Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. Différé : fan-out par région (T5).
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*

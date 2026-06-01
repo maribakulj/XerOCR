@@ -234,7 +234,7 @@ xerocr/app/
 ## DoD vivante (couche 6) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — orchestrateur (+ **workspace** par run) + registre/factory + `RunSpec` + **loader YAML** + **sécurité chemins** verts ; deps-lock à T2.f, entry-points à T6.
+> Maj dans le **même commit** que le code. **Statut : ✅ T2** — orchestrateur (+ **workspace** par run) + registre/factory + `RunSpec` + **loader YAML** + **sécurité chemins** verts. Différé : découverte entry-points (T6), reprise partielle, deps-lock (hors CI).
 
 **Enveloppe :**
 - [x] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis `evaluate_run` ; l'assemblage métrique vit en `evaluation`). — *preuve : `test_app_imports_are_allowed` ; l'orchestrateur délègue, n'importe aucune `evaluation.metrics*`*
