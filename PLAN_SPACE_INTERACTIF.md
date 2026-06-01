@@ -104,5 +104,6 @@ déploiement** — l'app web du Space. Donc :
   cloud). Pas de calcul réel tant que le moteur correspondant n'existe pas.
 - **Numérotation** : `T#` = migration moteur ; `TU#` = tranches UI/interfaces.
 
-**À clarifier avec le mainteneur** : l'entrelacement migration ⇄ UI (p. ex.
-TU1 maintenant, puis reprendre T2 pour débloquer le calcul, puis TU2).
+**Décidé (mainteneur)** : **TU1 d'abord** (coquille au design, indépendante du
+moteur), **puis reprendre T2** pour débloquer le calcul, **puis TU2**.
+Entrelacement migration ⇄ UI dans cet ordre.
