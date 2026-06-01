@@ -1,16 +1,16 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
-> Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **Statut qui fait autorité = le tableau de bord de
-> `MIGRATION_PLAN.md`** (+ table de correspondance `T#`⇄`TU#` : les `TU#` = la
-> couche 8 / Space sous T4+).
+> Point d'entrée **vivant** pour reprendre dans une **session fraîche**. **UN
+> SEUL plan ordonné + autorité de statut = `MIGRATION_PLAN.md`** (le web = **T4**,
+> sous-tranches T4a–i ; les `TU#` ne sont que des **alias historiques** —
+> `PLAN_SPACE_INTERACTIF.md` = spec UX, sans roadmap).
 >
-> **TU1 ✅ ; TU2.a→e ✅ ; TU2.f.1 ✅** (page « Banc d'essai » interactive) ;
-> **revue PR #17 passée** (sécurité RAS ; bug 500 upload corrigé ; code mort
-> élagué — commit `5c17cf2`) ; **plan harmonisé** (T⇄TU imbriqués). T1→T4e +
-> T2/T3 faits. **Prochaine = TU2.f.2** : page « Moteurs » (consomme
-> `GET /api/engines`) + UI upload/sélection au design (réutilise `/api/corpus`,
-> `/api/runs`). Puis **TU3** (persistance). PR #17 : **prête à relire/merger**.
+> **Fait** : T1→T3 ✅ ; **T4a–e** (vitrine read-only) ✅ ; **T4f** (habillage
+> design + lanceur : run de fond/SSE/Moteurs/upload/gardes HTTP) ✅ — **mergé dans
+> `main` (PR #17)**, CI verte. **Prochaine = T4f.2** : page **Moteurs** + UI
+> **upload**/sélection au design (réutilise `/api/engines`, `/api/corpus`,
+> `/api/runs`). Ensuite **T4g** (persistance) → **T4h** (vues rapport) → **T4i**
+> (durcissement public) → **T5** (structure). Détail : roll-up + §3-T4 du plan.
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +

@@ -33,12 +33,13 @@ avant d'écrire la moindre ligne.**
   statut** et porte la **table de correspondance `T#` ⇄ `TU#`** (les `TU#` = la
   décomposition de la couche 8 / Space sous T4+). `PLAN_SPACE_INTERACTIF.md` =
   **spec UX**, pas autorité de statut.
-- **Prochaine étape = TU2** (≡ **T4f** côté couche 8) : le **lanceur web
-  interactif** — `POST` run + upload corpus + **SSE** + onglet Moteurs + mode
-  public/sécurité d'exécution (clés en secrets). Seul gros morceau restant ; le
-  cœur moteur (T1-T3) est prêt à être consommé. Cf. `PLAN_SPACE_INTERACTIF.md`
-  (TU2) ≡ `xerocr/interfaces/ANALYSE_COUCHE_8.md` (T4f). Ensuite : T5
-  (structure/segmentation), T6 (extensibilité tierce).
+- **Prochaine étape = T4f.2** (reste du lanceur « Banc d'essai ») : page
+  **Moteurs** + UI **upload**/sélection au design. Le cœur du lanceur (run de
+  fond, SSE, gardes HTTP, API engines/corpus) est livré ; le cœur moteur (T1-T3)
+  est consommé. Ensuite, dans le plan unique : **T4g** (persistance) → **T4h**
+  (vues rapport au design) → **T4i** (durcissement public) → **T5** (structure/
+  segmentation) → **T6** (extensibilité). *(Les anciens « TU# » sont des alias —
+  table dans `MIGRATION_PLAN.md`.)*
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 
