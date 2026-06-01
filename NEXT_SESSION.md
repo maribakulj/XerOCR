@@ -1,16 +1,17 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
-> Point d'entrée **vivant** pour reprendre dans une **session fraîche**. **UN
-> SEUL plan ordonné + autorité de statut = `MIGRATION_PLAN.md`** (le web = **T4**,
-> sous-tranches T4a–i ; les `TU#` ne sont que des **alias historiques** —
-> `PLAN_SPACE_INTERACTIF.md` = spec UX, sans roadmap).
+> Point d'entrée **vivant** pour reprendre dans une **session fraîche**. **Autorité
+> de statut = `MIGRATION_PLAN.md`**, section **« Les deux axes »** : **`T#`** =
+> moteur (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le
+> moteur, avec dépendances. `PLAN_SPACE` = spec UX. *(Anciens `TU#` = alias `S#`.)*
 >
-> **Fait** : T1→T3 ✅ ; **T4a–e** (vitrine read-only) ✅ ; **T4f** (habillage
-> design + lanceur : run de fond/SSE/Moteurs/upload/gardes HTTP) ✅ — **mergé dans
-> `main` (PR #17)**, CI verte. **Prochaine = T4f.2** : page **Moteurs** + UI
-> **upload**/sélection au design (réutilise `/api/engines`, `/api/corpus`,
-> `/api/runs`). Ensuite **T4g** (persistance) → **T4h** (vues rapport) → **T4i**
-> (durcissement public) → **T5** (structure). Détail : roll-up + §3-T4 du plan.
+> **Fait** : moteur **T1→T4** ✅ (texte · OCR+LLM · **socle web read-only**) —
+> dans `main` (PR #17). Space **S1** ✅ (coquille design) · **S2** 🔨 (lanceur :
+> run de fond/SSE/Moteurs/upload/gardes HTTP). **Prochaine = S2.2** : page
+> **Moteurs** + UI **upload**/sélection au design (réutilise `/api/engines`,
+> `/api/corpus`, `/api/runs`). Débloqués ensuite : **S3** (persistance) · **S4**
+> (vues rapport) · **S5** (durcissement public). **S6** (UI segmentation/
+> importeurs) attend l'axe moteur **T5/T7**.
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +

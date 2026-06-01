@@ -29,17 +29,17 @@ avant d'écrire la moindre ligne.**
   `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
   `file_budgets`, `no_broad_except`, `single_version_source`, `status_freshness`.
 - **Parcours global + tableau de bord unique** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md)
-  (tranches T1→T7 + invariants d'enveloppe + statut). **Il fait autorité sur le
-  statut** et porte la **table de correspondance `T#` ⇄ `TU#`** (les `TU#` = la
-  décomposition de la couche 8 / Space sous T4+). `PLAN_SPACE_INTERACTIF.md` =
-  **spec UX**, pas autorité de statut.
-- **Prochaine étape = T4f.2** (reste du lanceur « Banc d'essai ») : page
+  (section **« Les deux axes »** + invariants d'enveloppe). **Il fait autorité sur
+  le statut.** Deux axes, un seul tableau : **`T#`** = bibliothèque déterministe
+  (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le moteur, avec
+  **dépendances explicites**. `PLAN_SPACE_INTERACTIF.md` = **spec UX**, pas
+  autorité de statut. *(Anciens « TU# » = alias des `S#`.)*
+- **Prochaine étape = S2.2** (reste du lanceur « Banc d'essai ») : page
   **Moteurs** + UI **upload**/sélection au design. Le cœur du lanceur (run de
   fond, SSE, gardes HTTP, API engines/corpus) est livré ; le cœur moteur (T1-T3)
-  est consommé. Ensuite, dans le plan unique : **T4g** (persistance) → **T4h**
-  (vues rapport au design) → **T4i** (durcissement public) → **T5** (structure/
-  segmentation) → **T6** (extensibilité). *(Les anciens « TU# » sont des alias —
-  table dans `MIGRATION_PLAN.md`.)*
+  est consommé. Le tableau « Les deux axes » fait foi : ensuite **S3**
+  (persistance) · **S4** (vues rapport) · **S5** (durcissement public) —
+  débloqués ; **S6** (UI segmentation/importeurs) attend l'axe moteur **T5/T7**.
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

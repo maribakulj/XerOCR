@@ -62,13 +62,14 @@ synthesis. **Manque : segmentation** (cf. §8).
 
 ## 6. Écrans du Space (référence UX — **pas une roadmap**)
 
-> **Ceci n'est pas un plan ordonné.** L'unique plan ordonné + le statut vivent
-> dans `MIGRATION_PLAN.md` (le web = **T4**, sous-tranches T4a–i ; les `TU#` n'y
-> sont plus que des **alias historiques**). Le tableau ci-dessous décrit le
-> **scope UX** de chaque écran ; les mentions « fait » sont un repère de lecture,
-> jamais l'autorité.
+> **Ceci n'est pas un plan ordonné.** L'unique tableau d'autorité (statut + ordre)
+> vit dans `MIGRATION_PLAN.md`, section **« Les deux axes »** : le web = l'**axe
+> Space `S#`** (couche 8). Les `TU#` ci-dessous sont des **alias** des `S#`
+> (`TU1=S1`, `TU2=S2`, `TU3=S3`, `TU4=S4`, `TU6=S5`, et `TU5=T7`/`TU7=T5` côté
+> moteur). Ce tableau décrit le **scope UX** des écrans ; les mentions « fait »
+> sont un repère de lecture, jamais l'autorité.
 
-| Écran (alias `TU#`) | Livre | Note |
+| Écran (alias `TU#` → `S#`) | Livre | Note |
 |---|---|---|
 | **TU1 — Coquille / design shell** | tokens + polices (FluxischElse/OCR-A) + chrome (rail, hero, panneau système) appliqués à l'app **actuelle** (read-only), **déployé**. Réserve les emplacements de nav : Bibliothèque · Banc d'essai · Rapports · **Segmentation** · Historique · Moteurs. | fine, pleine profondeur, faible risque ; valide l'approche design-en-Jinja2 |
 | **TU2 — Lanceur « Banc d'essai »** (cœur Phase A) | POST run + upload corpus + **SSE** progression + onglet Moteurs (dispo/indispo) ; clés depuis secrets ; écrit un `RunResult` | la grosse tranche ; sécurité d'exécution. **TU2.a fait** : walking skeleton `POST/GET/cancel /api/runs` → run de fond annulable (`JobRunner`+`JobStore`) → `RunResult` écrit (démo `precomputed`), **CSRF** + **gate mode public**. **TU2.b fait** : onglet Moteurs — `GET /api/engines`. **TU2.c fait** : upload corpus ZIP (`/api/corpus`) — ingestion durcie. **TU2.d fait** : `POST /api/runs {engine, corpus_id}` — sélection moteur + gardes HTTP (422/403/404/409). **TU2.e fait** : SSE (`/events` + `Last-Event-ID`). **TU2.f.1 fait** : page `/benchmark` interactive (rendu serveur + JS auto-hébergé : lance la démo, suit en SSE, lien rapport ; CSP ouverte `script/connect 'self'`). Reste : **TU2.f.2** page Moteurs + UI upload/sélection au design ; run tesseract réel = test `live`. |
@@ -100,15 +101,15 @@ Tranches fines de pleine profondeur · budgets `<400 LOC` · zéro shim · tests
 d'archi · « pas de consommateur = supprimé » · docs durables committées · **ne
 pas tout faire dans une seule conversation**.
 
-## 10. Une seule numérotation : `T#` (les `TU#` ne sont que des alias)
+## 10. Deux axes (`T#` moteur · `S#` Space), un seul tableau d'autorité
 
-**Il n'y a plus de double plan.** L'unique plan ordonné est dans
-[`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) : migration moteur **intérieur→extérieur**
-(couches 1→8), où **le web = T4** (sous-tranches T4a–i). Les `TU#` de ce document
-sont des **alias historiques** de ce plan (table d'alias dans le roll-up de
-`MIGRATION_PLAN.md`). Repères clés : `TU1+TU2 = T4f`, `TU3 = T4g`, `TU4 = T4h`,
-`TU5 = T7`, `TU6 = T4i`, `TU7 = T5`.
+**Plus de double plan.** L'unique tableau d'autorité est dans
+[`MIGRATION_PLAN.md`](MIGRATION_PLAN.md), section **« Les deux axes »** : `T#` =
+la **bibliothèque déterministe** (couches 1–7, intérieur→extérieur) ; `S#` = cette
+**app web** (couche 8 + déploiement) qui **consomme** le moteur. Les `TU#` de ce
+document sont des **alias** : `TU1=S1`, `TU2=S2`, `TU3=S3`, `TU4=S4`, `TU6=S5`,
+`TU5=T7`, `TU7=T5`.
 
-Invariant de dépendance (inchangé) : l'UI de calcul (T4f+) **consomme** les
-moteurs des tranches internes — un vrai OCR/LLM dans le Space suppose T2/T3 faits
-(✅). Le **statut fait foi dans `MIGRATION_PLAN.md`**, jamais ici.
+Invariant de dépendance : un écran `S#` n'aboutit que si son moteur est prêt
+(`S2 ⟸ T2/T3` ✅ ; segmentation-UI ⟸ `T5` ; importeurs-UI ⟸ `T7`). Le **statut
+fait foi dans `MIGRATION_PLAN.md`**, jamais ici.
