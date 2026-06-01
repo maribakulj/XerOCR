@@ -45,8 +45,12 @@ def test_document_structure_and_determinism() -> None:
     assert 'class="report-board"' in html1
     assert 'class="report-chrome"' in html1
     assert 'class="sec"' in html1
-    # autonome : CSS inline, aucune ressource externe
-    assert "<style>" in html1 and "http" not in html1.split("</style>")[0]
+    # trame de points (halftone Xerox) en fond, via data: URI inline
+    assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
+    # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
+    assert "@import" not in html1
+    assert "https://" not in html1
+    assert "<link" not in html1
 
 
 class _NeedsWer:
