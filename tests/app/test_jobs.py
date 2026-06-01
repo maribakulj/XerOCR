@@ -142,6 +142,67 @@ def _blocking_spec() -> RunSpec:
     )
 
 
+class _RecordingPublisher:
+    """Publisher de test : enregistre l'appel, renvoie une URL distante."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def publish(self, name: str, run_result_path: Path) -> str | None:
+        self.calls.append((name, str(run_result_path)))
+        return "https://remote/reports/" + name
+
+
+class _RaisingPublisher:
+    def publish(self, name: str, run_result_path: Path) -> str | None:
+        raise RuntimeError("réseau indisponible")
+
+
+def test_publish_on_done_sets_url(tmp_path: Path) -> None:
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    pub = _RecordingPublisher()
+    runner = JobRunner(
+        store=JobStore(), registry=registry, reports_dir=tmp_path,
+        code_version="1.0", publisher=pub,
+    )
+    job_id = runner.launch(
+        lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="web-pub")
+    )
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    assert job.published_url == "https://remote/reports/web-pub"
+    assert pub.calls == [("web-pub", str(tmp_path / "web-pub.json"))]
+
+
+def test_publish_failure_does_not_fail_the_run(tmp_path: Path) -> None:
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    runner = JobRunner(
+        store=JobStore(), registry=registry, reports_dir=tmp_path,
+        code_version="1.0", publisher=_RaisingPublisher(),
+    )
+    job_id = runner.launch(
+        lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="web-pf")
+    )
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    # best-effort : le run reste DONE (résultat local écrit), URL absente.
+    assert job is not None and job.state is JobState.DONE
+    assert job.published_url is None
+
+
+def test_default_runner_does_not_publish(tmp_path: Path) -> None:
+    runner = _runner(tmp_path)  # sans publisher → NoopPublisher
+    job_id = runner.launch(
+        lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="web-np")
+    )
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.published_url is None
+
+
 def test_cancel_interrupts_a_running_job(tmp_path: Path) -> None:
     registry = ModuleRegistry()
     module = _BlockingModule()

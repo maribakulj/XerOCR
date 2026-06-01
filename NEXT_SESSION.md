@@ -6,13 +6,13 @@
 > moteur, avec dépendances. `PLAN_SPACE` = spec UX. *(Anciens `TU#` = alias `S#`.)*
 >
 > **Fait** : moteur **T1→T4** ✅ (texte · OCR+LLM · **socle web read-only**).
-> Space **S1** ✅ (coquille design) · **S2** ✅ (lanceur complet : run/SSE/Moteurs
-> + page `/engines` · upload + UI sélection moteur dans `/benchmark` · gardes HTTP).
-> **Prochaine = S3** (persistance) : push du `RunResult`(+HTML) vers dépôt/Dataset
-> après run (token en secret) → survit au disque HF + alimente la vitrine publique.
-> Débloqués aussi : **S4** (vues rapport) · **S5** (durcissement public). **S6**
-> (UI segmentation/importeurs) attend l'axe moteur **T5/T7**. *(Run moteur réel
-> dans le Space = test `live` / Phase A privée.)*
+> Space **S1** ✅ (coquille) · **S2** ✅ (lanceur complet) · **S3** ✅ (persistance :
+> `ResultPublisher` pousse le `RunResult` JSON vers un dépôt GitHub après run —
+> opt-in via secrets `XEROCR_PUBLISH_REPO`/`_TOKEN`, best-effort, `published_url`
+> sur le Job). **Prochaine = S4** : **vues rapport au design** (overview/by-engine/
+> by-document/crosses/synthesis ; consomme `RunResult`, zéro data-layer). Débloqué
+> aussi : **S5** (durcissement public). **S6** attend l'axe moteur **T5/T7**.
+> *(Run moteur réel + push réel = tests `live` / Phase A privée.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +

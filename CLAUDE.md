@@ -34,13 +34,12 @@ avant d'écrire la moindre ligne.**
   (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le moteur, avec
   **dépendances explicites**. `PLAN_SPACE_INTERACTIF.md` = **spec UX**, pas
   autorité de statut. *(Anciens « TU# » = alias des `S#`.)*
-- **Prochaine étape = S3** (persistance) : push du `RunResult`(+HTML) vers le
-  dépôt/Dataset après run (token en secret) → survit au disque HF éphémère +
-  alimente la vitrine publique. Le **lanceur S2 est complet** (run de fond, SSE,
-  Moteurs + page, upload + UI sélection, gardes HTTP) ; le cœur moteur (T1-T3) est
-  consommé. Le tableau « Les deux axes » fait foi : **S3** · **S4** (vues rapport)
-  · **S5** (durcissement public) sont débloqués ; **S6** (UI segmentation/
-  importeurs) attend l'axe moteur **T5/T7**.
+- **Prochaine étape = S4** (vues rapport au design) : overview/by-engine/
+  by-document/crosses/synthesis rendues au design (consomme `RunResult`, zéro
+  data-layer). Fait : **S2** (lanceur complet) ✅ · **S3** (persistance opt-in :
+  push GitHub du `RunResult` après run, best-effort, secrets) ✅. Le tableau
+  « Les deux axes » fait foi : **S4** · **S5** (durcissement public) débloqués ;
+  **S6** (UI segmentation/importeurs) attend l'axe moteur **T5/T7**.
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

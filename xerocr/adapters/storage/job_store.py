@@ -60,6 +60,8 @@ class Job(BaseModel):
     report_name: str | None = None
     #: Message d'erreur quand ``state == FAILED`` (sinon ``None``).
     error: str | None = None
+    #: URL distante du rapport publié (S3) si la persistance est active, sinon ``None``.
+    published_url: str | None = None
 
 
 class JobStore:
@@ -97,6 +99,7 @@ class JobStore:
         state: JobState,
         report_name: str | None = None,
         error: str | None = None,
+        published_url: str | None = None,
     ) -> Job:
         """Remplace l'instantané du job (sous verrou). Lève si inconnu."""
         with self._lock:
@@ -108,6 +111,7 @@ class JobStore:
                     "state": state,
                     "report_name": report_name,
                     "error": error,
+                    "published_url": published_url,
                     "updated_at": utcnow().isoformat(),
                 }
             )
