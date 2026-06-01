@@ -28,7 +28,7 @@
 | 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) ; **+`storage/JobStore`** (TU2.a, en mémoire) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) ; **+`JobRunner`** (TU2.a) **+`CorpusStore`/`extract_corpus_zip`** (TU2.c, ingestion ZIP durcie) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
 | 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T4f** (CLI + `serve`/vitrine + lanceur TU2.a + Moteurs TU2.b + **upload corpus TU2.c** (`/api/corpus`, ingestion durcie) faits ; reste sélection moteur/SSE) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 8 `interfaces` | 🔨 **T4f** (CLI + `serve`/vitrine + lanceur + Moteurs + upload corpus + **sélection moteur/gardes HTTP TU2.d** (403 cloud-public/409 indispo/404 corpus) faits ; reste **SSE** + formulaires UI) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
 | **T2 axe texte** | ✅ **fait** — `tesseract` réel · WER/MER · stats · `run`/`compare` · round-trip JSON | §3-T2 |

@@ -135,7 +135,14 @@ def create_app(
 
     app.include_router(build_home_router(catalog_dir, templates))
     app.include_router(build_reports_router(catalog_dir))
-    app.include_router(build_runs_router(runner, public_mode=is_public))
+    app.include_router(
+        build_runs_router(
+            runner,
+            corpus_store,
+            public_mode=is_public,
+            statuses=lambda: engine_statuses(public_mode=is_public),
+        )
+    )
     app.include_router(
         build_engines_router(lambda: engine_statuses(public_mode=is_public))
     )

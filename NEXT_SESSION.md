@@ -2,11 +2,22 @@
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
 > jour à chaque tranche. **TU1 ✅ ; TU2.a (lanceur) ✅ ; TU2.b (Moteurs) ✅ ;
-> TU2.c (upload corpus ZIP) ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine = TU2.d**
-> (sélection de moteur au lancement, **sur le corpus uploadé** : `POST /api/runs`
-> prend `corpus_id` + `engine`, gate 403 cloud-public / 409 indispo au niveau
-> HTTP), puis **TU2.e** (SSE), **TU2.f** (formulaires au design). Cf.
+> TU2.c (upload) ✅ ; TU2.d (sélection moteur + gardes HTTP) ✅.** T1→T4e + T2/T3
+> déjà faits. **Prochaine = TU2.e** (SSE de progression + reprise `Last-Event-ID`),
+> puis **TU2.f** (formulaires « Banc d'essai » + page Moteurs au design). Cf.
 > `PLAN_SPACE_INTERACTIF.md §6`.
+
+## TU2.d — fait (sélection de moteur au lancement + gardes HTTP)
+`POST /api/runs` accepte un corps optionnel `{engine, corpus_id}`. **Ordre de
+garde (sécurité d'abord)** : moteur inconnu → 422 ; **moteur cloud en mode public
+→ 403** (le chemin sécurité, désormais HTTP) ; LLM autonome (openai/ollama, sans
+chaîne OCR→LLM) → 422 ; `corpus_id` introuvable → 404 ; moteur indisponible
+(binaire/SDK/clé) → 409 ; puis build : `precomputed` = démo (refuse un corpus),
+`tesseract` = run OCR **sur le corpus uploadé** (corpus requis). Sans corps → démo
+(rétro-compat TU2.a). Gardes **toutes testées en HTTP** (TestClient + uvicorn réel).
+Le run tesseract **réel** (binaire + vraies images) = test `live` opt-in (absent
+de la CI/vitrine). Fichiers : `interfaces/web/routers/runs.py` (`LaunchRequest`,
+`_spec_builder`, `_tesseract_spec`), `create_app` (corpus_store + statuses au routeur).
 
 ## TU2.c — fait (upload de corpus ZIP, ingestion durcie)
 `POST /api/corpus` (multipart, **CSRF**) → `CorpusStore` (couche 6) qui valide et

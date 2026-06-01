@@ -1,39 +1,54 @@
 """Routeur du **lanceur** : lancer un run, suivre son état, l'annuler (couche 8).
 
-Walking skeleton de TU2.a : ``POST /api/runs`` lance le run de **démonstration**
-(``precomputed``, sans clé ni binaire) en arrière-plan via le ``JobRunner`` ;
-``GET`` restitue l'état ; ``cancel`` déclenche l'annulation coopérative. Le
-``RunResult`` produit atterrit dans le dossier de la vitrine → visible aussitôt.
+TU2.d : ``POST /api/runs`` choisit un **moteur** et, le cas échéant, un **corpus
+uploadé** (``corpus_id``). Sans corps → le run de **démonstration** (`precomputed`).
 
-Sécurité :
-- écritures protégées **CSRF** (en-tête custom, cf. ``security/csrf.py``) ;
-- **mode public** : les moteurs *cloud* (clé API) sont refusés (``403``) — la
-  démo n'utilise que ``precomputed``, donc passe ; le blocage réel des kinds
-  cloud est porté par :func:`blocked_cloud_kinds` (sélection de moteur = TU2.b).
+Ordre de garde (sécurité d'abord) :
+1. moteur inconnu → ``422`` ;
+2. moteur **cloud** en **mode public** → ``403`` (jamais de secret en public) ;
+3. moteur de **post-correction** (LLM) en autonome → ``422`` (chaîne OCR→LLM non
+   exposée ici ; cf. TU3+) ;
+4. ``corpus_id`` fourni mais introuvable → ``404`` ;
+5. moteur **indisponible** (binaire/SDK/clé absent) → ``409`` ;
+6. incohérence moteur⇄corpus (`precomputed` veut la démo, `tesseract` veut un
+   corpus) → ``422``.
 
-Upload de corpus, SSE de progression et sélection de moteur : sous-tranches
-suivantes (TU2.b/c).
+``GET`` restitue l'état ; ``cancel`` déclenche l'annulation coopérative. Écritures
+protégées **CSRF**. Le ``RunResult`` produit atterrit dans le dossier vitrine.
 """
 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterable
-from pathlib import Path
+from collections.abc import Callable, Iterable
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict
 
-from xerocr.app.jobs import JobRunner
+from xerocr.app.corpus_upload import CorpusStore
+from xerocr.app.engines import EngineStatus
+from xerocr.app.jobs import JobRunner, SpecBuilder
+from xerocr.domain.artifacts import ArtifactType
+from xerocr.domain.corpus import CorpusSpec
+from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
+from xerocr.domain.pipeline import PipelineSpec, PipelineStep
 from xerocr.domain.run_spec import RunSpec
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
-#: Kinds de moteur **cloud** (porteurs de clé API) refusés en mode public —
-#: l'exposition publique ne doit jamais consommer les secrets du mainteneur.
+#: Kinds *cloud* (clé API) refusés en mode public.
 PUBLIC_BLOCKED_KINDS = frozenset({"openai"})
+#: Kinds de **post-correction** LLM : pas de run autonome (chaîne OCR→LLM = TU3+).
+LLM_KINDS = frozenset({"openai", "ollama"})
 
-#: Kinds du run de démonstration (TU2.a) : 100 % local → toujours public-safe.
-_DEMO_KINDS = frozenset({"precomputed"})
+_OCR_VIEW = EvaluationView(
+    name="text",
+    candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+    metric_names=("cer", "wer", "mer"),
+)
+
+#: Fournit l'état courant des moteurs (capturé par ``create_app`` avec le mode).
+StatusProvider = Callable[[], tuple[EngineStatus, ...]]
 
 
 def blocked_cloud_kinds(kinds: Iterable[str]) -> frozenset[str]:
@@ -41,25 +56,90 @@ def blocked_cloud_kinds(kinds: Iterable[str]) -> frozenset[str]:
     return frozenset(kinds) & PUBLIC_BLOCKED_KINDS
 
 
-def build_runs_router(runner: JobRunner, *, public_mode: bool) -> APIRouter:
+class LaunchRequest(BaseModel):
+    """Corps (optionnel) du lancement : un moteur, et un corpus uploadé ou rien."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    engine: str = "precomputed"
+    corpus_id: str | None = None
+
+
+def _tesseract_spec(corpus: CorpusSpec, run_id: str, *, lang: str = "fra") -> RunSpec:
+    label = "tesseract"
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name=f"tesseract:{label}",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    return RunSpec(
+        corpus=corpus,
+        pipelines=(PipelineSpec(name=label, initial_inputs=(ArtifactType.IMAGE,),
+                                steps=(step,)),),
+        evaluation=EvaluationSpec(views=(_OCR_VIEW,)),
+        adapter_kwargs={f"tesseract:{label}": {"label": label, "lang": lang}},
+        run_id=run_id,
+    )
+
+
+def _spec_builder(engine: str, corpus: CorpusSpec | None, run_id: str) -> SpecBuilder:
+    """Construit le *builder* de spec pour (moteur, corpus) — ou refuse (``422``)."""
+    if engine == "precomputed":
+        if corpus is not None:
+            raise HTTPException(
+                status_code=422,
+                detail="precomputed = démonstration (ne s'exécute pas sur un corpus).",
+            )
+        return lambda ws: demo_run_spec(write_demo_corpus(ws), run_id=run_id)
+    # engine == "tesseract" (seul OCR réel du socle exécutable sur un corpus)
+    if corpus is None:
+        raise HTTPException(status_code=422, detail="tesseract : corpus_id requis.")
+    return lambda _ws: _tesseract_spec(corpus, run_id)
+
+
+def build_runs_router(
+    runner: JobRunner,
+    corpus_store: CorpusStore,
+    *,
+    public_mode: bool,
+    statuses: StatusProvider,
+) -> APIRouter:
     """Construit le routeur du lanceur (monté par ``create_app``)."""
     router = APIRouter()
 
     @router.post(
         "/api/runs", status_code=201, dependencies=[Depends(csrf_protect)]
     )
-    def launch_run() -> dict[str, str]:
-        blocked = blocked_cloud_kinds(_DEMO_KINDS)
-        if public_mode and blocked:
+    def launch_run(payload: LaunchRequest | None = None) -> dict[str, str]:
+        req = payload or LaunchRequest()
+        sts = statuses()
+        if req.engine not in {s.kind for s in sts}:
+            raise HTTPException(
+                status_code=422, detail=f"moteur inconnu : {req.engine!r}"
+            )
+        if public_mode and req.engine in PUBLIC_BLOCKED_KINDS:
             raise HTTPException(
                 status_code=403,
-                detail=f"moteur cloud refusé (mode public) : {sorted(blocked)}",
+                detail=f"moteur cloud refusé (mode public) : {req.engine!r}",
+            )
+        if req.engine in LLM_KINDS:
+            raise HTTPException(
+                status_code=422,
+                detail="post-correction LLM : chaîne OCR→LLM non exposée ici (TU3+).",
+            )
+        corpus: CorpusSpec | None = None
+        if req.corpus_id is not None:
+            corpus = corpus_store.get(req.corpus_id)
+            if corpus is None:
+                raise HTTPException(status_code=404, detail="corpus introuvable")
+        if req.engine not in {s.kind for s in sts if s.available}:
+            raise HTTPException(
+                status_code=409, detail=f"moteur indisponible : {req.engine!r}"
             )
         run_id = f"web-{uuid.uuid4().hex[:12]}"
-
-        def build(workspace: Path) -> RunSpec:
-            return demo_run_spec(write_demo_corpus(workspace), run_id=run_id)
-
+        build = _spec_builder(req.engine, corpus, run_id)
         return {"job_id": runner.launch(build)}
 
     @router.get("/api/runs/{job_id}")
@@ -80,4 +160,10 @@ def build_runs_router(runner: JobRunner, *, public_mode: bool) -> APIRouter:
     return router
 
 
-__all__ = ["PUBLIC_BLOCKED_KINDS", "blocked_cloud_kinds", "build_runs_router"]
+__all__ = [
+    "LLM_KINDS",
+    "PUBLIC_BLOCKED_KINDS",
+    "LaunchRequest",
+    "blocked_cloud_kinds",
+    "build_runs_router",
+]

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import io
 import time
+import zipfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -89,3 +91,62 @@ def test_public_mode_allows_local_demo(tmp_path: Path) -> None:
     resp = client.post("/api/runs", headers=_CSRF)
     assert resp.status_code == 201
     assert _poll_until_terminal(client, resp.json()["job_id"])["state"] == "done"
+
+
+# --- TU2.d : sélection de moteur + corpus, gardes HTTP -----------------------
+
+_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+
+
+def _post(client: TestClient, body: dict) -> object:
+    return client.post("/api/runs", headers=_CSRF, json=body)
+
+
+def _upload_demo_corpus(client: TestClient) -> str:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("a.png", _PNG)
+        zf.writestr("a.gt.txt", b"verite")
+    files = {"file": ("c.zip", buf.getvalue(), "application/zip")}
+    return client.post("/api/corpus", files=files, headers=_CSRF).json()["corpus_id"]
+
+
+def test_unknown_engine_is_422(tmp_path: Path) -> None:
+    assert _post(_client(tmp_path), {"engine": "bogus"}).status_code == 422
+
+
+def test_extra_field_is_422(tmp_path: Path) -> None:
+    # corps strict (extra interdit) → rejet net.
+    resp = _post(_client(tmp_path), {"engine": "precomputed", "x": 1})
+    assert resp.status_code == 422
+
+
+def test_cloud_engine_in_public_mode_is_403(tmp_path: Path) -> None:
+    # LE chemin sécurité : un moteur cloud, exposé publiquement, refusé en HTTP.
+    resp = _post(_client(tmp_path, public_mode=True), {"engine": "openai"})
+    assert resp.status_code == 403
+
+
+def test_llm_engine_standalone_is_422(tmp_path: Path) -> None:
+    # post-correction LLM seule (sans chaîne OCR→LLM) → non exposée.
+    assert _post(_client(tmp_path), {"engine": "ollama"}).status_code == 422
+
+
+def test_unavailable_engine_is_409(tmp_path: Path) -> None:
+    # tesseract indisponible ici (ni binaire ni pytesseract) → 409.
+    resp = _post(_client(tmp_path), {"engine": "tesseract", "corpus_id": "x"})
+    assert resp.status_code in (404, 409)  # 404 si corpus d'abord ; sinon 409
+    # sans corpus_id, c'est franchement l'indisponibilité qui parle :
+    assert _post(_client(tmp_path), {"engine": "tesseract"}).status_code == 409
+
+
+def test_unknown_corpus_is_404(tmp_path: Path) -> None:
+    resp = _post(_client(tmp_path), {"engine": "precomputed", "corpus_id": "nope"})
+    assert resp.status_code == 404
+
+
+def test_precomputed_with_corpus_is_422(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(client, {"engine": "precomputed", "corpus_id": corpus_id})
+    assert resp.status_code == 422
