@@ -13,8 +13,9 @@
 > chaud + cartes, CSS inline → autonome + octet-stable, couche 7 `reports/html.py`)
 > · **S4.b.1a** ✅ (polices du design **incorporées en data-URI** : titres Fluxisch
 > Else + corps/données OCR-A, `reports/_assets`+`reports/_style`, octet-stable,
-> ~227 Ko). **Prochaine = S4.b.1b** : readouts/data-bars + overview riche, puis
-> by-engine/by-document/crosses/synthesis. Débloqué aussi : **S5** (durcissement
+> ~227 Ko) · **S4.b.1b** ✅ (overview enrichi : **readouts** de portée réelle +
+> tables **data-bars** relatives, sur les vraies métriques CER/WER/MER). **Prochaine
+> = S4.b (suite)** : vues by-engine/by-document/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
