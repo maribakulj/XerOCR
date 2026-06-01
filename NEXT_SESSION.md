@@ -14,8 +14,10 @@
 > · **S4.b.1a** ✅ (polices du design **incorporées en data-URI** : titres Fluxisch
 > Else + corps/données OCR-A, `reports/_assets`+`reports/_style`, octet-stable,
 > ~227 Ko) · **S4.b.1b** ✅ (overview enrichi : **readouts** de portée réelle +
-> tables **data-bars** relatives, sur les vraies métriques CER/WER/MER). **Prochaine
-> = S4.b (suite)** : vues by-engine/by-document/crosses/synthesis. Débloqué aussi : **S5** (durcissement
+> tables **data-bars** relatives, sur les vraies métriques CER/WER/MER) · **S4.b.2** ✅
+> (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
+> rendu — tables doc×pipeline groupées + data-bars). **Prochaine = S4.b (suite)** :
+> vues by-engine/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
