@@ -33,12 +33,13 @@ def _status_section() -> str:
 
 
 def _done_tranches() -> set[str]:
-    """Tranches marquées « ✅ … fait » dans le roll-up (ex. ``{T1, T2, T3}``)."""
+    """Tranches marquées « ✅ … fait » dans le roll-up — les deux axes ``T#``/``S#``
+    (ex. ``{T1, T2, T3, T4, S1}``)."""
     plan = (ROOT / "MIGRATION_PLAN.md").read_text(encoding="utf-8")
     done: set[str] = set()
     for line in plan.splitlines():
         if "✅" in line and "fait" in line:
-            done.update(re.findall(r"\bT\d\b", line))
+            done.update(re.findall(r"\b[TS]\d\b", line))
     return done
 
 
@@ -56,8 +57,8 @@ def test_status_section_has_no_hardcoded_test_count() -> None:
 
 
 def test_next_step_is_not_an_already_done_tranche() -> None:
-    match = re.search(r"Prochaine étape\s*=\s*(T[U]?\d[a-z]?)", _status_section())
-    assert match, "CLAUDE.md §0 doit nommer une « Prochaine étape = T… »."
+    match = re.search(r"Prochaine étape\s*=\s*([TS]U?\d[a-z]?)", _status_section())
+    assert match, "CLAUDE.md §0 doit nommer une « Prochaine étape = T…/S… »."
     next_step = match.group(1)
     done = _done_tranches()
     assert next_step not in done, (
