@@ -19,7 +19,7 @@
 | **Stack UI** | **Rendu serveur** (Jinja2 + tokens/polices du design + JS léger htmx/Alpine). Le design React = **spec visuelle**, pas de SPA livrée. | Conforme à « pas de SPA lourde » (D-β) ; 1 seule stack ; réutilise le backend ; le look reste identique. |
 | **Persistance des rapports** | **Push vers le dépôt GitHub** (ou Dataset HF) après chaque run. | HF Space = disque **éphémère** ; le push survit aux redémarrages **et** alimente la Phase B via `deploy-space.yml`. |
 | **Moteurs** | **API cloud + Tesseract = disponibles** (légers, clés en secrets) ; **Pero/Kraken/Calamari = listés mais indisponibles**. | Pero & co = PyTorch + modèles + **GPU payant** → hors Space gratuit (cf. §6). |
-| **Typographie** | **Titres = FluxischElse · corps = OCR-A.** | Choix mainteneur (remplace `tokens.css` hérité ; OCR-A à sourcer, lisibilité à valider). |
+| **Typographie** | **Titres = FluxischElse · corps = OCR-A.** | Choix mainteneur (remplace `tokens.css` hérité). OCR-A à sourcer en **version libre** : l'OCR-A BT uploadée = Bitstream propriétaire, écartée. Lisibilité à valider. |
 
 ## 3. Le pivot d'archi (assumé)
 
