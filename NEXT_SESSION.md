@@ -61,11 +61,11 @@ Périmètre :
 - **Ne pas casser le gate deploy** : `test_requirements_embark_no_engine`
   interdit les moteurs lourds dans la vitrine. TU1 **ne touche pas aux
   moteurs** → il doit rester vert. *(Son évolution = TU2.)*
-- **Polices = licence.** FluxischElse = libre (licence jointe). **OCR-A** : la
-  police uploadée est **OCR-A BT © Bitstream « All rights reserved » =
-  propriétaire → NE PAS committer.** Utiliser une **OCR-A libre** (domaine
-  public, ex. Matthew Skala) ou OCR-B libre. *(Décision mainteneur à confirmer
-  avant de figer la police.)*
+- **Polices = licence.** FluxischElse = OFL 1.1 (libre). **OCR-A = résolu** :
+  OCR-A de **John Sauter, domaine public** (`design/fonts/OCRA.pfa` +
+  `OCRA-LICENSE.txt`). En `.pfa` (Type 1) → **convertir en woff2/otf** pour le
+  `@font-face` (tâche TU1). **NE PAS** utiliser les OCR-A BT Bitstream
+  (propriétaires) testées avant.
 - **HF = disque éphémère** : ne jamais compter sur l'écriture locale pour
   persister (ça, c'est TU3 = push au dépôt).
 - **Ne pas recopier** `web-app.js` de Picarones (3000+ lignes, fragile) :

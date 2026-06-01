@@ -1,0 +1,30 @@
+OCR-A — Public Domain (John Sauter)
+===================================
+
+File: OCRA.pfa  (PostScript Type 1, ASCII; FontName "OCRA", version 001.000)
+
+PROVENANCE
+----------
+The font's embedded notice reads:
+    "Created by Sauter ... with FontForge (http://fontforge.sf.net)"
+This matches John Sauter's "OCR-A font" project:
+    https://sourceforge.net/projects/ocr-a-font/
+described as "A free OCR-A font, conformant to ANSI X3.17-1977, in TrueType
+format, with sources", released into the **PUBLIC DOMAIN**.
+
+LICENSE
+-------
+Public Domain. Free for any use — including commercial use, modification and
+redistribution — with no license obligations. (The .pfa itself carries no
+license string; this status comes from the upstream project above.)
+
+BUILD NOTE
+----------
+.pfa (Type 1) is not a web font format. Convert to woff2/otf for @font-face
+(e.g. with fontforge or fonttools). Public-domain status permits this freely.
+
+NOT USED
+--------
+The "OCR-A BT (c) Bitstream Inc. — All rights reserved / Confidential" files
+tested earlier (OCR-a___.ttf, OCR-A Regular.otf, from "free font" download
+sites) are PROPRIETARY and are deliberately excluded. See design/README.md.
