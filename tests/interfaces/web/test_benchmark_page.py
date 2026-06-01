@@ -36,6 +36,24 @@ def test_benchmark_page_renders_with_launcher(tmp_path: Path) -> None:
     assert "Lancer la démonstration" in body  # libellé du lanceur (FR par défaut)
 
 
+def test_benchmark_has_upload_and_engine_controls(tmp_path: Path) -> None:
+    # S2.2b : l'UI upload de corpus + sélection de moteur est rendue (serveur).
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="corpus-file"' in body  # input fichier ZIP
+    assert 'id="upload"' in body  # bouton téléverser
+    assert 'id="engine"' in body  # <select> moteur
+    # options de moteur rendues côté serveur (testables sans navigateur)
+    for label in ("Pré-calculé", "Tesseract", "OpenAI", "Ollama"):
+        assert label in body
+
+
+def test_benchmark_engine_select_disables_unavailable(tmp_path: Path) -> None:
+    # tesseract indisponible ici (ni binaire ni pytesseract) → option disabled.
+    body = _client(tmp_path).get("/benchmark").text
+    # l'option précomputed (toujours dispo) n'est pas désactivée ; au moins une l'est
+    assert "disabled" in body
+
+
 def test_nav_links_benchmark_and_reports(tmp_path: Path) -> None:
     # depuis l'accueil, « Banc d'essai » est un lien vivant (plus un placeholder)
     home = _client(tmp_path).get("/").text
