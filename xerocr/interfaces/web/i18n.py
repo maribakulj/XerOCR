@@ -50,6 +50,17 @@ _STRINGS: dict[str, dict[str, str]] = {
         "sys_mode_value": "vitrine · lecture seule",
         "sys_active_job": "Tâche active",
         "sys_idle": "au repos",
+        # Page « Moteurs »
+        "engines_eyebrow": "Vitrine · moteurs",
+        "engines_title": "Moteurs",
+        "engines_desc": "Disponibilité runtime des moteurs du socle (binaire · SDK · "
+        "clé). Le mode public masque les moteurs cloud.",
+        "stat_ready": "prêts",
+        "engines_col_engine": "Moteur",
+        "engines_col_status": "État",
+        "engines_col_detail": "Détail",
+        "engine_available": "disponible",
+        "engine_unavailable": "indisponible",
         "lang_label": "Langue",
     },
     "en": {
@@ -86,6 +97,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "sys_mode_value": "showcase · read-only",
         "sys_active_job": "Active job",
         "sys_idle": "idle",
+        "engines_eyebrow": "Showcase · engines",
+        "engines_title": "Engines",
+        "engines_desc": "Runtime availability of the built-in engines (binary · SDK · "
+        "key). Public mode hides cloud engines.",
+        "stat_ready": "ready",
+        "engines_col_engine": "Engine",
+        "engines_col_status": "Status",
+        "engines_col_detail": "Detail",
+        "engine_available": "available",
+        "engine_unavailable": "unavailable",
         "lang_label": "Language",
     },
 }

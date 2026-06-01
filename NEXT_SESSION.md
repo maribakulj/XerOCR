@@ -5,13 +5,13 @@
 > moteur (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le
 > moteur, avec dépendances. `PLAN_SPACE` = spec UX. *(Anciens `TU#` = alias `S#`.)*
 >
-> **Fait** : moteur **T1→T4** ✅ (texte · OCR+LLM · **socle web read-only**) —
-> dans `main` (PR #17). Space **S1** ✅ (coquille design) · **S2** 🔨 (lanceur :
-> run de fond/SSE/Moteurs/upload/gardes HTTP). **Prochaine = S2.2** : page
-> **Moteurs** + UI **upload**/sélection au design (réutilise `/api/engines`,
-> `/api/corpus`, `/api/runs`). Débloqués ensuite : **S3** (persistance) · **S4**
-> (vues rapport) · **S5** (durcissement public). **S6** (UI segmentation/
-> importeurs) attend l'axe moteur **T5/T7**.
+> **Fait** : moteur **T1→T4** ✅ (texte · OCR+LLM · **socle web read-only**).
+> Space **S1** ✅ (coquille design) · **S2** 🔨 (lanceur run/SSE/Moteurs/upload/
+> gardes + **page Moteurs `/engines` au design**, rendu serveur — **S2.2a ✅**).
+> **Prochaine = S2.2b** : l'**UI upload de corpus + sélection de moteur** dans
+> `/benchmark` (JS, réutilise `/api/corpus` + `POST /api/runs {engine,corpus_id}`).
+> Débloqués ensuite : **S3** (persistance) · **S4** (vues rapport) · **S5**
+> (durcissement public). **S6** (UI segmentation/importeurs) attend **T5/T7**.
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +

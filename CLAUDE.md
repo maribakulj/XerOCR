@@ -34,12 +34,13 @@ avant d'écrire la moindre ligne.**
   (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le moteur, avec
   **dépendances explicites**. `PLAN_SPACE_INTERACTIF.md` = **spec UX**, pas
   autorité de statut. *(Anciens « TU# » = alias des `S#`.)*
-- **Prochaine étape = S2.2** (reste du lanceur « Banc d'essai ») : page
-  **Moteurs** + UI **upload**/sélection au design. Le cœur du lanceur (run de
-  fond, SSE, gardes HTTP, API engines/corpus) est livré ; le cœur moteur (T1-T3)
-  est consommé. Le tableau « Les deux axes » fait foi : ensuite **S3**
-  (persistance) · **S4** (vues rapport) · **S5** (durcissement public) —
-  débloqués ; **S6** (UI segmentation/importeurs) attend l'axe moteur **T5/T7**.
+- **Prochaine étape = S2.2b** (reste du lanceur) : l'**UI upload de corpus +
+  sélection de moteur** au design (la page **Moteurs** `/engines`, rendue serveur,
+  est faite — S2.2a). Le cœur du lanceur (run de fond, SSE, gardes HTTP, API
+  engines/corpus) est livré ; le cœur moteur (T1-T3) est consommé. Le tableau
+  « Les deux axes » fait foi : ensuite **S3** (persistance) · **S4** (vues
+  rapport) · **S5** (durcissement public) — débloqués ; **S6** (UI segmentation/
+  importeurs) attend l'axe moteur **T5/T7**.
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

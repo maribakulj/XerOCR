@@ -361,6 +361,31 @@ button:focus-visible { outline: 2px solid var(--fern-deep); outline-offset: 2px;
 }
 .run-log:empty::before { content: "—"; color: var(--g-300); }
 
+/* === Moteurs (table d'état) === */
+table.engines { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.engines th {
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g-400);
+  font-weight: 500;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--g-100);
+}
+table.engines td { padding: 11px 12px; border-bottom: 1px solid var(--g-50); }
+table.engines tr:last-child td { border-bottom: none; }
+table.engines .eng-name { font-weight: 500; color: var(--ink); }
+table.engines .eng-kind {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--g-300);
+  margin-left: 6px;
+}
+table.engines .eng-detail { font-size: 12px; color: var(--g-500); }
+.dot.off { background: var(--g-150); }
+
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
   .rail { position: static; height: auto; overflow: visible; }

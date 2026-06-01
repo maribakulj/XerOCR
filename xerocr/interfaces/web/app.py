@@ -138,7 +138,9 @@ def create_app(
     def engine_status_provider() -> tuple[EngineStatus, ...]:
         return engine_statuses(public_mode=is_public)
 
-    app.include_router(build_home_router(catalog_dir, templates))
+    app.include_router(
+        build_home_router(catalog_dir, templates, statuses=engine_status_provider)
+    )
     app.include_router(build_reports_router(catalog_dir))
     app.include_router(
         build_runs_router(
