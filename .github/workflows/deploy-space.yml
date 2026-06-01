@@ -1,10 +1,13 @@
 name: Deploy Space
 
-# Déploiement MANUEL de la vitrine (lecture seule) vers un Hugging Face Space.
+# Synchronise la vitrine (lecture seule) vers un Hugging Face Space.
+# - AUTO : à chaque push sur main (comme l'ancien sync-to-hub).
+# - MANUEL : bouton "Run workflow" (permet de viser un autre Space).
 # Le runner GitHub a l'accès réseau + le secret HF_TOKEN (write) du dépôt ;
 # il assemble un dépôt « racine plate » et le pousse vers le Space.
-# Rien n'est public tant que tu ne lances pas ce workflow (bouton "Run workflow").
 "on":
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       space:
@@ -12,29 +15,46 @@ name: Deploy Space
         required: true
         default: "Ma-Ri-Ba-Ku/XerOCR"
 
+# Un seul déploiement à la fois ; un push plus récent annule le précédent.
+concurrency:
+  group: deploy-space
+  cancel-in-progress: true
+
+env:
+  # Space par défaut (push auto) ; l'input du déclenchement manuel le surcharge.
+  DEFAULT_SPACE: "Ma-Ri-Ba-Ku/XerOCR"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 1) Vérifier que la vitrine sert bien AVANT de publier (smoke-test réel).
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      # 1) Smoke-test FIDÈLE : on lance le VRAI serveur (ce que fait le conteneur)
+      #    et on le sonde avec curl. Aucune dépendance httpx/TestClient : on teste
+      #    l'artefact déployé, pas un client de test absent de l'image.
       - name: Smoke-test de la vitrine servie
         run: |
           pip install -e ".[serve]"
-          python - <<'PY'
-          import os
-          os.environ["XEROCR_REPORTS_DIR"] = "deploy/reports"
-          from fastapi.testclient import TestClient
-          from xerocr.interfaces.web.app import create_app
-          c = TestClient(create_app())
-          assert c.get("/health").json() == {"status": "ok"}
-          assert c.get("/api/reports").status_code == 200
-          print("smoke OK")
-          PY
+          export XEROCR_REPORTS_DIR="$PWD/deploy/reports"
+          python -m uvicorn xerocr.interfaces.web.app:create_app \
+            --factory --host 127.0.0.1 --port 7861 &
+          srv=$!
+          ok=0
+          for _ in $(seq 1 40); do
+            curl -sf http://127.0.0.1:7861/health >/dev/null 2>&1 && { ok=1; break; }
+            sleep 0.5
+          done
+          curl -s http://127.0.0.1:7861/api/reports
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7861/health)
+          kill $srv 2>/dev/null || true
+          test "$ok" = 1 && test "$code" = 200 || {
+            echo "::error::la vitrine ne répond pas (ok=$ok code=$code)"; exit 1; }
+          echo "smoke OK"
 
       # 2) Assembler le dépôt « racine plate » attendu par le Space.
       - name: Assembler le contexte du Space
@@ -45,23 +65,22 @@ jobs:
           cp deploy/README_SPACE.md  space/README.md
           cp pyproject.toml          space/pyproject.toml
           cp -r xerocr               space/xerocr
-          # Rapports à exposer (au moins le .gitkeep + les .json présents).
           cp deploy/reports/*.json space/reports/ 2>/dev/null || true
           touch space/reports/.gitkeep
           find space -name '__pycache__' -type d -prune -exec rm -rf {} +
 
-      # 3) Pousser vers le Space. Le token n'est JAMAIS imprimé : passé en env,
-      #    injecté dans l'URL au moment du push, et le log git est coupé.
+      # 3) Pousser vers le Space. Le token n'est JAMAIS imprimé (env + masquage).
       - name: Pousser vers le Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          SPACE: ${{ github.event.inputs.space }}
+          SPACE_INPUT: ${{ github.event.inputs.space }}
         run: |
+          space="${SPACE_INPUT:-$DEFAULT_SPACE}"
           if [ -z "$HF_TOKEN" ]; then
             echo "::error::secret HF_TOKEN absent du dépôt — déploiement impossible."
             exit 1
           fi
-          owner="${SPACE%%/*}"
+          owner="${space%%/*}"
           cd space
           git init -q
           git config user.name  "xerocr-deploy"
@@ -69,8 +88,7 @@ jobs:
           git checkout -q -b main
           git add -A
           git commit -q -m "Déploiement de la vitrine XerOCR"
-          # URL avec credentials gardée hors des logs (set +x autour du push).
           set +x
-          remote="https://${owner}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+          remote="https://${owner}:${HF_TOKEN}@huggingface.co/spaces/${space}"
           git push -f "$remote" main 2>&1 | sed "s/${HF_TOKEN}/***/g"
-          echo "Poussé vers https://huggingface.co/spaces/${SPACE}"
+          echo "Poussé vers https://huggingface.co/spaces/${space}"

@@ -60,4 +60,15 @@ def test_flat_dockerfile_has_no_deploy_paths() -> None:
 def test_deploy_workflow_uses_secret_not_literal_token() -> None:
     wf = (ROOT / ".github/workflows/deploy-space.yml").read_text(encoding="utf-8")
     assert "secrets.HF_TOKEN" in wf  # le token vient du secret de dépôt
-    assert "workflow_dispatch" in wf  # déclenchement manuel (pas auto)
+    assert "workflow_dispatch" in wf  # déclenchement manuel disponible
+    assert "branches: [main]" in wf  # + auto-sync à chaque push sur main
+
+
+def test_deploy_smoke_test_has_no_httpx_dependency() -> None:
+    # Le smoke-test du déploiement lance le VRAI serveur (uvicorn) + curl :
+    # pas de TestClient/httpx (absent de l'image servie). Régression du 1er échec.
+    wf = (ROOT / ".github/workflows/deploy-space.yml").read_text(encoding="utf-8")
+    assert "uvicorn" in wf and "curl" in wf
+    # pas d'IMPORT de TestClient (un commentaire qui le nomme reste autorisé).
+    assert "import TestClient" not in wf
+    assert "fastapi.testclient" not in wf
