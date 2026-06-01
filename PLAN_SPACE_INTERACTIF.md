@@ -87,3 +87,22 @@ surface.
 Tranches fines de pleine profondeur · budgets `<400 LOC` · zéro shim · tests
 d'archi · « pas de consommateur = supprimé » · docs durables committées · **ne
 pas tout faire dans une seule conversation**.
+
+## 10. Rapport avec la migration T1–T7 (ne pas confondre les numéros)
+
+`CLAUDE.md` décrit la **migration du moteur** (bibliothèque/CLI) par tranches
+**T1→T7**, bâties **intérieur → extérieur** (couches 1→8) ; statut : T1
+(squelette) fait, **prochaine = T2** (tesseract réel, WER/MER…).
+
+Les **TU1→TU7** de ce plan sont l'autre extrémité : **couche 8 (interfaces) +
+déploiement** — l'app web du Space. Donc :
+
+- **TU1 (coquille au design)** est **indépendante du moteur** : présentation
+  pure sur l'interface existante (read-only) → avance sans toucher à la migration.
+- **TU2+ (lancer un run, calculer)** **consomment** les moteurs livrés par la
+  migration : un vrai OCR dans le Space **suppose T2+ faits** (tesseract, puis
+  cloud). Pas de calcul réel tant que le moteur correspondant n'existe pas.
+- **Numérotation** : `T#` = migration moteur ; `TU#` = tranches UI/interfaces.
+
+**À clarifier avec le mainteneur** : l'entrelacement migration ⇄ UI (p. ex.
+TU1 maintenant, puis reprendre T2 pour débloquer le calcul, puis TU2).

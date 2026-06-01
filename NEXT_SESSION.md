@@ -19,6 +19,9 @@
   reproduire, pas du code à livrer.
 - **Design** sauvegardé dans `design/`. **Typo** : titres **FluxischElse**
   (incluse), corps **OCR-A** (⚠️ à sourcer en version LIBRE — cf. §4).
+- **Migration moteur** : à **T1** (squelette), prochaine = **T2**. **TU1 en est
+  indépendant** ; le calcul réel (TU2+) suppose T2+ livrés — cf.
+  `PLAN_SPACE_INTERACTIF.md §10`.
 - **Branche de dev** : celle désignée pour la session. Commits clairs.
   **Pas de PR sauf demande explicite.**
 

@@ -23,12 +23,15 @@ reproduit à l'identique côté serveur. Rien ici n'est importé par le paquet
 ## Typographie — DÉCISION (source de vérité)
 
 - **Titres → FluxischElse** (fournie dans `fonts/`, licence jointe).
-- **Corps / reste → OCR-A** — **à sourcer en version LIBRE**. ⚠️ La police
-  uploadée (`OCR-a___.ttf`) est **OCR-A BT © Bitstream Inc. « All rights
-  reserved » = propriétaire, non redistribuable** → **ne pas committer**
-  (problématique en repo et en Space public). Prendre une OCR-A libre
-  (p. ex. l'OCR-A domaine public de Matthew Skala) ou une OCR-B libre.
-  Lisibilité en corps long à valider (OCR-A est très typé).
+- **Corps / reste → OCR-A** — **à sourcer en version LIBRE**. ⚠️ Les OCR-A
+  trouvées sur les sites de « polices gratuites » (testées : `OCR-a___.ttf`,
+  `OCR-A Regular.otf`) sont en réalité **OCR-A BT © Bitstream Inc. « All rights
+  reserved / Confidential » = propriétaires** → **ne pas committer**
+  (problématique en repo et en Space public). « Téléchargé sur un site gratuit »
+  ≠ « sous licence libre » : c'est le **copyright embarqué** qui fait foi.
+  Prendre une OCR-A réellement libre (p. ex. l'OCR-A de Matthew Skala) ou une
+  OCR-B libre, **et vérifier sa licence de la même façon**. Lisibilité en corps
+  long à valider (OCR-A est très typé).
 - ⚠️ `tokens.css` hérité référence encore **Bricolage Grotesque / IBM Plex** :
   **à remplacer** par FluxischElse / OCR-A au portage. Les variables
   `--display` / `--sans` / `--mono` / `--serif` sont les points à modifier.
