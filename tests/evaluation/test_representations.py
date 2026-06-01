@@ -13,7 +13,10 @@ from xerocr.evaluation.representations import load_representation
 
 def test_loads_raw_text_and_normalises_newlines(tmp_path: Path) -> None:
     path = tmp_path / "t.txt"
-    path.write_text("héllo\r\nworld", encoding="utf-8")
+    # write_bytes (pas write_text) : octets EXACTS. write_text traduit \n → \r\n
+    # sous Windows, ce qui fausserait ce test de normalisation des fins de ligne
+    # (le lecteur lit en binaire via read_bytes).
+    path.write_bytes("héllo\r\nworld".encode())
     assert load_representation(str(path), ArtifactType.RAW_TEXT) == "héllo\nworld"
 
 
