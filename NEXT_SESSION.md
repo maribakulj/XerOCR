@@ -10,9 +10,11 @@
 > `ResultPublisher` pousse le `RunResult` JSON vers un dépôt GitHub après run —
 > opt-in via secrets `XEROCR_PUBLISH_REPO`/`_TOKEN`, best-effort, `published_url`
 > sur le Job) · **S4.a** ✅ (rapport autonome **restylé au design** : chrome gris
-> chaud + cartes, CSS inline + polices système → autonome + octet-stable, couche 7
-> `reports/html.py`). **Prochaine = S4.b** : enrichir les vues (readouts/data-bars
-> + by-engine/by-document/crosses/synthesis). Débloqué aussi : **S5** (durcissement
+> chaud + cartes, CSS inline → autonome + octet-stable, couche 7 `reports/html.py`)
+> · **S4.b.1a** ✅ (polices du design **incorporées en data-URI** : titres Fluxisch
+> Else + corps/données OCR-A, `reports/_assets`+`reports/_style`, octet-stable,
+> ~227 Ko). **Prochaine = S4.b.1b** : readouts/data-bars + overview riche, puis
+> by-engine/by-document/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)

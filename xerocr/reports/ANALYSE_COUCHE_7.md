@@ -268,7 +268,7 @@ xerocr/reports/
 - [x] Consommation **directe de `RunResult`**, **zéro data-layer**. — *preuve : `test_reports_imports_are_allowed` (`reports → {domain, evaluation}`)*
 - [x] `ReportRenderer` **injectable** (sections en paramètre ; `default_report_renderer` = socle). — *preuve : `test_renderer`*
 - [ ] charts **SVG serveur** déterministes (pas de Chart.js/CDN). — *avec la 1ʳᵉ section graphique (T2+)*
-- [x] **Rapport = artefact autonome** : HTML déterministe **sans backend ni CDN** (ouvrable hors-ligne). — *preuve : `xerocr demo` (811 o, octet-stable) + `test_cli_demo`.* `[~]` interactivité client-side : avec les sections (surface).
+- [x] **Rapport = artefact autonome** : HTML déterministe **sans backend ni CDN** (ouvrable hors-ligne) — y compris ses **polices incorporées en data-URI** (Fluxisch Else + OCR-A, S4.b.1a · `_style.font_face_css`), donc **aucune** ressource externe. — *preuve : `xerocr demo` (~227 Ko, octet-stable) + `test_cli_demo` + `test_renderer` (ni `@import`/`https`/`<link>`).* `[~]` interactivité client-side : avec les sections (surface).
 
 **Garde-fous :**
 - [x] `layer_dependencies` (`reports → {domain, evaluation}`) · **`no-orphan section↔métrique`** (le renderer saute les `requires` non couverts) · **golden HTML byte-stable** (2 runs identiques) · `file_budgets`. — *preuve : `test_renderer` (no-orphan + déterminisme) + suite archi*
