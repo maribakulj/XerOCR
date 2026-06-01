@@ -264,12 +264,13 @@ xerocr/interfaces/
 ## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 T4a** — CLI `demo`/`run`/`compare` + **`create_app()` web (santé)** ; routers/sécurité/SSE à T4b+.
+> Maj dans le **même commit** que le code. **Statut : 🔨 T4b** — CLI `demo`/`run`/`compare` + web `create_app()` + **vitrine** (liste + rendu HTML des rapports, accueil mince, sécurité chemins) ; sécurité HTTP/SSE/annulation à T4c+.
 
 **Enveloppe :**
 - [x] **Contrat de commande CLI** (`argparse`, D-007) — verbes **`demo`** + **`run`** (YAML → orchestrateur → rapport) câblés, console-script `xerocr`. — *preuve : `test_cli_demo` + `test_cli_run` (bout en bout)*
 - [x] **`compare`** (2 RunResult JSON → deltas `B − A`) + **`run --json`** (export du RunResult). — *preuve : `test_cli_compare` + `test_results_io` (round-trip)*
-- [ ] `report` (rendre un JSON sauvé) · `serve` (T4).
+- [ ] `report` (rendre un JSON sauvé en CLI) · `serve` (commande, T4d/e).
+- [x] **Vitrine web** (« montrer les rapports sans clés ») : `GET /api/reports` (liste triée) · `GET /reports/{name}` (rend le `RunResult` sauvé en HTML **à la demande** — format unique, rendu déterministe) · `GET /` (accueil **mince**, pas de SPA). **Sécurité chemins** via `validated_path` (couche 6) : traversal → 404 sans fuite. Routeurs = **fonctions builder**. — *preuve : `test_vitrine` (liste/rendu/404/traversal/accueil) + `no_side_effect_imports`*
 - [x] **`create_app()` factory** — zéro effet de bord à l'import : `FastAPI()` construit **dans** la factory (jamais au niveau module), routers à venir = **fonctions builder** (`APIRouter()` interdit au module par le gate). Deps `fastapi`/`uvicorn` en **extra `[serve]`** (CLI reste léger). — *preuve : `tests/interfaces/web/test_app.py` (factory ≠ singleton ; `/health`→200) + `no_side_effect_imports` vert* `[~]` `JOB_STORE` module-level : N/A tant que le store n'existe pas (T4d).
 - [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) + SSE + annulation `RunControl`/`Deadline` réelle. — *T4*
 - [ ] **Duplicable par construction** (config par secrets/env, boot sans secret, déblocage **fail-closed**). — *T4*

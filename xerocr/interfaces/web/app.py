@@ -15,19 +15,40 @@ une sous-tranche à la fois.
 
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 from fastapi import FastAPI
+
+from xerocr.interfaces.web.routers.home import build_home_router
+from xerocr.interfaces.web.routers.reports import build_reports_router
 
 #: Version du **contrat de transport HTTP** (évolue indépendamment du code métier ;
 #: le déterminisme produit (§12) vit dans ``RunResult``, pas dans l'API).
 API_VERSION = "0"
 
+#: Dossier des rapports (``RunResult`` JSON) servis par la vitrine, surchargé par
+#: ce var d'env (utile au Space) si ``create_app(reports_dir=...)`` ne le fixe pas.
+REPORTS_DIR_ENV = "XEROCR_REPORTS_DIR"
 
-def create_app() -> FastAPI:
+
+def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
+    """Argument explicite > variable d'env > défaut ``./reports``."""
+    if reports_dir is not None:
+        return Path(reports_dir)
+    env = os.environ.get(REPORTS_DIR_ENV)
+    return Path(env) if env else Path("reports")
+
+
+def create_app(*, reports_dir: Path | str | None = None) -> FastAPI:
     """Construit une **nouvelle** application web XerOCR.
 
     Appelée explicitement (CLI ``serve``, tests, Space) — jamais au chargement du
     module. Chaque appel renvoie une instance neuve (aucun état partagé global).
+    Les routeurs sont des **fonctions builder** montées ici (jamais d'``APIRouter``
+    au niveau module — gate ``no_side_effect_imports``).
     """
+    catalog_dir = _resolve_reports_dir(reports_dir)
     app = FastAPI(title="XerOCR", version=API_VERSION)
 
     @app.get("/health")
@@ -35,7 +56,9 @@ def create_app() -> FastAPI:
         """Sonde de vivacité (orchestrateurs / Space). Aucune donnée sensible."""
         return {"status": "ok"}
 
+    app.include_router(build_home_router(catalog_dir))
+    app.include_router(build_reports_router(catalog_dir))
     return app
 
 
-__all__ = ["API_VERSION", "create_app"]
+__all__ = ["API_VERSION", "REPORTS_DIR_ENV", "create_app"]
