@@ -16,6 +16,24 @@
   </div>
 
   <div class="launcher">
+    <div class="field">
+      <label class="label" for="corpus-file">{{ t.bench_corpus }}</label>
+      <input type="file" id="corpus-file" accept=".zip,application/zip">
+      <button id="upload" class="btn btn-sm">{{ t.bench_upload }}</button>
+      <span id="corpus-status" class="run-status">{{ t.bench_corpus_none }}</span>
+    </div>
+
+    <div class="field">
+      <label class="label" for="engine">{{ t.bench_engine }}</label>
+      <select id="engine" class="select">
+        {% for e in engines %}
+        <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+          {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
     <button id="launch" class="btn btn-primary"
             data-launching="{{ t.bench_launching }}">{{ t.bench_run }}</button>
 

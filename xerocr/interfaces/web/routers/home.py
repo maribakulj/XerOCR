@@ -88,9 +88,11 @@ def build_home_router(
     @router.get("/benchmark", response_class=HTMLResponse)
     def benchmark(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
-        return templates.TemplateResponse(
-            request, "benchmark.html", _base_context(lang, "benchmark", {})
-        )
+        context = _base_context(lang, "benchmark", {})
+        # Le <select> des moteurs est rendu **serveur** (options dans le HTML,
+        # testables) ; le JS ne fait que l'upload + le lancement.
+        context["engines"] = statuses()
+        return templates.TemplateResponse(request, "benchmark.html", context)
 
     @router.get("/engines", response_class=HTMLResponse)
     def engines(request: Request, lang: str = "fr") -> HTMLResponse:

@@ -337,6 +337,18 @@ button:focus-visible { outline: 2px solid var(--fern-deep); outline-offset: 2px;
 .btn-primary:hover { background: var(--g-700); }
 
 .launcher { display: flex; flex-direction: column; gap: 14px; }
+.field { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.field .label { min-width: 96px; }
+.select {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border: 1px solid var(--g-100);
+  border-radius: var(--r-pill);
+  background: var(--raised-2);
+  color: var(--ink);
+}
+.field input[type="file"] { font-family: var(--sans); font-size: 12px; color: var(--g-500); }
 .run-line { display: flex; align-items: center; gap: 12px; }
 .run-status {
   font-family: var(--mono);

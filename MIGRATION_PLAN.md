@@ -28,7 +28,7 @@
 | 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) ; **+`storage/JobStore`** (TU2.a, en mémoire + **journal d'événements SSE** TU2.e — R-10 levé) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) ; **+`JobRunner`** (TU2.a) **+`CorpusStore`/`extract_corpus_zip`** (TU2.c, ingestion ZIP durcie) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
 | 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T4 socle ✅ + Space S1 ✅ · S2 🔨** (vitrine read-only · CLI · coquille design · lanceur run/SSE/Moteurs/upload/gardes · **page Moteurs au design** ; reste S2.2b UI upload→S6) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 8 `interfaces` | 🔨 **T4 socle ✅ · Space S1 ✅ · S2 ✅** (vitrine read-only · CLI · coquille design · lanceur complet : run/SSE/Moteurs+page · upload+UI sélection · gardes HTTP ; reste **S3→S6**) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 ### Les deux axes : **Moteur `T#`** & **Space `S#`** — un seul tableau, dépendances explicites
 
 **Deux *natures* de travail, un seul tableau d'autorité.** `T#` = la
@@ -51,7 +51,7 @@ c'est un **ordre partiel**, pas deux files déconnectées.
 | Axe **Space** `S#` | Livre | Dépend de | État |
 |---|---|---|---|
 | **S1** coquille au design | rendu serveur · polices self-host · nav · FR/EN | T4 ✅ | ✅ **fait** |
-| **S2** lanceur « Banc d'essai » | run de fond annulable · Moteurs `/api/engines` · upload durci · gardes HTTP · SSE · page JS · **page Moteurs au design** (rendu serveur) | T2,T3,T4 ✅ | 🔨 page Moteurs (S2.2a) ✅ · reste **S2.2b** (UI upload/sélection au design) |
+| **S2** lanceur « Banc d'essai » | run de fond annulable · Moteurs `/api/engines` + page `/engines` · upload durci · gardes HTTP · SSE · page JS + **UI upload/sélection** | T2,T3,T4 ✅ | ✅ **fait** (run moteur réel = Space privé / test `live`) |
 | **S3** persistance | push `RunResult`(+HTML) → dépôt/Dataset après run | T4 ✅ | ⏳ (débloqué) |
 | **S4** vues rapport au design | overview/by-engine/by-document/crosses/synthesis | couche 7 ✅ | ⏳ (débloqué) |
 | **S5** sécurité publique | mode public · quotas · rate-limit · durcissement exposition | T4 ✅ | 🔨 partiel (CSRF · mode public · quotas upload posés) |
@@ -197,7 +197,7 @@ importeurs / extensibilité / infra).
 | `S#` | Livre | ⟸ | Élimine / Valide | ex-TU |
 |---|---|---|---|---|
 | **S1** | coquille au design (Jinja + CSS, polices self-host, nav, FR/EN) | T4 | SPA lourde → rendu serveur ; CDN → self-host | TU1 |
-| **S2** | lanceur : `JobRunner`+`JobStore` (annulation), `/api/engines`, upload ZIP durci, gardes HTTP, SSE+`Last-Event-ID`, page JS `/benchmark`, **page Moteurs `/engines`** (rendu serveur) — **reste S2.2b** (UI upload/sélection au design) | T2,T3,T4 | 2 JobStore→1 (SSE réabsorbé) · annulation réelle · CSRF/mode public/zip-bomb **verts d'abord** | TU2 |
+| **S2** ✅ | lanceur : `JobRunner`+`JobStore` (annulation), `/api/engines` + page `/engines`, upload ZIP durci, gardes HTTP, SSE+`Last-Event-ID`, page JS `/benchmark` + **UI upload/sélection moteur** | T2,T3,T4 | 2 JobStore→1 (SSE réabsorbé) · annulation réelle · CSRF/mode public/zip-bomb **verts d'abord** ; run moteur réel = test `live` | TU2 |
 | **S3** | persistance : push `RunResult`(+HTML) → dépôt/Dataset après run | T4 | disque HF éphémère → push durable | TU3 |
 | **S4** | vues rapport au design (overview/by-engine/by-document/crosses/synthesis) | couche 7 | data-layer → lit `RunResult` direct | TU4 |
 | **S5** | sécurité publique : mode public · quotas · rate-limit · durcissement | T4 | exposition non bornée | TU6 |
