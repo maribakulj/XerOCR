@@ -241,4 +241,25 @@ xerocr/adapters/
 4. **Élagage discipliné** : **SUPPRIMER** `_fallback_log` (son seul débouché, le narratif, est supprimé), `atomic_write_bytes`, la surface morte (escriptorium/gallica/hf), `execution_mode` (déjà parti) ; **sortir** les ~220 LOC de données démo en `data/` ; **sortie corpus unique = `Corpus`** (fin des dict-manifestes). Registre/découverte = **couche `app`** (entry-points `xerocr.modules`), **seul point d'extension tiers = les briques de pipeline**.
 5. **Placement & dépendances** : les importeurs de corpus restent **first-party en couche 5** (transport + parsing → `Corpus`), l'**orchestration disque** remonte en service `app` ; le **store SQLite longitudinal/tidy** est **rapatrié** de `evaluation/` vers `adapters/storage` (cf. `MIGRATION_COUCHE_3.md`). Whitelist d'archi `adapters/` à **expliciter** (inclut `evaluation` pour le type `Corpus` chargé).
 
+## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : ✅ T3 complet** — `precomputed` + `tesseract` + **`openai`** + **`ollama`** (LLM post-correction) verts, annulation câblée (D-A clos) ; importeurs/stores/VLM **par tranches**.
+
+**Enveloppe :**
+- [x] `precomputed` implémente le `Module` Protocol (couche 4) **directement**, avec `name`/`version`. — *preuve : `tests/adapters/test_precomputed.py` (`isinstance(.., Module)` ; lecture `<stem>.<label>.txt` → `RAW_TEXT` + `content_hash` ; UTF-8 strict ; annulation)*
+- [x] **1ᵉʳ vrai moteur : `tesseract`** (implémente `Module` directement ; `lang` anti-injection, timeout borné par la deadline, écrit dans le **workspace** ; pytesseract = **extra**, invocation **mockable** → CI sans binaire). — *preuve : `test_tesseract` (mock + validations + workspace + annulation) ; `test_live` opt-in*
+- [x] **2ᵉ famille de module : LLM post-correction** (`openai`, mode `text_only`) — `RAW_TEXT → CORRECTED_TEXT` ; SDK extra, invocation **mockable** (CI sans clé) ; **pipeline multi-étapes OCR→LLM** prouvé (`CORRECTED_TEXT` **non vide**, bug historique). — *preuve : `test_openai` + `test_llm_pipeline`*
+- [x] **2ᵉ LLM (généralisation prouvée) : `ollama`** — *même* contrat que `openai`, sortie `CORRECTED_TEXT`, **aucun cas particulier** ; transport `httpx` = **extra**, `_invoke_ollama` **mockable** (CI sans serveur). **Référence d'annulation câblée** : `_invoke_ollama` enregistre `client.close` via `RunControl.register_cancel_handle` → `trigger_cancel` ferme la connexion en vol ; « annulation vs panne » tranchée en sondant `is_cancelled` (`_fail_or_cancel`, **fiable** — remplace l'heuristique de message fragile, **D-A clos**). — *preuve : `test_ollama` (conformité Module + mock + workspace + annulation + `_fail_or_cancel` cancel/panne) ; mécanisme `register_cancel_handle` : `test_run_control` (fire-on-cancel · immédiat-si-déjà-annulé · once · ordre)*
+- [~] VLM/`zero_shot` (0 conso) · `Base*Adapter` mixins · confidences/ALTO · `unregister`/déduplication des handles (accumulation bénigne, runs bornés) : **différés**.
+
+**Garde-fous :**
+- [x] `layer_dependencies` (whitelist `adapters` explicitée : domain+pipeline+formats) · `no_side_effect_imports` · `no_broad_except` · `file_budgets`. — *preuve : `test_adapters_imports_are_allowed` + suite archi verte.* `[~]` `install_opener` global (D-E) : tué à la tranche HTTP.
+
+**Validation par tranche :** `MIGRATION_PLAN.md` §3 — starter pack via `Module` (T1-T3) · **1 seul `JobStore` avec SSE/`job_events` réabsorbés** (T4, cf. §0/D-γ) · bugs latents `Corpus(source=)`/`selected_indices+1` corrigés + test `live` (T7).
+
+- [~] **Différé** : kraken/calamari/pero/cloud OCR, anthropic/mistral, **VLM (0 conso → pas avant `zero_shot`)**, importeurs (1/tranche, sortie unique `Corpus`), stores. **Supprimer** `_fallback_log` + données démo en dur (→`data/`).
+
+---
+
 *Tous les verdicts de la Partie 1 sont marqués **PROVISOIRE — à confirmer au build** : le contact du code corrige souvent l'analyse.*

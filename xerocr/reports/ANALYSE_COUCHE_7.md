@@ -258,4 +258,25 @@ xerocr/reports/
 4. **Suppressions nettes :** `narrative/`(2 162 LOC, 3 accroches), `html/data/`(1 614, ré-agrégation), `section_registry`, `generator` legacy, vendor `chart.umd.min.js`, i18n/glossary d'office. « Pas de consommateur = supprimé », budgets <400 (render/crosses/philological/engines_table à splitter).
 5. **Invariants à tenir :** `reports` **lit, ne calcule pas, ne narre pas** (anti-hallucination) ; **clés de métrique = contrat dur** avec les sections/CSV ; **golden HTML byte-stable** (déterminisme §12) ; la repro s'**affiche** depuis le `RunManifest`, ne se ré-embarque pas ; direction de couche `reports→{domain,evaluation}` seulement (jamais `app`/`interfaces`).
 
+## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — cadre + assembleur autonome + sections **overview** & **cross_engine** + rapport de **comparaison** (deltas 2 runs) verts ; sections incrémentales.
+
+**Enveloppe (cadre, plein-scope dès T1) :**
+- [x] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés ; `Html` NewType anti-XSS) ; 0 registry. — *preuve : `reports/section.py` ; `isinstance(OverviewSection(), Section)`*
+- [x] Consommation **directe de `RunResult`**, **zéro data-layer**. — *preuve : `test_reports_imports_are_allowed` (`reports → {domain, evaluation}`)*
+- [x] `ReportRenderer` **injectable** (sections en paramètre ; `default_report_renderer` = socle). — *preuve : `test_renderer`*
+- [ ] charts **SVG serveur** déterministes (pas de Chart.js/CDN). — *avec la 1ʳᵉ section graphique (T2+)*
+- [x] **Rapport = artefact autonome** : HTML déterministe **sans backend ni CDN** (ouvrable hors-ligne). — *preuve : `xerocr demo` (811 o, octet-stable) + `test_cli_demo`.* `[~]` interactivité client-side : avec les sections (surface).
+
+**Garde-fous :**
+- [x] `layer_dependencies` (`reports → {domain, evaluation}`) · **`no-orphan section↔métrique`** (le renderer saute les `requires` non couverts) · **golden HTML byte-stable** (2 runs identiques) · `file_budgets`. — *preuve : `test_renderer` (no-orphan + déterminisme) + suite archi*
+
+**Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (1 section overview/CER lit `RunResult` → HTML déterministe).
+
+- [~] **Supprimé** : `narrative/` (D2) · `generator` legacy + `html/data/` + i18n/glossary d'office + Chart.js + SPA. **Différé** : 1 section/métrique à sa tranche (jamais en avance). **Interactivité what-if** = question ouverte (sélection, jamais re-mesure ; cf. §2.7).
+
+---
+
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/app non encore implémentés) prévaut.*

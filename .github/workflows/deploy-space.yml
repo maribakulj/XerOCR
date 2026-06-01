@@ -1,0 +1,76 @@
+name: Deploy Space
+
+# Déploiement MANUEL de la vitrine (lecture seule) vers un Hugging Face Space.
+# Le runner GitHub a l'accès réseau + le secret HF_TOKEN (write) du dépôt ;
+# il assemble un dépôt « racine plate » et le pousse vers le Space.
+# Rien n'est public tant que tu ne lances pas ce workflow (bouton "Run workflow").
+"on":
+  workflow_dispatch:
+    inputs:
+      space:
+        description: "Space cible (owner/nom)"
+        required: true
+        default: "Ma-Ri-Ba-Ku/XerOCR"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 1) Vérifier que la vitrine sert bien AVANT de publier (smoke-test réel).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Smoke-test de la vitrine servie
+        run: |
+          pip install -e ".[serve]"
+          python - <<'PY'
+          import os
+          os.environ["XEROCR_REPORTS_DIR"] = "deploy/reports"
+          from fastapi.testclient import TestClient
+          from xerocr.interfaces.web.app import create_app
+          c = TestClient(create_app())
+          assert c.get("/health").json() == {"status": "ok"}
+          assert c.get("/api/reports").status_code == 200
+          print("smoke OK")
+          PY
+
+      # 2) Assembler le dépôt « racine plate » attendu par le Space.
+      - name: Assembler le contexte du Space
+        run: |
+          mkdir -p space/reports
+          cp deploy/Dockerfile.space space/Dockerfile
+          cp deploy/requirements.txt space/requirements.txt
+          cp deploy/README_SPACE.md  space/README.md
+          cp pyproject.toml          space/pyproject.toml
+          cp -r xerocr               space/xerocr
+          # Rapports à exposer (au moins le .gitkeep + les .json présents).
+          cp deploy/reports/*.json space/reports/ 2>/dev/null || true
+          touch space/reports/.gitkeep
+          find space -name '__pycache__' -type d -prune -exec rm -rf {} +
+
+      # 3) Pousser vers le Space. Le token n'est JAMAIS imprimé : passé en env,
+      #    injecté dans l'URL au moment du push, et le log git est coupé.
+      - name: Pousser vers le Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          SPACE: ${{ github.event.inputs.space }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::secret HF_TOKEN absent du dépôt — déploiement impossible."
+            exit 1
+          fi
+          owner="${SPACE%%/*}"
+          cd space
+          git init -q
+          git config user.name  "xerocr-deploy"
+          git config user.email "deploy@xerocr.local"
+          git checkout -q -b main
+          git add -A
+          git commit -q -m "Déploiement de la vitrine XerOCR"
+          # URL avec credentials gardée hors des logs (set +x autour du push).
+          set +x
+          remote="https://${owner}:${HF_TOKEN}@huggingface.co/spaces/${SPACE}"
+          git push -f "$remote" main 2>&1 | sed "s/${HF_TOKEN}/***/g"
+          echo "Poussé vers https://huggingface.co/spaces/${SPACE}"

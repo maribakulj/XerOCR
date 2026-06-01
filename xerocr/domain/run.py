@@ -47,6 +47,10 @@ class RunManifest(BaseModel):
     dependencies_lock / system_binaries_lock:
         Snapshots ``{paquet: version}`` et ``{binaire: version}`` —
         indispensables à la reproductibilité.
+    module_versions:
+        ``{adapter_name: module.version}`` — version déclarée de chaque
+        module exécuté (R-2). La version *binaire* d'un moteur externe
+        (tesseract…) relève de ``system_binaries_lock`` (capture live).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -62,6 +66,7 @@ class RunManifest(BaseModel):
     completed_at: datetime
     dependencies_lock: dict[str, str] = Field(default_factory=dict)
     system_binaries_lock: dict[str, str] = Field(default_factory=dict)
+    module_versions: dict[str, str] = Field(default_factory=dict)
     metadata: dict[str, str] = Field(default_factory=dict)
 
     @property

@@ -9,11 +9,23 @@ avant d'écrire la moindre ligne.**
 
 ## 0. Statut actuel
 
-- Dépôt vierge, branche de travail : `claude/focused-gates-6737Q`.
-- Échafaudage posé : `xerocr/` avec 8 packages (un `__init__.py` vide par couche).
-- Couche 1 (`domain`) : plan de migration prêt dans
-  [`xerocr/domain/MIGRATION_COUCHE_1.md`](xerocr/domain/MIGRATION_COUCHE_1.md).
-- Aucune couche encore implémentée.
+- **Couches 1-2 construites et vertes** : `domain` (13 fichiers) + `formats`
+  (ALTO/PAGE/text, sécurité XML, normalisation). `pytest` vert (~158 tests, ~95 %
+  couverture), `mypy --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
+- **T1 (squelette ambulant) CONSTRUIT** : tranche verticale fine à travers les
+  couches 3→8 — `xerocr demo` marche (rapport HTML autonome, **octet-stable**).
+  Couches 3-6 remplies de leur part T1, 7-8 = cadre `Section` + CLI `demo`. État
+  détaillé vivant : roll-up de `MIGRATION_PLAN.md`. Analyses durables toujours
+  dans `xerocr/<couche>/{MIGRATION,ANALYSE}_COUCHE_*.md`.
+- **Garde-fous d'archi actifs** : `tests/architecture/` —
+  `layer_dependencies`, `no_legacy_imports`, `no_side_effect_imports`,
+  `file_budgets`, `no_broad_except`, `single_version_source`.
+- **Parcours global** : [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) (tranches T1→T7 +
+  invariants d'enveloppe + statut T0 détaillé).
+- **Prochaine étape = T2** (axe texte) : moteur `tesseract` réel, WER/MER, stats
+  `scipy`, `cross_engine`, commandes `run`/`compare`. Toujours par tranche.
+- Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
+  consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 
 ---
 
@@ -233,7 +245,7 @@ ne fige pas une forme qui dépend d'une couche non encore conçue.
 |---|---|---|
 | `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | tranche segmentation (couche 4) |
 | `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
-| `RunSpec` (+ `StepSpec`) | `app/schemas/run_spec.py` | migration couche 6 (séparer du loader YAML) |
+| `RunSpec` ✅ (créé T1, **sans `StepSpec`** — D-010 : `PipelineStep` suffit) | `app/schemas/run_spec.py` | couche 6 — fait ; loader YAML différé T2 |
 | `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |
 
 **Non-candidats confirmés** (faux positifs analysés) : `RunContext` (→ couche 4,

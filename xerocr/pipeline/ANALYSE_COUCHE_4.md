@@ -276,5 +276,27 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
    cache** vers le store. Tests d'archi (`layer-deps` sans `evaluation`,
    `no-side-effect-import`, `file-budgets`) dès le premier commit de code.
 
+## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — spine verte (`Module` Protocol + exécuteur) ; reste : runner N-docs, planner.
+
+**Enveloppe (plein-scope dès T1) :**
+- [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*
+- [x] Split `RunContext`(domain `Deadline`) / `RunControl`(runtime), câblés par l'exécuteur. — *preuve : `tests/pipeline/test_run_control.py` + `test_executor.py` verts.* `[~]` round-trip (dé)sérialisation `RunContext` : test dédié à ajouter.
+- [x] **`RunControl.register_cancel_handle`** (interruption d'appel bloquant) — différé en T1 faute de consommateur (D-008), **livré en T3 avec son 1ᵉʳ vrai consommateur** (`ollama`). Thread-safe (`Lock`) : enregistrement et `trigger_cancel` synchronisés → handle ni perdu (course) ni appelé deux fois ; enregistrement *après* annulation = appel immédiat. Sondage coopératif (`raise_if_cancelled`) reste la **garantie** ; le handle est *best-effort*. — *preuve : `test_run_control` (fire-on-cancel · immédiat-si-déjà-annulé · once · ordre) ; consommateur réel `adapters/llm/ollama.py`*
+- [x] `PipelineExecutor` mono-doc, **provenance estampillée** (`code_version` + `parameters_hash` + `produced_by_step`). — *preuve : `test_executor::test_runs_single_step_and_stamps_provenance`*
+- [ ] `CorpusRunner` N-docs (threads/timeout/cancel/backpressure). — *T1 (app) / T2*
+- [ ] `planner`+`validation` fusionnés (`SpecError`, pas d'homonyme pydantic) ; port de cache.
+
+**Garde-fous (verts dès la 1ʳᵉ tranche) :**
+- [x] `layer_dependencies` (`pipeline` → domain seulement, **pas** `evaluation`) · `no_side_effect_imports` (`__init__` mince) · `file_budgets` · `no_broad_except`. — *preuve : `test_pipeline_imports_are_allowed` + suite archi verte*
+
+**Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
+
+- [~] **Différé** : fan-out par région (T5) · ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
+
+---
+
 *Verdicts marqués « PROVISOIRE — à confirmer au build ». Partie 1 durable (source
 figée) ; Partie 2 périssable (à confirmer à la tranche).*

@@ -280,6 +280,30 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 
 ---
 
+## DoD vivante (couche 3) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — `RunResult` + registre + runner verts ; métriques **CER/WER/MER** (parité jiwer) ; profils/stats/cross-engine à T2.
+
+**Enveloppe (plein-scope dès T1) :**
+- [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*
+- [x] Registre **type-driven** unique (sélection par `input_types`) ; 0 ancien registre. — *preuve : `test_registry::test_get_and_select_by_input_types` + `test_no_forbidden_tokens` vert*
+- [x] `DocContext` + runner (par-document → **agrégat micro** `Σerreurs/Σpoids` = la métrique au niveau corpus, `None`-exclu + support ; macro reconstructible depuis le détail par-doc). Les métriques renvoient `Observation(value, weight)` ; `weight` = dénominateur. — *preuve : `test_runner` (micro `1/6` ≠ macro `0.125` ; poids par-doc = 4 ; GT absente → `None`)* — **corrigé à l'audit T3** (était macro non pondéré + `safe_mean` supprimé).
+- [x] `CrossEngineContext` + passe inter-moteurs (`cross_engine` écrit dans `RunResult`) ; **Wilcoxon/Friedman** avec **plancher de puissance** `_MIN_SUPPORT=6` (sous lui → `None`, pas un faux verdict) + filet `ValueError→None`. — *preuve : `test_metrics_stats` (significatif/égaux/sous-plancher) + `test_runner::test_cross_engine_significance_written`* — *(T2 ; durci à l'audit T3)*
+
+**Garde-fous :**
+- [x] `layer_dependencies` (`evaluation` → domain+formats ; `scipy` whitelisté) · `no_side_effect_imports` (décorateur **pur**, registre non auto-peuplé) · `file_budgets`. — *preuve : `test_evaluation_imports_are_allowed` + `test_fresh_registry_is_empty` + suite archi verte*
+- [~] **`no-orphan métrique↔section`** : à la 1ʳᵉ section (couche 7, T1).
+
+**Validation inter-couches :** voir `MIGRATION_PLAN.md` §3-T1 (1 CER → `RunResult` → HTML déterministe de bout en bout).
+
+- [x] **WER/MER** (impl maison déterministe + **parité jiwer**, 15 cas) au socle texte. — *preuve : `test_metrics_text` (valeurs main) + `test_metrics_parity` (vs jiwer)*
+- [x] **Profils de normalisation** (`normalization_profile`/`char_exclude`) honorés par le runner (couche 2 `formats/text`), symétriques GT/hyp ; **1 chargement par signature**. — *preuve : `test_runner` (caseless→0 ; profil inconnu→erreur) ; démo : vue `francais_medieval`*
+- [x] **`cross_engine` + stats** : passe inter-moteurs (`CrossEngineContext`) → `RunResult.cross_engine` (clés `vue:métrique:test`) ; significativité **Wilcoxon/Friedman** (`scipy`). — *preuve : `test_metrics_stats` + `test_runner` (`text:cer:significance_p`)*
+- [~] **Surface encore différée** : `compare` + sections engines/cross (T2.f) ; structure (T5) ; longitudinal/philologie/taxo/économie (T7).
+
+---
+
 *Référence : décisions actées en session de conception couche 3, réconciliées avec
 `CLAUDE.md`. Enveloppe (contrats §3,§5-9) plein-scope maintenant ; surface remplie
 par tranches (§15). Le reste émerge sous test (§13).*

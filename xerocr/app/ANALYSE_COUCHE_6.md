@@ -231,4 +231,27 @@ xerocr/app/
 4. **Invariants à porter fidèlement et à tester EN PREMIER** : sécurité chemins (`validated_path`/`WorkspaceManager`/anti zip-bomb-traversal-symlink, §12), reproductibilité (`dependencies` → `RunManifest`), annulation coopérative (`Deadline`/`RunControl` — Picarones ne la branche pas vraiment, à corriger).
 5. **Ne pas bâtir `app` en bloc** : elle naît par tranches. Tranche 1 (`demo`) = orchestrateur minimal + registre (1 module `precomputed`) + `RunSpec` minimal — juste assez pour prouver que la coquille tient. Budgets <400, zéro shim, zéro effet de bord à l'import, zéro champ de spec sans consommateur.
 
+## DoD vivante (couche 6) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
+
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — orchestrateur (+ **workspace** par run) + registre/factory + `RunSpec` + **loader YAML** + **sécurité chemins** verts ; deps-lock à T2.f, entry-points à T6.
+
+**Enveloppe :**
+- [x] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis `evaluate_run` ; l'assemblage métrique vit en `evaluation`). — *preuve : `test_app_imports_are_allowed` ; l'orchestrateur délègue, n'importe aucune `evaluation.metrics*`*
+- [x] **Registre + factory** (`name→Module` via builder enregistré, convention `<kind>:<label>`) — socle en dur, **seul** point d'extension. — *preuve : `test_module_registry` (build `precomputed` ; kind inconnu ; kwargs incohérents)*
+- [ ] Découverte **entry-points `xerocr.modules`** + `register()` tiers. — *T6*
+- [x] `RunSpec` → `domain` (compose `PipelineSpec` **directement**, sans `StepSpec` — D-010) ; orchestrateur assemble `RunManifest` (`adapter_kwargs` capturés). — *preuve : `test_run_spec` + `test_orchestrator`*
+- [x] **loader YAML** (`RunSpec.model_validate`, `extra="forbid"`) + **sécurité chemins** (`validated_path` : rejet `..`/absolu-hors-base/octet-nul/symlink, §12 ; **GT `must_exist=True`** → erreur typée au chargement, pas d'`OSError` opaque en run) — **pas** de `resolve_adapter_class` (le registre résout `name→Module`, D-010). — *preuve : `test_loader` (+ GT manquante rejetée) + `test_security`*
+- [x] **Isolation des workspaces par pipeline** (sous-dossier dédié) : deux pipelines partageant un `adapter_name` **écrivain** (ex. `openai:gpt`) n'écrasent plus mutuellement leur sortie → zéro contamination inter-pipelines. — *preuve : `test_orchestrator::test_pipelines_sharing_a_writer_do_not_contaminate`* — **corrigé à l'audit T3.**
+- [x] **`RunManifest.module_versions`** : version déclarée de chaque module exécuté capturée (R-2). — *preuve : `test_orchestrator::test_manifest_captures_module_versions`.* `[~]` deps/binaires lock (`dependencies_lock`/`system_binaries_lock`, dont version **binaire** tesseract) : capture live, **différée** (hors CI).
+
+**Garde-fous :**
+- [x] `no_side_effect_imports` (**pas de `register_default_*()` auto** ni singleton module-level ; `register_default_modules`/`metrics` explicites) · `file_budgets` · `layer_dependencies`. — *preuve : suite archi verte*
+
+**Validation par tranche :** `MIGRATION_PLAN.md` §3 — orchestrateur minimal + registre 1 module + `RunSpec` minimal (T1) · sécurité chemins testée d'abord + repro (T2) · entry-points + plugin (T6).
+
+- [~] **Supprimé** : tout `_benchmark_*` (double format) · `results.py`/`legacy.py` (shim) · ½ `partial_store` mort · `python_helpers` (preset). **Différé** : reprise partielle (1 seul mécanisme, à sa tranche).
+
+---
+
 *(Tous les verdicts ci-dessus sont **PROVISOIRES — à confirmer au build** ; le contact du code amont non encore mergé prévaut.)*

@@ -167,17 +167,23 @@ backlog inexistant. **Aucune logique ne change.**
 
 ---
 
-## 8. Definition of Done (couche 1)
+## 8. DoD vivante (couche 1) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
-- [ ] 13 fichiers créés dans `xerocr/domain/` ; `facts.py` et `module_protocol.py` **non** migrés en `domain`.
-- [ ] `ArtifactType.LAYOUT` et `Artifact.region_id` ajoutés et testés.
-- [ ] Contrat de module exécutable **reporté au plan de la couche 4** (pas un livrable de la couche 1).
-- [ ] Aucune occurrence de `PicaronesError`, `BaseModule`, `Fact`, `LEGACY_VALUE_ALIASES`, `pipeline_names`, `BACKLOG_POST_LIVRAISON` dans la couche.
-- [ ] Aucune annotation de sprint résiduelle.
-- [ ] `mypy --strict` vert sur `xerocr/domain/`.
-- [ ] `ruff check` vert.
-- [ ] Tests domain + architecture verts.
-- [ ] `python -c "import xerocr.domain"` fonctionne sans effet de bord.
+> Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
+> Mise à jour dans le **même commit** que le code (règle d'or anti-dérive).
+> **Statut couche 1 : ✅ vert** (vérifié 2026-05-31).
+
+- [x] 13 fichiers dans `xerocr/domain/` ; `facts.py`/`module_protocol.py` **non** migrés. — *preuve : `ls xerocr/domain` ; `test_no_legacy_imports` (tokens `Fact`/`BaseModule` absents)*
+- [x] `ArtifactType.LAYOUT` et `Artifact.region_id` présents. — *preuve : `xerocr/domain/artifacts.py:55,138`*
+- [x] Contrat de module **reporté à la couche 4** (pas un livrable couche 1). — *preuve : `module_protocol.py` absent de `domain/`*
+- [x] Aucune occurrence de `PicaronesError`/`BaseModule`/`Fact`/`LEGACY_VALUE_ALIASES`/`pipeline_names`/`BACKLOG_POST_LIVRAISON`. — *preuve : `tests/architecture/test_no_legacy_imports.py` vert*
+- [x] Aucune annotation de sprint résiduelle. — *preuve : `grep -rE "Sprint|Phase [0-9]" xerocr/domain` vide*
+- [x] `mypy --strict` vert sur `domain`. — *preuve : `mypy --strict -p xerocr.domain` → Success*
+- [x] `ruff check` vert. — *preuve : `ruff check xerocr/` → All checks passed*
+- [x] Tests domain + architecture verts. — *preuve : `pytest` 163 passed / 95 % cov*
+- [x] Import sans effet de bord. — *preuve : `tests/architecture/test_no_side_effect_imports.py` vert*
+- [~] **Réserve partiellement levée (T1)** : `MetricSpec`/`EvaluationView`/`EvaluationSpec` ont un consommateur (registre + runner couche 3) → **confirmés, gardés**. `ProjectionSpec` reste **sans consommateur** → différé à T2 (projections). — *cf. journal D-009.*
+- [~] **Différé-par-design** : backlog domain (`RunSpec`/`ProjectionReport`/`ConfidenceToken`), `CanonicalLayout`. — *anti-spéculatif : créés à la tranche de leur 1ᵉʳ consommateur (§9).*
 
 ---
 

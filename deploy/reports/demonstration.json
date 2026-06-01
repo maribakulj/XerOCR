@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "manifest": {
+    "run_id": "demo",
+    "corpus_name": "demo",
+    "n_documents": 3,
+    "pipeline_specs": [
+      {
+        "name": "tesseract",
+        "description": "",
+        "initial_inputs": [
+          "image"
+        ],
+        "steps": [
+          {
+            "id": "ocr",
+            "kind": "ocr",
+            "adapter_name": "precomputed:tesseract",
+            "params": {},
+            "input_types": [
+              "image"
+            ],
+            "output_types": [
+              "raw_text"
+            ],
+            "inputs_from": {}
+          }
+        ]
+      },
+      {
+        "name": "pero",
+        "description": "",
+        "initial_inputs": [
+          "image"
+        ],
+        "steps": [
+          {
+            "id": "ocr",
+            "kind": "ocr",
+            "adapter_name": "precomputed:pero",
+            "params": {},
+            "input_types": [
+              "image"
+            ],
+            "output_types": [
+              "raw_text"
+            ],
+            "inputs_from": {}
+          }
+        ]
+      }
+    ],
+    "adapter_kwargs": {
+      "precomputed:pero": {
+        "source_label": "pero"
+      },
+      "precomputed:tesseract": {
+        "source_label": "tesseract"
+      }
+    },
+    "view_specs": [
+      {
+        "name": "text",
+        "description": "",
+        "candidate_types": [
+          "raw_text"
+        ],
+        "projection": null,
+        "projections_by_source_type": {},
+        "normalization_profile": null,
+        "char_exclude": null,
+        "metric_names": [
+          "cer",
+          "wer",
+          "mer"
+        ],
+        "ignored_dimensions": [],
+        "warnings": []
+      },
+      {
+        "name": "francais_medieval",
+        "description": "",
+        "candidate_types": [
+          "raw_text"
+        ],
+        "projection": null,
+        "projections_by_source_type": {},
+        "normalization_profile": "medieval_french",
+        "char_exclude": null,
+        "metric_names": [
+          "cer",
+          "wer",
+          "mer"
+        ],
+        "ignored_dimensions": [],
+        "warnings": []
+      }
+    ],
+    "code_version": "0.1.1.dev25+gca59b82a2",
+    "started_at": "2026-06-01T07:07:12.591327Z",
+    "completed_at": "2026-06-01T07:07:13.202600Z",
+    "dependencies_lock": {},
+    "system_binaries_lock": {},
+    "module_versions": {
+      "precomputed:pero": "1.0",
+      "precomputed:tesseract": "1.0"
+    },
+    "metadata": {}
+  },
+  "pipelines": [
+    {
+      "pipeline": "tesseract",
+      "view": "text",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.014285714285714285,
+          "support": 3
+        },
+        {
+          "metric": "wer",
+          "value": 0.09090909090909091,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.09090909090909091,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "pipeline": "pero",
+      "view": "text",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.02857142857142857,
+          "support": 3
+        },
+        {
+          "metric": "wer",
+          "value": 0.09090909090909091,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.09090909090909091,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "pipeline": "tesseract",
+      "view": "francais_medieval",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "pipeline": "pero",
+      "view": "francais_medieval",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 3
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "document_id": "folio_001",
+      "pipeline": "tesseract",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.041666666666666664,
+          "support": 24
+        },
+        {
+          "metric": "wer",
+          "value": 0.25,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.25,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_002",
+      "pipeline": "tesseract",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "document_id": "folio_003",
+      "pipeline": "tesseract",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_001",
+      "pipeline": "pero",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 24
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_002",
+      "pipeline": "pero",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.08695652173913043,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.3333333333333333,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.3333333333333333,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "document_id": "folio_003",
+      "pipeline": "pero",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_001",
+      "pipeline": "tesseract",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 24
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_002",
+      "pipeline": "tesseract",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "document_id": "folio_003",
+      "pipeline": "tesseract",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_001",
+      "pipeline": "pero",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 24
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    },
+    {
+      "document_id": "folio_002",
+      "pipeline": "pero",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 3
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 3
+        }
+      ]
+    },
+    {
+      "document_id": "folio_003",
+      "pipeline": "pero",
+      "view": "francais_medieval",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 23
+        },
+        {
+          "metric": "wer",
+          "value": 0.0,
+          "support": 4
+        },
+        {
+          "metric": "mer",
+          "value": 0.0,
+          "support": 4
+        }
+      ]
+    }
+  ],
+  "cross_engine": [
+    {
+      "metric": "text:cer:significance_p",
+      "value": null,
+      "support": 3
+    },
+    {
+      "metric": "text:wer:significance_p",
+      "value": null,
+      "support": 3
+    },
+    {
+      "metric": "text:mer:significance_p",
+      "value": null,
+      "support": 3
+    },
+    {
+      "metric": "francais_medieval:cer:significance_p",
+      "value": null,
+      "support": 3
+    },
+    {
+      "metric": "francais_medieval:wer:significance_p",
+      "value": null,
+      "support": 3
+    },
+    {
+      "metric": "francais_medieval:mer:significance_p",
+      "value": null,
+      "support": 3
+    }
+  ]
+}
