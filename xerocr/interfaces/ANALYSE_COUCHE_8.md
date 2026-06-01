@@ -264,17 +264,19 @@ xerocr/interfaces/
 ## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 T4c** — vitrine + **durcissement HTTP** (package `security/` : CSP stricte + en-têtes + rate-limit). Reste : `serve` + Docker/Space (T4d/e) ; CSRF/uploads/mode public **avec le lanceur** (T4f).
+> Maj dans le **même commit** que le code. **Statut : 🔨 T4e** — vitrine + sécurité HTTP + **`serve`** (uvicorn←factory) + **packaging Docker/Space** (lecture seule, sans clé). Reste : déploiement HF effectif ; CSRF/uploads/mode public + SSE/annulation **avec le lanceur** (T4f).
 
 **Enveloppe :**
 - [x] **Contrat de commande CLI** (`argparse`, D-007) — verbes **`demo`** + **`run`** (YAML → orchestrateur → rapport) câblés, console-script `xerocr`. — *preuve : `test_cli_demo` + `test_cli_run` (bout en bout)*
 - [x] **`compare`** (2 RunResult JSON → deltas `B − A`) + **`run --json`** (export du RunResult). — *preuve : `test_cli_compare` + `test_results_io` (round-trip)*
-- [ ] `report` (rendre un JSON sauvé en CLI) · `serve` (commande, T4d/e).
+- [x] **`serve`** (commande) — uvicorn reçoit la **factory** (`...app:create_app`, `factory=True`), jamais un app de module ; uvicorn = **import paresseux** (extra `[serve]` absent → message clair + code 1) ; **avertissement** si `--host` ≠ local (exposition réseau) ; `--reports-dir` → `XEROCR_REPORTS_DIR`. — *preuve : `test_cli_serve` (factory ; warning `0.0.0.0` ; env ; extra manquant)*
+- [ ] `report` (rendre un JSON sauvé en CLI) — différé (la vitrine web couvre le besoin de rendu).
 - [x] **Vitrine web** (« montrer les rapports sans clés ») : `GET /api/reports` (liste triée) · `GET /reports/{name}` (rend le `RunResult` sauvé en HTML **à la demande** — format unique, rendu déterministe) · `GET /` (accueil **mince**, pas de SPA). **Sécurité chemins** via `validated_path` (couche 6) : traversal → 404 sans fuite. Routeurs = **fonctions builder**. — *preuve : `test_vitrine` (liste/rendu/404/traversal/accueil) + `no_side_effect_imports`*
 - [x] **`create_app()` factory** — zéro effet de bord à l'import : `FastAPI()` construit **dans** la factory (jamais au niveau module), routers à venir = **fonctions builder** (`APIRouter()` interdit au module par le gate). Deps `fastapi`/`uvicorn` en **extra `[serve]`** (CLI reste léger). — *preuve : `tests/interfaces/web/test_app.py` (factory ≠ singleton ; `/health`→200) + `no_side_effect_imports` vert* `[~]` `JOB_STORE` module-level : N/A tant que le store n'existe pas (T4d).
 - [x] **Package `security/`** (couche 8, **un** package ≠ 7 modules épars) — **CSP stricte** (`default-src 'none'` ; seul `style-src 'unsafe-inline'` car le rapport n'a que du CSS inline, zéro script — vérifié) + en-têtes durcis (nosniff/DENY/no-referrer/COOP) + **rate-limit** en mémoire par IP (purge des IP expirées → pas de fuite, dette H corrigée). Middlewares ASGI montés par la factory. — *preuve : `test_web_security` (CSP stricte ; en-têtes sur `/health` ET sur le rapport ; 429 au dépassement ; non-HTTP traversé ; config invalide rejetée)*
 - [~] **CSRF / quotas upload / mode public** : différés à **T4f** (le lanceur BYO-key) — **0 consommateur** tant que la vitrine est en lecture seule (GET only), pas de mutation à protéger. SSE + annulation `RunControl`/`Deadline` = T4d.
-- [ ] **Duplicable par construction** (config par secrets/env, boot sans secret, déblocage **fail-closed**). — *T4*
+- [x] **Packaging Space (Docker, lecture seule)** — `deploy/` : `Dockerfile` (python:3.11-slim, **non-root**, port **7860**, n'installe que cœur + `[serve]` — **aucun moteur**), `requirements.txt` (épinglé, vérifié couvrant cœur+serve par test anti-dérive), `README_SPACE.md` (`sdk: docker`), dossier `reports/` baké via `XEROCR_REPORTS_DIR`. **Boot sans aucun secret/clé.** — *preuve : `test_packaging` (artefacts + cohérence deps + non-root + pas de moteur) ; smoke-test servi : `XEROCR_REPORTS_DIR` → liste+rendu HTML+CSP.* `[~]` **build Docker non vérifié ici** (pas de démon dans le sandbox) ; runtime servi vérifié.
+- [~] **Duplicable BYO-key** (clés par secrets/env, déblocage **fail-closed** du lanceur) : avec le lanceur (T4f). La vitrine, elle, est déjà **dupliquable telle quelle** (aucun secret).
 
 **Garde-fous :**
 - [x] `no_side_effect_imports` (la CLI construit tout dans `main`) · `layer_dependencies` (interfaces → couches internes) · `file_budgets`. — *preuve : `test_interfaces_imports_are_allowed` + suite archi*

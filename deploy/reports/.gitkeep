@@ -1,0 +1,3 @@
+# Déposez ici les rapports RunResult (JSON) à exposer par la vitrine du Space.
+# Générés par :  xerocr run config.yaml -o rapport.html --json deploy/reports/<nom>.json
+# Le dossier doit exister (même vide) pour que l'image Docker se construise.

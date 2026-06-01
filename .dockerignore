@@ -1,0 +1,13 @@
+# Contexte de build minimal pour l'image de la vitrine.
+.git
+.github
+tests
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+*.egg-info
+PROMPT_ANALYSE_COUCHE.md
+MIGRATION_PLAN.md
