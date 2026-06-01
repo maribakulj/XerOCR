@@ -316,6 +316,51 @@ button:focus-visible { outline: 2px solid var(--fern-deep); outline-offset: 2px;
   border-left: 2px solid var(--g-100);
 }
 
+/* === Launcher (Banc d'essai) === */
+.btn {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border: none;
+  background: var(--g-50);
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover { background: var(--g-100); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { background: var(--g-700); }
+
+.launcher { display: flex; flex-direction: column; gap: 14px; }
+.run-line { display: flex; align-items: center; gap: 12px; }
+.run-status {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface);
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+}
+.run-result { min-height: 1px; }
+.run-log {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--g-600);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  margin: 0;
+}
+.run-log:empty::before { content: "—"; color: var(--g-300); }
+
 @media (max-width: 720px) {
   .app { grid-template-columns: 1fr; }
   .rail { position: static; height: auto; overflow: visible; }

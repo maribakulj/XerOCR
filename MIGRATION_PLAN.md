@@ -28,7 +28,7 @@
 | 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) ; **+`storage/JobStore`** (TU2.a, en mémoire + **journal d'événements SSE** TU2.e — R-10 levé) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) ; **+`JobRunner`** (TU2.a) **+`CorpusStore`/`extract_corpus_zip`** (TU2.c, ingestion ZIP durcie) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
 | 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T4f** (CLI + `serve`/vitrine + lanceur + Moteurs + upload + sélection moteur/gardes HTTP + **SSE TU2.e** (`/events` + `Last-Event-ID`) faits ; reste **formulaires UI au design** TU2.f) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 8 `interfaces` | 🔨 **T4f** (CLI + `serve`/vitrine + lanceur + Moteurs + upload + gardes HTTP + SSE + **page « Banc d'essai » interactive TU2.f.1** (JS auto-hébergé, SSE live, CSP `script/connect 'self'`) faits ; reste page Moteurs/UI upload au design TU2.f.2) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
 | **T2 axe texte** | ✅ **fait** — `tesseract` réel · WER/MER · stats · `run`/`compare` · round-trip JSON | §3-T2 |

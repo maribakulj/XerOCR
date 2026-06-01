@@ -1,12 +1,30 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 ✅ ; TU2.a→e ✅** (lanceur · Moteurs · upload ·
-> sélection moteur/gardes HTTP · **SSE**). T1→T4e + T2/T3 déjà faits. **Prochaine
-> = TU2.f** : les **formulaires au design** (« Banc d'essai » + page Moteurs),
-> rendus serveur + **JS léger** (EventSource pour le SSE) — c'est là qu'on
-> revisite la **CSP** (`script-src`/`connect-src 'self'`) et `form-action`. Puis
-> **TU3** (persistance : push des `RunResult` au dépôt). Cf. `PLAN_SPACE_INTERACTIF.md §6`.
+> jour à chaque tranche. **TU1 ✅ ; TU2.a→e ✅ ; TU2.f.1 (page « Banc d'essai »
+> interactive) ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine = TU2.f.2** : la
+> **page « Moteurs »** (consomme `GET /api/engines`) + l'**UI d'upload de corpus
+> et de sélection de moteur** au design (réutilise `/api/corpus`, `/api/runs`).
+> Puis **TU3** (persistance : push des `RunResult` au dépôt). Cf.
+> `PLAN_SPACE_INTERACTIF.md §6`.
+
+## TU2.f.1 — fait (page « Banc d'essai » interactive)
+`GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +
+`home.html`/`benchmark.html`) **+ JS léger auto-hébergé** (`static/js/benchmark.js`,
+vanilla, sans dépendance) qui **lance la démo** (`fetch` POST `/api/runs` + en-tête
+CSRF) puis **suit la progression en direct** via `EventSource` sur le SSE, et
+propose le **lien du rapport** produit. La nav devient vivante pour **Banc d'essai
++ Rapports** (les autres restent « à venir »). **CSP ouverte** au 1ᵉʳ consommateur
+navigateur : `script-src 'self'` + `connect-src 'self'` (jamais d'inline ni
+d'externe ; `form-action 'none'` conservé — on pilote en `fetch`). Fichiers :
+`templates/base.html|home.html|benchmark.html`, `static/js/benchmark.js`,
+`static/css/shell.css` (+ `.btn`/launcher), `routers/home.py` (route `/benchmark`
++ nav 3 états), `security/headers.py` (CSP), `pyproject` (`static/js/*.js` packagé).
+
+> ⚠️ **Comportement navigateur non exécuté en CI** (pas de navigateur, cf. TU1) :
+> on teste la **surface serveur** (page, JS lié/servi, nav, CSP) + `node --check`
+> (syntaxe JS) + les API sous-jacentes (déjà testées). Rendu visuel & interaction
+> à confirmer au déploiement.
 
 ## TU2.e — fait (SSE de progression + reprise Last-Event-ID)
 `GET /api/runs/{id}/events` (`text/event-stream`, read-only) diffuse le **journal**

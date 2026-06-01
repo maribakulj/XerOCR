@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ t.reports_title }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div>
+    <div class="view-hero-eyebrow">{{ t.hero_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.reports_title }}</div>
+    <div class="view-hero-desc">{{ t.hero_desc }}</div>
+  </div>
+  <div class="hero-stat">
+    <div class="v">{{ n_reports }}</div>
+    <div class="k">{{ t.stat_reports }}</div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.reports_title }}</div>
+    <div class="sec-sub">{{ t.reports_desc }}</div>
+  </div>
+  {% if reports %}
+  <div class="report-list">
+    {% for r in reports %}
+    <a class="report-row" href="{{ r.href }}">
+      <span class="r-name">{{ r.name }}</span>
+      <span class="r-open">{{ t.open_report }} →</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="report-empty">{{ t.reports_empty }}</p>
+  {% endif %}
+</section>
+{% endblock %}

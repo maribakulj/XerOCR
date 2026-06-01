@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ t.bench_title }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div>
+    <div class="view-hero-eyebrow">{{ t.bench_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.bench_title }}</div>
+    <div class="view-hero-desc">{{ t.bench_desc }}</div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.bench_title }}</div>
+    <div class="sec-sub">{{ t.bench_desc }}</div>
+  </div>
+
+  <div class="launcher">
+    <button id="launch" class="btn btn-primary"
+            data-launching="{{ t.bench_launching }}">{{ t.bench_run }}</button>
+
+    <div class="run-line">
+      <span class="label">{{ t.bench_status }}</span>
+      <span id="run-status" class="run-status">{{ t.bench_idle }}</span>
+    </div>
+
+    <div id="run-result" class="run-result"
+         data-open="{{ t.open_report_full }}"
+         data-neterror="{{ t.bench_net_error }}"></div>
+
+    <div class="label">{{ t.bench_log }}</div>
+    <pre id="run-log" class="run-log" aria-live="polite"></pre>
+  </div>
+</section>
+{% endblock %}
+{% block body_end %}<script src="/static/js/benchmark.js"></script>{% endblock %}

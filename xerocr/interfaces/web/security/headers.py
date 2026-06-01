@@ -1,13 +1,16 @@
 """En-têtes de sécurité HTTP (couche 8).
 
 CSP **stricte** : on bloque tout par défaut (``default-src 'none'``) et on
-n'ouvre que le strict nécessaire. Le **rapport** est autonome (``<style>``
-inline, images self/data — cf. ``reports/html.py``) ; la **coquille** (TU1) sert
-en plus sa feuille de style et ses polices **auto-hébergées** depuis notre
-origine (``style-src``/``font-src 'self'`` — aucun CDN). **Toujours aucun
-script** : ``script-src`` reste absent → tombe sur ``default-src 'none'`` (la
-coquille est rendue serveur, sans JS). Si un futur écran introduisait du script,
-**cette politique le casserait** — c'est volontaire : la CSP est un contrat.
+n'ouvre que le strict nécessaire, **toujours en `self`** (aucun CDN). Le
+**rapport** reste autonome (``<style>`` inline + images self/data — cf.
+``reports/html.py``). La **coquille** sert sa feuille de style et ses polices
+auto-hébergées (``style-src``/``font-src 'self'``) ; depuis le lanceur
+interactif (TU2.f), elle sert aussi un **JS auto-hébergé** (``script-src
+'self'`` — jamais ``'unsafe-inline'``, jamais d'externe) qui parle aux API et
+s'abonne au SSE (``connect-src 'self'``). ``form-action 'none'`` (on pilote en
+``fetch``, pas en soumission de formulaire). Tout le reste tombe sur
+``default-src 'none'`` — un script inline ou une origine tierce serait bloqué,
+c'est volontaire : la CSP est un contrat.
 
 **Adaptation HuggingFace Space.** Un Space est servi dans une ``<iframe>`` côté
 ``huggingface.co`` / ``*.hf.space``. Or ``frame-ancestors 'none'`` +
@@ -33,9 +36,11 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 #: (``script``/``object``/``base``) tombe sur ``default-src 'none'``, verrouillé.
 _CSP_BASE = (
     "default-src 'none'; "
+    "script-src 'self'; "
     "style-src 'self' 'unsafe-inline'; "
     "font-src 'self'; "
     "img-src 'self' data:; "
+    "connect-src 'self'; "
     "base-uri 'none'; "
     "form-action 'none'"
 )

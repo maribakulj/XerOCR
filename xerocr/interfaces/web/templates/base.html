@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>XerOCR — {{ t.reports_title }}</title>
+  <title>XerOCR — {% block title %}{{ t.reports_title }}{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/shell.css">
 </head>
 <body>
@@ -32,20 +32,21 @@
       <div class="wordmark-sub">{{ t.wordmark_sub }}</div>
     </div>
 
-    <nav class="rail-nav" aria-label="{{ t.reports_title }}">
+    <nav class="rail-nav" aria-label="Navigation">
       {% for item in nav %}
-      {% if item.active %}
-      <a class="nav-item active" href="{{ item.href }}" aria-current="page">
-        <span class="nav-glyph">{{ glyph(item.id) }}</span>
-        <span class="nav-label">{{ item.label }}</span>
-        <span class="nav-meta">{{ item.meta }}</span>
-      </a>
-      {% else %}
+      {% if item.state == 'soon' %}
       <span class="nav-item soon" aria-disabled="true" title="{{ t.soon }}">
         <span class="nav-glyph">{{ glyph(item.id) }}</span>
         <span class="nav-label">{{ item.label }}</span>
         <span class="nav-meta">{{ t.soon }}</span>
       </span>
+      {% else %}
+      <a class="nav-item{% if item.state == 'active' %} active{% endif %}"
+         href="{{ item.href }}"{% if item.state == 'active' %} aria-current="page"{% endif %}>
+        <span class="nav-glyph">{{ glyph(item.id) }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+        <span class="nav-meta">{{ item.meta }}</span>
+      </a>
       {% endif %}
       {% endfor %}
     </nav>
@@ -62,44 +63,16 @@
     <div class="rail-foot">
       <span class="foot-meta">{{ t.lang_label }}</span>
       <span class="lang-toggle">
-        <a href="/?lang=fr" class="{{ 'on' if lang == 'fr' else '' }}">FR</a>
-        <a href="/?lang=en" class="{{ 'on' if lang == 'en' else '' }}">EN</a>
+        <a href="{{ view_path }}?lang=fr" class="{{ 'on' if lang == 'fr' else '' }}">FR</a>
+        <a href="{{ view_path }}?lang=en" class="{{ 'on' if lang == 'en' else '' }}">EN</a>
       </span>
     </div>
   </aside>
 
   <main class="main">
-    <section class="view-hero">
-      <div>
-        <div class="view-hero-eyebrow">{{ t.hero_eyebrow }}</div>
-        <div class="view-hero-name">{{ t.reports_title }}</div>
-        <div class="view-hero-desc">{{ t.hero_desc }}</div>
-      </div>
-      <div class="hero-stat">
-        <div class="v">{{ n_reports }}</div>
-        <div class="k">{{ t.stat_reports }}</div>
-      </div>
-    </section>
-
-    <section class="sec">
-      <div class="sec-head">
-        <div class="sec-title">{{ t.reports_title }}</div>
-        <div class="sec-sub">{{ t.reports_desc }}</div>
-      </div>
-      {% if reports %}
-      <div class="report-list">
-        {% for r in reports %}
-        <a class="report-row" href="{{ r.href }}">
-          <span class="r-name">{{ r.name }}</span>
-          <span class="r-open">{{ t.open_report }} →</span>
-        </a>
-        {% endfor %}
-      </div>
-      {% else %}
-      <p class="report-empty">{{ t.reports_empty }}</p>
-      {% endif %}
-    </section>
+    {% block main %}{% endblock %}
   </main>
 </div>
+{% block body_end %}{% endblock %}
 </body>
 </html>

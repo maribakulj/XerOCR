@@ -1,11 +1,9 @@
-"""Routeur d'accueil : la **coquille de pilotage** au design (couche 8).
+"""Routeur des **vues de la coquille** (couche 8) : accueil + Banc d'essai.
 
-Rendu **serveur** (Jinja2 + tokens/polices du design, JS zéro) — pas de SPA
-(anti-pattern hérité, D-β). La page pose le chrome complet (rail à pilules,
-hero, panneau système, bascule FR/EN) et **réserve tous les emplacements de
-nav** — Bibliothèque · Banc d'essai · Rapports · Segmentation · Historique ·
-Moteurs — même si seul « Rapports » est fonctionnel à cette tranche (TU1). Les
-autres sont des placeholders honnêtes (badge « à venir »), sans fausse donnée.
+Rendu **serveur** (Jinja2 + tokens/polices du design) ; le Banc d'essai ajoute
+un **JS léger auto-hébergé** (EventSource pour le SSE) — toujours pas de SPA. Le
+rail réserve **tous** les emplacements de nav ; deux sont vivants (Rapports,
+Banc d'essai), les autres restent des placeholders honnêtes (« à venir »).
 """
 
 from __future__ import annotations
@@ -21,47 +19,73 @@ from xerocr.app import resolve_code_version
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
 
-#: Emplacements de nav réservés dès TU1 (ordre fixé par la spec). Seul
-#: ``reports`` est fonctionnel ; les autres arrivent à leurs tranches (TU2+).
+#: Emplacements de nav réservés dès TU1 (ordre fixé par la spec).
 _NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engines")
-_ACTIVE_NAV = "reports"
+#: Vues **vivantes** : id de nav → chemin. Les autres restent « à venir ».
+_LIVE_VIEWS = {"reports": "/", "benchmark": "/benchmark"}
+
+
+def _nav(
+    t: dict[str, str], lang: str, active: str, metas: dict[str, str]
+) -> list[dict[str, str]]:
+    """Construit les entrées de nav (états active/link/soon) pour la vue ``active``."""
+    items: list[dict[str, str]] = []
+    for nav_id in _NAV_IDS:
+        if nav_id == active:
+            state = "active"
+        elif nav_id in _LIVE_VIEWS:
+            state = "link"
+        else:
+            state = "soon"
+        href = (
+            f"{_LIVE_VIEWS[nav_id]}?lang={lang}" if nav_id in _LIVE_VIEWS else ""
+        )
+        items.append(
+            {
+                "id": nav_id,
+                "label": t[f"nav_{nav_id}"],
+                "state": state,
+                "href": href,
+                "meta": metas.get(nav_id, ""),
+            }
+        )
+    return items
 
 
 def build_home_router(reports_dir: Path, templates: Jinja2Templates) -> APIRouter:
-    """Construit le routeur d'accueil (monté par ``create_app``)."""
+    """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
     router = APIRouter()
     app_version = resolve_code_version()
+
+    def _base_context(
+        lang: str, active: str, metas: dict[str, str]
+    ) -> dict[str, object]:
+        t = strings_for(lang)
+        return {
+            "lang": lang,
+            "t": t,
+            "nav": _nav(t, lang, active, metas),
+            "version": app_version,
+            "view_path": _LIVE_VIEWS[active],
+        }
 
     @router.get("/", response_class=HTMLResponse)
     def home(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
-        t = strings_for(lang)
         names = available_reports(reports_dir)
-        nav = [
-            {
-                "id": nav_id,
-                "label": t[f"nav_{nav_id}"],
-                "active": nav_id == _ACTIVE_NAV,
-                "meta": str(len(names)) if nav_id == _ACTIVE_NAV else "",
-                "href": f"/?lang={lang}",
-            }
-            for nav_id in _NAV_IDS
-        ]
-        reports = [
+        context = _base_context(lang, "reports", {"reports": str(len(names))})
+        context["reports"] = [
             {"name": name, "href": f"/reports/{quote(name, safe='')}"}
             for name in names
         ]
+        context["n_reports"] = len(names)
+        return templates.TemplateResponse(request, "home.html", context)
+
+    @router.get("/benchmark", response_class=HTMLResponse)
+    def benchmark(request: Request, lang: str = "fr") -> HTMLResponse:
+        lang = normalize_lang(lang)
         return templates.TemplateResponse(
-            request,
-            "shell.html",
-            {
-                "lang": lang,
-                "t": t,
-                "nav": nav,
-                "reports": reports,
-                "n_reports": len(names),
-                "version": app_version,
-            },
+            request, "benchmark.html", _base_context(lang, "benchmark", {})
         )
 
     return router

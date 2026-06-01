@@ -31,10 +31,14 @@ def test_security_headers_present(tmp_path: Path) -> None:
 
 
 def test_csp_is_strict() -> None:
-    # default-src verrouillé ; aucun script autorisé (le rapport n'a que du CSS).
+    # default-src verrouillé ; scripts/connexions/styles/polices uniquement en self.
     assert "default-src 'none'" in CONTENT_SECURITY_POLICY
     assert "frame-ancestors 'none'" in CONTENT_SECURITY_POLICY
-    assert "script-src" not in CONTENT_SECURITY_POLICY  # → tombe sur default 'none'
+    # JS auto-hébergé : 'self' SEUL (ni inline ni origine tierce dans script-src)
+    assert "script-src 'self';" in CONTENT_SECURITY_POLICY
+    assert "script-src 'self' " not in CONTENT_SECURITY_POLICY
+    assert "connect-src 'self'" in CONTENT_SECURITY_POLICY
+    assert "form-action 'none'" in CONTENT_SECURITY_POLICY
 
 
 def test_is_huggingface_space_reads_space_id(monkeypatch: pytest.MonkeyPatch) -> None:
