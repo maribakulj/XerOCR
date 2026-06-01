@@ -22,6 +22,10 @@ from fastapi import FastAPI
 
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
+from xerocr.interfaces.web.security import (
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
 
 #: Version du **contrat de transport HTTP** (évolue indépendamment du code métier ;
 #: le déterminisme produit (§12) vit dans ``RunResult``, pas dans l'API).
@@ -40,16 +44,27 @@ def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
     return Path(env) if env else Path("reports")
 
 
-def create_app(*, reports_dir: Path | str | None = None) -> FastAPI:
+def create_app(
+    *,
+    reports_dir: Path | str | None = None,
+    rate_limit: int = 60,
+) -> FastAPI:
     """Construit une **nouvelle** application web XerOCR.
 
     Appelée explicitement (CLI ``serve``, tests, Space) — jamais au chargement du
     module. Chaque appel renvoie une instance neuve (aucun état partagé global).
     Les routeurs sont des **fonctions builder** montées ici (jamais d'``APIRouter``
-    au niveau module — gate ``no_side_effect_imports``).
+    au niveau module — gate ``no_side_effect_imports``). Toute réponse porte les
+    en-têtes de sécurité (CSP stricte) ; le débit par IP est borné (``429``).
     """
+    if rate_limit < 1:
+        raise ValueError("create_app : rate_limit doit être >= 1.")
     catalog_dir = _resolve_reports_dir(reports_dir)
     app = FastAPI(title="XerOCR", version=API_VERSION)
+    # Ordre : le limiteur (ajouté en dernier) s'exécute en premier → il borne
+    # avant tout traitement ; les en-têtes habillent la réponse qui remonte.
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(RateLimitMiddleware, max_requests=rate_limit)
 
     @app.get("/health")
     def health() -> dict[str, str]:
