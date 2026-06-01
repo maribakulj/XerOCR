@@ -1,0 +1,183 @@
+/* Main app — v2 soft rounded, 3 main views + System modal */
+const { useState, useEffect, useRef } = React;
+const { Icon } = window.PicaUI;
+
+const VIEWS = [
+  { id: "library",   icon: "library", labelKey: "nav_library",   meta: (s) => "4 corpora" },
+  { id: "benchmark", icon: "bench",   labelKey: "nav_benchmark", meta: (s) => s.benchPhase === "running" ? null : `${s.competitors.length} queued` },
+  { id: "reports",   icon: "reports", labelKey: "nav_reports",   meta: (s) => "4 reports" },
+];
+
+// Extend i18n strings for the new nav labels
+if (window.I18N) {
+  window.I18N.fr.nav_library = "Bibliothèque";
+  window.I18N.en.nav_library = "Library";
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "balanced",
+  "showRail": true,
+  "accent": "fern",
+  "lang": "fr"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [view, setView] = useState("benchmark");
+  const [systemOpen, setSystemOpen] = useState(false);
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [lang, setLang] = useState(tweaks.lang || "fr");
+  const t = window.useT(lang);
+
+  useEffect(() => {
+    document.documentElement.dataset.density = tweaks.density;
+    document.documentElement.dataset.accent = tweaks.accent;
+  }, [tweaks.density, tweaks.accent]);
+
+  const [benchState, setBenchState] = useState({
+    corpusPath: "corpus_psaumes_240/",
+    competitors: [
+      { id: "C01", kind: "OCR", name: "Tesseract 5 (fra+lat)", chain: ["Tesseract 5"], color: "ink" },
+      { id: "C02", kind: "OCR→LLM", name: "Pero → claude-sonnet-4.5", chain: ["Pero OCR", "claude-sonnet-4.5"], color: "slate" },
+      { id: "C03", kind: "OCR", name: "Mistral OCR", chain: ["Mistral OCR"], color: "fern" },
+    ],
+    composeMode: "ocr",
+    composeOCR: "tesseract",
+    composeOCRLang: "fra+lat",
+    composeLLMProv: "anthropic",
+    composeLLM: "claude-sonnet-4.5",
+    composeMode2: "text_only",
+    composePrompt: "medieval_latin_v3",
+    benchPhase: "idle",
+    benchProgress: 0,
+  });
+
+  useEffect(() => {
+    if (benchState.benchPhase !== "running") return;
+    const id = setInterval(() => {
+      setBenchState((s) => {
+        if (s.benchProgress >= 240) return { ...s, benchPhase: "done", benchProgress: 240 };
+        return { ...s, benchProgress: Math.min(240, s.benchProgress + 4) };
+      });
+    }, 220);
+    return () => clearInterval(id);
+  }, [benchState.benchPhase]);
+
+  return (
+    <div className="app">
+      {tweaks.showRail && (
+        <aside className="rail">
+          <div className="wordmark-card">
+            <div className="wordmark">
+              <span className="mark">P</span>
+              <span>Picarones</span>
+            </div>
+            <div className="wordmark-sub">OCR · HTR · VLM benchmark</div>
+          </div>
+
+          <nav className="rail-nav rail-nav-window">
+            {VIEWS.map((v) => (
+              <div
+                key={v.id}
+                className={"nav-item" + (view === v.id ? " active" : "")}
+                onClick={() => setView(v.id)}
+              >
+                <span className="nav-glyph"><Icon name={v.icon} size={16} /></span>
+                <span className="nav-label">{t(v.labelKey)}</span>
+                {v.id === "benchmark" && benchState.benchPhase === "running"
+                  ? <span className="pulse" title="running" />
+                  : <span className="nav-meta">{v.meta(benchState)}</span>}
+              </div>
+            ))}
+          </nav>
+
+          <div className="rail-system">
+            <div className="sys-card">
+              <div className="sys-card-title">
+                <span>{t("sys_status")}</span>
+                <span className="dot on" />
+              </div>
+              <div className="sys-row"><span className="k">{t("sys_version")}</span><span className="v">2.0.0-rc4</span></div>
+              <div className="sys-row"><span className="k">{t("sys_mode")}</span><span className="v">institutional</span></div>
+              <div className="sys-row"><span className="k">{t("sys_active_job")}</span>
+                <span className={"v " + (benchState.benchPhase === "running" ? "on" : "off")}>
+                  {benchState.benchPhase === "running" ? t("sys_running") : t("sys_idle")}
+                </span>
+              </div>
+            </div>
+
+            <div className="sys-card">
+              <div className="sys-card-title">
+                <span>Pipeline</span>
+                <span className="foot">5/7 · 3/4</span>
+              </div>
+              <div className="sys-row"><span className="k">{t("sys_engines_online")}</span><span className="v">5 / 7</span></div>
+              <div className="sys-row"><span className="k">LLM providers</span><span className="v">3 / 4</span></div>
+            </div>
+
+            <button className="system-trigger" onClick={() => setSystemOpen(true)}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <Icon name="system" size={14} />
+                <span>{lang === "fr" ? "Système · détails" : "System · details"}</span>
+              </span>
+              <Icon name="arrow-right" size={12} />
+            </button>
+          </div>
+
+          <div className="rail-foot">
+            <span className="foot-meta">{t("sys_lang")}</span>
+            <span className="lang-toggle">
+              <button className={lang === "fr" ? "on" : ""} onClick={() => { setLang("fr"); setTweak("lang", "fr"); }}>FR</button>
+              <button className={lang === "en" ? "on" : ""} onClick={() => { setLang("en"); setTweak("lang", "en"); }}>EN</button>
+            </span>
+          </div>
+        </aside>
+      )}
+
+      <main className="main">
+        {view === "library" && <window.LibraryView t={t} lang={lang} />}
+        {view === "benchmark" && <window.BenchmarkView t={t} lang={lang} state={benchState} setState={setBenchState} />}
+        {view === "reports" && <window.ReportsView t={t} lang={lang} />}
+      </main>
+
+      <window.SystemPanel open={systemOpen} onClose={() => setSystemOpen(false)} t={t} lang={lang} />
+
+      {/* Tweaks */}
+      <window.TweaksPanel title="Tweaks">
+        <window.TweakSection title="Density">
+          <window.TweakRadio
+            value={tweaks.density}
+            onChange={(v) => setTweak("density", v)}
+            options={[
+              { value: "dense", label: "Dense" },
+              { value: "balanced", label: "Balanced" },
+              { value: "airy", label: "Airy" },
+            ]}
+          />
+        </window.TweakSection>
+        <window.TweakSection title="Accent">
+          <window.TweakRadio
+            value={tweaks.accent}
+            onChange={(v) => setTweak("accent", v)}
+            options={[
+              { value: "fern", label: "Full" },
+              { value: "slate", label: "Cool" },
+              { value: "mono", label: "Mono" },
+            ]}
+          />
+        </window.TweakSection>
+        <window.TweakSection title="Layout">
+          <window.TweakToggle label="Show left rail" value={tweaks.showRail} onChange={(v) => setTweak("showRail", v)} />
+        </window.TweakSection>
+        <window.TweakSection title="Language">
+          <window.TweakRadio
+            value={lang}
+            onChange={(v) => { setLang(v); setTweak("lang", v); }}
+            options={[{ value: "fr", label: "FR" }, { value: "en", label: "EN" }]}
+          />
+        </window.TweakSection>
+      </window.TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
