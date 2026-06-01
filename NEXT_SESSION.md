@@ -1,7 +1,26 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **Tranche courante : TU1 — la coquille au design.**
+> jour à chaque tranche. **TU1 (coquille au design) faite ✅ — prochaine = T2**
+> (tesseract réel) puis **TU2** (lanceur), cf. `PLAN_SPACE_INTERACTIF.md §10`.
+
+## TU1 — fait (coquille au design)
+Livré sur la branche de session : coquille rendue **serveur** (Jinja2 + CSS, JS
+zéro) au design, **polices auto-hébergées** (Fluxisch Else en woff2 ; OCR-A
+converti de `OCRA.pfa` → woff2), servies sous `/static` (aucun CDN). Nav avec
+**tous** les emplacements réservés — Bibliothèque · Banc d'essai · Rapports ·
+**Segmentation** · Historique · Moteurs (placeholders « à venir » honnêtes, seul
+Rapports actif). Bascule **FR/EN** via `?lang=`. CSP durcie (`style-src`/
+`font-src 'self'`, toujours zéro script). Gate `test_requirements_embark_no_engine`
+**vert** (aucun moteur ajouté). Suite complète verte (356) + archi + `serve`
+fumé via uvicorn. Détails de fichiers : `xerocr/interfaces/web/` (`i18n.py`,
+`templates/shell.html`, `static/{css,fonts}`), `app.py`, `routers/home.py`,
+`security/headers.py` ; `pyproject.toml` (extra `serve` + `package-data`) ;
+`deploy/requirements.txt`.
+
+> Reste hors TU1 (volontaire) : capture pixel vs `design/screenshots/` non faite
+> faute de navigateur dans l'environnement (vérif. structurelle uniquement :
+> en-têtes, assets servis, nav, FR/EN). À confirmer visuellement au déploiement.
 
 ## 0. À lire en premier (dans l'ordre)
 1. `CLAUDE.md` — garde-fous, architecture en couches, workflow (chargé auto).
@@ -42,14 +61,16 @@ Périmètre :
 - Préserver l'**i18n FR/EN** (`design/js/i18n.jsx`) et le **focus-visible** /
   les contrastes (accessibilité de base).
 
-## 3. Définition de « terminé » (TU1)
-- [ ] Templates rendus au design (chrome + tokens + polices self-hosted).
-- [ ] Nav avec **tous** les emplacements (dont **Segmentation** en placeholder).
-- [ ] FR/EN fonctionnels ; focus-visible OK.
-- [ ] **Tous les tests verts**, dont les tests d'**archi** et le gate
+## 3. Définition de « terminé » (TU1) — état
+- [x] Templates rendus au design (chrome + tokens + polices self-hosted).
+- [x] Nav avec **tous** les emplacements (dont **Segmentation** en placeholder).
+- [x] FR/EN fonctionnels ; focus-visible OK.
+- [x] **Tous les tests verts**, dont les tests d'**archi** et le gate
       `tests/deploy/test_packaging.py`.
-- [ ] **Space déployé** et conforme aux captures `design/screenshots/`.
-- [ ] Diff sous budget (~< 400 LOC) ; aucun code mort.
+- [~] **Space déployé** : artefacts prêts (wheel embarque les assets, gate vert,
+      smoke `serve` OK) ; conformité pixel aux captures à confirmer au déploiement
+      (pas de navigateur dans l'environnement de build).
+- [x] Diff sous budget (~90 LOC Python) ; aucun code mort.
 
 ## 4. Garde-fous — NE PAS se tromper
 - **Tranches fines, pleine profondeur.** Faire **TU1 seulement**, puis

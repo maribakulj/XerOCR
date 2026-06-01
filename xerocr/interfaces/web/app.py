@@ -19,6 +19,8 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
@@ -26,6 +28,13 @@ from xerocr.interfaces.web.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+
+#: Assets de la coquille (CSS + polices auto-hébergées) et gabarits Jinja2,
+#: livrés **dans le paquet** (cf. ``[tool.setuptools.package-data]``) pour être
+#: présents aussi bien en source qu'une fois ``pip install``é (Space/CI).
+_WEB_DIR = Path(__file__).resolve().parent
+_STATIC_DIR = _WEB_DIR / "static"
+_TEMPLATES_DIR = _WEB_DIR / "templates"
 
 #: Version du **contrat de transport HTTP** (évolue indépendamment du code métier ;
 #: le déterminisme produit (§12) vit dans ``RunResult``, pas dans l'API).
@@ -71,7 +80,12 @@ def create_app(
         """Sonde de vivacité (orchestrateurs / Space). Aucune donnée sensible."""
         return {"status": "ok"}
 
-    app.include_router(build_home_router(catalog_dir))
+    # Assets servis depuis notre origine (``font-src``/``style-src 'self'``) —
+    # aucune dépendance CDN en prod (cf. CSP, ``security/headers.py``).
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+    templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+
+    app.include_router(build_home_router(catalog_dir, templates))
     app.include_router(build_reports_router(catalog_dir))
     return app
 

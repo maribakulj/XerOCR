@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XerOCR — {{ t.reports_title }}</title>
+  <link rel="stylesheet" href="/static/css/shell.css">
+</head>
+<body>
+{%- macro glyph(name) -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"
+     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'library' -%}
+<path d="M3 8h6l1.5 2H21v10H3z"/><path d="M3 8V6h5.5L10 8"/><path d="M7 14h10M7 17h7"/>
+{%- elif name == 'benchmark' -%}
+<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M12 12l4-4"/><path d="M5 12h2M17 12h2M12 5v2"/>
+{%- elif name == 'reports' -%}
+<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 15h7M9 18h5"/>
+{%- elif name == 'segmentation' -%}
+<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 11h18M11 11v9"/>
+{%- elif name == 'history' -%}
+<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+{%- elif name == 'engines' -%}
+<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+{%- endif -%}
+</svg>
+{%- endmacro -%}
+<div class="app">
+  <aside class="rail">
+    <div class="wordmark-card">
+      <div class="wordmark"><span class="mark">X</span><span>XerOCR</span></div>
+      <div class="wordmark-sub">{{ t.wordmark_sub }}</div>
+    </div>
+
+    <nav class="rail-nav" aria-label="{{ t.reports_title }}">
+      {% for item in nav %}
+      {% if item.active %}
+      <a class="nav-item active" href="{{ item.href }}" aria-current="page">
+        <span class="nav-glyph">{{ glyph(item.id) }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+        <span class="nav-meta">{{ item.meta }}</span>
+      </a>
+      {% else %}
+      <span class="nav-item soon" aria-disabled="true" title="{{ t.soon }}">
+        <span class="nav-glyph">{{ glyph(item.id) }}</span>
+        <span class="nav-label">{{ item.label }}</span>
+        <span class="nav-meta">{{ t.soon }}</span>
+      </span>
+      {% endif %}
+      {% endfor %}
+    </nav>
+
+    <div class="rail-system">
+      <div class="sys-card">
+        <div class="sys-card-title"><span>{{ t.sys_status }}</span><span class="dot on"></span></div>
+        <div class="sys-row"><span class="k">{{ t.sys_version }}</span><span class="v">{{ version }}</span></div>
+        <div class="sys-row"><span class="k">{{ t.sys_mode }}</span><span class="v">{{ t.sys_mode_value }}</span></div>
+        <div class="sys-row"><span class="k">{{ t.sys_active_job }}</span><span class="v">{{ t.sys_idle }}</span></div>
+      </div>
+    </div>
+
+    <div class="rail-foot">
+      <span class="foot-meta">{{ t.lang_label }}</span>
+      <span class="lang-toggle">
+        <a href="/?lang=fr" class="{{ 'on' if lang == 'fr' else '' }}">FR</a>
+        <a href="/?lang=en" class="{{ 'on' if lang == 'en' else '' }}">EN</a>
+      </span>
+    </div>
+  </aside>
+
+  <main class="main">
+    <section class="view-hero">
+      <div>
+        <div class="view-hero-eyebrow">{{ t.hero_eyebrow }}</div>
+        <div class="view-hero-name">{{ t.reports_title }}</div>
+        <div class="view-hero-desc">{{ t.hero_desc }}</div>
+      </div>
+      <div class="hero-stat">
+        <div class="v">{{ n_reports }}</div>
+        <div class="k">{{ t.stat_reports }}</div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="sec-head">
+        <div class="sec-title">{{ t.reports_title }}</div>
+        <div class="sec-sub">{{ t.reports_desc }}</div>
+      </div>
+      {% if reports %}
+      <div class="report-list">
+        {% for r in reports %}
+        <a class="report-row" href="{{ r.href }}">
+          <span class="r-name">{{ r.name }}</span>
+          <span class="r-open">{{ t.open_report }} →</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="report-empty">{{ t.reports_empty }}</p>
+      {% endif %}
+    </section>
+  </main>
+</div>
+</body>
+</html>
