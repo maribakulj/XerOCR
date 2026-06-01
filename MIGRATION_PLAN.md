@@ -23,18 +23,48 @@
 |---|---|---|
 | 1 `domain` | ✅ **vert** | `xerocr/domain/MIGRATION_COUCHE_1.md` §DoD |
 | 2 `formats` | ✅ **vert** | `xerocr/formats/MIGRATION_COUCHE_2.md` §DoD |
-| 3 `evaluation` | 🔨 **T2** (WER/MER · stats `scipy` · `cross_engine`) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
-| 4 `pipeline` | 🔨 **T3** (Protocol + exécuteur · `register_cancel_handle`) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
-| 5 `adapters` | 🔨 **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
-| 6 `app` | 🔨 **T3** (orchestrateur · loader/sécurité · 4 builders) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
-| 7 `reports` | 🔨 **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T2** (CLI `demo`/`run`/`compare`) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 3 `evaluation` | ✅ **T2** (CER/WER/MER · stats `scipy` · `cross_engine`) | `xerocr/evaluation/MIGRATION_COUCHE_3.md` §DoD |
+| 4 `pipeline` | ✅ **T3** (Protocol + exécuteur · annulation câblée) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
+| 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) ; **+`storage/JobStore`** (TU2.a, en mémoire + **journal d'événements SSE** TU2.e — R-10 levé) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
+| 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) ; **+`JobRunner`** (TU2.a) **+`CorpusStore`/`extract_corpus_zip`** (TU2.c, ingestion ZIP durcie) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
+| 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 🔨 **T4f** (CLI + `serve`/vitrine + lanceur + Moteurs + upload + gardes HTTP + SSE + **page « Banc d'essai » interactive TU2.f.1** (JS auto-hébergé, SSE live, CSP `script/connect 'self'`) faits ; reste page Moteurs/UI upload au design TU2.f.2) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 | **T0 fondations** | ✅ **clos** (§9) | 163 tests / 95 % · mypy strict · ruff · 6 garde-fous |
 | **T1 squelette ambulant** | ✅ **fait** — `xerocr demo` octet-stable (3→8 traversées) | critère inter-couches §3-T1 |
 | **T2 axe texte** | ✅ **fait** — `tesseract` réel · WER/MER · stats · `run`/`compare` · round-trip JSON | §3-T2 |
 | **T3 OCR + LLM** | ✅ **fait** — pipeline 2 étapes OCR→LLM (`CORRECTED_TEXT` non vide) · `openai`+`ollama` (2ᵉ famille) · annulation câblée | §3-T3 |
 | **Rapport autonome interactif** | ✅ HTML autonome déterministe (interactivité client-side = surface ult.) | §Cibles de distribution |
-| **Space hébergé (vitrine, mode public)** | ⏳ **non-optionnel** — T4 | §Cibles de distribution |
+| **Space interactif (T4 / couche 8)** | 🔨 **en cours** — read-only (T4e) ✅ ; lanceur interactif (T4f ≡ TU2) en cours · détail → table T⇄TU ci-dessous | §Cibles de distribution |
+
+### T# (moteur) ⇄ TU# (couche 8 / Space) — **une seule réalité, un seul tableau**
+
+**Il n'y a pas deux plans.** Les `T#` décrivent la migration du **moteur**, bâtie
+**intérieur → extérieur** (couches 1→8). Les `TU#` (introduits par la décision de
+cap) sont la **décomposition de la couche 8** — l'app web du Space — **sous T4 et
+au-delà**. **Ce tableau de bord fait autorité pour le statut** ;
+[`PLAN_SPACE_INTERACTIF.md`](PLAN_SPACE_INTERACTIF.md) est la **spec UX/produit**
+de cette couche 8, **pas** une autorité de statut. Correspondance :
+
+| TU# (vue Space / couche 8) | tranche moteur | Couche(s) | État |
+|---|---|---|---|
+| **TU1** coquille au design | habillage de T4e (présentation pure) | 8 | ✅ |
+| **TU2** lanceur « Banc d'essai » | **= T4f** | 8 (+ câblage 5/6) | 🔨 a–e + f.1 ✅ · f.2 reste |
+| **TU3** persistance des rapports | T4 (push dépôt/Dataset) | 8 + `adapters/storage` | ⏳ |
+| **TU4** vues rapport au design | rend la **couche 7** dans la couche 8 | 8 | ⏳ |
+| **TU5** importeurs | **= T7** (importeurs) | 8 + app/adapters | ⏳ |
+| **TU6** sécurité publique | T4 (mode public + quotas) | 8 | 🔨 partiel (CSRF · mode public · quotas upload déjà posés) |
+| **TU7** segmentation (UI + fan-out) | **= T5** (structure) | 1–4 + 8 | ⏳ |
+
+> **Axes restants côté moteur pur** (hors couche 8) : **T5** (structure/
+> segmentation, ≡ surface TU7) et **T6** (extensibilité tierce, entry-points) —
+> non commencés. Le cap a délibérément priorisé le Space interactif (T4/TU2)
+> avant T5/T6.
+
+**Règle anti-dérive (corollaire de « pas de consommateur = supprimé »)** : on ne
+crée **pas** d'API/symbole public avant que **son consommateur de la même
+sous-tranche** existe. Une API posée « en prévision » d'une sous-tranche ultérieure
+est du spéculatif → élaguée à la revue (précédents : `blocked_cloud_kinds`,
+`CLOUD_KINDS` dupliqué, retirés au commit `5c17cf2`).
 
 ### Rituel de réconciliation (NON négociable — c'est ce qui rend la redondance utile)
 

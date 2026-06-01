@@ -1,7 +1,119 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **Tranche courante : TU1 — la coquille au design.**
+> jour à chaque tranche. **Statut qui fait autorité = le tableau de bord de
+> `MIGRATION_PLAN.md`** (+ table de correspondance `T#`⇄`TU#` : les `TU#` = la
+> couche 8 / Space sous T4+).
+>
+> **TU1 ✅ ; TU2.a→e ✅ ; TU2.f.1 ✅** (page « Banc d'essai » interactive) ;
+> **revue PR #17 passée** (sécurité RAS ; bug 500 upload corrigé ; code mort
+> élagué — commit `5c17cf2`) ; **plan harmonisé** (T⇄TU imbriqués). T1→T4e +
+> T2/T3 faits. **Prochaine = TU2.f.2** : page « Moteurs » (consomme
+> `GET /api/engines`) + UI upload/sélection au design (réutilise `/api/corpus`,
+> `/api/runs`). Puis **TU3** (persistance). PR #17 : **prête à relire/merger**.
+
+## TU2.f.1 — fait (page « Banc d'essai » interactive)
+`GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +
+`home.html`/`benchmark.html`) **+ JS léger auto-hébergé** (`static/js/benchmark.js`,
+vanilla, sans dépendance) qui **lance la démo** (`fetch` POST `/api/runs` + en-tête
+CSRF) puis **suit la progression en direct** via `EventSource` sur le SSE, et
+propose le **lien du rapport** produit. La nav devient vivante pour **Banc d'essai
++ Rapports** (les autres restent « à venir »). **CSP ouverte** au 1ᵉʳ consommateur
+navigateur : `script-src 'self'` + `connect-src 'self'` (jamais d'inline ni
+d'externe ; `form-action 'none'` conservé — on pilote en `fetch`). Fichiers :
+`templates/base.html|home.html|benchmark.html`, `static/js/benchmark.js`,
+`static/css/shell.css` (+ `.btn`/launcher), `routers/home.py` (route `/benchmark`
++ nav 3 états), `security/headers.py` (CSP), `pyproject` (`static/js/*.js` packagé).
+
+> ⚠️ **Comportement navigateur non exécuté en CI** (pas de navigateur, cf. TU1) :
+> on teste la **surface serveur** (page, JS lié/servi, nav, CSP) + `node --check`
+> (syntaxe JS) + les API sous-jacentes (déjà testées). Rendu visuel & interaction
+> à confirmer au déploiement.
+
+## TU2.e — fait (SSE de progression + reprise Last-Event-ID)
+`GET /api/runs/{id}/events` (`text/event-stream`, read-only) diffuse le **journal**
+du job — un événement par transition d'état (`pending→running→done/failed/
+cancelled`), id monotone — et **rejoue depuis `Last-Event-ID`** à la reconnexion.
+L'événementiel est réabsorbé dans le `JobStore` (`_history` + `history_since`),
+ce qui **lève la réserve R-10** d'`ANALYSE_COUCHE_5`. Diffusion par *polling* du
+journal (transitions rares), `idle_timeout` borne un job qui ne finit pas. Rejeu
+**déterministe** même après la fin du job. Fichiers : `adapters/storage/job_store.py`
+(journal), `interfaces/web/routers/runs.py` (`_sse_stream`, `/events`). ⚠️ La **CSP
+n'est pas encore touchée** (pas de consommateur navigateur : zéro JS) — l'EventSource
+arrive en TU2.f avec `connect-src 'self'`.
+
+## TU2.d — fait (sélection de moteur au lancement + gardes HTTP)
+`POST /api/runs` accepte un corps optionnel `{engine, corpus_id}`. **Ordre de
+garde (sécurité d'abord)** : moteur inconnu → 422 ; **moteur cloud en mode public
+→ 403** (le chemin sécurité, désormais HTTP) ; LLM autonome (openai/ollama, sans
+chaîne OCR→LLM) → 422 ; `corpus_id` introuvable → 404 ; moteur indisponible
+(binaire/SDK/clé) → 409 ; puis build : `precomputed` = démo (refuse un corpus),
+`tesseract` = run OCR **sur le corpus uploadé** (corpus requis). Sans corps → démo
+(rétro-compat TU2.a). Gardes **toutes testées en HTTP** (TestClient + uvicorn réel).
+Le run tesseract **réel** (binaire + vraies images) = test `live` opt-in (absent
+de la CI/vitrine). Fichiers : `interfaces/web/routers/runs.py` (`LaunchRequest`,
+`_spec_builder`, `_tesseract_spec`), `create_app` (corpus_store + statuses au routeur).
+
+## TU2.c — fait (upload de corpus ZIP, ingestion durcie)
+`POST /api/corpus` (multipart, **CSRF**) → `CorpusStore` (couche 6) qui valide et
+matérialise l'archive, `GET /api/corpus/{id}` en donne le résumé. **Sécurité
+d'ingestion** (concept de la tranche, tout testé) : **anti-traversal**
+(aplatissement au basename + `validated_path`), **anti-zip-bomb** (octets
+**réellement** décompressés plafonnés par fichier et au total — pas de confiance
+au header), **quotas** (taille archive/fichier, nombre d'entrées), **dédup** de
+basename, **liste blanche** d'extensions + **magic bytes** des images, **noms**
+restreints (→ `DocumentRef.id` valide). Sortie : `CorpusSpec` (images appariées à
+leur `.txt` par radical). Fichiers : `app/corpus_upload.py`,
+`interfaces/web/routers/corpus.py` ; `python-multipart` ajouté (serve/dev +
+`deploy/requirements.txt`). Le corpus uploadé est la **cible du run** en TU2.d.
+
+## TU2.b — fait (onglet « Moteurs » : disponibilité runtime)
+`GET /api/engines` (read-only) restitue, pour chaque kind du socle (`precomputed`,
+`tesseract`, `openai`, `ollama`), s'il est **utilisable ici** et *pourquoi pas* :
+sondes **bon marché et sans effet de bord** — binaire (`shutil.which`), SDK
+(`importlib.util.find_spec`, **sans importer**), clé d'API (env). Le **mode public**
+masque les moteurs cloud. Sondes **injectables** → détection déterministe en test,
+indépendante de la CI. Fichiers : `app/engines.py` (`engine_statuses`,
+`EngineStatus`), `interfaces/web/routers/engines.py`. La **page** Moteurs au design
+(rendu) arrive avec les formulaires UI (TU2.f) ; ici c'est la capacité backend.
+
+## TU2.a — fait (lanceur, walking skeleton)
+Le calcul tourne **dans le web**, de bout en bout : `POST /api/runs` lance le run
+de démonstration (`precomputed`, sans clé) en arrière-plan via `JobRunner`
+(couche 6, thread + **annulation coopérative** `RunControl`) ; `GET /api/runs/{id}`
+suit l'état ; `POST .../cancel` interrompt. État dans `JobStore` (couche 5, en
+mémoire, thread-safe). Le `RunResult` produit est écrit dans le dossier de la
+vitrine → **listé et rendu** par les routes read-only existantes (preuve
+bout-en-bout). **Sécurité d'abord** : écritures **CSRF** (en-tête custom
+`X-XeroCR-CSRF`) ; **mode public** (`XEROCR_PUBLIC_MODE`) refuse les kinds cloud
+(`blocked_cloud_kinds`, démo `precomputed` = safe). Fichiers : `adapters/storage/`
+(`job_store.py`), `app/jobs.py`, `app/versioning.py` (version unifiée),
+`interfaces/web/routers/runs.py`, `interfaces/web/security/csrf.py`,
+`interfaces/demo.py` (corpus démo partagé CLI⇄web) ; `orchestrator.run(control=…)`.
+Suite : **379 verts**, archi + deploy gate verts, fumé via vrai uvicorn.
+
+> **Hors TU2.a (volontaire)** : SSE/progression fine, upload de corpus, sélection
+> de moteur (et donc le **403 cloud au niveau HTTP**), persistance (HF éphémère),
+> formulaire « Banc d'essai » au design. La gate mode-public est **unit-testée**
+> pour le blocage cloud ; son chemin HTTP arrive avec la sélection de moteur (TU2.b).
+
+## TU1 — fait (coquille au design)
+Livré sur la branche de session : coquille rendue **serveur** (Jinja2 + CSS, JS
+zéro) au design, **polices auto-hébergées** (Fluxisch Else en woff2 ; OCR-A
+converti de `OCRA.pfa` → woff2), servies sous `/static` (aucun CDN). Nav avec
+**tous** les emplacements réservés — Bibliothèque · Banc d'essai · Rapports ·
+**Segmentation** · Historique · Moteurs (placeholders « à venir » honnêtes, seul
+Rapports actif). Bascule **FR/EN** via `?lang=`. CSP durcie (`style-src`/
+`font-src 'self'`, toujours zéro script). Gate `test_requirements_embark_no_engine`
+**vert** (aucun moteur ajouté). Suite complète verte (356) + archi + `serve`
+fumé via uvicorn. Détails de fichiers : `xerocr/interfaces/web/` (`i18n.py`,
+`templates/shell.html`, `static/{css,fonts}`), `app.py`, `routers/home.py`,
+`security/headers.py` ; `pyproject.toml` (extra `serve` + `package-data`) ;
+`deploy/requirements.txt`.
+
+> Reste hors TU1 (volontaire) : capture pixel vs `design/screenshots/` non faite
+> faute de navigateur dans l'environnement (vérif. structurelle uniquement :
+> en-têtes, assets servis, nav, FR/EN). À confirmer visuellement au déploiement.
 
 ## 0. À lire en premier (dans l'ordre)
 1. `CLAUDE.md` — garde-fous, architecture en couches, workflow (chargé auto).
@@ -42,14 +154,16 @@ Périmètre :
 - Préserver l'**i18n FR/EN** (`design/js/i18n.jsx`) et le **focus-visible** /
   les contrastes (accessibilité de base).
 
-## 3. Définition de « terminé » (TU1)
-- [ ] Templates rendus au design (chrome + tokens + polices self-hosted).
-- [ ] Nav avec **tous** les emplacements (dont **Segmentation** en placeholder).
-- [ ] FR/EN fonctionnels ; focus-visible OK.
-- [ ] **Tous les tests verts**, dont les tests d'**archi** et le gate
+## 3. Définition de « terminé » (TU1) — état
+- [x] Templates rendus au design (chrome + tokens + polices self-hosted).
+- [x] Nav avec **tous** les emplacements (dont **Segmentation** en placeholder).
+- [x] FR/EN fonctionnels ; focus-visible OK.
+- [x] **Tous les tests verts**, dont les tests d'**archi** et le gate
       `tests/deploy/test_packaging.py`.
-- [ ] **Space déployé** et conforme aux captures `design/screenshots/`.
-- [ ] Diff sous budget (~< 400 LOC) ; aucun code mort.
+- [~] **Space déployé** : artefacts prêts (wheel embarque les assets, gate vert,
+      smoke `serve` OK) ; conformité pixel aux captures à confirmer au déploiement
+      (pas de navigateur dans l'environnement de build).
+- [x] Diff sous budget (~90 LOC Python) ; aucun code mort.
 
 ## 4. Garde-fous — NE PAS se tromper
 - **Tranches fines, pleine profondeur.** Faire **TU1 seulement**, puis

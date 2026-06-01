@@ -19,18 +19,25 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML",
-    "jiwer", "fastapi", "httpx",
+    "jiwer", "fastapi", "httpx", "jinja2", "python-multipart",
 ]
 tesseract = ["pytesseract"]
 openai = ["openai"]
 ollama = ["httpx"]
-serve = ["fastapi", "uvicorn"]
+serve = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["xerocr*"]
+
+# La coquille web embarque ses gabarits + assets auto-hébergés (CSS, polices) ;
+# ils doivent voyager dans le wheel pour exister après ``pip install`` (Space/CI).
+[tool.setuptools.package-data]
+"xerocr.interfaces.web" = [
+    "templates/*.html", "static/css/*.css", "static/js/*.js", "static/fonts/*",
+]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"

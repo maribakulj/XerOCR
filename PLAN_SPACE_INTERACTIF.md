@@ -1,6 +1,12 @@
-# Plan — application interactive dans le Space (calcul → vitrine)
+# Spec UX/produit — application interactive dans le Space (calcul → vitrine)
 
-> **Statut** : enveloppe **PROVISOIRE** (à confirmer au build, cf. `CLAUDE.md` §9).
+> **Rôle de ce document : spec UX/produit de la couche 8 (le Space).** Il porte le
+> *cap*, les décisions UX et le découpage `TU#`. **Il ne fait PAS autorité sur le
+> statut** : le tableau de bord unique est celui de
+> [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md), qui établit que **les `TU#` sont la
+> décomposition de la couche 8 sous T4+** (table de correspondance T⇄TU là-bas).
+> Si une ligne d'ici contredit ce tableau, **le tableau gagne** (cf. `CLAUDE.md` §9).
+>
 > Mémoire durable d'une décision de cap : la vitrine lecture seule devient une
 > **application complète qui calcule dans le Space**, puis bascule en vitrine
 > publique. Construire **par tranches verticales**, jamais tout d'un coup.
@@ -56,10 +62,14 @@ synthesis. **Manque : segmentation** (cf. §8).
 
 ## 6. Roadmap par tranches (proposée)
 
+> **Scope/UX de chaque `TU#`.** Le **statut fait foi** dans le tableau de bord de
+> `MIGRATION_PLAN.md` (table T⇄TU) — pas ici. Les mentions « fait » ci-dessous
+> sont un repère de lecture, pas l'autorité.
+
 | Tranche | Livre | Note |
 |---|---|---|
 | **TU1 — Coquille / design shell** | tokens + polices (FluxischElse/OCR-A) + chrome (rail, hero, panneau système) appliqués à l'app **actuelle** (read-only), **déployé**. Réserve les emplacements de nav : Bibliothèque · Banc d'essai · Rapports · **Segmentation** · Historique · Moteurs. | fine, pleine profondeur, faible risque ; valide l'approche design-en-Jinja2 |
-| **TU2 — Lanceur « Banc d'essai »** (cœur Phase A) | POST run + upload corpus + **SSE** progression + onglet Moteurs (dispo/indispo) ; clés depuis secrets ; écrit un `RunResult` | la grosse tranche ; sécurité d'exécution |
+| **TU2 — Lanceur « Banc d'essai »** (cœur Phase A) | POST run + upload corpus + **SSE** progression + onglet Moteurs (dispo/indispo) ; clés depuis secrets ; écrit un `RunResult` | la grosse tranche ; sécurité d'exécution. **TU2.a fait** : walking skeleton `POST/GET/cancel /api/runs` → run de fond annulable (`JobRunner`+`JobStore`) → `RunResult` écrit (démo `precomputed`), **CSRF** + **gate mode public**. **TU2.b fait** : onglet Moteurs — `GET /api/engines`. **TU2.c fait** : upload corpus ZIP (`/api/corpus`) — ingestion durcie. **TU2.d fait** : `POST /api/runs {engine, corpus_id}` — sélection moteur + gardes HTTP (422/403/404/409). **TU2.e fait** : SSE (`/events` + `Last-Event-ID`). **TU2.f.1 fait** : page `/benchmark` interactive (rendu serveur + JS auto-hébergé : lance la démo, suit en SSE, lien rapport ; CSP ouverte `script/connect 'self'`). Reste : **TU2.f.2** page Moteurs + UI upload/sélection au design ; run tesseract réel = test `live`. |
 | **TU3 — Persistance** | push `RunResult`(+HTML) vers dépôt/Dataset après run (token en secret) | rend durable + alimente Phase B |
 | **TU4 — Vues rapport** | overview/by-engine/by-document/crosses/synthesis au design | consomme `RunResult`, zéro data-layer |
 | **TU5 — Importeurs** | IIIF→Gallica→eScriptorium→HTR-United→HF, 1 par sous-tranche | sortie unique `Corpus` |
@@ -91,8 +101,11 @@ pas tout faire dans une seule conversation**.
 ## 10. Rapport avec la migration T1–T7 (ne pas confondre les numéros)
 
 `CLAUDE.md` décrit la **migration du moteur** (bibliothèque/CLI) par tranches
-**T1→T7**, bâties **intérieur → extérieur** (couches 1→8) ; statut : T1
-(squelette) fait, **prochaine = T2** (tesseract réel, WER/MER…).
+**T1→T7**, bâties **intérieur → extérieur** (couches 1→8) ; statut réel :
+**T1→T4e faits** (tesseract réel, CER/WER/MER, stats, OCR→LLM, `serve`/vitrine
+read-only). **Le calcul est déjà débloqué côté bibliothèque** — il reste à
+l'exposer dans le web (T4f). ⚠️ Une version périmée de ce plan disait « prochaine
+= T2 » (recopiée d'un `CLAUDE.md §0` non réconcilié) : **T2/T3 sont faits**.
 
 Les **TU1→TU7** de ce plan sont l'autre extrémité : **couche 8 (interfaces) +
 déploiement** — l'app web du Space. Donc :
@@ -105,5 +118,6 @@ déploiement** — l'app web du Space. Donc :
 - **Numérotation** : `T#` = migration moteur ; `TU#` = tranches UI/interfaces.
 
 **Décidé (mainteneur)** : **TU1 d'abord** (coquille au design, indépendante du
-moteur), **puis reprendre T2** pour débloquer le calcul, **puis TU2**.
-Entrelacement migration ⇄ UI dans cet ordre.
+moteur) — **fait**. T2/T3 étant déjà livrés, le calcul est débloqué côté
+bibliothèque → **prochaine = TU2 (= T4f)** : le lanceur web qui exécute un run
+dans le Space.

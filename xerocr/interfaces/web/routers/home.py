@@ -1,45 +1,94 @@
-"""Routeur d'accueil : shell de pilotage **mince** (couche 8).
+"""Routeur des **vues de la coquille** (couche 8) : accueil + Banc d'essai.
 
-Pas de SPA lourde (anti-pattern hérité, D-β) : une page HTML minimale qui
-liste les rapports et y mène. Les noms sont **échappés** (HTML) et **URL-encodés**
-(chemin) — défense XSS de base sur des stems venant du système de fichiers.
+Rendu **serveur** (Jinja2 + tokens/polices du design) ; le Banc d'essai ajoute
+un **JS léger auto-hébergé** (EventSource pour le SSE) — toujours pas de SPA. Le
+rail réserve **tous** les emplacements de nav ; deux sont vivants (Rapports,
+Banc d'essai), les autres restent des placeholders honnêtes (« à venir »).
 """
 
 from __future__ import annotations
 
-from html import escape
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
+from xerocr.app import resolve_code_version
 from xerocr.interfaces.web.catalog import available_reports
+from xerocr.interfaces.web.i18n import normalize_lang, strings_for
+
+#: Emplacements de nav réservés dès TU1 (ordre fixé par la spec).
+_NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engines")
+#: Vues **vivantes** : id de nav → chemin. Les autres restent « à venir ».
+_LIVE_VIEWS = {"reports": "/", "benchmark": "/benchmark"}
 
 
-def build_home_router(reports_dir: Path) -> APIRouter:
-    """Construit le routeur d'accueil (monté par ``create_app``)."""
+def _nav(
+    t: dict[str, str], lang: str, active: str, metas: dict[str, str]
+) -> list[dict[str, str]]:
+    """Construit les entrées de nav (états active/link/soon) pour la vue ``active``."""
+    items: list[dict[str, str]] = []
+    for nav_id in _NAV_IDS:
+        if nav_id == active:
+            state = "active"
+        elif nav_id in _LIVE_VIEWS:
+            state = "link"
+        else:
+            state = "soon"
+        href = (
+            f"{_LIVE_VIEWS[nav_id]}?lang={lang}" if nav_id in _LIVE_VIEWS else ""
+        )
+        items.append(
+            {
+                "id": nav_id,
+                "label": t[f"nav_{nav_id}"],
+                "state": state,
+                "href": href,
+                "meta": metas.get(nav_id, ""),
+            }
+        )
+    return items
+
+
+def build_home_router(reports_dir: Path, templates: Jinja2Templates) -> APIRouter:
+    """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
     router = APIRouter()
+    app_version = resolve_code_version()
+
+    def _base_context(
+        lang: str, active: str, metas: dict[str, str]
+    ) -> dict[str, object]:
+        t = strings_for(lang)
+        return {
+            "lang": lang,
+            "t": t,
+            "nav": _nav(t, lang, active, metas),
+            "version": app_version,
+            "view_path": _LIVE_VIEWS[active],
+        }
 
     @router.get("/", response_class=HTMLResponse)
-    def home() -> str:
-        return _render_home(available_reports(reports_dir))
+    def home(request: Request, lang: str = "fr") -> HTMLResponse:
+        lang = normalize_lang(lang)
+        names = available_reports(reports_dir)
+        context = _base_context(lang, "reports", {"reports": str(len(names))})
+        context["reports"] = [
+            {"name": name, "href": f"/reports/{quote(name, safe='')}"}
+            for name in names
+        ]
+        context["n_reports"] = len(names)
+        return templates.TemplateResponse(request, "home.html", context)
+
+    @router.get("/benchmark", response_class=HTMLResponse)
+    def benchmark(request: Request, lang: str = "fr") -> HTMLResponse:
+        lang = normalize_lang(lang)
+        return templates.TemplateResponse(
+            request, "benchmark.html", _base_context(lang, "benchmark", {})
+        )
 
     return router
-
-
-def _render_home(names: list[str]) -> str:
-    items = "".join(
-        f'<li><a href="/reports/{escape(quote(name), quote=True)}">'
-        f"{escape(name)}</a></li>\n"
-        for name in names
-    ) or "<li>(aucun rapport)</li>\n"
-    return (
-        '<!DOCTYPE html>\n<html lang="fr"><head><meta charset="utf-8">'
-        "<title>XerOCR — rapports</title></head><body>\n"
-        "<h1>XerOCR — rapports</h1>\n"
-        f"<ul>\n{items}</ul>\n</body></html>\n"
-    )
 
 
 __all__ = ["build_home_router"]

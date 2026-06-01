@@ -283,7 +283,7 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 ## DoD vivante (couche 3) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1→T2)** — `RunResult` + registre + runner verts ; métriques **CER/WER/MER** (parité jiwer) ; profils/stats/cross-engine à T2.
+> Maj dans le **même commit** que le code. **Statut : ✅ T2** — `RunResult` plein-scope + registre type-driven + runner verts ; **CER/WER/MER** (parité jiwer) + profils de normalisation + stats `scipy` + `cross_engine` **livrés**. Différé : métrique `(LAYOUT,LAYOUT)` (structure, T5), sections/métriques incrémentales (T7).
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*

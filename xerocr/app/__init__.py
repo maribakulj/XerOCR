@@ -15,6 +15,7 @@ from xerocr.app.modules.registry import (
 from xerocr.app.orchestrator import OrchestrationError, run
 from xerocr.app.results import RunResultError, dump_run_result, load_run_result
 from xerocr.app.security import PathSecurityError, validated_path
+from xerocr.app.versioning import resolve_code_version
 
 __all__ = [
     "ModuleRegistry",
@@ -27,6 +28,7 @@ __all__ = [
     "load_run_result",
     "load_run_spec",
     "register_default_modules",
+    "resolve_code_version",
     "run",
     "validated_path",
 ]
