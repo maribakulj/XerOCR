@@ -264,13 +264,13 @@ xerocr/interfaces/
 ## DoD vivante (couche 8) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : 🔨 en cours (T1)** — CLI `demo` verte ; `serve`/`create_app`/sécurité à T4.
+> Maj dans le **même commit** que le code. **Statut : 🔨 T4a** — CLI `demo`/`run`/`compare` + **`create_app()` web (santé)** ; routers/sécurité/SSE à T4b+.
 
 **Enveloppe :**
 - [x] **Contrat de commande CLI** (`argparse`, D-007) — verbes **`demo`** + **`run`** (YAML → orchestrateur → rapport) câblés, console-script `xerocr`. — *preuve : `test_cli_demo` + `test_cli_run` (bout en bout)*
 - [x] **`compare`** (2 RunResult JSON → deltas `B − A`) + **`run --json`** (export du RunResult). — *preuve : `test_cli_compare` + `test_results_io` (round-trip)*
 - [ ] `report` (rendre un JSON sauvé) · `serve` (T4).
-- [ ] **`create_app()` factory** — zéro effet de bord à l'import (pas de `app=FastAPI()` ni `JOB_STORE=...` module-level). — *T4 ; gate `no_side_effect_imports`*
+- [x] **`create_app()` factory** — zéro effet de bord à l'import : `FastAPI()` construit **dans** la factory (jamais au niveau module), routers à venir = **fonctions builder** (`APIRouter()` interdit au module par le gate). Deps `fastapi`/`uvicorn` en **extra `[serve]`** (CLI reste léger). — *preuve : `tests/interfaces/web/test_app.py` (factory ≠ singleton ; `/health`→200) + `no_side_effect_imports` vert* `[~]` `JOB_STORE` module-level : N/A tant que le store n'existe pas (T4d).
 - [ ] **Package `security/`** (CSRF/CSP/rate-limit/uploads/**mode public**) + SSE + annulation `RunControl`/`Deadline` réelle. — *T4*
 - [ ] **Duplicable par construction** (config par secrets/env, boot sans secret, déblocage **fail-closed**). — *T4*
 

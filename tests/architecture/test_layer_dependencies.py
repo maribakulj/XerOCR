@@ -196,6 +196,11 @@ def test_reports_imports_are_allowed():
     assert not offenders, f"imports interdits dans reports : {offenders}"
 
 
+#: interfaces (couche 8) câble le transport web : FastAPI + son socle ASGI
+#: (starlette) + le serveur uvicorn. Ajoutés à la tranche T4 (`serve`).
+INTERFACES_ALLOWED_EXT = ALLOWED_EXT | {"fastapi", "starlette", "uvicorn"}
+
+
 def test_interfaces_imports_are_allowed():
     """interfaces = feuille : peut câbler toutes les couches internes."""
     allowed = (
@@ -215,7 +220,7 @@ def test_interfaces_imports_are_allowed():
             top = mod.split(".")[0]
             if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
                 continue
-            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+            if mod == "__future__" or top in INTERFACES_ALLOWED_EXT or top in STDLIB:
                 continue
             bad.append(mod)
         if bad:
