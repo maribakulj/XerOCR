@@ -41,6 +41,12 @@ def test_document_structure_and_determinism() -> None:
     assert html1.startswith("<!DOCTYPE html>")
     assert "<title>" in html1
     assert "</html>" in html1
+    # S4.a : le rapport porte le chrome au design (carte gris chaud + en-tête pilule)
+    assert 'class="report-board"' in html1
+    assert 'class="report-chrome"' in html1
+    assert 'class="sec"' in html1
+    # autonome : CSS inline, aucune ressource externe
+    assert "<style>" in html1 and "http" not in html1.split("</style>")[0]
 
 
 class _NeedsWer:

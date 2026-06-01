@@ -27,8 +27,8 @@
 | 4 `pipeline` | ✅ **T3** (Protocol + exécuteur · annulation câblée) | `xerocr/pipeline/ANALYSE_COUCHE_4.md` §DoD |
 | 5 `adapters` | ✅ **T3 complet** (`precomputed`+`tesseract`+`openai`+`ollama`) ; **+`storage/JobStore`** (journal SSE) **+`storage/publisher`** (S3, push GitHub opt-in) | `xerocr/adapters/ANALYSE_COUCHE_5.md` §DoD |
 | 6 `app` | ✅ **T2** (orchestrateur · loader/sécurité) ; **+`JobRunner`** (TU2.a, + hook publication S3) **+`CorpusStore`** (TU2.c) | `xerocr/app/ANALYSE_COUCHE_6.md` §DoD |
-| 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
-| 8 `interfaces` | 🔨 **T4 socle ✅ · Space S1·S2·S3 ✅** (vitrine · lanceur complet · persistance opt-in ; reste **S4→S6**) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
+| 7 `reports` | ✅ **T2** (overview · `cross_engine` · `compare`) **+ chrome au design** (S4.a, rapport autonome restylé) | `xerocr/reports/ANALYSE_COUCHE_7.md` §DoD |
+| 8 `interfaces` | 🔨 **T4 socle ✅ · Space S1·S2·S3 ✅ · S4 🔨** (vitrine · lanceur complet · persistance · rapport au design ; reste S4.b/S5/S6) | `xerocr/interfaces/ANALYSE_COUCHE_8.md` §DoD |
 ### Les deux axes : **Moteur `T#`** & **Space `S#`** — un seul tableau, dépendances explicites
 
 **Deux *natures* de travail, un seul tableau d'autorité.** `T#` = la
@@ -53,7 +53,7 @@ c'est un **ordre partiel**, pas deux files déconnectées.
 | **S1** coquille au design | rendu serveur · polices self-host · nav · FR/EN | T4 ✅ | ✅ **fait** |
 | **S2** lanceur « Banc d'essai » | run de fond annulable · Moteurs `/api/engines` + page `/engines` · upload durci · gardes HTTP · SSE · page JS + **UI upload/sélection** | T2,T3,T4 ✅ | ✅ **fait** (run moteur réel = Space privé / test `live`) |
 | **S3** persistance | push `RunResult` JSON → dépôt GitHub après run (opt-in secrets) | T4 ✅ | ✅ **fait** (best-effort · push réel = test `live`) |
-| **S4** vues rapport au design | overview/by-engine/by-document/crosses/synthesis | couche 7 ✅ | ⏳ (débloqué) |
+| **S4** vues rapport au design | overview/by-engine/by-document/crosses/synthesis | couche 7 ✅ | 🔨 chrome + overview au design (S4.a) ✅ · reste **S4.b** (readouts/data-bars + by-engine/document/crosses/synthesis) |
 | **S5** sécurité publique | mode public · quotas · rate-limit · durcissement exposition | T4 ✅ | 🔨 partiel (CSRF · mode public · quotas upload posés) |
 | **S6** surfaces UI | segmentation-UI · importeurs-UI | **T5** / **T7** | ⛔ bloqué (attend l'axe moteur) |
 | **Rapport autonome interactif** | HTML déterministe sans backend (artefact ≈ T1) | T1 ✅ | ✅ |
@@ -199,7 +199,7 @@ importeurs / extensibilité / infra).
 | **S1** | coquille au design (Jinja + CSS, polices self-host, nav, FR/EN) | T4 | SPA lourde → rendu serveur ; CDN → self-host | TU1 |
 | **S2** ✅ | lanceur : `JobRunner`+`JobStore` (annulation), `/api/engines` + page `/engines`, upload ZIP durci, gardes HTTP, SSE+`Last-Event-ID`, page JS `/benchmark` + **UI upload/sélection moteur** | T2,T3,T4 | 2 JobStore→1 (SSE réabsorbé) · annulation réelle · CSRF/mode public/zip-bomb **verts d'abord** ; run moteur réel = test `live` | TU2 |
 | **S3** ✅ | persistance : `ResultPublisher` (couche 5) pousse le `RunResult` JSON vers un dépôt GitHub (API *contents*, `urllib`) après un run réussi — **opt-in via secrets** (`XEROCR_PUBLISH_REPO`/`_TOKEN`), **best-effort** (un échec ne fait pas échouer le run), jeton jamais journalisé ; `published_url` remonte sur le `Job`. Push réel = test `live` | T4 | disque HF éphémère → push durable ; la vitrine **rend** le JSON (pas besoin de pousser le HTML) | TU3 |
-| **S4** | vues rapport au design (overview/by-engine/by-document/crosses/synthesis) | couche 7 | data-layer → lit `RunResult` direct | TU4 |
+| **S4** 🔨 | vues rapport au design : **S4.a** chrome rapport (gris chaud · en-tête pilule · cartes `sec` · tables tabulaires, **inline + polices système** → autonome + octet-stable) + overview restylé ✅ ; **reste S4.b** readouts/data-bars + by-engine/by-document/crosses/synthesis | couche 7 | data-layer → lit `RunResult` direct | TU4 |
 | **S5** | sécurité publique : mode public · quotas · rate-limit · durcissement | T4 | exposition non bornée | TU6 |
 | **S6** | surfaces UI : segmentation-UI ⟸ **T5** · importeurs-UI ⟸ **T7** | T5 / T7 | — | TU7 / TU5 |
 
