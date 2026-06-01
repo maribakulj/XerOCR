@@ -19,12 +19,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML",
-    "jiwer", "fastapi", "httpx", "jinja2",
+    "jiwer", "fastapi", "httpx", "jinja2", "python-multipart",
 ]
 tesseract = ["pytesseract"]
 openai = ["openai"]
 ollama = ["httpx"]
-serve = ["fastapi", "uvicorn", "jinja2"]
+serve = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

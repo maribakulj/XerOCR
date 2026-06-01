@@ -16,6 +16,7 @@ une sous-tranche à la fois.
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -24,9 +25,11 @@ from fastapi.templating import Jinja2Templates
 
 from xerocr.adapters.storage import JobStore
 from xerocr.app import resolve_code_version
+from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import engine_statuses
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
+from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
@@ -64,6 +67,16 @@ def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
     return Path(env) if env else Path("reports")
 
 
+def _resolve_uploads_dir(uploads_dir: Path | str | None) -> Path:
+    """Dossier des corpus uploadés : argument explicite > dossier temporaire neuf.
+
+    Éphémère par défaut (entrées de travail ; la persistance des résultats = TU3).
+    """
+    if uploads_dir is not None:
+        return Path(uploads_dir)
+    return Path(tempfile.mkdtemp(prefix="xerocr-uploads-"))
+
+
 def _resolve_public_mode(public_mode: bool | None) -> bool:
     """Argument explicite > env (``1``/``true``/``yes``) > défaut ``False``."""
     if public_mode is not None:
@@ -74,6 +87,7 @@ def _resolve_public_mode(public_mode: bool | None) -> bool:
 def create_app(
     *,
     reports_dir: Path | str | None = None,
+    uploads_dir: Path | str | None = None,
     rate_limit: int = 60,
     public_mode: bool | None = None,
 ) -> FastAPI:
@@ -117,6 +131,7 @@ def create_app(
         reports_dir=catalog_dir,
         code_version=resolve_code_version(),
     )
+    corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 
     app.include_router(build_home_router(catalog_dir, templates))
     app.include_router(build_reports_router(catalog_dir))
@@ -124,6 +139,7 @@ def create_app(
     app.include_router(
         build_engines_router(lambda: engine_statuses(public_mode=is_public))
     )
+    app.include_router(build_corpus_router(corpus_store))
     return app
 
 

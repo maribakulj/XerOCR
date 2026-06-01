@@ -1,11 +1,25 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 (coquille) ✅ ; TU2.a (lanceur) ✅ ; TU2.b (onglet
-> Moteurs : `GET /api/engines`) ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine =
-> TU2.c** (upload corpus ZIP : validation, anti-traversal, dédup), puis **TU2.d**
-> (sélection de moteur au lancement + 403 cloud/409 indispo HTTP, sur corpus réel),
-> **TU2.e** (SSE), **TU2.f** (formulaires au design). Cf. `PLAN_SPACE_INTERACTIF.md §6`.
+> jour à chaque tranche. **TU1 ✅ ; TU2.a (lanceur) ✅ ; TU2.b (Moteurs) ✅ ;
+> TU2.c (upload corpus ZIP) ✅.** T1→T4e + T2/T3 déjà faits. **Prochaine = TU2.d**
+> (sélection de moteur au lancement, **sur le corpus uploadé** : `POST /api/runs`
+> prend `corpus_id` + `engine`, gate 403 cloud-public / 409 indispo au niveau
+> HTTP), puis **TU2.e** (SSE), **TU2.f** (formulaires au design). Cf.
+> `PLAN_SPACE_INTERACTIF.md §6`.
+
+## TU2.c — fait (upload de corpus ZIP, ingestion durcie)
+`POST /api/corpus` (multipart, **CSRF**) → `CorpusStore` (couche 6) qui valide et
+matérialise l'archive, `GET /api/corpus/{id}` en donne le résumé. **Sécurité
+d'ingestion** (concept de la tranche, tout testé) : **anti-traversal**
+(aplatissement au basename + `validated_path`), **anti-zip-bomb** (octets
+**réellement** décompressés plafonnés par fichier et au total — pas de confiance
+au header), **quotas** (taille archive/fichier, nombre d'entrées), **dédup** de
+basename, **liste blanche** d'extensions + **magic bytes** des images, **noms**
+restreints (→ `DocumentRef.id` valide). Sortie : `CorpusSpec` (images appariées à
+leur `.txt` par radical). Fichiers : `app/corpus_upload.py`,
+`interfaces/web/routers/corpus.py` ; `python-multipart` ajouté (serve/dev +
+`deploy/requirements.txt`). Le corpus uploadé est la **cible du run** en TU2.d.
 
 ## TU2.b — fait (onglet « Moteurs » : disponibilité runtime)
 `GET /api/engines` (read-only) restitue, pour chaque kind du socle (`precomputed`,
