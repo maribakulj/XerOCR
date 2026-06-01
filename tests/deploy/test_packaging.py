@@ -44,3 +44,20 @@ def test_space_readme_declares_docker_sdk() -> None:
     header = (DEPLOY / "README_SPACE.md").read_text(encoding="utf-8")
     assert "sdk: docker" in header
     assert "app_port: 7860" in header
+
+
+def test_flat_dockerfile_has_no_deploy_paths() -> None:
+    # Le Dockerfile « racine plate » (dépôt du Space) ne doit copier AUCUN chemin
+    # deploy/… : dans le Space, tout est à la racine. (Les commentaires exceptés.)
+    text = (DEPLOY / "Dockerfile.space").read_text(encoding="utf-8")
+    copy_lines = [
+        line for line in text.splitlines() if line.strip().upper().startswith("COPY")
+    ]
+    assert copy_lines, "Dockerfile.space sans COPY ?"
+    assert all("deploy/" not in line for line in copy_lines)
+
+
+def test_deploy_workflow_uses_secret_not_literal_token() -> None:
+    wf = (ROOT / ".github/workflows/deploy-space.yml").read_text(encoding="utf-8")
+    assert "secrets.HF_TOKEN" in wf  # le token vient du secret de dépôt
+    assert "workflow_dispatch" in wf  # déclenchement manuel (pas auto)
