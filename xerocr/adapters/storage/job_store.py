@@ -7,6 +7,11 @@ couche 6). Le store ne *fait* rien : il garde l'état observable (la machine à
 Concurrence : un seul verrou protège le dict ; ``Job`` est **immuable** (pydantic
 ``frozen``), donc un lecteur (requête HTTP) reçoit un instantané cohérent sans
 risque de course avec le worker qui le remplace sous verrou.
+
+Chaque transition est aussi **journalisée** (``_history``) : un instantané ``Job``
+par changement d'état, indexé par un id monotone (1-based). C'est la matière
+première du **flux SSE** + de la reprise ``Last-Event-ID`` (couche 8) — rejouable
+même après la fin du job.
 """
 
 from __future__ import annotations
@@ -62,6 +67,7 @@ class JobStore:
 
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}
+        self._history: dict[str, list[Job]] = {}
         self._lock = threading.Lock()
 
     def create(self) -> Job:
@@ -71,13 +77,14 @@ class JobStore:
                   updated_at=now)
         with self._lock:
             self._jobs[job.id] = job
+            self._history[job.id] = [job]
         return job
 
     def get(self, job_id: str) -> Job | None:
         with self._lock:
             return self._jobs.get(job_id)
 
-    def list(self) -> tuple[Job, ...]:
+    def all_jobs(self) -> tuple[Job, ...]:
         """Tous les jobs, du plus récent au plus ancien."""
         with self._lock:
             jobs = tuple(self._jobs.values())
@@ -105,7 +112,18 @@ class JobStore:
                 }
             )
             self._jobs[job_id] = updated
+            self._history[job_id].append(updated)
         return updated
+
+    def history_since(self, job_id: str, after_id: int) -> list[tuple[int, Job]]:
+        """Instantanés (``event_id``, ``Job``) du journal **après** ``after_id``.
+
+        ``event_id`` est la position 1-based dans le journal du job → c'est l'id
+        d'événement SSE (``Last-Event-ID``). Job inconnu → liste vide.
+        """
+        with self._lock:
+            history = list(self._history.get(job_id, ()))
+        return [(i, job) for i, job in enumerate(history, start=1) if i > after_id]
 
 
 __all__ = ["Job", "JobError", "JobState", "JobStore"]

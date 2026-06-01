@@ -19,12 +19,16 @@ protégées **CSRF**. Le ``RunResult`` produit atterrit dans le dossier vitrine.
 
 from __future__ import annotations
 
+import json
+import time
 import uuid
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Iterator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
 
+from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import EngineStatus
 from xerocr.app.jobs import JobRunner, SpecBuilder
@@ -99,6 +103,48 @@ def _spec_builder(engine: str, corpus: CorpusSpec | None, run_id: str) -> SpecBu
     return lambda _ws: _tesseract_spec(corpus, run_id)
 
 
+def _parse_last_event_id(raw: str | None) -> int:
+    """``Last-Event-ID`` (en-tête de reprise SSE) → entier ≥ 0, tolérant."""
+    if raw is None:
+        return 0
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return 0
+
+
+def _sse_stream(
+    store: JobStore,
+    job_id: str,
+    last_event_id: int,
+    *,
+    poll: float = 0.1,
+    idle_timeout: float = 30.0,
+) -> Iterator[str]:
+    """Diffuse le journal du job en SSE depuis ``last_event_id`` jusqu'au terminal.
+
+    Boucle de *polling* (les transitions sont rares) ; rejoue d'abord les
+    événements manqués (reprise ``Last-Event-ID``), puis suit les nouveaux. Un
+    job déjà terminé renvoie tout l'historique puis ferme. Le ``idle_timeout``
+    borne un job qui ne se terminerait jamais (pas de flux pendu en prod).
+    """
+    sent = last_event_id
+    deadline = time.monotonic() + idle_timeout
+    while True:
+        for event_id, job in store.history_since(job_id, sent):
+            sent = event_id
+            payload = json.dumps(job.model_dump(mode="json"), ensure_ascii=False)
+            yield f"id: {event_id}\nevent: {job.state.value}\ndata: {payload}\n\n"
+            deadline = time.monotonic() + idle_timeout
+        current = store.get(job_id)
+        if current is not None and current.state.is_terminal:
+            if not store.history_since(job_id, sent):
+                return
+        elif time.monotonic() > deadline:
+            return
+        time.sleep(poll)
+
+
 def build_runs_router(
     runner: JobRunner,
     corpus_store: CorpusStore,
@@ -148,6 +194,17 @@ def build_runs_router(
         if job is None:
             raise HTTPException(status_code=404, detail="job introuvable")
         return job.model_dump(mode="json")
+
+    @router.get("/api/runs/{job_id}/events")
+    def run_events(job_id: str, request: Request) -> StreamingResponse:
+        if runner.store.get(job_id) is None:
+            raise HTTPException(status_code=404, detail="job introuvable")
+        last = _parse_last_event_id(request.headers.get("last-event-id"))
+        return StreamingResponse(
+            _sse_stream(runner.store, job_id, last),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     @router.post(
         "/api/runs/{job_id}/cancel", dependencies=[Depends(csrf_protect)]

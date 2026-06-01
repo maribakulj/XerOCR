@@ -52,10 +52,40 @@ def test_list_is_newest_first() -> None:
     store = JobStore()
     a = store.create()
     b = store.create()
-    ids = [j.id for j in store.list()]
+    ids = [j.id for j in store.all_jobs()]
     assert set(ids) == {a.id, b.id}
     # tri stable par created_at décroissant : aucun job perdu
-    assert len(store.list()) == 2
+    assert len(store.all_jobs()) == 2
+
+
+def test_history_records_each_transition() -> None:
+    store = JobStore()
+    job = store.create()
+    store.update(job.id, state=JobState.RUNNING)
+    store.update(job.id, state=JobState.DONE, report_name="r")
+    events = store.history_since(job.id, 0)
+    assert [eid for eid, _ in events] == [1, 2, 3]
+    assert [j.state for _, j in events] == [
+        JobState.PENDING,
+        JobState.RUNNING,
+        JobState.DONE,
+    ]
+
+
+def test_history_since_resumes_after_id() -> None:
+    store = JobStore()
+    job = store.create()
+    store.update(job.id, state=JobState.RUNNING)
+    store.update(job.id, state=JobState.DONE, report_name="r")
+    # reprise depuis l'événement 1 → ne renvoie que 2 et 3
+    resumed = store.history_since(job.id, 1)
+    assert [eid for eid, _ in resumed] == [2, 3]
+    # au-delà du dernier → rien
+    assert store.history_since(job.id, 3) == []
+
+
+def test_history_unknown_job_is_empty() -> None:
+    assert JobStore().history_since("absent", 0) == []
 
 
 def test_concurrent_creates_are_all_recorded() -> None:
@@ -74,4 +104,4 @@ def test_concurrent_creates_are_all_recorded() -> None:
     for t in threads:
         t.join()
     assert len({j.id for j in created}) == 20
-    assert len(store.list()) == 20
+    assert len(store.all_jobs()) == 20

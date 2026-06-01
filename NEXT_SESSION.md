@@ -1,11 +1,24 @@
 # NEXT_SESSION.md — démarrage de la prochaine session
 
 > Point d'entrée **vivant** pour reprendre dans une **session fraîche**, mis à
-> jour à chaque tranche. **TU1 ✅ ; TU2.a (lanceur) ✅ ; TU2.b (Moteurs) ✅ ;
-> TU2.c (upload) ✅ ; TU2.d (sélection moteur + gardes HTTP) ✅.** T1→T4e + T2/T3
-> déjà faits. **Prochaine = TU2.e** (SSE de progression + reprise `Last-Event-ID`),
-> puis **TU2.f** (formulaires « Banc d'essai » + page Moteurs au design). Cf.
-> `PLAN_SPACE_INTERACTIF.md §6`.
+> jour à chaque tranche. **TU1 ✅ ; TU2.a→e ✅** (lanceur · Moteurs · upload ·
+> sélection moteur/gardes HTTP · **SSE**). T1→T4e + T2/T3 déjà faits. **Prochaine
+> = TU2.f** : les **formulaires au design** (« Banc d'essai » + page Moteurs),
+> rendus serveur + **JS léger** (EventSource pour le SSE) — c'est là qu'on
+> revisite la **CSP** (`script-src`/`connect-src 'self'`) et `form-action`. Puis
+> **TU3** (persistance : push des `RunResult` au dépôt). Cf. `PLAN_SPACE_INTERACTIF.md §6`.
+
+## TU2.e — fait (SSE de progression + reprise Last-Event-ID)
+`GET /api/runs/{id}/events` (`text/event-stream`, read-only) diffuse le **journal**
+du job — un événement par transition d'état (`pending→running→done/failed/
+cancelled`), id monotone — et **rejoue depuis `Last-Event-ID`** à la reconnexion.
+L'événementiel est réabsorbé dans le `JobStore` (`_history` + `history_since`),
+ce qui **lève la réserve R-10** d'`ANALYSE_COUCHE_5`. Diffusion par *polling* du
+journal (transitions rares), `idle_timeout` borne un job qui ne finit pas. Rejeu
+**déterministe** même après la fin du job. Fichiers : `adapters/storage/job_store.py`
+(journal), `interfaces/web/routers/runs.py` (`_sse_stream`, `/events`). ⚠️ La **CSP
+n'est pas encore touchée** (pas de consommateur navigateur : zéro JS) — l'EventSource
+arrive en TU2.f avec `connect-src 'self'`.
 
 ## TU2.d — fait (sélection de moteur au lancement + gardes HTTP)
 `POST /api/runs` accepte un corps optionnel `{engine, corpus_id}`. **Ordre de
