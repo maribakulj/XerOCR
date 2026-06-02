@@ -48,10 +48,11 @@ class MetricRegistry:
 
 def register_default_metrics(registry: MetricRegistry) -> None:
     """Collecte explicite du socle de métriques (aucun effet de bord à l'import)."""
+    from xerocr.evaluation.metrics.diacritics import DIACRITIC_METRICS
     from xerocr.evaluation.metrics.stats import CROSS_ENGINE_METRICS
     from xerocr.evaluation.metrics.text import TEXT_METRICS
 
-    for document in TEXT_METRICS:
+    for document in (*TEXT_METRICS, *DIACRITIC_METRICS):
         registry.register_document_metric(document)
     for cross in CROSS_ENGINE_METRICS:
         registry.register_cross_engine_metric(cross)
