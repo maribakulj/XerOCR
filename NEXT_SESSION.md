@@ -16,7 +16,11 @@
 > ~227 Ko) · **S4.b.1b** ✅ (overview enrichi : **readouts** de portée réelle +
 > tables **data-bars** relatives, sur les vraies métriques CER/WER/MER) · **S4.b.2** ✅
 > (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
-> rendu — tables doc×pipeline groupées + data-bars). **Prochaine = S4.b (suite)** :
+> rendu — tables doc×pipeline groupées + data-bars) · **Corpus réel BNL** ✅ (mini-GT
+> presse Fraktur luxembourgeoise en fixture déterministe `tests/fixtures/reference_corpus/bnl_mini/` ;
+> Tesseract `frk`/`deu` figé via `precomputed` → 1ᵉʳ benchmark XerOCR sur **données
+> réelles** : CER/WER/MER + **significativité inter-moteurs vivante** n=10≥6 ; réalise
+> le mini-corpus de `CLAUDE.md §10`). **Prochaine = S4.b (suite)** :
 > vues by-engine/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
