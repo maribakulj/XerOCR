@@ -24,8 +24,10 @@
 > à 5 moteurs** (text:cer p≈0) ; réalise le mini-corpus de `CLAUDE.md §10`. EasyOCR ✓
 > (GitHub) ; Pero/Kraken/docTR bloqués) · **`by-engine`** ✅ (S4.b.3) · **`crosses`** ✅
 > (S4.b.4 : Vue/Métrique + verdict factuel au design). **S4 — vues rapport au design =
-> FAIT** (synthesis seul différé T7). **Prochaine = S5** (durcissement
-> public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
+> FAIT** (synthesis seul différé T7) · **S5** ✅ (durcissement public **enforced** :
+> mode public cloud→403 · rate-limit · CSRF · CSP · upload double-cap 413+422). **Axe
+> Space S1–S5 complet → Prochaine = T5** (axe moteur : structure/segmentation ;
+> débloque S6). *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +
