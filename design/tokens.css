@@ -3,7 +3,19 @@
    Pour le redesign des rapports de benchmark.
    ===================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;1,400&display=swap');
+/* === Typographie XerOCR (résolue) — SOURCE UNIQUE, self-hosted, zéro CDN ===
+   Titres = Fluxisch Else (OFL 1.1) · corps + données = OCR-A (John Sauter,
+   domaine public). Changer la typo = déposer le woff2 dans fonts/, éditer
+   ces @font-face + les 4 variables --display/--sans/--mono/--serif ci-dessous.
+   picarones.css n'(re)définit plus de police : il hérite d'ici. */
+@font-face { font-family: 'Fluxisch Else'; font-weight: 300; font-display: swap;
+  src: url('fonts/FluxischElse-Light.woff2')   format('woff2'); }
+@font-face { font-family: 'Fluxisch Else'; font-weight: 400; font-display: swap;
+  src: url('fonts/FluxischElse-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Fluxisch Else'; font-weight: 600 700; font-display: swap;
+  src: url('fonts/FluxischElse-Bold.woff2')    format('woff2'); }
+@font-face { font-family: 'OCRA'; font-display: swap;
+  src: url('fonts/OCRA.woff2') format('woff2'); }
 
 :root {
   /* Greyscale (warm) */
@@ -51,10 +63,10 @@
   --warn: var(--butter-deep);
   --err: oklch(0.55 0.14 28);
 
-  --sans:    'IBM Plex Sans', system-ui, sans-serif;
-  --mono:    'IBM Plex Mono', ui-monospace, monospace;
-  --serif:   'IBM Plex Serif', Georgia, serif;
-  --display: 'Bricolage Grotesque', 'IBM Plex Sans', system-ui, sans-serif;
+  --display: 'Fluxisch Else', Georgia, serif;   /* titres */
+  --sans:    'OCRA', ui-monospace, monospace;   /* corps */
+  --mono:    'OCRA', ui-monospace, monospace;   /* données / chiffres */
+  --serif:   'OCRA', ui-monospace, monospace;   /* légendes (ex-italique) */
 
   --r-sm: 8px;
   --r-md: 14px;

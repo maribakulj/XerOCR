@@ -75,7 +75,7 @@ function BenchmarkView({ t, lang, state, setState }) {
               </div>
             </Surface>
             <Help>
-              Without ground truth, no benchmark. Picarones measures agreement with a known reference,
+              Without ground truth, no benchmark. XerOCR measures agreement with a known reference,
               not absolute transcription quality.
             </Help>
           </div>

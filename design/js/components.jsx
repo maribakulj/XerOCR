@@ -242,7 +242,7 @@ function PipelineFig() {
   return (
     <div className="fig fig-large">
       <div className="fig-caption">
-        <span className="num">fig.1</span> — Picarones evaluation pipeline · how a competitor is benchmarked
+        <span className="num">fig.1</span> — XerOCR evaluation pipeline · how a competitor is benchmarked
       </div>
       <div className="fig-meta">SCHEMA · v2.0</div>
       <svg viewBox="0 0 880 320" xmlns="http://www.w3.org/2000/svg">

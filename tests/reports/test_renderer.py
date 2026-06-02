@@ -71,5 +71,8 @@ class _Always:
 
 def test_no_orphan_skips_section_with_unmet_requires() -> None:
     html = ReportRenderer((_NeedsWer(), _Always())).render(_result())
-    assert "ALWAYS" in html  # requires=() rendu
-    assert "WER" not in html  # requires=("wer",) sauté (seul cer présent)
+    # On vérifie le **markup** rendu, pas une sous-chaîne nue : depuis que le
+    # rapport incorpore ses polices (base64), "WER"/"ALWAYS" apparaissent par
+    # hasard dans le data-URI. "<p>…</p>" ne peut pas (pas de "<" en base64).
+    assert "<p>ALWAYS</p>" in html  # requires=() rendu
+    assert "<p>WER</p>" not in html  # requires=("wer",) sauté (seul cer présent)

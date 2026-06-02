@@ -38,6 +38,9 @@ include = ["xerocr*"]
 "xerocr.interfaces.web" = [
     "templates/*.html", "static/css/*.css", "static/js/*.js", "static/fonts/*",
 ]
+# Le rapport autonome (couche 7) incorpore ses polices en data-URI : les woff2
+# doivent voyager dans le wheel pour exister après ``pip install``.
+"xerocr.reports" = ["_assets/*.woff2"]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"
