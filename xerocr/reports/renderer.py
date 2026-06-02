@@ -35,13 +35,14 @@ class ReportRenderer:
 
 
 def default_report_renderer() -> ReportRenderer:
-    """Renderer du socle : overview + par-document + significativité inter-moteurs."""
+    """Socle : overview + par-moteur + par-document + significativité inter-moteurs."""
     from xerocr.reports.sections.by_document import DocumentSection
+    from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.overview import OverviewSection
 
     return ReportRenderer(
-        (OverviewSection(), DocumentSection(), CrossEngineSection())
+        (OverviewSection(), EngineSection(), DocumentSection(), CrossEngineSection())
     )
 
 

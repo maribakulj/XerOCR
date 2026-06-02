@@ -87,6 +87,13 @@ _CSS = (
     "border-radius:8px;background:var(--fern);opacity:0.18;z-index:0;}"
     "table.data td.databar .db-num{position:relative;z-index:1;display:block;"
     "text-align:right;padding:12px 14px;}"
+    "table.data td.rank{padding:11px 8px 11px 14px;color:var(--g-400);"
+    "font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--g-50);}"
+    "table.data td.disp{padding:11px 14px;text-align:right;font-family:var(--mono);"
+    "font-size:11px;color:var(--g-500);border-bottom:1px solid var(--g-50);}"
+    "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
+    "color:var(--g-400);border-bottom:1px solid var(--g-50);}"
+    "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
 )

@@ -6,6 +6,7 @@ import io
 import zipfile
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from xerocr.interfaces.web.app import create_app
@@ -71,3 +72,12 @@ def test_stem_collision_is_422_not_500(tmp_path: Path) -> None:
     jpeg = b"\xff\xd8\xff" + b"\x00" * 32
     resp = _upload(_client(tmp_path), _zip({"a.png": _PNG, "a.jpg": jpeg}))
     assert resp.status_code == 422
+
+
+def test_oversized_upload_is_413(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # plafond abaissé (≠ envoyer 25 Mo) : au-delà → 413 net, avant tout dézippage.
+    monkeypatch.setattr("xerocr.interfaces.web.routers.corpus.MAX_ZIP_BYTES", 64)
+    resp = _upload(_client(tmp_path), b"x" * 256)
+    assert resp.status_code == 413

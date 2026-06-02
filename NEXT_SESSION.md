@@ -16,9 +16,18 @@
 > ~227 Ko) · **S4.b.1b** ✅ (overview enrichi : **readouts** de portée réelle +
 > tables **data-bars** relatives, sur les vraies métriques CER/WER/MER) · **S4.b.2** ✅
 > (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
-> rendu — tables doc×pipeline groupées + data-bars). **Prochaine = S4.b (suite)** :
-> vues by-engine/crosses/synthesis. Débloqué aussi : **S5** (durcissement
-> public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
+> rendu — tables doc×pipeline groupées + data-bars) · **Corpus réel BNL** ✅ (mini-GT
+> presse luxembourgeoise **multilingue** DE Fraktur + FR, **30 docs**, fixture
+> déterministe `tests/fixtures/reference_corpus/bnl_mini/` ; **5 moteurs** : 4 Tesseract
+> (`frk`/`deu`/`fra`/`deu_latf`) + **`easyocr`** figés via `precomputed` → benchmark sur
+> **données réelles** : `deu_latf` meilleur en `caseless` (0,075) · **Friedman SIGNIFICATIF
+> à 5 moteurs** (text:cer p≈0) ; réalise le mini-corpus de `CLAUDE.md §10`. EasyOCR ✓
+> (GitHub) ; Pero/Kraken/docTR bloqués) · **`by-engine`** ✅ (S4.b.3) · **`crosses`** ✅
+> (S4.b.4 : Vue/Métrique + verdict factuel au design). **S4 — vues rapport au design =
+> FAIT** (synthesis seul différé T7) · **S5** ✅ (durcissement public **enforced** :
+> mode public cloud→403 · rate-limit · CSRF · CSP · upload double-cap 413+422). **Axe
+> Space S1–S5 complet → Prochaine = T5** (axe moteur : structure/segmentation ;
+> débloque S6). *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
 `GET /benchmark` : page rendue serveur (base Jinja partagée `base.html` +
