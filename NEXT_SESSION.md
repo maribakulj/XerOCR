@@ -18,11 +18,11 @@
 > (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
 > rendu — tables doc×pipeline groupées + data-bars) · **Corpus réel BNL** ✅ (mini-GT
 > presse luxembourgeoise **multilingue** DE Fraktur + FR, **30 docs**, fixture
-> déterministe `tests/fixtures/reference_corpus/bnl_mini/` ; **4 moteurs** Tesseract
-> `frk`/`deu`/`fra`/`deu_latf` figés via `precomputed` → benchmark sur **données réelles** :
-> `deu_latf` meilleur en `caseless` (CER 0,075) · Friedman vivant n=30 (text:cer p=0,072) ;
-> réalise le mini-corpus de `CLAUDE.md §10`. Pero/Kraken/docTR : modèles bloqués ici.
-> **`by-engine` désormais justifié**). **Prochaine = S4.b (suite)** :
+> déterministe `tests/fixtures/reference_corpus/bnl_mini/` ; **5 moteurs** : 4 Tesseract
+> (`frk`/`deu`/`fra`/`deu_latf`) + **`easyocr`** figés via `precomputed` → benchmark sur
+> **données réelles** : `deu_latf` meilleur en `caseless` (0,075) · **Friedman SIGNIFICATIF
+> à 5 moteurs** (text:cer p≈0) ; réalise le mini-corpus de `CLAUDE.md §10`. EasyOCR ✓
+> (GitHub) ; Pero/Kraken/docTR bloqués. **`by-engine` désormais justifié**). **Prochaine = S4.b (suite)** :
 > vues by-engine/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
