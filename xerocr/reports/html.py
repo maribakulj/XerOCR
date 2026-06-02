@@ -91,6 +91,9 @@ _CSS = (
     "font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--g-50);}"
     "table.data td.disp{padding:11px 14px;text-align:right;font-family:var(--mono);"
     "font-size:11px;color:var(--g-500);border-bottom:1px solid var(--g-50);}"
+    "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
+    "color:var(--g-400);border-bottom:1px solid var(--g-50);}"
+    "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
 )

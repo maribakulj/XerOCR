@@ -34,12 +34,11 @@ avant d'écrire la moindre ligne.**
   (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le moteur, avec
   **dépendances explicites**. `PLAN_SPACE_INTERACTIF.md` = **spec UX**, pas
   autorité de statut. *(Anciens « TU# » = alias des `S#`.)*
-- **Prochaine étape = S4b** : enrichir les vues rapport au design (readouts/
-  data-bars + by-engine/by-document/crosses/synthesis). Fait : **S2** (lanceur) ·
-  **S3** (persistance opt-in) · **S4.a** (chrome rapport + overview au design,
-  rapport autonome restylé, octet-stable) ✅. Le tableau « Les deux axes » fait
-  foi : **S4b** · **S5** (durcissement public) débloqués ; **S6** (UI
-  segmentation/importeurs) attend l'axe moteur **T5/T7**.
+- **Prochaine étape = S5** (durcissement public : mode public · quotas · rate-limit).
+  **Fait** : **S2** (lanceur) · **S3** (persistance opt-in) · **S4** (vues rapport au
+  design : overview · by-engine · by-document · crosses, rapport autonome octet-stable ;
+  **synthesis différé T7**) ✅. Le tableau « Les deux axes » fait foi : **S5** débloqué ;
+  **S6** (UI segmentation/importeurs) attend l'axe moteur **T5/T7**.
 - Réserves T0 à lever (cf. `MIGRATION_PLAN.md` §9) : types `domain` sans
   consommateur (`EvaluationSpec`/`ProjectionSpec`) à assumer ou différer.
 

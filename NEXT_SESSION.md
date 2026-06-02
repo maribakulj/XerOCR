@@ -22,9 +22,9 @@
 > (`frk`/`deu`/`fra`/`deu_latf`) + **`easyocr`** figés via `precomputed` → benchmark sur
 > **données réelles** : `deu_latf` meilleur en `caseless` (0,075) · **Friedman SIGNIFICATIF
 > à 5 moteurs** (text:cer p≈0) ; réalise le mini-corpus de `CLAUDE.md §10`. EasyOCR ✓
-> (GitHub) ; Pero/Kraken/docTR bloqués) · **`by-engine`** ✅ (S4.b.3 : classement trié
-> par CER + dispersion par-doc, vraies métriques). **Prochaine = S4.b (fin)** : **crosses**
-> (styliser au design) + **synthesis** (différé T7). Débloqué aussi : **S5** (durcissement
+> (GitHub) ; Pero/Kraken/docTR bloqués) · **`by-engine`** ✅ (S4.b.3) · **`crosses`** ✅
+> (S4.b.4 : Vue/Métrique + verdict factuel au design). **S4 — vues rapport au design =
+> FAIT** (synthesis seul différé T7). **Prochaine = S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 
 ## TU2.f.1 — fait (page « Banc d'essai » interactive)
