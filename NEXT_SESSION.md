@@ -17,10 +17,12 @@
 > tables **data-bars** relatives, sur les vraies métriques CER/WER/MER) · **S4.b.2** ✅
 > (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
 > rendu — tables doc×pipeline groupées + data-bars) · **Corpus réel BNL** ✅ (mini-GT
-> presse Fraktur luxembourgeoise en fixture déterministe `tests/fixtures/reference_corpus/bnl_mini/` ;
-> Tesseract `frk`/`deu` figé via `precomputed` → 1ᵉʳ benchmark XerOCR sur **données
-> réelles** : CER/WER/MER + **significativité inter-moteurs vivante** n=10≥6 ; réalise
-> le mini-corpus de `CLAUDE.md §10`). **Prochaine = S4.b (suite)** :
+> presse luxembourgeoise **multilingue** DE Fraktur + FR, **30 docs**, fixture
+> déterministe `tests/fixtures/reference_corpus/bnl_mini/` ; **4 moteurs** Tesseract
+> `frk`/`deu`/`fra`/`deu_latf` figés via `precomputed` → benchmark sur **données réelles** :
+> `deu_latf` meilleur en `caseless` (CER 0,075) · Friedman vivant n=30 (text:cer p=0,072) ;
+> réalise le mini-corpus de `CLAUDE.md §10`. Pero/Kraken/docTR : modèles bloqués ici.
+> **`by-engine` désormais justifié**). **Prochaine = S4.b (suite)** :
 > vues by-engine/crosses/synthesis. Débloqué aussi : **S5** (durcissement
 > public). **S6** attend l'axe moteur **T5/T7**. *(Runs/push réels = tests `live`.)*
 

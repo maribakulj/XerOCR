@@ -1,11 +1,13 @@
-"""Premier benchmark XerOCR sur **données réelles** : mini-corpus BNL (presse
-historique luxembourgeoise, Fraktur), Tesseract ``frk`` vs ``deu``.
+"""Benchmark XerOCR sur **données réelles** : corpus BNL (presse historique
+luxembourgeoise, **multilingue** allemand Fraktur + français), 4 pipelines
+Tesseract — ``frk`` (Fraktur legacy) · ``deu`` (allemand moderne) · ``fra``
+(français) · ``deu_latf`` (Fraktur LSTM « best »).
 
-Déterministe en CI : la GT (extraite de l'ALTO BNL) et les sorties OCR sont
+Déterministe en CI : la GT (extraite des ALTO v4 BNL) et les sorties OCR sont
 **figées** dans ``tests/fixtures/reference_corpus/bnl_mini/`` ; on les rejoue via
 l'adapter ``precomputed`` (aucun Tesseract requis en CI). Vérifie ce que le
 synthétique ne pouvait pas : de **vraies** métriques **et** une **significativité
-inter-moteurs vivante** (n=10 ≥ plancher de puissance 6, ≠ démo n=3 → ``None``).
+inter-moteurs vivante** (n≈30 ≥ plancher de puissance 6, ≠ démo n=3 → ``None``).
 """
 
 from __future__ import annotations
@@ -31,8 +33,10 @@ _FIXTURES = (
     / "reference_corpus"
     / "bnl_mini"
 )
-_DOC_IDS = tuple(f"{i:04d}" for i in range(10))
-_ENGINES = ("frk", "deu")  # Tesseract Fraktur vs allemand moderne
+#: Documents découverts depuis la fixture (la GT figée fait foi).
+_DOC_IDS = tuple(sorted(p.name.removesuffix(".gt.txt") for p in _FIXTURES.glob("*.gt.txt")))
+#: 4 pipelines Tesseract : Fraktur legacy · allemand moderne · français · Fraktur LSTM.
+_ENGINES = ("frk", "deu", "fra", "deu_latf")
 
 
 def _document(root: Path, doc_id: str) -> DocumentRef:
@@ -73,7 +77,7 @@ def build_bnl_run_result(root: Path) -> RunResult:
     corpus = CorpusSpec(
         name="bnl_mini",
         documents=tuple(_document(root, doc_id) for doc_id in _DOC_IDS),
-        metadata={"source": "BNL", "language": "deu", "script": "fraktur"},
+        metadata={"source": "BNL", "languages": "deu,fra", "script": "fraktur+antiqua"},
     )
     views = (
         EvaluationView(
@@ -106,25 +110,24 @@ def build_bnl_run_result(root: Path) -> RunResult:
 
 def test_bnl_real_metrics_are_plausible(tmp_path: Path) -> None:
     result = build_bnl_run_result(tmp_path)
-    assert {(p.pipeline, p.view) for p in result.pipelines} == {
-        ("frk", "text"), ("deu", "text"), ("frk", "caseless"), ("deu", "caseless"),
-    }
+    assert {p.pipeline for p in result.pipelines} == set(_ENGINES)
+    assert {p.view for p in result.pipelines} == {"text", "caseless"}
     for pipeline in result.pipelines:
         scores = {s.metric: s.value for s in pipeline.aggregate}
         assert set(scores) == {"cer", "wer", "mer"}
-        # OCR historique réel : taux non nuls et bornés (pas un faux 0, pas absurde)
-        assert scores["cer"] is not None and 0.0 < scores["cer"] < 0.5
-    # détail par-document réellement peuplé : 10 docs × 2 moteurs × 2 vues
+        # OCR historique réel (y compris moteur en mauvaise langue) : non nul, borné
+        assert scores["cer"] is not None and 0.0 < scores["cer"] < 0.95
+    # détail par-document peuplé : N docs × 4 moteurs × 2 vues
     assert len(result.documents) == len(_DOC_IDS) * len(_ENGINES) * 2
 
 
 def test_bnl_cross_engine_significance_is_live(tmp_path: Path) -> None:
-    # n=10 ≥ _MIN_SUPPORT=6 → Wilcoxon CALCULE un p (≠ démo n=3 → tout None).
+    # n≈30 ≥ _MIN_SUPPORT=6 → le test omnibus CALCULE un p (≠ démo n=3 → tout None).
     result = build_bnl_run_result(tmp_path)
     sig = [s for s in result.cross_engine if s.metric.endswith("significance_p")]
     assert sig, "significativité inter-moteurs attendue dans cross_engine"
     assert any(s.value is not None for s in sig), (
-        "n=10 ≥ plancher 6 → au moins un p-value calculé (pas uniquement None)"
+        "n≈30 ≥ plancher 6 → au moins un p-value calculé (pas uniquement None)"
     )
 
 
