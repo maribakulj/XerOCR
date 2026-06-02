@@ -7,7 +7,7 @@ import pytest
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.text import cer, mer, wer
+from xerocr.evaluation.metrics.text import cer, cer_diplomatic, mer, wer
 
 
 def _ctx(reference: object, hypothesis: object) -> DocContext:
@@ -21,6 +21,12 @@ def test_cer_perfect_match() -> None:
 
 def test_cer_one_substitution() -> None:
     assert cer.fn(_ctx("abc", "abx")).value == pytest.approx(1 / 3)
+
+
+def test_cer_diplomatic_folds_long_s() -> None:
+    # « Froiſſart » vs « Froissart » : 2 subs au CER brut, 0 sous repli ſ→s.
+    assert cer.fn(_ctx("Froissart", "Froiſſart")).value > 0
+    assert cer_diplomatic.fn(_ctx("Froissart", "Froiſſart")).value == 0.0
 
 
 def test_cer_both_empty() -> None:

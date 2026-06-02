@@ -50,7 +50,7 @@ _DEMO_DOCS: tuple[tuple[str, str, dict[str, str]], ...] = (
 _TEXT_VIEW = EvaluationView(
     name="text",
     candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-    metric_names=("cer", "wer", "mer"),
+    metric_names=("cer", "cer_diplo", "wer", "mer"),
 )
 
 #: Même corpus, sous équivalence orthographique du français médiéval (ſ=s, u=v,

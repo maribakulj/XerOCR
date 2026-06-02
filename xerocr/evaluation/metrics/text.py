@@ -21,6 +21,12 @@ from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
+from xerocr.formats.text import get_builtin_profile
+
+#: Repli diplomatique minimal (NFC + ſ long → s), appliqué symétriquement par
+#: ``cer_diplo``. L'écart ``cer − cer_diplo`` = part d'erreur **purement
+#: typographique** (un ſ long mal lu cesse de compter comme une erreur).
+_DIPLOMATIC = get_builtin_profile("minimal")
 
 
 def _edit_distance(
@@ -123,6 +129,21 @@ def cer(ctx: DocContext) -> Observation:
 
 
 @document_metric(
+    name="cer_diplo",
+    input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
+    description="CER diplomatique : CER après repli ſ long→s (NFC), des deux côtés.",
+    higher_is_better=False,
+    tags=frozenset({"text", "edit_distance", "philology"}),
+)
+def cer_diplomatic(ctx: DocContext) -> Observation:
+    reference, hypothesis = _text_pair(ctx)
+    ref = _DIPLOMATIC.normalize(reference)
+    hyp = _DIPLOMATIC.normalize(hypothesis)
+    edits = _edit_distance(ref, hyp)
+    return Observation(value=_error_rate(edits, len(ref)), weight=len(ref))
+
+
+@document_metric(
     name="wer",
     input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
     description="Word Error Rate : distance d'édition au mot / nombre de mots de réf.",
@@ -155,6 +176,6 @@ def mer(ctx: DocContext) -> Observation:
 
 
 #: Socle de métriques texte, collecté explicitement par le registre.
-TEXT_METRICS: tuple[DocumentMetric, ...] = (cer, wer, mer)
+TEXT_METRICS: tuple[DocumentMetric, ...] = (cer, cer_diplomatic, wer, mer)
 
-__all__ = ["TEXT_METRICS", "cer", "mer", "wer"]
+__all__ = ["TEXT_METRICS", "cer", "cer_diplomatic", "mer", "wer"]
