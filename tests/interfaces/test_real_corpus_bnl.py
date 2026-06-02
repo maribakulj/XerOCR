@@ -90,7 +90,7 @@ def build_bnl_run_result(root: Path) -> RunResult:
         EvaluationView(
             name="text",
             candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-            metric_names=("cer", "wer", "mer"),
+            metric_names=("cer", "cer_diplo", "wer", "mer"),
         ),
         EvaluationView(
             name="caseless",
@@ -127,11 +127,37 @@ def test_bnl_real_metrics_are_plausible(bnl_result: RunResult) -> None:
     assert {p.view for p in bnl_result.pipelines} == {"text", "caseless"}
     for pipeline in bnl_result.pipelines:
         scores = {s.metric: s.value for s in pipeline.aggregate}
-        assert set(scores) == {"cer", "wer", "mer"}
+        # cer_diplo (repli ſ→s) n'est demandé que dans la vue brute « text », où il
+        # isole la part d'erreur purement typographique (cf. test dédié plus bas).
+        expected = (
+            {"cer", "cer_diplo", "wer", "mer"}
+            if pipeline.view == "text"
+            else {"cer", "wer", "mer"}
+        )
+        assert set(scores) == expected
         # OCR réel (y compris moteur en mauvaise langue/écriture) : non nul, borné
         assert scores["cer"] is not None and 0.0 < scores["cer"] < 2.0
     # détail par-document peuplé : N docs × 5 moteurs × 2 vues
     assert len(bnl_result.documents) == len(_DOC_IDS) * len(_ENGINES) * 2
+
+
+def test_bnl_cer_diplomatic_isolates_long_s(bnl_result: RunResult) -> None:
+    """Trouvaille philologique réelle, figée : les modèles Fraktur (``frk``,
+    ``deu_latf``) transcrivent le ſ long que la GT BNL a normalisé en ``s`` ; le
+    CER brut les en « pénalise ». ``cer_diplo`` (repli ſ→s, des deux côtés)
+    récupère cette part **purement typographique**. Les moteurs non-Fraktur
+    (``deu``/``fra``/``easyocr``) n'émettent aucun ſ → aucun écart."""
+    text = {
+        p.pipeline: {s.metric: s.value for s in p.aggregate}
+        for p in bnl_result.pipelines
+        if p.view == "text"
+    }
+    for fraktur in ("frk", "deu_latf"):
+        gap = text[fraktur]["cer"] - text[fraktur]["cer_diplo"]
+        assert gap > 0.005, f"{fraktur} : écart ſ long attendu, vu {gap}"
+    for antiqua in ("deu", "fra", "easyocr"):
+        gap = text[antiqua]["cer"] - text[antiqua]["cer_diplo"]
+        assert gap < 1e-6, f"{antiqua} : pas de ſ → aucun écart, vu {gap}"
 
 
 def test_bnl_cross_engine_significance_is_live(bnl_result: RunResult) -> None:
