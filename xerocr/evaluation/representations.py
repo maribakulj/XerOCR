@@ -15,6 +15,8 @@ from xerocr.domain.layout import CanonicalLayout
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.formats.alto import parse_alto
 from xerocr.formats.alto.layout_map import alto_to_layout
+from xerocr.formats.pagexml import parse_pagexml
+from xerocr.formats.pagexml.layout_map import page_to_layout
 from xerocr.formats.text import read_plaintext
 
 _TEXT_TYPES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
@@ -39,17 +41,23 @@ def load_representation(uri: str, artifact_type: ArtifactType) -> object:
 
 
 def _load_layout(uri: str, data: bytes) -> CanonicalLayout:
-    """Charge un ``CanonicalLayout`` depuis du JSON natif **ou** un fichier ALTO.
+    """Charge un ``CanonicalLayout`` depuis du JSON natif, de l'ALTO ou du PAGE.
 
-    Détection par le premier octet non-blanc : ``<`` → ALTO (projeté vers le
-    modèle neutre), sinon JSON sérialisé d'un ``CanonicalLayout``.
+    XML (premier octet non-blanc ``<``) → ALTO ou PAGE selon le marqueur de
+    racine (``PcGts``/``pagecontent`` = PAGE, sinon ALTO) ; autrement JSON
+    sérialisé d'un ``CanonicalLayout``.
     """
     if data.lstrip()[:1] == b"<":
+        head = data[:4096].lower()
+        is_page = b"pcgts" in head or b"pagecontent" in head
         try:
+            if is_page:
+                return page_to_layout(parse_pagexml(data))
             return alto_to_layout(parse_alto(data))
         except (ValueError, FormatError) as exc:
+            kind = "PAGE" if is_page else "ALTO"
             raise EvaluationError(
-                f"ALTO illisible en layout ({uri!r}) : {exc}"
+                f"{kind} illisible en layout ({uri!r}) : {exc}"
             ) from exc
     try:
         return CanonicalLayout.model_validate_json(data)
