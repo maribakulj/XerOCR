@@ -10,8 +10,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from xerocr.domain.artifacts import ArtifactType
+from xerocr.domain.errors import FormatError
 from xerocr.domain.layout import CanonicalLayout
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.formats.alto import parse_alto
+from xerocr.formats.alto.layout_map import alto_to_layout
 from xerocr.formats.text import read_plaintext
 
 _TEXT_TYPES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
@@ -29,15 +32,29 @@ def load_representation(uri: str, artifact_type: ArtifactType) -> object:
     if artifact_type in _TEXT_TYPES:
         return read_plaintext(data)
     if artifact_type is ArtifactType.LAYOUT:
-        try:
-            return CanonicalLayout.model_validate_json(data)
-        except ValueError as exc:
-            raise EvaluationError(
-                f"CanonicalLayout invalide ({uri!r}) : {exc}"
-            ) from exc
+        return _load_layout(uri, data)
     raise EvaluationError(
         f"représentation non chargeable pour le type {artifact_type.value!r}."
     )
+
+
+def _load_layout(uri: str, data: bytes) -> CanonicalLayout:
+    """Charge un ``CanonicalLayout`` depuis du JSON natif **ou** un fichier ALTO.
+
+    Détection par le premier octet non-blanc : ``<`` → ALTO (projeté vers le
+    modèle neutre), sinon JSON sérialisé d'un ``CanonicalLayout``.
+    """
+    if data.lstrip()[:1] == b"<":
+        try:
+            return alto_to_layout(parse_alto(data))
+        except (ValueError, FormatError) as exc:
+            raise EvaluationError(
+                f"ALTO illisible en layout ({uri!r}) : {exc}"
+            ) from exc
+    try:
+        return CanonicalLayout.model_validate_json(data)
+    except ValueError as exc:
+        raise EvaluationError(f"CanonicalLayout invalide ({uri!r}) : {exc}") from exc
 
 
 __all__ = ["load_representation"]
