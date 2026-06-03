@@ -244,7 +244,7 @@ xerocr/adapters/
 ## DoD vivante (couche 5) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : ✅ T3 complet** — `precomputed` + `tesseract` + **`openai`** + **`ollama`** (LLM post-correction) verts, annulation câblée (D-A clos) ; importeurs/stores/VLM **par tranches**.
+> Maj dans le **même commit** que le code. **Statut : ✅ T3 complet** — `precomputed` + `tesseract` + **`openai`** + **`ollama`** (LLM post-correction) verts, annulation câblée (D-A clos) ; importeurs/stores/VLM **par tranches**. **+ T5 `layout/`** : `precomputed` (source LAYOUT + recognizer région), `assembler` (`AltoAssembler`), **`crop`** (`crop_region` PIL — découpe réelle des blocs du pipeline hybride seg→OCR ; `PIL` ajouté à la whitelist archi `adapters`). — *preuves : `tests/adapters/layout/test_crop.py`, `…/test_alto_assembler.py`, `tests/pipeline/test_hybrid_real_bnl.py` (live)*
 
 **Enveloppe :**
 - [x] `precomputed` implémente le `Module` Protocol (couche 4) **directement**, avec `name`/`version`. — *preuve : `tests/adapters/test_precomputed.py` (`isinstance(.., Module)` ; lecture `<stem>.<label>.txt` → `RAW_TEXT` + `content_hash` ; UTF-8 strict ; annulation)*

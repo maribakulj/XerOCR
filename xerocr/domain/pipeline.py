@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from xerocr.domain.artifacts import ArtifactType
 
@@ -57,6 +57,11 @@ class PipelineStep(BaseModel):
         DAG branchant : pour chaque type d'entrée, l'étape source.
         ``"__initial__"`` désigne les entrées initiales du runner. Dict
         vide → version la plus récente de chaque type.
+    fanout:
+        Si vrai, l'``adapter_name`` (un *reconnaisseur* de région) est exécuté
+        **une fois par région** du ``LAYOUT`` d'entrée, et ses sorties sont
+        réassemblées en un ``LAYOUT`` rempli (orchestration couche 4). Exige
+        ``LAYOUT`` + ``IMAGE`` en entrée et ``LAYOUT`` en sortie.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -68,6 +73,24 @@ class PipelineStep(BaseModel):
     input_types: tuple[ArtifactType, ...] = Field(default_factory=tuple)
     output_types: tuple[ArtifactType, ...] = Field(default_factory=tuple)
     inputs_from: dict[ArtifactType, str] = Field(default_factory=dict)
+    fanout: bool = False
+
+    @model_validator(mode="after")
+    def _check_fanout_contract(self) -> PipelineStep:
+        if self.fanout:
+            from xerocr.domain.errors import XerOCRError
+
+            needed = {ArtifactType.LAYOUT, ArtifactType.IMAGE}
+            if not needed.issubset(self.input_types):
+                raise XerOCRError(
+                    f"step {self.id!r} : fanout=True exige LAYOUT et IMAGE en "
+                    f"input_types (reçu {[t.value for t in self.input_types]})."
+                )
+            if ArtifactType.LAYOUT not in self.output_types:
+                raise XerOCRError(
+                    f"step {self.id!r} : fanout=True exige LAYOUT en output_types."
+                )
+        return self
 
     @field_validator("id")
     @classmethod

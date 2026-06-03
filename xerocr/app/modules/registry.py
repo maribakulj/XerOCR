@@ -106,12 +106,38 @@ def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
     )
 
 
+def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
+    from xerocr.adapters.layout.precomputed import PrecomputedLayoutSource
+
+    return PrecomputedLayoutSource()
+
+
+def _build_precomputed_region(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("source_label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "precomputed_region : 'source_label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.layout.precomputed import PrecomputedRegionRecognizer
+
+    return PrecomputedRegionRecognizer(source_label=label)
+
+
+def _build_alto_assembler(kwargs: Mapping[str, ParamValue]) -> Module:
+    from xerocr.adapters.layout.assembler import AltoAssembler
+
+    return AltoAssembler()
+
+
 def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
+    registry.register_builder("precomputed_layout", _build_precomputed_layout)
+    registry.register_builder("precomputed_region", _build_precomputed_region)
+    registry.register_builder("alto_assembler", _build_alto_assembler)
 
 
 __all__ = [

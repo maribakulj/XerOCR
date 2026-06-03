@@ -25,7 +25,15 @@ def test_builds_precomputed_module() -> None:
 
 
 def test_kinds_listed() -> None:
-    assert _registry().kinds() == ("ollama", "openai", "precomputed", "tesseract")
+    assert _registry().kinds() == (
+        "alto_assembler",
+        "ollama",
+        "openai",
+        "precomputed",
+        "precomputed_layout",
+        "precomputed_region",
+        "tesseract",
+    )
 
 
 def test_builds_tesseract_module() -> None:

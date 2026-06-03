@@ -1,0 +1,224 @@
+"""Fan-out par région — le cœur net-new de la tranche segmentation (couche 4).
+
+``segmentation (IMAGE → LAYOUT régions-seules) → reconnaissance PAR RÉGION (remplit
+le LAYOUT)``. Le ``Module`` reste **inchangé** : il renvoie *un* artefact par type ;
+c'est **l'orchestration** (ici) qui boucle sur les N régions, collecte les N
+sorties (estampillées ``region_id``), **tolère les échecs partiels** (une région
+qui échoue n'abat pas la page) et réassemble en respectant l'ordre de lecture.
+
+Le recognizer reçoit une IMAGE **cadrée par région**. Deux modes :
+- **``precomputed``** (pas de ``cropper``) : l'IMAGE page entière est passée avec
+  ``region_id`` posé (la donnée précalculée est figée par région) ;
+- **hybride réel** (``cropper`` injecté) : le bloc est **découpé** de l'image — la
+  pièce qui rend « segmentation externe → OCR des blocs » réel. Le découpage PIL
+  vit en couche 5 (``cropper``) ; ici on ne calcule que la **boîte relative**
+  (arithmétique, unités neutralisées : ALTO ``mm10`` vs pixels).
+"""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Callable, Mapping
+from pathlib import Path
+
+from xerocr.domain.artifacts import (
+    Artifact,
+    ArtifactType,
+    compute_content_hash,
+)
+from xerocr.domain.errors import AdapterStepError
+from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from xerocr.pipeline.protocols import Module, ParamValue
+from xerocr.pipeline.run_control import RunControl
+from xerocr.pipeline.types import RunContext
+
+logger = logging.getLogger(__name__)
+
+#: Découpeur de bloc injecté (impl PIL en couche 5) :
+#: ``(image_page, boîte_relative, region_id, contexte) → artefact IMAGE du bloc``.
+RegionCropper = Callable[
+    [Artifact, tuple[float, float, float, float], str, RunContext], Artifact
+]
+
+
+def _relative_bbox(
+    region: Region, page: LayoutPage
+) -> tuple[float, float, float, float] | None:
+    """Boîte de la région en coordonnées relatives ``[0, 1]`` (unités neutralisées)."""
+    geometry = region.geometry
+    width, height = page.width, page.height
+    if geometry is None or not width or not height:
+        return None
+    if geometry.bbox is not None:
+        b = geometry.bbox
+        x0, y0, x1, y1 = b.x, b.y, b.x + b.width, b.y + b.height
+    elif geometry.polygon:
+        xs = [p[0] for p in geometry.polygon]
+        ys = [p[1] for p in geometry.polygon]
+        x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+    else:
+        return None
+    return (x0 / width, y0 / height, x1 / width, y1 / height)
+
+
+def run_region_fanout(
+    *,
+    layout: CanonicalLayout,
+    page_image: Artifact,
+    recognizer: Module,
+    context: RunContext,
+    control: RunControl,
+    params: Mapping[str, ParamValue] | None = None,
+    cropper: RegionCropper | None = None,
+) -> CanonicalLayout:
+    """Remplit ``layout`` (régions seules) par reconnaissance région par région.
+
+    Renvoie un nouveau ``CanonicalLayout`` où chaque région porte sa ligne de
+    texte reconnu. Une région dont la reconnaissance échoue reste **vide** (texte
+    non produit, avertissement journalisé) — la page n'est pas abattue. Avec un
+    ``cropper``, chaque bloc est **découpé** de l'image avant OCR (pipeline réel).
+    """
+    step_params = dict(params) if params is not None else {}
+    pages = tuple(
+        _fill_page(page, page_image, recognizer, context, control, step_params, cropper)
+        for page in layout.pages
+    )
+    return CanonicalLayout(pages=pages)
+
+
+def _fill_page(
+    page: LayoutPage,
+    page_image: Artifact,
+    recognizer: Module,
+    context: RunContext,
+    control: RunControl,
+    params: dict[str, ParamValue],
+    cropper: RegionCropper | None,
+) -> LayoutPage:
+    filled = tuple(
+        _fill_region(
+            region, page, page_image, recognizer, context, control, params, cropper
+        )
+        for region in page.regions
+    )
+    return page.model_copy(update={"regions": filled})
+
+
+def _region_image(
+    region: Region,
+    page: LayoutPage,
+    page_image: Artifact,
+    context: RunContext,
+    cropper: RegionCropper | None,
+) -> Artifact | None:
+    """IMAGE passée au recognizer : crop réel si ``cropper``, sinon image entière."""
+    if cropper is None:
+        return page_image.model_copy(
+            update={
+                "id": f"{page_image.id}:{region.id}",
+                "region_id": region.id,
+                "produced_by_step": None,
+                "provenance": None,
+            }
+        )
+    rel = _relative_bbox(region, page)
+    if rel is None:
+        logger.warning(
+            "[fanout] région %r sans géométrie : non découpable, ignorée", region.id
+        )
+        return None
+    return cropper(page_image, rel, region.id, context)
+
+
+def _fill_region(
+    region: Region,
+    page: LayoutPage,
+    page_image: Artifact,
+    recognizer: Module,
+    context: RunContext,
+    control: RunControl,
+    params: dict[str, ParamValue],
+    cropper: RegionCropper | None,
+) -> Region:
+    control.raise_if_cancelled()
+    region_image = _region_image(region, page, page_image, context, cropper)
+    if region_image is None:
+        return region
+    try:
+        outputs = recognizer.execute(
+            {ArtifactType.IMAGE: region_image}, dict(params), context, control
+        )
+        text = _read_text(outputs)
+    except AdapterStepError as exc:
+        logger.warning(
+            "[fanout] région %r non reconnue (ignorée) : %s", region.id, exc
+        )
+        return region
+    line = Line(id=f"{region.id}:l1", text=text)
+    return region.model_copy(update={"lines": (line,)})
+
+
+def _read_text(outputs: dict[ArtifactType, Artifact]) -> str:
+    artifact = outputs.get(ArtifactType.RAW_TEXT)
+    if artifact is None or artifact.uri is None:
+        raise AdapterStepError("fanout : reconnaissance sans RAW_TEXT exploitable.")
+    try:
+        return Path(artifact.uri).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise AdapterStepError(f"fanout : texte de région illisible : {exc}") from exc
+
+
+def execute_region_fanout(
+    *,
+    layout_artifact: Artifact,
+    page_image: Artifact,
+    recognizer: Module,
+    context: RunContext,
+    control: RunControl,
+    params: Mapping[str, ParamValue] | None = None,
+    cropper: RegionCropper | None = None,
+) -> dict[ArtifactType, Artifact]:
+    """Étage *reconnaissance par région* prêt pour l'exécuteur déclaratif.
+
+    Charge le ``LAYOUT`` (régions seules) depuis son artefact, remplit par
+    fan-out, **persiste** le ``LAYOUT`` rempli (JSON) dans le workspace et
+    renvoie l'artefact correspondant — la forme ``dict`` attendue par
+    ``PipelineExecutor`` (qui estampille ensuite la provenance).
+    """
+    if layout_artifact.uri is None:
+        raise AdapterStepError("fanout : artefact LAYOUT d'entrée sans URI.")
+    try:
+        layout = CanonicalLayout.model_validate_json(
+            Path(layout_artifact.uri).read_bytes()
+        )
+    except (OSError, ValueError) as exc:
+        raise AdapterStepError(f"fanout : LAYOUT d'entrée illisible : {exc}") from exc
+    filled = run_region_fanout(
+        layout=layout,
+        page_image=page_image,
+        recognizer=recognizer,
+        context=context,
+        control=control,
+        params=params,
+        cropper=cropper,
+    )
+    payload = filled.model_dump_json().encode("utf-8")
+    out_dir = (
+        Path(context.workspace_uri)
+        if context.workspace_uri
+        else Path(layout_artifact.uri).parent
+    )
+    out_path = out_dir / f"{context.document_id.replace('/', '_')}.filled.layout.json"
+    out_path.write_bytes(payload)
+    return {
+        ArtifactType.LAYOUT: Artifact(
+            id=f"{context.document_id}:fanout:layout",
+            document_id=context.document_id,
+            type=ArtifactType.LAYOUT,
+            uri=str(out_path),
+            content_hash=compute_content_hash(payload),
+        )
+    }
+
+
+__all__ = ["RegionCropper", "execute_region_fanout", "run_region_fanout"]
