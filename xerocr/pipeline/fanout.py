@@ -6,15 +6,19 @@ c'est **l'orchestration** (ici) qui boucle sur les N régions, collecte les N
 sorties (estampillées ``region_id``), **tolère les échecs partiels** (une région
 qui échoue n'abat pas la page) et réassemble en respectant l'ordre de lecture.
 
-Le recognizer reçoit une IMAGE **cadrée par région** (``region_id`` posé) ; en
-socle ``precomputed`` aucun découpage réel n'a lieu (la donnée est figée par
-région). Le découpage pixel réel est un épaississement (concern adapter).
+Le recognizer reçoit une IMAGE **cadrée par région**. Deux modes :
+- **``precomputed``** (pas de ``cropper``) : l'IMAGE page entière est passée avec
+  ``region_id`` posé (la donnée précalculée est figée par région) ;
+- **hybride réel** (``cropper`` injecté) : le bloc est **découpé** de l'image — la
+  pièce qui rend « segmentation externe → OCR des blocs » réel. Le découpage PIL
+  vit en couche 5 (``cropper``) ; ici on ne calcule que la **boîte relative**
+  (arithmétique, unités neutralisées : ALTO ``mm10`` vs pixels).
 """
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from xerocr.domain.artifacts import (
@@ -30,6 +34,32 @@ from xerocr.pipeline.types import RunContext
 
 logger = logging.getLogger(__name__)
 
+#: Découpeur de bloc injecté (impl PIL en couche 5) :
+#: ``(image_page, boîte_relative, region_id, contexte) → artefact IMAGE du bloc``.
+RegionCropper = Callable[
+    [Artifact, tuple[float, float, float, float], str, RunContext], Artifact
+]
+
+
+def _relative_bbox(
+    region: Region, page: LayoutPage
+) -> tuple[float, float, float, float] | None:
+    """Boîte de la région en coordonnées relatives ``[0, 1]`` (unités neutralisées)."""
+    geometry = region.geometry
+    width, height = page.width, page.height
+    if geometry is None or not width or not height:
+        return None
+    if geometry.bbox is not None:
+        b = geometry.bbox
+        x0, y0, x1, y1 = b.x, b.y, b.x + b.width, b.y + b.height
+    elif geometry.polygon:
+        xs = [p[0] for p in geometry.polygon]
+        ys = [p[1] for p in geometry.polygon]
+        x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+    else:
+        return None
+    return (x0 / width, y0 / height, x1 / width, y1 / height)
+
 
 def run_region_fanout(
     *,
@@ -39,16 +69,18 @@ def run_region_fanout(
     context: RunContext,
     control: RunControl,
     params: Mapping[str, ParamValue] | None = None,
+    cropper: RegionCropper | None = None,
 ) -> CanonicalLayout:
     """Remplit ``layout`` (régions seules) par reconnaissance région par région.
 
     Renvoie un nouveau ``CanonicalLayout`` où chaque région porte sa ligne de
     texte reconnu. Une région dont la reconnaissance échoue reste **vide** (texte
-    non produit, avertissement journalisé) — la page n'est pas abattue.
+    non produit, avertissement journalisé) — la page n'est pas abattue. Avec un
+    ``cropper``, chaque bloc est **découpé** de l'image avant OCR (pipeline réel).
     """
     step_params = dict(params) if params is not None else {}
     pages = tuple(
-        _fill_page(page, page_image, recognizer, context, control, step_params)
+        _fill_page(page, page_image, recognizer, context, control, step_params, cropper)
         for page in layout.pages
     )
     return CanonicalLayout(pages=pages)
@@ -61,31 +93,57 @@ def _fill_page(
     context: RunContext,
     control: RunControl,
     params: dict[str, ParamValue],
+    cropper: RegionCropper | None,
 ) -> LayoutPage:
     filled = tuple(
-        _fill_region(region, page_image, recognizer, context, control, params)
+        _fill_region(
+            region, page, page_image, recognizer, context, control, params, cropper
+        )
         for region in page.regions
     )
     return page.model_copy(update={"regions": filled})
 
 
+def _region_image(
+    region: Region,
+    page: LayoutPage,
+    page_image: Artifact,
+    context: RunContext,
+    cropper: RegionCropper | None,
+) -> Artifact | None:
+    """IMAGE passée au recognizer : crop réel si ``cropper``, sinon image entière."""
+    if cropper is None:
+        return page_image.model_copy(
+            update={
+                "id": f"{page_image.id}:{region.id}",
+                "region_id": region.id,
+                "produced_by_step": None,
+                "provenance": None,
+            }
+        )
+    rel = _relative_bbox(region, page)
+    if rel is None:
+        logger.warning(
+            "[fanout] région %r sans géométrie : non découpable, ignorée", region.id
+        )
+        return None
+    return cropper(page_image, rel, region.id, context)
+
+
 def _fill_region(
     region: Region,
+    page: LayoutPage,
     page_image: Artifact,
     recognizer: Module,
     context: RunContext,
     control: RunControl,
     params: dict[str, ParamValue],
+    cropper: RegionCropper | None,
 ) -> Region:
     control.raise_if_cancelled()
-    region_image = page_image.model_copy(
-        update={
-            "id": f"{page_image.id}:{region.id}",
-            "region_id": region.id,
-            "produced_by_step": None,
-            "provenance": None,
-        }
-    )
+    region_image = _region_image(region, page, page_image, context, cropper)
+    if region_image is None:
+        return region
     try:
         outputs = recognizer.execute(
             {ArtifactType.IMAGE: region_image}, dict(params), context, control
@@ -118,6 +176,7 @@ def execute_region_fanout(
     context: RunContext,
     control: RunControl,
     params: Mapping[str, ParamValue] | None = None,
+    cropper: RegionCropper | None = None,
 ) -> dict[ArtifactType, Artifact]:
     """Étage *reconnaissance par région* prêt pour l'exécuteur déclaratif.
 
@@ -141,6 +200,7 @@ def execute_region_fanout(
         context=context,
         control=control,
         params=params,
+        cropper=cropper,
     )
     payload = filled.model_dump_json().encode("utf-8")
     out_dir = (
@@ -161,4 +221,4 @@ def execute_region_fanout(
     }
 
 
-__all__ = ["execute_region_fanout", "run_region_fanout"]
+__all__ = ["RegionCropper", "execute_region_fanout", "run_region_fanout"]

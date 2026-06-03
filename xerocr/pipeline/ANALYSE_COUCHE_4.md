@@ -294,7 +294,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
 
-- [x] **fan-out par région (T5)** : `fanout.py` + `execute_region_fanout`, orchestré par `step.fanout` dans l'exécuteur ; assemblage `LAYOUT→ALTO_XML` livré (`AltoAssembler`, couche 5). Reste (épaississement) : segmenteur réel + crop, routage par type de bloc.
+- [x] **fan-out par région (T5)** : `fanout.py` + `execute_region_fanout`, orchestré par `step.fanout` dans l'exécuteur ; assemblage `LAYOUT→ALTO_XML` livré (`AltoAssembler`, couche 5). **+ `RegionCropper`** injecté → **crop réel des blocs** (pipeline hybride seg→OCR par bloc ; la couche 4 calcule la boîte relative, PIL en couche 5). *preuve : `tests/adapters/layout/test_crop.py`, `tests/pipeline/test_hybrid_real_bnl.py` (live)*. Reste (épaississement) : routage par type de bloc, segmenteur **out-of-tree** (T6).
 - [~] **Différé** : ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
 
 ---

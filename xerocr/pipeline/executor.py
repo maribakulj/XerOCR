@@ -23,7 +23,7 @@ from xerocr.domain.deadline import Deadline
 from xerocr.domain.errors import XerOCRError
 from xerocr.domain.pipeline import INITIAL_STEP_ID, PipelineSpec, PipelineStep
 from xerocr.domain.provenance import ProvenanceRecord
-from xerocr.pipeline.fanout import execute_region_fanout
+from xerocr.pipeline.fanout import RegionCropper, execute_region_fanout
 from xerocr.pipeline.protocols import Module
 from xerocr.pipeline.run_control import RunControl
 from xerocr.pipeline.types import RunContext
@@ -56,8 +56,13 @@ class PipelineExecutor:
         deadline: Deadline | None = None,
         control: RunControl | None = None,
         workspace_uri: str | None = None,
+        cropper: RegionCropper | None = None,
     ) -> dict[ArtifactType, Artifact]:
-        """Exécute ``spec`` ; renvoie le pool d'artefacts (dernier par type)."""
+        """Exécute ``spec`` ; renvoie le pool d'artefacts (dernier par type).
+
+        ``cropper`` (couche 5, injecté par l'app) active le découpage réel des
+        blocs dans les étapes ``fanout`` (pipeline hybride seg→OCR par bloc).
+        """
         ctrl = control if control is not None else RunControl()
         dl = deadline if deadline is not None else Deadline.infinite()
         pool: dict[ArtifactType, Artifact] = dict(initial_inputs)
@@ -80,7 +85,7 @@ class PipelineExecutor:
                 workspace_uri=workspace_uri,
             )
             if step.fanout:
-                outputs = self._run_fanout(step, module, inputs, context, ctrl)
+                outputs = self._run_fanout(step, module, inputs, context, ctrl, cropper)
             else:
                 outputs = module.execute(inputs, dict(step.params), context, ctrl)
             stamped = self._stamp(outputs, step)
@@ -96,6 +101,7 @@ class PipelineExecutor:
         inputs: Mapping[ArtifactType, Artifact],
         context: RunContext,
         control: RunControl,
+        cropper: RegionCropper | None,
     ) -> dict[ArtifactType, Artifact]:
         layout = inputs.get(ArtifactType.LAYOUT)
         image = inputs.get(ArtifactType.IMAGE)
@@ -110,6 +116,7 @@ class PipelineExecutor:
             context=context,
             control=control,
             params=dict(step.params),
+            cropper=cropper,
         )
 
     def _resolve_inputs(

@@ -98,7 +98,8 @@ ADAPTERS_ALLOWED_PKG = (
     "xerocr.adapters",
 )
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
-ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract", "openai", "httpx"}
+#: ``PIL`` : découpage des blocs (``layout/crop``) du pipeline hybride seg→OCR.
+ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract", "openai", "httpx", "PIL"}
 
 
 def test_adapters_imports_are_allowed():
