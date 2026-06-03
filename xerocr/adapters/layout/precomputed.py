@@ -39,7 +39,7 @@ class PrecomputedLayoutSource:
 
     @property
     def name(self) -> str:
-        return "precomputed:layout"
+        return "precomputed_layout"
 
     @property
     def version(self) -> str:

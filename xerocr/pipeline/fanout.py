@@ -17,7 +17,11 @@ import logging
 from collections.abc import Mapping
 from pathlib import Path
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
+from xerocr.domain.artifacts import (
+    Artifact,
+    ArtifactType,
+    compute_content_hash,
+)
 from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
 from xerocr.pipeline.protocols import Module, ParamValue
@@ -106,4 +110,55 @@ def _read_text(outputs: dict[ArtifactType, Artifact]) -> str:
         raise AdapterStepError(f"fanout : texte de région illisible : {exc}") from exc
 
 
-__all__ = ["run_region_fanout"]
+def execute_region_fanout(
+    *,
+    layout_artifact: Artifact,
+    page_image: Artifact,
+    recognizer: Module,
+    context: RunContext,
+    control: RunControl,
+    params: Mapping[str, ParamValue] | None = None,
+) -> dict[ArtifactType, Artifact]:
+    """Étage *reconnaissance par région* prêt pour l'exécuteur déclaratif.
+
+    Charge le ``LAYOUT`` (régions seules) depuis son artefact, remplit par
+    fan-out, **persiste** le ``LAYOUT`` rempli (JSON) dans le workspace et
+    renvoie l'artefact correspondant — la forme ``dict`` attendue par
+    ``PipelineExecutor`` (qui estampille ensuite la provenance).
+    """
+    if layout_artifact.uri is None:
+        raise AdapterStepError("fanout : artefact LAYOUT d'entrée sans URI.")
+    try:
+        layout = CanonicalLayout.model_validate_json(
+            Path(layout_artifact.uri).read_bytes()
+        )
+    except (OSError, ValueError) as exc:
+        raise AdapterStepError(f"fanout : LAYOUT d'entrée illisible : {exc}") from exc
+    filled = run_region_fanout(
+        layout=layout,
+        page_image=page_image,
+        recognizer=recognizer,
+        context=context,
+        control=control,
+        params=params,
+    )
+    payload = filled.model_dump_json().encode("utf-8")
+    out_dir = (
+        Path(context.workspace_uri)
+        if context.workspace_uri
+        else Path(layout_artifact.uri).parent
+    )
+    out_path = out_dir / f"{context.document_id.replace('/', '_')}.filled.layout.json"
+    out_path.write_bytes(payload)
+    return {
+        ArtifactType.LAYOUT: Artifact(
+            id=f"{context.document_id}:fanout:layout",
+            document_id=context.document_id,
+            type=ArtifactType.LAYOUT,
+            uri=str(out_path),
+            content_hash=compute_content_hash(payload),
+        )
+    }
+
+
+__all__ = ["execute_region_fanout", "run_region_fanout"]

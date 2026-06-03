@@ -279,7 +279,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 ## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. **+ T5 squelette** : `fanout.py` (`run_region_fanout` — reconnaissance par région, échec partiel toléré, ordre de lecture préservé) ; le `Module` reste **inchangé** (1 artefact/type, le fan-out boucle dans l'orchestration). *preuve : `tests/pipeline/test_segmentation_skeleton.py`*
+> Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. **+ T5 squelette** : `fanout.py` (`run_region_fanout` — reconnaissance par région, échec partiel toléré, ordre de lecture préservé) ; le `Module` reste **inchangé** (1 artefact/type, le fan-out boucle dans l'orchestration). *preuve : `tests/pipeline/test_segmentation_skeleton.py`*. **+ T5 wiring déclaratif** : `execute_region_fanout` (persiste le LAYOUT rempli) + branche `step.fanout` dans `PipelineExecutor` → une `PipelineSpec` unique orchestre segment→fanout→assemblage. *preuve : `tests/pipeline/test_segmentation_pipeline.py`*
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*
@@ -294,7 +294,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
 
-- [x] **fan-out par région (T5 squelette)** : `fanout.py`, tout `precomputed`. Reste (épaississement) : segmenteur réel + crop, routage par type de bloc, assemblage `LAYOUT→ALTO_XML`.
+- [x] **fan-out par région (T5)** : `fanout.py` + `execute_region_fanout`, orchestré par `step.fanout` dans l'exécuteur ; assemblage `LAYOUT→ALTO_XML` livré (`AltoAssembler`, couche 5). Reste (épaississement) : segmenteur réel + crop, routage par type de bloc.
 - [~] **Différé** : ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
 
 ---

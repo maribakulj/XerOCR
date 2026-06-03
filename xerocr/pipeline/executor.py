@@ -6,8 +6,11 @@ puis **estampille la provenance** (``code_version`` + ``parameters_hash``) et le
 ``produced_by_step`` sur chaque artefact produit — le module n'a pas à connaître
 ces concerns. L'annulation coopérative est vérifiée avant chaque étape.
 
-Le fan-out par région (segmentation) et l'orchestration multi-documents
-(threads, timeout, backpressure) sont des tranches ultérieures — pas ici.
+Une étape ``fanout=True`` (reconnaissance par région) exécute son module **une
+fois par région** du ``LAYOUT`` d'entrée et réassemble un ``LAYOUT`` rempli
+(délégué à ``execute_region_fanout``) ; l'estampillage de provenance reste
+identique. L'orchestration multi-documents (threads, timeout, backpressure) est
+une tranche ultérieure — pas ici.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from xerocr.domain.deadline import Deadline
 from xerocr.domain.errors import XerOCRError
 from xerocr.domain.pipeline import INITIAL_STEP_ID, PipelineSpec, PipelineStep
 from xerocr.domain.provenance import ProvenanceRecord
+from xerocr.pipeline.fanout import execute_region_fanout
 from xerocr.pipeline.protocols import Module
 from xerocr.pipeline.run_control import RunControl
 from xerocr.pipeline.types import RunContext
@@ -75,12 +79,38 @@ class PipelineExecutor:
                 deadline=dl,
                 workspace_uri=workspace_uri,
             )
-            outputs = module.execute(inputs, dict(step.params), context, ctrl)
+            if step.fanout:
+                outputs = self._run_fanout(step, module, inputs, context, ctrl)
+            else:
+                outputs = module.execute(inputs, dict(step.params), context, ctrl)
             stamped = self._stamp(outputs, step)
             self._check_outputs(step, stamped)
             by_step[step.id] = stamped
             pool.update(stamped)
         return pool
+
+    def _run_fanout(
+        self,
+        step: PipelineStep,
+        module: Module,
+        inputs: Mapping[ArtifactType, Artifact],
+        context: RunContext,
+        control: RunControl,
+    ) -> dict[ArtifactType, Artifact]:
+        layout = inputs.get(ArtifactType.LAYOUT)
+        image = inputs.get(ArtifactType.IMAGE)
+        if layout is None or image is None:
+            raise PipelineStepError(
+                f"étape {step.id!r} (fanout) : entrées LAYOUT et IMAGE requises."
+            )
+        return execute_region_fanout(
+            layout_artifact=layout,
+            page_image=image,
+            recognizer=module,
+            context=context,
+            control=control,
+            params=dict(step.params),
+        )
 
     def _resolve_inputs(
         self,
