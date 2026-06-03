@@ -106,11 +106,23 @@ def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
     )
 
 
+def _build_mistral(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "mistral : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.llm.mistral import MistralAdapter
+
+    return MistralAdapter(
+        label=label, model=str(kwargs.get("model", "mistral-small-latest"))
+    )
+
+
 def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
     from xerocr.adapters.layout.precomputed import PrecomputedLayoutSource
 
     return PrecomputedLayoutSource()
-
 
 def _build_precomputed_region(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("source_label")
@@ -135,6 +147,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("tesseract", _build_tesseract)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
+    registry.register_builder("mistral", _build_mistral)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)

@@ -24,6 +24,7 @@ dev = [
 ]
 tesseract = ["pytesseract"]
 openai = ["openai"]
+mistral = ["mistralai"]
 ollama = ["httpx"]
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
 

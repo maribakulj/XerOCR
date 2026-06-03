@@ -99,7 +99,9 @@ ADAPTERS_ALLOWED_PKG = (
 )
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
 #: ``PIL`` : découpage des blocs (``layout/crop``) du pipeline hybride seg→OCR.
-ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {"pytesseract", "openai", "httpx", "PIL"}
+ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
+    "pytesseract", "openai", "mistralai", "httpx", "PIL"
+}
 
 
 def test_adapters_imports_are_allowed():
