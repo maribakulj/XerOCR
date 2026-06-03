@@ -7,8 +7,10 @@ import time
 import zipfile
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
+from xerocr.app.engines import engine_statuses
 from xerocr.interfaces.web.app import create_app
 from xerocr.interfaces.web.security.csrf import CSRF_HEADER
 
@@ -126,8 +128,15 @@ def test_llm_engine_standalone_is_422(tmp_path: Path) -> None:
     assert _post(_client(tmp_path), {"engine": "ollama"}).status_code == 422
 
 
-def test_unavailable_engine_is_409(tmp_path: Path) -> None:
-    # tesseract indisponible ici (ni binaire ni pytesseract) → 409.
+def test_unavailable_engine_is_409(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # On FORCE l'indisponibilité du binaire (déterministe : indépendant du fait
+    # que tesseract soit installé ou non sur la machine de test/CI).
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.app.engine_statuses",
+        lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
+    )
     resp = _post(_client(tmp_path), {"engine": "tesseract", "corpus_id": "x"})
     assert resp.status_code in (404, 409)  # 404 si corpus d'abord ; sinon 409
     # sans corpus_id, c'est franchement l'indisponibilité qui parle :
