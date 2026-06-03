@@ -21,7 +21,11 @@ from xerocr.app import (
     resolve_code_version,
 )
 from xerocr.app import run as run_orchestrator
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
+from xerocr.app.modules import (
+    ModuleRegistry,
+    discover_plugins,
+    register_default_modules,
+)
 from xerocr.domain.errors import XerOCRError
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
@@ -31,6 +35,7 @@ def demo_to_html() -> str:
     """Exécute la démo et renvoie le rapport HTML (déterministe)."""
     registry = ModuleRegistry()
     register_default_modules(registry)
+    discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     with TemporaryDirectory() as tmp:
         corpus = write_demo_corpus(Path(tmp))
         result = run_orchestrator(
@@ -51,6 +56,7 @@ def _run_demo(output: str) -> int:
 def _run_config(config_path: str, output: str, json_output: str | None) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
+    discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     spec = load_run_spec(config_path)
     result = run_orchestrator(
         spec, registry=registry, code_version=resolve_code_version()
