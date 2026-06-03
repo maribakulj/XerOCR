@@ -175,7 +175,56 @@ def mer(ctx: DocContext) -> Observation:
     )
 
 
-#: Socle de métriques texte, collecté explicitement par le registre.
-TEXT_METRICS: tuple[DocumentMetric, ...] = (cer, cer_diplomatic, wer, mer)
+@document_metric(
+    name="del_rate",
+    input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
+    description="Taux de suppression au mot : mots de réf. omis / mots de réf.",
+    higher_is_better=False,
+    tags=frozenset({"text", "word", "error_profile"}),
+)
+def deletion_rate(ctx: DocContext) -> Observation:
+    reference, hypothesis = _text_pair(ctx)
+    ref_words = reference.split()
+    alignment = _align(ref_words, hypothesis.split())
+    return Observation(
+        value=_error_rate(alignment.deletions, len(ref_words)),
+        weight=len(ref_words),
+    )
 
-__all__ = ["TEXT_METRICS", "cer", "cer_diplomatic", "mer", "wer"]
+
+@document_metric(
+    name="ins_rate",
+    input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
+    description="Taux d'insertion au mot : mots parasites ajoutés / mots de réf.",
+    higher_is_better=False,
+    tags=frozenset({"text", "word", "error_profile"}),
+)
+def insertion_rate(ctx: DocContext) -> Observation:
+    reference, hypothesis = _text_pair(ctx)
+    ref_words = reference.split()
+    alignment = _align(ref_words, hypothesis.split())
+    return Observation(
+        value=_error_rate(alignment.insertions, len(ref_words)),
+        weight=len(ref_words),
+    )
+
+
+#: Socle de métriques texte, collecté explicitement par le registre.
+TEXT_METRICS: tuple[DocumentMetric, ...] = (
+    cer,
+    cer_diplomatic,
+    wer,
+    mer,
+    deletion_rate,
+    insertion_rate,
+)
+
+__all__ = [
+    "TEXT_METRICS",
+    "cer",
+    "cer_diplomatic",
+    "deletion_rate",
+    "insertion_rate",
+    "mer",
+    "wer",
+]

@@ -7,7 +7,14 @@ import pytest
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.text import cer, cer_diplomatic, mer, wer
+from xerocr.evaluation.metrics.text import (
+    cer,
+    cer_diplomatic,
+    deletion_rate,
+    insertion_rate,
+    mer,
+    wer,
+)
 
 
 def _ctx(reference: object, hypothesis: object) -> DocContext:
@@ -27,6 +34,25 @@ def test_cer_diplomatic_folds_long_s() -> None:
     # « Froiſſart » vs « Froissart » : 2 subs au CER brut, 0 sous repli ſ→s.
     assert cer.fn(_ctx("Froissart", "Froiſſart")).value > 0
     assert cer_diplomatic.fn(_ctx("Froissart", "Froiſſart")).value == 0.0
+
+
+def test_deletion_rate() -> None:
+    # « a b c d » → « a b c » : dernier mot supprimé (1 sur 4 mots de réf).
+    obs = deletion_rate.fn(_ctx("a b c d", "a b c"))
+    assert obs.value == 0.25 and obs.weight == 4
+
+
+def test_insertion_rate() -> None:
+    # « a b » → « a b c d » : « c » et « d » insérés (2 sur 2 mots de réf).
+    obs = insertion_rate.fn(_ctx("a b", "a b c d"))
+    assert obs.value == 1.0 and obs.weight == 2
+
+
+def test_error_profile_bounded_by_wer() -> None:
+    # del_rate + ins_rate ≤ wer (le reste = sub_rate = wer − del − ins ≥ 0).
+    ctx = _ctx("the quick brown fox", "the fast brown")
+    total = deletion_rate.fn(ctx).value + insertion_rate.fn(ctx).value
+    assert total <= wer.fn(ctx).value + 1e-9
 
 
 def test_cer_both_empty() -> None:

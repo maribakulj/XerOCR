@@ -90,7 +90,15 @@ def build_bnl_run_result(root: Path) -> RunResult:
         EvaluationView(
             name="text",
             candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-            metric_names=("cer", "cer_diplo", "diacritic_err", "wer", "mer"),
+            metric_names=(
+                "cer",
+                "cer_diplo",
+                "diacritic_err",
+                "del_rate",
+                "ins_rate",
+                "wer",
+                "mer",
+            ),
         ),
         EvaluationView(
             name="caseless",
@@ -127,10 +135,10 @@ def test_bnl_real_metrics_are_plausible(bnl_result: RunResult) -> None:
     assert {p.view for p in bnl_result.pipelines} == {"text", "caseless"}
     for pipeline in bnl_result.pipelines:
         scores = {s.metric: s.value for s in pipeline.aggregate}
-        # cer_diplo (repli ſ→s) et diacritic_err (umlauts/accents) ne sont demandés
-        # que dans la vue brute « text » (cf. tests dédiés plus bas).
+        # cer_diplo, diacritic_err et le profil d'erreur (del_rate/ins_rate) ne sont
+        # demandés que dans la vue brute « text » (cf. tests dédiés plus bas).
         expected = (
-            {"cer", "cer_diplo", "diacritic_err", "wer", "mer"}
+            {"cer", "cer_diplo", "diacritic_err", "del_rate", "ins_rate", "wer", "mer"}
             if pipeline.view == "text"
             else {"cer", "wer", "mer"}
         )
@@ -139,6 +147,24 @@ def test_bnl_real_metrics_are_plausible(bnl_result: RunResult) -> None:
         assert scores["cer"] is not None and 0.0 < scores["cer"] < 2.0
     # détail par-document peuplé : N docs × 5 moteurs × 2 vues
     assert len(bnl_result.documents) == len(_DOC_IDS) * len(_ENGINES) * 2
+
+
+def test_bnl_insertion_rate_flags_easyocr_hallucination(bnl_result: RunResult) -> None:
+    """Trouvaille figée : easyocr (pire CER, 0,50) insère le plus de mots parasites
+    — ins_rate strictement supérieur à chaque autre moteur (il « hallucine »). Et
+    l'invariant de décomposition del_rate + ins_rate ≤ wer tient pour chacun (le
+    reste = substitutions). Vue « text »."""
+    text = {
+        p.pipeline: {s.metric: s.value for s in p.aggregate}
+        for p in bnl_result.pipelines
+        if p.view == "text"
+    }
+    easy = text["easyocr"]["ins_rate"]
+    assert easy is not None
+    for other in ("frk", "deu", "fra", "deu_latf"):
+        assert easy > text[other]["ins_rate"]
+    for scores in text.values():
+        assert scores["del_rate"] + scores["ins_rate"] <= scores["wer"] + 1e-9
 
 
 def test_bnl_diacritic_error_splits_germanic_vs_latin(bnl_result: RunResult) -> None:

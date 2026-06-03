@@ -10,7 +10,15 @@ def test_default_metrics_registration_is_idempotent() -> None:
     registry = MetricRegistry()
     register_default_metrics(registry)
     register_default_metrics(registry)
-    assert registry.names() == ("cer", "cer_diplo", "diacritic_err", "mer", "wer")
+    assert registry.names() == (
+        "cer",
+        "cer_diplo",
+        "del_rate",
+        "diacritic_err",
+        "ins_rate",
+        "mer",
+        "wer",
+    )
 
 
 def test_get_and_select_by_input_types() -> None:
@@ -25,7 +33,9 @@ def test_get_and_select_by_input_types() -> None:
     assert {metric.name for metric in selected} == {
         "cer",
         "cer_diplo",
+        "del_rate",
         "diacritic_err",
+        "ins_rate",
         "wer",
         "mer",
     }
