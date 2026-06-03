@@ -38,6 +38,8 @@ from xerocr.formats.alto.types import (
     AltoTextBlock,
 )
 
+_NON_TEXT_TYPES = frozenset({"illustration", "graphical"})
+
 
 class _Counter:
     """Compteur déterministe pour synthétiser les ``id`` de région manquants."""
@@ -133,4 +135,91 @@ def alto_to_layout(document: AltoDocument) -> CanonicalLayout:
     )
 
 
-__all__ = ["alto_to_layout"]
+# --- assemblage inverse : CanonicalLayout → AltoDocument --------------------
+
+
+def _alto_bbox(geometry: Geometry | None) -> AltoBBox | None:
+    if geometry is None or geometry.bbox is None:
+        return None
+    b = geometry.bbox
+    return AltoBBox(hpos=b.x, vpos=b.y, width=b.width, height=b.height)
+
+
+def _alto_polygon(geometry: Geometry | None) -> tuple[Point, ...] | None:
+    if geometry is None or not geometry.polygon:
+        return None
+    return geometry.polygon
+
+
+def _alto_strings(line: Line) -> tuple[AltoString, ...]:
+    """Mots → ``<String>``. Sans mots, le texte est segmenté sur les blancs."""
+    if line.words:
+        return tuple(
+            AltoString(
+                content=word.text,
+                bbox=_alto_bbox(word.geometry),
+                confidence=word.confidence,
+            )
+            for word in line.words
+        )
+    return tuple(AltoString(content=token) for token in line.text.split())
+
+
+def _alto_line(line: Line) -> AltoLine:
+    return AltoLine(
+        id=line.id,
+        bbox=_alto_bbox(line.geometry),
+        polygon=_alto_polygon(line.geometry),
+        baseline=tuple(line.baseline) or None,
+        strings=_alto_strings(line),
+    )
+
+
+def _alto_block(region: Region) -> AltoBlock:
+    bbox = _alto_bbox(region.geometry)
+    polygon = _alto_polygon(region.geometry)
+    if region.regions:
+        return AltoComposedBlock(
+            id=region.id,
+            block_type=region.region_type,
+            bbox=bbox,
+            polygon=polygon,
+            blocks=tuple(_alto_block(child) for child in region.regions),
+        )
+    if region.region_type in _NON_TEXT_TYPES and not region.lines:
+        return AltoIllustration(
+            id=region.id, block_type=region.region_type, bbox=bbox, polygon=polygon
+        )
+    return AltoTextBlock(
+        id=region.id,
+        block_type=region.region_type,
+        bbox=bbox,
+        polygon=polygon,
+        lines=tuple(_alto_line(line) for line in region.lines),
+    )
+
+
+def _ordered_regions(page: LayoutPage) -> tuple[Region, ...]:
+    """Régions dans l'ordre de lecture (sinon ordre des régions)."""
+    if not page.reading_order:
+        return page.regions
+    by_id = {region.id: region for region in page.regions}
+    ordered = [by_id[rid] for rid in page.reading_order if rid in by_id]
+    ordered.extend(r for r in page.regions if r.id not in set(page.reading_order))
+    return tuple(ordered)
+
+
+def _alto_page(page: LayoutPage) -> AltoPage:
+    return AltoPage(
+        width=page.width,
+        height=page.height,
+        blocks=tuple(_alto_block(region) for region in _ordered_regions(page)),
+    )
+
+
+def layout_to_alto(layout: CanonicalLayout) -> AltoDocument:
+    """Assemble un ``CanonicalLayout`` (rempli) en ``AltoDocument`` sérialisable."""
+    return AltoDocument(pages=tuple(_alto_page(page) for page in layout.pages))
+
+
+__all__ = ["alto_to_layout", "layout_to_alto"]

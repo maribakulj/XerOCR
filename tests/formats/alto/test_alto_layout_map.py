@@ -31,9 +31,10 @@ from xerocr.formats.alto import (
     AltoPage,
     AltoString,
     AltoTextBlock,
+    parse_alto,
     write_alto,
 )
-from xerocr.formats.alto.layout_map import alto_to_layout
+from xerocr.formats.alto.layout_map import alto_to_layout, layout_to_alto
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -92,6 +93,28 @@ def test_non_text_block_has_no_lines() -> None:
     region = layout.pages[0].regions[0]
     assert region.region_type == "illustration"
     assert region.lines == ()
+
+
+def _region_texts(layout: object) -> list[str]:
+    return [
+        "\n".join(line.text for line in region.lines)
+        for region in layout.pages[0].regions  # type: ignore[attr-defined]
+    ]
+
+
+def test_layout_to_alto_round_trips_region_text() -> None:
+    # layout (issu d'ALTO) → ALTO → reparse → layout : le texte par région tient.
+    source = alto_to_layout(
+        _doc(_block("b1", "hello", "world"), _block("b2", "second", "block"))
+    )
+    rebuilt = alto_to_layout(parse_alto(write_alto(layout_to_alto(source))))
+    assert _region_texts(rebuilt) == _region_texts(source)
+    assert _region_texts(rebuilt) == ["hello world", "second block"]
+
+
+def test_layout_to_alto_is_octet_stable() -> None:
+    layout = alto_to_layout(_doc(_block("b1", "x", "y")))
+    assert write_alto(layout_to_alto(layout)) == write_alto(layout_to_alto(layout))
 
 
 def test_load_representation_reads_alto_as_layout(tmp_path: Path) -> None:
