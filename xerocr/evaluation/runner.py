@@ -17,11 +17,12 @@ from collections.abc import Mapping
 
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
+from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation
 from xerocr.evaluation.result import (
@@ -49,6 +50,11 @@ _CANDIDATE_PRECEDENCE: tuple[ArtifactType, ...] = (
 
 #: { métrique : { pipeline : [score par doc, aligné, ``None`` inclus] } }
 _Series = dict[str, dict[str, list[MetricScore]]]
+
+#: Types **inter-changeables au niveau représentation** : tous chargés en ``str``.
+#: Un candidat ``CORRECTED_TEXT`` est donc noté par une métrique ``RAW_TEXT`` sans
+#: projection (les post-corrections LLM, comportement T3 préservé).
+_TEXT_LIKE = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
 def evaluate_run(
@@ -213,14 +219,58 @@ def _context_for(
     signature: _Signature,
 ) -> DocContext | None:
     reference_type, hypothesis_type = signature
-    ground_truth = document.gt_for(reference_type)
-    if candidate is None or candidate.uri is None or ground_truth is None:
+    if candidate is None or candidate.uri is None:
         return None
-    reference = _prepare(load_representation(ground_truth.uri, reference_type), view)
-    hypothesis = _prepare(load_representation(candidate.uri, hypothesis_type), view)
+    resolved = _resolve_ground_truth(document, view, reference_type)
+    if resolved is None:
+        return None
+    ground_truth, gt_native_type = resolved
+    reference = _project_side(ground_truth.uri, gt_native_type, reference_type, view)
+    hypothesis = _project_side(candidate.uri, candidate.type, hypothesis_type, view)
+    if reference is None or hypothesis is None:
+        return None
     return DocContext(
-        document_id=document.id, reference=reference, hypothesis=hypothesis
+        document_id=document.id,
+        reference=_prepare(reference, view),
+        hypothesis=_prepare(hypothesis, view),
     )
+
+
+def _resolve_ground_truth(
+    document: DocumentRef, view: EvaluationView, reference_type: ArtifactType
+) -> tuple[GroundTruthRef, ArtifactType] | None:
+    """GT dont le type natif **alimente** ``reference_type`` (direct ou projeté)."""
+    direct = document.gt_for(reference_type)
+    if direct is not None:
+        return direct, reference_type
+    for gt in document.ground_truths:
+        spec = view.projection_for(gt.type)
+        if spec is not None and spec.target_type == reference_type:
+            return gt, gt.type
+    return None
+
+
+def _project_side(
+    uri: str,
+    native_type: ArtifactType,
+    target_type: ArtifactType,
+    view: EvaluationView,
+) -> object | None:
+    """Charge ``uri`` dans son type natif, projette vers ``target_type`` si besoin.
+
+    Identité si types égaux ou tous deux *text-like* (même représentation ``str``).
+    Sinon une ``ProjectionSpec`` de la vue doit pont(er) ``native → target`` ; à
+    défaut, ``None`` (jonction non applicable, pas de comparaison factice).
+    """
+    representation = load_representation(uri, native_type)
+    if native_type == target_type or (
+        native_type in _TEXT_LIKE and target_type in _TEXT_LIKE
+    ):
+        return representation
+    spec = view.projection_for(native_type)
+    if spec is None or spec.target_type != target_type:
+        return None
+    return get_projector(spec.projector_name)(representation, spec.params)
 
 
 def _prepare(representation: object, view: EvaluationView) -> object:

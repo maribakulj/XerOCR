@@ -1,0 +1,13 @@
+Source : « D'Wäschfra » (1868), Bibliothèque nationale de Luxembourg (www.bnl.lu).
+
+Œuvre originale : libre de restrictions de droits d'auteur connues
+(Public Domain Mark 1.0 — https://creativecommons.org/publicdomain/mark/1.0/).
+
+Fichiers numérisés et métadonnées (PDF, XML METS/ALTO, TIFF, PNG, JPG) :
+la BnL a renoncé à tous droits via CC0 1.0 Universal
+(https://creativecommons.org/publicdomain/zero/1.0/).
+
+`waeschfra_p2_excerpt.alto.xml` : extrait déterministe (3 premiers blocs de
+texte de la page 2, OCR ABBYY/CCS docWORKS d'origine) re-sérialisé en ALTO 4 par
+`xerocr.formats.alto.write_alto` pour rester léger. Utilisé comme **donnée réelle
+de référence** pour valider la projection layout→texte et les métriques texte.
