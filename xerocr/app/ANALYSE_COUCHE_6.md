@@ -234,7 +234,7 @@ xerocr/app/
 ## DoD vivante (couche 6) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : ✅ T2** — orchestrateur (+ **workspace** par run) + registre/factory + `RunSpec` + **loader YAML** + **sécurité chemins** verts. Différé : découverte entry-points (T6), reprise partielle, deps-lock (hors CI).
+> Maj dans le **même commit** que le code. **Statut : ✅ T2** — orchestrateur (+ **workspace** par run) + registre/factory + `RunSpec` + **loader YAML** + **sécurité chemins** verts. **+ T6 découverte entry-points** : `discover_plugins` (groupe `xerocr.modules`, builder tiers enregistré comme le socle ; **fail-closed mode public** ; câblé CLI + web). — *preuve : `tests/app/test_plugin_discovery.py` + plugin de réf. `tests/fixtures/sample_segmenter_plugin.py`*. Différé : reprise partielle, deps-lock (hors CI), 2ᵉ plugin pip réel.
 
 **Enveloppe :**
 - [x] `app` = **coquille mince qui NE CALCULE PAS** (appelle pipeline puis `evaluate_run` ; l'assemblage métrique vit en `evaluation`). — *preuve : `test_app_imports_are_allowed` ; l'orchestrateur délègue, n'importe aucune `evaluation.metrics*`*

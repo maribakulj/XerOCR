@@ -29,7 +29,11 @@ from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import EngineStatus, engine_statuses
 from xerocr.app.jobs import JobRunner
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
+from xerocr.app.modules import (
+    ModuleRegistry,
+    discover_plugins,
+    register_default_modules,
+)
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.home import build_home_router
@@ -126,6 +130,9 @@ def create_app(
     # processus serveur, pas un singleton de module → factory respectée).
     registry = ModuleRegistry()
     register_default_modules(registry)
+    # Découverte de modules tiers : DÉSACTIVÉE en mode public (fail-closed —
+    # pas de chargement de code arbitraire in-process sur un serveur exposé).
+    discover_plugins(registry, enabled=not is_public)
     runner = JobRunner(
         store=JobStore(),
         registry=registry,
