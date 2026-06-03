@@ -261,7 +261,7 @@ xerocr/reports/
 ## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : ✅ T2** — cadre `Section` + assembleur autonome + sections **overview** & **cross_engine** + rapport de **comparaison** (deltas 2 runs) verts. Différé : sections/métriques incrémentales (T7), interactivité client-side.
+> Maj dans le **même commit** que le code. **Statut : ✅ T2** — cadre `Section` + assembleur autonome + sections **overview** & **cross_engine** + rapport de **comparaison** (deltas 2 runs) verts. **+ T7 `synthesis`** : section verdict factuel par vue (meilleur pipeline CER · Δ au suivant · significativité `cross_engine`), gatée `requires=("cer",)`, déterministe — **toutes les vues S4 au design désormais livrées**. Différé : importeurs cœur · longitudinal (T7), interactivité client-side.
 
 **Enveloppe (cadre, plein-scope dès T1) :**
 - [x] **`Protocol Section` unique** (1 signature `render(RunResult, ctx) → Html|None`, `requires` déclarés ; `Html` NewType anti-XSS) ; 0 registry. — *preuve : `reports/section.py` ; `isinstance(OverviewSection(), Section)`*
