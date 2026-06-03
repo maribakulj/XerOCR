@@ -164,6 +164,30 @@ def download(url: str, dest: Path, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     dest.write_bytes(data)
 
 
+def fetch_text(
+    url: str,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    headers: dict[str, str] | None = None,
+) -> str:
+    """Récupère un corps **texte** (UTF-8, erreurs remplacées) ; anti-SSRF + plafond.
+
+    Pour les endpoints qui ne servent pas du JSON (ex. OCR brut Gallica).
+    """
+    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
+        response = _send_validated(client, url, headers=headers)
+        try:
+            response.raise_for_status()
+            raw = _read_capped(response, MANIFEST_MAX_BYTES)
+        except httpx.HTTPStatusError as exc:
+            raise HttpFetchError(
+                f"statut HTTP {exc.response.status_code} sur {url!r}."
+            ) from exc
+        finally:
+            response.close()
+    return raw.decode("utf-8", errors="replace")
+
+
 __all__ = [
     "CorpusHttpError",
     "HttpFetchError",
@@ -173,4 +197,5 @@ __all__ = [
     "assert_public_url",
     "download",
     "fetch_json",
+    "fetch_text",
 ]

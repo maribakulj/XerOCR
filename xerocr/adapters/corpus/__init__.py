@@ -11,12 +11,15 @@ from xerocr.adapters.corpus.escriptorium import (
     EScriptoriumImporter,
     EScriptoriumPage,
 )
+from xerocr.adapters.corpus.gallica import GallicaImporter, normalize_ark
 from xerocr.adapters.corpus.iiif import IIIFImage, IIIFImporter, parse_manifest
 
 __all__ = [
     "EScriptoriumImporter",
     "EScriptoriumPage",
+    "GallicaImporter",
     "IIIFImage",
     "IIIFImporter",
+    "normalize_ark",
     "parse_manifest",
 ]
