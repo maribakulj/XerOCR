@@ -212,6 +212,7 @@ importeurs / extensibilité / infra).
 | **Ambition** | `segmentation (IMAGE→LAYOUT) → reconnaissance par région → assemblage (LAYOUT→ALTO)` + segmenteur de référence (starter pack) |
 | **Validation** | `region_id` exercé · `RunResult` accueille une métrique `(LAYOUT,LAYOUT)` **sans modif de contrat** · golden **ALTO+PAGE** · round-trip fidélité |
 | **Test conceptuel** | si T5 force à changer `RunResult`/registre/`Module`, le dimensionnement de T1 était faux. Attendu : elle ne fait qu'**ajouter**. |
+| **Guide de portage** | `xerocr/pipeline/ANALYSE_T5_SEGMENTATION.md` (analyse durable Picarones + design cible PROVISOIRE + squelette + risques) |
 
 ### T6 — Extensibilité tierce ★ ambition nouvelle
 
