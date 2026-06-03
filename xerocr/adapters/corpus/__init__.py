@@ -12,14 +12,28 @@ from xerocr.adapters.corpus.escriptorium import (
     EScriptoriumPage,
 )
 from xerocr.adapters.corpus.gallica import GallicaImporter, normalize_ark
+from xerocr.adapters.corpus.htr_united import (
+    HTRUnitedCatalogue,
+    HTRUnitedEntry,
+    fetch_catalogue,
+)
+from xerocr.adapters.corpus.huggingface import (
+    HuggingFaceCatalogue,
+    HuggingFaceDataset,
+)
 from xerocr.adapters.corpus.iiif import IIIFImage, IIIFImporter, parse_manifest
 
 __all__ = [
     "EScriptoriumImporter",
     "EScriptoriumPage",
     "GallicaImporter",
+    "HTRUnitedCatalogue",
+    "HTRUnitedEntry",
+    "HuggingFaceCatalogue",
+    "HuggingFaceDataset",
     "IIIFImage",
     "IIIFImporter",
+    "fetch_catalogue",
     "normalize_ark",
     "parse_manifest",
 ]

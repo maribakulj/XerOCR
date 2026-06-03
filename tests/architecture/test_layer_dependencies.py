@@ -99,8 +99,9 @@ ADAPTERS_ALLOWED_PKG = (
 )
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
 #: ``PIL`` : découpage des blocs (``layout/crop``) du pipeline hybride seg→OCR.
+#: ``yaml`` : catalogue HTR-United (``htr-united.yml``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
-    "pytesseract", "openai", "mistralai", "httpx", "PIL"
+    "pytesseract", "openai", "mistralai", "httpx", "PIL", "yaml"
 }
 
 
