@@ -10,6 +10,7 @@ tiers découvert **produit un LAYOUT** consommable par le fan-out — le cas d'u
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib.metadata import EntryPoint
 from pathlib import Path
 
 from tests.fixtures.sample_segmenter_plugin import build_sample_segmenter
@@ -89,6 +90,24 @@ def test_non_callable_entry_point_is_skipped() -> None:
         entry_points_loader=_loader(_FakeEntryPoint("notbuilder", lambda: 42)),
     )
     assert kinds == ()
+
+
+def test_real_entry_point_load_resolves_dotted_path() -> None:
+    # Vrai importlib.metadata.EntryPoint : .load() fait la VRAIE résolution
+    # dotted-path (≠ fake .load()), comme un paquet installé.
+    entry_point = EntryPoint(
+        name="sample_seg",
+        value="tests.fixtures.sample_segmenter_plugin:build_sample_segmenter",
+        group="xerocr.modules",
+    )
+    registry = ModuleRegistry()
+    kinds = discover_plugins(
+        registry, enabled=True, entry_points_loader=lambda: [entry_point]
+    )
+    assert kinds == ("sample_seg",)
+    assert registry.build("sample_seg", {}).output_types == frozenset(
+        {ArtifactType.LAYOUT}
+    )
 
 
 def test_default_loader_runs_clean() -> None:
