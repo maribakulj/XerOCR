@@ -10,7 +10,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
     registry = MetricRegistry()
     register_default_metrics(registry)
     register_default_metrics(registry)
-    assert registry.names() == ("cer", "cer_diplo", "mer", "wer")  # socle texte trié
+    assert registry.names() == ("cer", "cer_diplo", "diacritic_err", "mer", "wer")
 
 
 def test_get_and_select_by_input_types() -> None:
@@ -22,7 +22,13 @@ def test_get_and_select_by_input_types() -> None:
     selected = registry.for_input_types(
         ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT
     )
-    assert {metric.name for metric in selected} == {"cer", "cer_diplo", "wer", "mer"}
+    assert {metric.name for metric in selected} == {
+        "cer",
+        "cer_diplo",
+        "diacritic_err",
+        "wer",
+        "mer",
+    }
     assert registry.for_input_types(ArtifactType.LAYOUT, ArtifactType.LAYOUT) == ()
 
 

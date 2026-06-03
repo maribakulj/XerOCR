@@ -90,7 +90,7 @@ def build_bnl_run_result(root: Path) -> RunResult:
         EvaluationView(
             name="text",
             candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-            metric_names=("cer", "cer_diplo", "wer", "mer"),
+            metric_names=("cer", "cer_diplo", "diacritic_err", "wer", "mer"),
         ),
         EvaluationView(
             name="caseless",
@@ -127,10 +127,10 @@ def test_bnl_real_metrics_are_plausible(bnl_result: RunResult) -> None:
     assert {p.view for p in bnl_result.pipelines} == {"text", "caseless"}
     for pipeline in bnl_result.pipelines:
         scores = {s.metric: s.value for s in pipeline.aggregate}
-        # cer_diplo (repli ſ→s) n'est demandé que dans la vue brute « text », où il
-        # isole la part d'erreur purement typographique (cf. test dédié plus bas).
+        # cer_diplo (repli ſ→s) et diacritic_err (umlauts/accents) ne sont demandés
+        # que dans la vue brute « text » (cf. tests dédiés plus bas).
         expected = (
-            {"cer", "cer_diplo", "wer", "mer"}
+            {"cer", "cer_diplo", "diacritic_err", "wer", "mer"}
             if pipeline.view == "text"
             else {"cer", "wer", "mer"}
         )
@@ -139,6 +139,22 @@ def test_bnl_real_metrics_are_plausible(bnl_result: RunResult) -> None:
         assert scores["cer"] is not None and 0.0 < scores["cer"] < 2.0
     # détail par-document peuplé : N docs × 5 moteurs × 2 vues
     assert len(bnl_result.documents) == len(_DOC_IDS) * len(_ENGINES) * 2
+
+
+def test_bnl_diacritic_error_splits_germanic_vs_latin(bnl_result: RunResult) -> None:
+    """Trouvaille figée (alignement caractère via rapidfuzz) : les modèles
+    germaniques/Fraktur (frk, deu, deu_latf) butent sur les diacritiques (umlauts
+    ä/ö/ü mal rendus vs GT précomposée, ~80 % d'erreur) là où le modèle français et
+    easyocr les restituent bien (~10-14 %). Mesuré dans la vue « text »."""
+    diac = {
+        p.pipeline: {s.metric: s.value for s in p.aggregate}["diacritic_err"]
+        for p in bnl_result.pipelines
+        if p.view == "text"
+    }
+    for germanic in ("frk", "deu", "deu_latf"):
+        assert diac[germanic] is not None and diac[germanic] > 0.5
+    for latin in ("fra", "easyocr"):
+        assert diac[latin] is not None and diac[latin] < 0.3
 
 
 def test_bnl_cer_diplomatic_isolates_long_s(bnl_result: RunResult) -> None:

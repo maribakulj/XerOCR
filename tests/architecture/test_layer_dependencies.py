@@ -119,9 +119,10 @@ def test_adapters_imports_are_allowed():
     assert not offenders, f"imports interdits dans adapters : {offenders}"
 
 
-#: evaluation parle domain + formats + scipy (Wilcoxon/Friedman, dette dure) ;
-#: jiwer/rapidfuzz/numpy/shapely/PIL s'ajoutent à la tranche qui les introduit.
-EVAL_ALLOWED_EXT = ALLOWED_EXT | {"scipy"}
+#: evaluation parle domain + formats + scipy (Wilcoxon/Friedman) + rapidfuzz
+#: (alignement caractère de diacritic_err — c'est la tranche qui l'introduit) ;
+#: jiwer/numpy/shapely/PIL s'ajoutent à la tranche qui les introduit.
+EVAL_ALLOWED_EXT = ALLOWED_EXT | {"scipy", "rapidfuzz"}
 
 
 def test_evaluation_imports_are_allowed():
