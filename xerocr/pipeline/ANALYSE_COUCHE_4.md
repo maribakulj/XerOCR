@@ -279,7 +279,7 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 ## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
-> Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. Différé : fan-out par région (T5).
+> Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. **+ T5 squelette** : `fanout.py` (`run_region_fanout` — reconnaissance par région, échec partiel toléré, ordre de lecture préservé) ; le `Module` reste **inchangé** (1 artefact/type, le fan-out boucle dans l'orchestration). *preuve : `tests/pipeline/test_segmentation_skeleton.py`*
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `Module` Protocol unique : `name`/**`version`**/`input_types`/`output_types`/`execute(inputs,params,context,control)`. — *preuve : `precomputed` l'implémente (`isinstance(.., Module)` vert) ; `pipeline/protocols.py`*
@@ -294,7 +294,8 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 
 **Validation inter-couches :** `MIGRATION_PLAN.md` §3-T1 (module exécuté de bout en bout) + §3-T4 (un `cancel` interrompt réellement).
 
-- [~] **Différé** : fan-out par région (T5) · ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
+- [x] **fan-out par région (T5 squelette)** : `fanout.py`, tout `precomputed`. Reste (épaississement) : segmenteur réel + crop, routage par type de bloc, assemblage `LAYOUT→ALTO_XML`.
+- [~] **Différé** : ré-exécution robustness (entrante couche 3). **Ne PAS recréer `RunResult` ici** (→ couche 3) ni `cache.py`/`yaml_io.py` (morts).
 
 ---
 

@@ -17,6 +17,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "diacritic_err",
         "ins_rate",
         "mer",
+        "region_cer",
         "wer",
     )
 
@@ -39,7 +40,10 @@ def test_get_and_select_by_input_types() -> None:
         "wer",
         "mer",
     }
-    assert registry.for_input_types(ArtifactType.LAYOUT, ArtifactType.LAYOUT) == ()
+    layout_metrics = registry.for_input_types(
+        ArtifactType.LAYOUT, ArtifactType.LAYOUT
+    )
+    assert {metric.name for metric in layout_metrics} == {"region_cer"}
 
 
 def test_fresh_registry_is_empty() -> None:
