@@ -89,12 +89,14 @@ def assert_public_url(url: str) -> None:
             )
 
 
-def _send_validated(client: httpx.Client, url: str) -> httpx.Response:
+def _send_validated(
+    client: httpx.Client, url: str, *, headers: dict[str, str] | None = None
+) -> httpx.Response:
     """GET en streaming, SSRF re-validé à chaque redirection (bornée)."""
     current = url
     for _ in range(_MAX_REDIRECTS + 1):
         assert_public_url(current)
-        request = client.build_request("GET", current)
+        request = client.build_request("GET", current, headers=headers)
         response = client.send(request, stream=True)
         if response.is_redirect:
             location = response.headers.get("location", "")
@@ -118,10 +120,19 @@ def _read_capped(response: httpx.Response, max_bytes: int) -> bytes:
     return b"".join(chunks)
 
 
-def fetch_json(url: str, *, timeout: float = DEFAULT_TIMEOUT) -> object:
-    """Récupère et parse un JSON ; anti-SSRF + plafond ``MANIFEST_MAX_BYTES``."""
+def fetch_json(
+    url: str,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    headers: dict[str, str] | None = None,
+) -> object:
+    """Récupère et parse un JSON ; anti-SSRF + plafond ``MANIFEST_MAX_BYTES``.
+
+    ``headers`` permet l'authentification d'API (ex. ``Authorization: Token …``) ;
+    il n'est jamais journalisé (les messages d'erreur ne portent que l'URL).
+    """
     with httpx.Client(timeout=timeout, follow_redirects=False) as client:
-        response = _send_validated(client, url)
+        response = _send_validated(client, url, headers=headers)
         try:
             response.raise_for_status()
             raw = _read_capped(response, MANIFEST_MAX_BYTES)
