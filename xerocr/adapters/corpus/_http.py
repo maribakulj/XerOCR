@@ -35,6 +35,7 @@ from __future__ import annotations
 import contextlib
 import ipaddress
 import json
+import os
 import socket
 import typing
 from collections.abc import Iterator
@@ -257,17 +258,46 @@ def fetch_json(
         raise HttpFetchError(f"réponse non-JSON depuis {url!r} : {exc}.") from exc
 
 
-def download(url: str, dest: Path, *, timeout: float = DEFAULT_TIMEOUT) -> None:
-    """Télécharge ``url`` vers ``dest`` ; anti-SSRF + plafond ``IMAGE_MAX_BYTES``."""
-    with _stream_validated(url, timeout=timeout) as response:
-        try:
-            response.raise_for_status()
-            data = _read_capped(response, IMAGE_MAX_BYTES)
-        except httpx.HTTPStatusError as exc:
-            raise HttpFetchError(
-                f"statut HTTP {exc.response.status_code} sur {url!r}."
-            ) from exc
-    dest.write_bytes(data)
+def download(
+    url: str,
+    dest: Path,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    headers: dict[str, str] | None = None,
+) -> None:
+    """Télécharge ``url`` vers ``dest`` en **flux disque** ; anti-SSRF + plafond.
+
+    Écrit au fil de l'eau dans un fichier ``.part`` voisin (jamais tout le corps
+    en RAM), plafonne à ``IMAGE_MAX_BYTES``, puis **renomme atomiquement**
+    (``os.replace``) vers ``dest``. À la moindre erreur (statut, dépassement de
+    plafond, I/O, annulation), le ``.part`` est supprimé : **aucun fichier
+    partiel** n'est laissé derrière, et ``dest`` n'apparaît qu'une fois complet.
+
+    ``headers`` (ex. ``Authorization``) n'est transmis qu'à l'hôte d'origine —
+    ``_stream_validated`` le retire sur une redirection cross-hôte (cf. D-050).
+    """
+    part = dest.with_name(dest.name + ".part")
+    try:
+        with _stream_validated(url, timeout=timeout, headers=headers) as response:
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise HttpFetchError(
+                    f"statut HTTP {exc.response.status_code} sur {url!r}."
+                ) from exc
+            total = 0
+            with part.open("wb") as handle:
+                for chunk in response.iter_bytes():
+                    total += len(chunk)
+                    if total > IMAGE_MAX_BYTES:
+                        raise HttpFetchError(
+                            f"réponse dépasse le plafond de {IMAGE_MAX_BYTES} octets."
+                        )
+                    handle.write(chunk)
+        os.replace(part, dest)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
 
 
 def fetch_text(
