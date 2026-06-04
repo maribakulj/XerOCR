@@ -36,6 +36,7 @@ from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
+from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.run_spec import RunSpec
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.interfaces.web.security.csrf import csrf_protect
@@ -50,6 +51,47 @@ _OCR_VIEW = EvaluationView(
     candidate_types=frozenset({ArtifactType.RAW_TEXT}),
     metric_names=("cer", "wer", "mer"),
 )
+
+#: Vue **référence OCR** (opt-in) : compare le candidat ``RAW_TEXT`` à une
+#: référence ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le
+#: **nom de la vue porte l'avertissement** (rendu tel quel par le rapport) : ce
+#: n'est PAS une vérité-terrain manuelle, le score mesure l'accord avec un autre
+#: OCR. La vue ``text`` par défaut, elle, ne déclare pas cette projection → elle
+#: ignore les GT ``REFERENCE_TEXT`` (pas de faux score d'exactitude).
+_REFERENCE_VIEW = EvaluationView(
+    name="référence OCR (pas une vérité-terrain manuelle)",
+    candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+    projections_by_source_type={
+        ArtifactType.REFERENCE_TEXT: ProjectionSpec(
+            source_type=ArtifactType.REFERENCE_TEXT,
+            target_type=ArtifactType.RAW_TEXT,
+            projector_name="identity_text",
+        )
+    },
+    metric_names=("cer", "wer", "mer"),
+    ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
+)
+
+
+def _views_for_corpus(corpus: CorpusSpec) -> tuple[EvaluationView, ...]:
+    """Vues à évaluer selon les **types de GT présents** dans le corpus.
+
+    GT manuelle ``RAW_TEXT`` → vue ``text`` ; référence ``REFERENCE_TEXT`` (OCR
+    Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
+    défaut (le run reste OCR-able, simplement non scoré). On n'émet une vue que
+    si elle a de quoi être renseignée : pas de vue vide spéculative.
+    """
+    gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
+    views: list[EvaluationView] = []
+    if ArtifactType.RAW_TEXT in gt_types:
+        views.append(_OCR_VIEW)
+    if ArtifactType.REFERENCE_TEXT in gt_types:
+        views.append(_REFERENCE_VIEW)
+    if not views:
+        # Aucune GT (ex. corpus IIIF images-seules) : vue OCR par défaut — le run
+        # s'exécute et reste lisible, simplement non scoré (pas de référence).
+        views.append(_OCR_VIEW)
+    return tuple(views)
 
 
 class LaunchRequest(BaseModel):
@@ -74,7 +116,7 @@ def _tesseract_spec(corpus: CorpusSpec, run_id: str, *, lang: str = "fra") -> Ru
         corpus=corpus,
         pipelines=(PipelineSpec(name=label, initial_inputs=(ArtifactType.IMAGE,),
                                 steps=(step,)),),
-        evaluation=EvaluationSpec(views=(_OCR_VIEW,)),
+        evaluation=EvaluationSpec(views=_views_for_corpus(corpus)),
         adapter_kwargs={f"tesseract:{label}": {"label": label, "lang": lang}},
         run_id=run_id,
     )

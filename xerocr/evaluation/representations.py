@@ -19,7 +19,13 @@ from xerocr.formats.pagexml import parse_pagexml
 from xerocr.formats.pagexml.layout_map import page_to_layout
 from xerocr.formats.text import read_plaintext
 
-_TEXT_TYPES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
+_TEXT_TYPES = frozenset(
+    {
+        ArtifactType.RAW_TEXT,
+        ArtifactType.CORRECTED_TEXT,
+        ArtifactType.REFERENCE_TEXT,
+    }
+)
 
 
 def load_representation(uri: str, artifact_type: ArtifactType) -> object:

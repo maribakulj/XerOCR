@@ -39,6 +39,14 @@ class ArtifactType(StrEnum):
     #: Texte corrigé par un LLM ou un module de post-correction.
     CORRECTED_TEXT = "corrected_text"
 
+    #: Texte de **référence** (ex. OCR pré-existant fourni par une source :
+    #: ``texteBrut`` Gallica) — **distinct d'une vérité-terrain manuelle**. Sert
+    #: de référence de comparaison *étiquetée* : un score contre un
+    #: ``REFERENCE_TEXT`` mesure l'**accord avec un autre OCR**, pas l'exactitude.
+    #: N'est jamais résolu par une vue d'évaluation par défaut (opt-in explicite
+    #: via une projection ``reference_text → raw_text``).
+    REFERENCE_TEXT = "reference_text"
+
     #: ALTO XML 4.x (lignes, mots, coordonnées, ordre de lecture).
     ALTO_XML = "alto_xml"
 

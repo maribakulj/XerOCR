@@ -211,8 +211,10 @@ def import_gallica_corpus(
     """Importe un document Gallica (ARK) → images (via IIIF) + OCR Gallica optionnel.
 
     Les images viennent du **manifeste IIIF** Gallica ; si ``include_ocr``, l'OCR
-    brut de chaque vue (``texteBrut``) est écrit comme **référence étiquetée**
-    (``gt_source=gallica_ocr`` — pas une GT manuelle).
+    brut de chaque vue (``texteBrut``) est écrit comme **référence étiquetée** :
+    type domaine ``REFERENCE_TEXT`` (≠ vérité-terrain manuelle) + métadonnée
+    ``gt_source=gallica_ocr``. Une vue d'évaluation par défaut **ne le score pas**
+    comme une GT ; seule une vue *référence* dédiée (opt-in) le compare.
 
     Le numéro de vue est **lu dans l'URL de l'image** (``/f{n}/``), pas déduit de la
     position : un canvas sans image sauté par le parseur IIIF décalerait sinon tout
@@ -244,7 +246,9 @@ def import_gallica_corpus(
                 gt_target = validated_path(f"{doc_id}.gallica_ocr.txt", dest_dir)
                 gt_target.write_text(text, encoding="utf-8")
                 ground_truths = (
-                    GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(gt_target)),
+                    GroundTruthRef(
+                        type=ArtifactType.REFERENCE_TEXT, uri=str(gt_target)
+                    ),
                 )
                 has_ocr_gt = True
         documents.append(

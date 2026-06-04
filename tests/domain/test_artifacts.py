@@ -11,6 +11,12 @@ def test_layout_is_first_class():
     assert ArtifactType.LAYOUT.value == "layout"
 
 
+def test_reference_text_value():
+    # Référence OCR (≠ GT manuelle) ; valeur sérialisée stable (round-trip JSON).
+    assert ArtifactType.REFERENCE_TEXT.value == "reference_text"
+    assert ArtifactType("reference_text") is ArtifactType.REFERENCE_TEXT
+
+
 def test_short_aliases_via_missing():
     assert ArtifactType("text") is ArtifactType.RAW_TEXT
     assert ArtifactType("alto") is ArtifactType.ALTO_XML
