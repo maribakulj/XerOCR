@@ -43,6 +43,22 @@ def test_materialize_failure_registers_nothing(tmp_path: Path) -> None:
     assert store.get("nimporte") is None
 
 
+def test_materialize_failure_cleans_partial_dir(tmp_path: Path) -> None:
+    # F3 : un builder qui écrit quelques fichiers puis échoue ne doit laisser
+    # **aucun** dossier partiel sous base_dir (import atomique).
+    store = CorpusStore(tmp_path)
+
+    def half_then_boom(dest: Path) -> CorpusSpec:
+        dest.mkdir(parents=True, exist_ok=True)
+        (dest / "page_0001.jpg").write_bytes(b"img")  # matérialisation partielle
+        raise RuntimeError("source injoignable à mi-parcours")
+
+    with pytest.raises(RuntimeError):
+        store.materialize(half_then_boom)
+    # base_dir ne contient aucun dossier de corpus résiduel
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_materialize_ids_are_unique(tmp_path: Path) -> None:
     store = CorpusStore(tmp_path)
 

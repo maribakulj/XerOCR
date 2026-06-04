@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import io
 import re
+import shutil
 import threading
 import uuid
 import zipfile
@@ -171,9 +172,19 @@ class CorpusStore:
         matérialisée — agnostique de la source (importeurs IIIF/eScriptorium/
         Gallica…). Le store reste un **registre** : il alloue l'id et le dossier,
         sans connaître le format d'entrée.
+
+        **Atomicité (F3)** : si ``builder`` échoue en cours de route (réseau,
+        source non conforme, annulation), le dossier **partiellement** matérialisé
+        est nettoyé — pas de corpus à demi importé laissé sous ``base_dir``, et
+        rien n'est enregistré.
         """
         corpus_id = uuid.uuid4().hex
-        spec = builder(self._base / corpus_id)
+        dest = self._base / corpus_id
+        try:
+            spec = builder(dest)
+        except BaseException:
+            shutil.rmtree(dest, ignore_errors=True)
+            raise
         with self._lock:
             self._corpora[corpus_id] = spec
         return corpus_id, spec
