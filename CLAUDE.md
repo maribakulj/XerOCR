@@ -376,14 +376,20 @@ couche 3), DTO web (transport → couche 8).
 
 ## 11. Commandes
 
-À renseigner quand le packaging existe (`pyproject.toml` + extras). Cible :
-
 ```bash
 pip install -e ".[dev]"      # installation dev
-make test                    # pytest
-make lint                    # ruff + mypy
+make ci                      # ruff + mypy + pytest COMPLET — porte avant push
+make lint                    # ruff
+make type                    # mypy
+make test                    # pytest complet
 xerocr demo --output r.html  # rapport démo sans moteur (squelette)
 ```
+
+**Règle de vérification (non négociable)** : avant tout push, lancer **`make ci`**
+(suite **complète**). **Ne jamais** rapporter « vert » sur un *sous-ensemble* de
+tests — c'est ainsi qu'une CI rouge est passée inaperçue pendant 11 commits
+(cf. `MIGRATION_PLAN.md` D-049/D-050). Les tests `live`/`network` sont opt-in
+(skippés sans `XEROCR_LIVE_*` / env requis) : ils ne dispensent pas du reste.
 
 ---
 
