@@ -120,6 +120,15 @@ class HistoryStore:
             )
             return tuple(HistoryRecord(*row) for row in cur.fetchall())
 
+    def all_records(self) -> tuple[HistoryRecord, ...]:
+        """Toutes les lignes, les plus récentes d'abord (pour la vue Historique)."""
+        with closing(sqlite3.connect(self._path)) as conn:
+            cur = conn.execute(
+                f"SELECT {_COLUMNS} FROM run_metrics "
+                "ORDER BY completed_at DESC, pipeline, view, metric"
+            )
+            return tuple(HistoryRecord(*row) for row in cur.fetchall())
+
     def regressions(
         self,
         view: str,

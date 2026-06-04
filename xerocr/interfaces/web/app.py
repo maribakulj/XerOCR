@@ -156,7 +156,12 @@ def create_app(
         return engine_statuses(public_mode=is_public)
 
     app.include_router(
-        build_home_router(catalog_dir, templates, statuses=engine_status_provider)
+        build_home_router(
+            catalog_dir,
+            templates,
+            statuses=engine_status_provider,
+            history_store=history_store,
+        )
     )
     app.include_router(build_reports_router(catalog_dir))
     app.include_router(
