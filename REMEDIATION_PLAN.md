@@ -36,10 +36,10 @@
 - [x] **B1** `download` en **flux disque** (`.part` au fil de l'eau, cap `IMAGE_MAX_BYTES`, `os.replace` atomique, `.part` supprimé sur toute erreur → pas de fichier partiel). Plus de buffer RAM intégral (limite assumée de D-050 levée).
 - [x] **B2** média eScriptorium : `download` accepte `headers` ; `import_escriptorium_corpus` ne joint le jeton qu'à un média **même-hôte** que `base_url` (règle host de D-050) — média sur hôte tiers (CDN) téléchargé sans jeton (+ `_stream_validated` strip cross-hôte sur redirection en défense en profondeur).
 
-### Lot C — Domaine : type « OCR-référence » (D1)
-- [ ] `ArtifactType.REFERENCE_TEXT` (couche 1) ; Gallica écrit `GroundTruthRef(REFERENCE_TEXT)`.
-- [ ] **Évaluation** : une GT `REFERENCE_TEXT` n'est pas scorée comme vérité manuelle par défaut (vue/étiquette dédiée ou opt-in) ; rapport distinct.
-- [ ] Golden-snapshots refaits ; round-trip JSON.
+### Lot C — Domaine : type « OCR-référence » (D1) ✅ (D-053)
+- [x] `ArtifactType.REFERENCE_TEXT` (couche 1) ; Gallica écrit `GroundTruthRef(REFERENCE_TEXT)` (+ `gt_source=gallica_ocr`).
+- [x] **Évaluation** : une GT `REFERENCE_TEXT` **n'est pas scorée** par une vue par défaut (la vue `text` ne déclare pas la projection → GT ignorée, pas de faux score d'exactitude). **Matérialisé de bout en bout** (≠ type dormant) : vue *référence* dédiée (opt-in via projection `reference_text → raw_text`, projecteur `identity_text`), **construite automatiquement** par `_views_for_corpus` quand le corpus porte une GT `REFERENCE_TEXT` → **rapport distinct** (le nom de la vue porte l'avertissement « pas une vérité-terrain manuelle », rendu tel quel par le rapport).
+- [x] Round-trip JSON (valeur `reference_text` stable) ; golden démo inchangé (corpus précalculé = GT manuelle `RAW_TEXT`, non concerné).
 
 ### Lot D — Import HuggingFace (D2 : convention XerOCR + streaming)
 - [ ] Doc **convention XerOCR** (schéma : `image`, `ground_truth`, opt. `segmentation`).

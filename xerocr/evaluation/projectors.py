@@ -66,7 +66,27 @@ def layout_to_text(representation: object, params: Mapping[str, ParamValue]) -> 
     return "\n\n".join(blocks)
 
 
-_BUILTIN: dict[str, Projector] = {"layout_to_text": layout_to_text}
+def identity_text(representation: object, params: Mapping[str, ParamValue]) -> object:
+    """Projection identité pour les représentations **texte** (str → str).
+
+    Sert l'opt-in d'une référence ``REFERENCE_TEXT`` vers l'espace de comparaison
+    ``RAW_TEXT`` : le texte est déjà chargé en ``str`` (couche 2), on le rend tel
+    quel. Le *type* change (l'étiquette « référence OCR »), pas la représentation —
+    c'est ce qui permet de noter un candidat contre une référence OCR via une vue
+    dédiée, sans confondre cette référence avec une vérité-terrain manuelle.
+    """
+    if not isinstance(representation, str):
+        raise EvaluationError(
+            "identity_text : une représentation texte (str) est attendue, reçu "
+            f"{type(representation).__name__}."
+        )
+    return representation
+
+
+_BUILTIN: dict[str, Projector] = {
+    "layout_to_text": layout_to_text,
+    "identity_text": identity_text,
+}
 
 
 def get_projector(name: str) -> Projector:
@@ -80,4 +100,4 @@ def get_projector(name: str) -> Projector:
         ) from None
 
 
-__all__ = ["Projector", "get_projector", "layout_to_text"]
+__all__ = ["Projector", "get_projector", "identity_text", "layout_to_text"]

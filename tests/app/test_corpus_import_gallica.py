@@ -10,6 +10,7 @@ from pathlib import Path
 
 from xerocr.adapters.corpus.iiif import IIIFImage
 from xerocr.app.corpus_import import import_gallica_corpus
+from xerocr.domain.artifacts import ArtifactType
 
 
 class _FakeIIIF:
@@ -71,6 +72,8 @@ def test_images_plus_labeled_ocr_with_correct_mapping(tmp_path: Path) -> None:
         fetch_ocr=lambda page: f"ocr p{page}",
     )
     assert [d.id for d in spec.documents] == ["f0001", "f0002"]
+    # OCR Gallica = référence étiquetée REFERENCE_TEXT (≠ vérité-terrain manuelle)
+    assert spec.documents[0].ground_truths[0].type == ArtifactType.REFERENCE_TEXT
     # mapping : doc en position i (1-based) ↔ texteBrut f{i} (pas de décalage)
     assert Path(spec.documents[0].ground_truths[0].uri).read_text() == "ocr p1"
     assert Path(spec.documents[1].ground_truths[0].uri).read_text() == "ocr p2"
