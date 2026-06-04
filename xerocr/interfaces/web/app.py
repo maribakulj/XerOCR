@@ -162,7 +162,7 @@ def create_app(
         )
     )
     app.include_router(build_engines_router(engine_status_provider))
-    app.include_router(build_corpus_router(corpus_store))
+    app.include_router(build_corpus_router(corpus_store, public_mode=is_public))
     return app
 
 

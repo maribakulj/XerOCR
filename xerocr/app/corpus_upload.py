@@ -25,6 +25,7 @@ import re
 import threading
 import uuid
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -157,6 +158,22 @@ class CorpusStore:
         """Extrait l'archive dans un dossier neuf et enregistre la ``CorpusSpec``."""
         corpus_id = uuid.uuid4().hex
         spec = extract_corpus_zip(data, self._base / corpus_id, name=name or corpus_id)
+        with self._lock:
+            self._corpora[corpus_id] = spec
+        return corpus_id, spec
+
+    def materialize(
+        self, builder: Callable[[Path], CorpusSpec]
+    ) -> tuple[str, CorpusSpec]:
+        """Enregistre un corpus **construit** dans un dossier neuf sous ``base_dir``.
+
+        ``builder`` reçoit le dossier de destination et renvoie la ``CorpusSpec``
+        matérialisée — agnostique de la source (importeurs IIIF/eScriptorium/
+        Gallica…). Le store reste un **registre** : il alloue l'id et le dossier,
+        sans connaître le format d'entrée.
+        """
+        corpus_id = uuid.uuid4().hex
+        spec = builder(self._base / corpus_id)
         with self._lock:
             self._corpora[corpus_id] = spec
         return corpus_id, spec
