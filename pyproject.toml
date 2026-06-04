@@ -26,6 +26,7 @@ tesseract = ["pytesseract"]
 openai = ["openai"]
 mistral = ["mistralai"]
 ollama = ["httpx", "httpcore"]
+huggingface = ["datasets"]
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
 
 [project.scripts]
