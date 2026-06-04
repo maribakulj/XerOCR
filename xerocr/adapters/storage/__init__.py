@@ -7,6 +7,18 @@ R-10) sont la **sous-tranche suivante** (TU2.c), pas ici.
 
 from __future__ import annotations
 
+from xerocr.adapters.storage.history_store import (
+    HistoryRecord,
+    HistoryStore,
+    Regression,
+)
 from xerocr.adapters.storage.job_store import Job, JobState, JobStore
 
-__all__ = ["Job", "JobState", "JobStore"]
+__all__ = [
+    "HistoryRecord",
+    "HistoryStore",
+    "Job",
+    "JobState",
+    "JobStore",
+    "Regression",
+]

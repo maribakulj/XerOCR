@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from xerocr.adapters.storage import JobStore
+from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.adapters.storage.publisher import resolve_publisher
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
@@ -36,6 +37,7 @@ from xerocr.app.modules import (
 )
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
+from xerocr.interfaces.web.routers.history import build_history_router
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
 from xerocr.interfaces.web.routers.runs import build_runs_router
@@ -133,6 +135,9 @@ def create_app(
     # Découverte de modules tiers : DÉSACTIVÉE en mode public (fail-closed —
     # pas de chargement de code arbitraire in-process sur un serveur exposé).
     discover_plugins(registry, enabled=not is_public)
+    # Historique longitudinal (S6) : un store SQLite par application ; le runner
+    # y enregistre chaque run terminé, le routeur Historique le lit.
+    history_store = HistoryStore(catalog_dir / "history.db")
     runner = JobRunner(
         store=JobStore(),
         registry=registry,
@@ -141,6 +146,7 @@ def create_app(
         # Persistance (S3) : actif uniquement si dépôt + jeton sont en secrets ;
         # sinon NoopPublisher → la vitrine read-only ne fait aucune sortie réseau.
         publisher=resolve_publisher(),
+        history_store=history_store,
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 
@@ -150,7 +156,12 @@ def create_app(
         return engine_statuses(public_mode=is_public)
 
     app.include_router(
-        build_home_router(catalog_dir, templates, statuses=engine_status_provider)
+        build_home_router(
+            catalog_dir,
+            templates,
+            statuses=engine_status_provider,
+            history_store=history_store,
+        )
     )
     app.include_router(build_reports_router(catalog_dir))
     app.include_router(
@@ -162,7 +173,8 @@ def create_app(
         )
     )
     app.include_router(build_engines_router(engine_status_provider))
-    app.include_router(build_corpus_router(corpus_store))
+    app.include_router(build_corpus_router(corpus_store, public_mode=is_public))
+    app.include_router(build_history_router(history_store))
     return app
 
 
