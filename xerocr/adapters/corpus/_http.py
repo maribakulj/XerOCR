@@ -13,28 +13,35 @@ sans borne (DoS mémoire/disque). Défenses, toutes testées :
 - **taille plafonnée** au fil de l'eau (on ne fait pas confiance à
   ``Content-Length``).
 
-**Limite réelle, assumée — DNS-rebinding.** ``assert_public_url`` résout l'hôte
-puis ``httpx`` re-résout indépendamment à la connexion : un DNS hostile peut
-renvoyer une IP publique au validateur et une IP interne à la connexion. La
-validation d'IP est donc une **défense en profondeur best-effort**, pas une
-barrière étanche. La vraie frontière contre une entrée non fiable est le **gate
-« mode public » (403)** côté interface (les imports distants y sont refusés) ;
-en mode privé l'opérateur fournit ses propres URLs. Pinner l'IP résolue
-(anti-rebind strict) reste un durcissement futur.
+**DNS-rebinding fermé — épinglage d'IP.** ``assert_public_url`` résout l'hôte
+**une seule fois**, valide **toutes** les IP, et **retourne** ces IP. La
+connexion vise alors directement l'IP **épinglée** (transport ``httpx`` à
+``network_backend`` custom, cf. :class:`_PinnedBackend`) : il n'y a **pas de
+seconde résolution** que pourrait détourner un DNS hostile. Le nom d'hôte de
+l'URL reste inchangé, donc le ``Host`` envoyé, le **SNI** et la vérification du
+certificat TLS portent toujours sur le vrai hôte (aucun override fragile) —
+seule la cible TCP est figée. L'épinglage est ré-appliqué **à chaque saut** de
+redirection. Le **gate « mode public » (403)** côté interface reste la première
+barrière (les imports distants y sont refusés) ; l'épinglage est la défense en
+profondeur, désormais étanche.
 
 Auth & redirections : les en-têtes (jeton) ne suivent **pas** un changement
-d'hôte (cf. ``_send_validated``). Une seule pile HTTP (``httpx``) ; **aucun état
-global** (pas d'``install_opener``).
+d'hôte (cf. ``_stream_validated``). Une seule pile HTTP (``httpx`` + son moteur
+``httpcore``) ; **aucun état global** (pas d'``install_opener``).
 """
 
 from __future__ import annotations
 
+import contextlib
 import ipaddress
 import json
 import socket
+import typing
+from collections.abc import Iterator
 from pathlib import Path
 from urllib.parse import urlsplit
 
+import httpcore
 import httpx
 
 from xerocr.domain.errors import XerOCRError
@@ -70,11 +77,14 @@ def _is_public(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     )
 
 
-def assert_public_url(url: str) -> None:
-    """Lève ``SsrfError`` si ``url`` n'est pas une cible HTTP(S) publique.
+def assert_public_url(url: str) -> tuple[str, ...]:
+    """Valide ``url`` et **retourne les IP publiques** vers lesquelles épingler.
 
-    Résout l'hôte et exige que **toutes** les IP retournées soient publiques :
-    un nom qui résout (même partiellement) vers l'interne est rejeté.
+    Résout l'hôte **une seule fois** et exige que **toutes** les IP retournées
+    soient publiques : un nom qui résout (même partiellement) vers l'interne est
+    rejeté (``SsrfError``). Les IP validées sont retournées pour que l'appelant
+    **épingle** la connexion dessus (anti-DNS-rebinding) — pas de seconde
+    résolution. Pour une IP littérale, retourne cette IP (aucun DNS réel).
     """
     parts = urlsplit(url)
     if parts.scheme not in _ALLOWED_SCHEMES:
@@ -89,40 +99,126 @@ def assert_public_url(url: str) -> None:
         infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except OSError as exc:
         raise SsrfError(f"résolution DNS impossible pour {host!r} : {exc}.") from exc
+    pins: list[str] = []
     for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if not _is_public(ip):
+        addr = str(info[4][0])  # sockaddr[0] = adresse textuelle (IPv4/IPv6)
+        if not _is_public(ipaddress.ip_address(addr)):
             raise SsrfError(
-                f"hôte {host!r} résout vers une IP non publique ({ip})."
+                f"hôte {host!r} résout vers une IP non publique ({addr})."
             )
+        if addr not in pins:
+            pins.append(addr)
+    return tuple(pins)
 
 
-def _send_validated(
-    client: httpx.Client, url: str, *, headers: dict[str, str] | None = None
-) -> httpx.Response:
-    """GET en streaming, SSRF re-validé à chaque redirection (bornée).
+class _PinnedBackend(httpcore.SyncBackend):
+    """Épingle la cible TCP sur des IP **pré-validées** (anti-DNS-rebinding).
 
+    ``httpcore`` appelle ``connect_tcp(host, port)`` avec le **nom d'hôte** de
+    l'origine ; on substitue les IP déjà résolues+validées, sans repasser par le
+    DNS. Le nom d'hôte de l'URL restant inchangé, le SNI et la vérification du
+    certificat TLS (pilotés par ``httpcore`` depuis l'origin) portent toujours
+    sur le **vrai hôte** — donc aucun override fragile. On essaie les IP dans
+    l'ordre (comme ``socket.create_connection`` le ferait), préservant le
+    repli multi-adresses.
+    """
+
+    def __init__(self, ips: tuple[str, ...]) -> None:
+        super().__init__()
+        self._ips = ips
+
+    def connect_tcp(
+        self,
+        host: str,
+        port: int,
+        timeout: float | None = None,
+        local_address: str | None = None,
+        socket_options: typing.Any = None,
+    ) -> httpcore.NetworkStream:
+        last_exc: httpcore.ConnectError | None = None
+        for ip in self._ips:
+            try:
+                return super().connect_tcp(
+                    ip,
+                    port,
+                    timeout=timeout,
+                    local_address=local_address,
+                    socket_options=socket_options,
+                )
+            except httpcore.ConnectError as exc:
+                last_exc = exc
+        assert last_exc is not None  # _ips est non vide (cf. _make_client)
+        raise last_exc
+
+
+def _pinned_transport(ips: tuple[str, ...]) -> httpx.HTTPTransport:
+    """Transport ``httpx`` dont le backend réseau épingle ``ips``.
+
+    ``httpx`` n'expose pas ``network_backend`` ; on le pose sur le pool interne
+    (seul point d'injection). Le ``isinstance`` fait échouer **bruyamment** si
+    une future version de ``httpx`` change la forme du pool, plutôt que de
+    contourner silencieusement l'épinglage.
+    """
+    transport = httpx.HTTPTransport()
+    pool = transport._pool
+    if not isinstance(pool, httpcore.ConnectionPool):  # pragma: no cover
+        transport.close()
+        raise CorpusHttpError("épinglage IP indisponible : transport httpx inattendu.")
+    pool._network_backend = _PinnedBackend(ips)
+    return transport
+
+
+def _make_client(pins: tuple[str, ...] | None, timeout: float) -> httpx.Client:
+    """Client mono-saut. ``pins`` vide/None → résolution httpx normale.
+
+    Le cas ``None`` n'arrive qu'en test (``assert_public_url`` neutralisé en
+    no-op pour viser le loopback) ; en production il est toujours non vide.
+    """
+    if not pins:
+        return httpx.Client(timeout=timeout, follow_redirects=False)
+    return httpx.Client(
+        transport=_pinned_transport(pins), timeout=timeout, follow_redirects=False
+    )
+
+
+@contextlib.contextmanager
+def _stream_validated(
+    url: str, *, timeout: float, headers: dict[str, str] | None = None
+) -> Iterator[httpx.Response]:
+    """GET en streaming, **épinglé à l'IP validée** et re-validé à chaque saut.
+
+    Chaque saut (origine + redirections, bornées) : résout+valide une fois via
+    ``assert_public_url``, épingle la connexion sur l'IP retournée, puis envoie.
     Les en-têtes fournis (ex. ``Authorization: Token …``) ne sont **jamais**
-    propagés vers un **hôte différent** de l'origine : une redirection vers un
-    tiers ne doit pas lui livrer le jeton (fuite de credentials sur redirection).
+    propagés vers un **hôte différent** de l'origine (fuite de credentials sur
+    redirection). Un client ``httpx`` distinct est créé par saut (épinglage
+    propre à l'IP du saut) ; tous sont fermés à la sortie du contexte.
     """
     origin_host = urlsplit(url).hostname
     current = url
-    for _ in range(_MAX_REDIRECTS + 1):
-        assert_public_url(current)
-        # Auth conservée seulement tant qu'on reste sur l'hôte d'origine.
-        hop_headers = headers if urlsplit(current).hostname == origin_host else None
-        request = client.build_request("GET", current, headers=hop_headers)
-        response = client.send(request, stream=True)
-        if response.is_redirect:
-            location = response.headers.get("location", "")
-            response.close()
-            if not location:
-                raise HttpFetchError(f"redirection sans 'Location' depuis {current!r}.")
-            current = str(request.url.join(location))
-            continue
-        return response
-    raise HttpFetchError(f"trop de redirections (> {_MAX_REDIRECTS}) pour {url!r}.")
+    with contextlib.ExitStack() as stack:
+        for _ in range(_MAX_REDIRECTS + 1):
+            pins = assert_public_url(current)
+            # Auth conservée seulement tant qu'on reste sur l'hôte d'origine.
+            hop_headers = headers if urlsplit(current).hostname == origin_host else None
+            client = stack.enter_context(_make_client(pins, timeout))
+            request = client.build_request("GET", current, headers=hop_headers)
+            response = client.send(request, stream=True)
+            if response.is_redirect:
+                location = response.headers.get("location", "")
+                response.close()
+                if not location:
+                    raise HttpFetchError(
+                        f"redirection sans 'Location' depuis {current!r}."
+                    )
+                current = str(request.url.join(location))
+                continue
+            try:
+                yield response
+            finally:
+                response.close()
+            return
+        raise HttpFetchError(f"trop de redirections (> {_MAX_REDIRECTS}) pour {url!r}.")
 
 
 def _read_capped(response: httpx.Response, max_bytes: int) -> bytes:
@@ -147,8 +243,7 @@ def fetch_json(
     ``headers`` permet l'authentification d'API (ex. ``Authorization: Token …``) ;
     il n'est jamais journalisé (les messages d'erreur ne portent que l'URL).
     """
-    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
-        response = _send_validated(client, url, headers=headers)
+    with _stream_validated(url, timeout=timeout, headers=headers) as response:
         try:
             response.raise_for_status()
             raw = _read_capped(response, MANIFEST_MAX_BYTES)
@@ -156,8 +251,6 @@ def fetch_json(
             raise HttpFetchError(
                 f"statut HTTP {exc.response.status_code} sur {url!r}."
             ) from exc
-        finally:
-            response.close()
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -166,8 +259,7 @@ def fetch_json(
 
 def download(url: str, dest: Path, *, timeout: float = DEFAULT_TIMEOUT) -> None:
     """Télécharge ``url`` vers ``dest`` ; anti-SSRF + plafond ``IMAGE_MAX_BYTES``."""
-    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
-        response = _send_validated(client, url)
+    with _stream_validated(url, timeout=timeout) as response:
         try:
             response.raise_for_status()
             data = _read_capped(response, IMAGE_MAX_BYTES)
@@ -175,8 +267,6 @@ def download(url: str, dest: Path, *, timeout: float = DEFAULT_TIMEOUT) -> None:
             raise HttpFetchError(
                 f"statut HTTP {exc.response.status_code} sur {url!r}."
             ) from exc
-        finally:
-            response.close()
     dest.write_bytes(data)
 
 
@@ -190,8 +280,7 @@ def fetch_text(
 
     Pour les endpoints qui ne servent pas du JSON (ex. OCR brut Gallica).
     """
-    with httpx.Client(timeout=timeout, follow_redirects=False) as client:
-        response = _send_validated(client, url, headers=headers)
+    with _stream_validated(url, timeout=timeout, headers=headers) as response:
         try:
             response.raise_for_status()
             raw = _read_capped(response, MANIFEST_MAX_BYTES)
@@ -199,8 +288,6 @@ def fetch_text(
             raise HttpFetchError(
                 f"statut HTTP {exc.response.status_code} sur {url!r}."
             ) from exc
-        finally:
-            response.close()
     return raw.decode("utf-8", errors="replace")
 
 

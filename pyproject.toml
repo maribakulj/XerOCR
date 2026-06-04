@@ -20,13 +20,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML",
-    "jiwer", "fastapi", "httpx", "jinja2", "python-multipart",
+    "jiwer", "fastapi", "httpx", "httpcore", "jinja2", "python-multipart",
 ]
 tesseract = ["pytesseract"]
 openai = ["openai"]
 mistral = ["mistralai"]
-ollama = ["httpx"]
-serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx"]
+ollama = ["httpx", "httpcore"]
+serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

@@ -27,10 +27,10 @@
 - [x] `make ci` (= `make check` : ruff + mypy + **pytest complet**).
 - [x] Règle écrite (`CLAUDE.md §11`) : **jamais rapporter « vert » sur un sous-ensemble** ; `make check` obligatoire avant tout push. *(Cause racine de la CI rouge non vue pendant 11 commits.)*
 
-### Lot A — Sécurité : anti-DNS-rebinding réel (#2)
-- [ ] Résoudre **une fois** → valider → **connecter à l'IP épinglée** (transport `httpx` custom : hostname→IP validée, `Host` + **SNI** préservés), ré-épinglage par redirection.
-- [ ] Test : `getaddrinfo` mocké (public à la validation, loopback à la connexion) → connexion vers l'IP **validée**.
-- Risque TLS/SNI : si l'override est fragile selon la version `httpx`, **remonter la décision** (accept = gate public 403 déjà en place) — pas de demi-pinning.
+### Lot A — Sécurité : anti-DNS-rebinding réel (#2) ✅ (D-051)
+- [x] Résoudre **une fois** → valider → **connecter à l'IP épinglée**. Implémenté par un `network_backend` `httpcore` custom (`_PinnedBackend`) : l'URL (donc `Host` + **SNI** + vérif. de certificat TLS) reste **inchangée** ; seule la cible TCP est figée sur l'IP validée. Pas d'override SNI-sur-IP fragile → le risque TLS noté ci-dessous **ne se présente pas**. Ré-épinglage par redirection (`_stream_validated`, client par saut).
+- [x] Test : `getaddrinfo` mocké (public à la validation, loopback ensuite) → la connexion vise l'IP **validée** (interception de la cible réelle du transport) + une **seule** résolution DNS (`test_connection_pins_validated_ip_not_rebind`). Non-régression SSRF + redirect-auth verte.
+- Risque TLS/SNI : **évité** (URL/Host/SNI préservés, seule la cible TCP change). `httpcore` ajouté à la whitelist archi adapters + aux extras (`httpx` le co-installe).
 
 ### Lot B — Robustesse transport
 - [ ] **B1** `download` en **flux disque** (`.part` au fil de l'eau, cap, `os.replace` atomique, pas de fichier partiel).

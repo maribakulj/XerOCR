@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import socket
+import threading
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+import httpcore
 import pytest
 
 from xerocr.adapters.corpus import _http
@@ -46,7 +50,89 @@ def test_rejects_hostname_resolving_to_loopback(
         assert_public_url("http://evil.test/x")
 
 
+def test_assert_public_url_returns_validated_ips(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Le validateur retourne les IP à épingler (résolues une seule fois).
+    def fake_getaddrinfo(host: str, *a: object, **k: object) -> list:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("93.184.216.34", 80))]
+
+    monkeypatch.setattr(_http.socket, "getaddrinfo", fake_getaddrinfo)
+    assert assert_public_url("http://example.test/x") == ("93.184.216.34",)
+
+
 def test_fetch_json_guards_before_connecting() -> None:
     # La validation court-circuite tout I/O réseau pour une cible interdite.
     with pytest.raises(SsrfError):
         fetch_json("http://127.0.0.1/manifest.json")
+
+
+@pytest.fixture
+def json_server() -> Iterator[int]:
+    """Serveur loopback qui répond ``{"ok": true}`` à tout GET."""
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *a: object) -> None:
+            pass
+
+        def do_GET(self) -> None:
+            body = b'{"ok": true}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    port = httpd.server_address[1]
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield port
+    finally:
+        httpd.shutdown()
+        thread.join(timeout=5)
+
+
+def test_connection_pins_validated_ip_not_rebind(
+    json_server: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Anti-DNS-rebinding : la connexion vise l'IP **validée**, pas une 2ᵉ résolution.
+
+    ``getaddrinfo`` est hostile : il renvoie une IP **publique** à la validation,
+    puis du **loopback** ensuite (rebinding). Le fix résout une seule fois et
+    épingle l'IP publique ; on prouve que le transport tente bien de se connecter
+    à cette IP publique (et non à l'IP interne d'une seconde résolution).
+    """
+    public_ip = "93.184.216.34"
+    resolves = {"n": 0}
+
+    def hostile_getaddrinfo(host: str, *a: object, **k: object) -> list:
+        resolves["n"] += 1
+        # 1ʳᵉ résolution (validation) = publique ; rebind interne ensuite.
+        addr = public_ip if resolves["n"] == 1 else "127.0.0.1"
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 80))]
+
+    monkeypatch.setattr(_http.socket, "getaddrinfo", hostile_getaddrinfo)
+
+    # Intercepte l'adresse réellement visée par le transport, puis redirige la
+    # vraie connexion TCP vers le serveur loopback (connexion par IP littérale →
+    # pas de résolution supplémentaire, donc le compteur reste à 1).
+    targets: list[str] = []
+    backend_socket = httpcore._backends.sync.socket  # type: ignore[attr-defined]
+
+    def spy_create_connection(address: tuple[str, int], *a: object, **k: object):  # type: ignore[no-untyped-def]
+        targets.append(address[0])
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(("127.0.0.1", json_server))
+        return sock
+
+    monkeypatch.setattr(backend_socket, "create_connection", spy_create_connection)
+
+    result = fetch_json("http://malicious.test/manifest.json")
+
+    assert result == {"ok": True}
+    # La connexion a visé l'IP publique validée, pas le loopback du rebind.
+    assert targets == [public_ip]
+    # Une seule résolution DNS : aucune fenêtre de rebinding.
+    assert resolves["n"] == 1
