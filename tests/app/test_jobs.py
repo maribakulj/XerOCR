@@ -6,7 +6,10 @@ import threading
 import time
 from pathlib import Path
 
+import pytest
+
 from xerocr.adapters.storage import JobState, JobStore
+from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.app.results import load_run_result
@@ -74,6 +77,64 @@ def test_unexpected_error_marks_failed(tmp_path: Path) -> None:
     job = runner.store.get(job_id)
     assert job is not None and job.state is JobState.FAILED
     assert job.error == "kaboom"
+
+
+class _BoomPublisher:
+    """Publisher qui échoue toujours (simule un dépôt distant injoignable)."""
+
+    def publish(self, name: str, run_result_path: Path) -> str | None:
+        raise RuntimeError("dépôt distant injoignable")
+
+
+def test_publish_failure_does_not_fail_run(tmp_path: Path) -> None:
+    # Lot G : un effet secondaire (publication) raté ne fait PAS échouer un run
+    # réussi — le RunResult est écrit, le job reste DONE, published_url absent.
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    runner = JobRunner(
+        store=JobStore(),
+        registry=registry,
+        reports_dir=tmp_path,
+        code_version="1.0",
+        publisher=_BoomPublisher(),
+    )
+    job_id = runner.launch(
+        lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="pub-fail")
+    )
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    assert job.published_url is None
+    assert (tmp_path / "pub-fail.json").exists()
+
+
+def test_history_failure_does_not_fail_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Lot G : un échec d'écriture d'historique (effet secondaire) ne fait PAS
+    # échouer un run réussi. On force record_run à lever.
+    history = HistoryStore(tmp_path / "h.db")
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    runner = JobRunner(
+        store=JobStore(),
+        registry=registry,
+        reports_dir=tmp_path,
+        code_version="1.0",
+        history_store=history,
+    )
+
+    def _boom(*a: object, **k: object) -> int:
+        raise RuntimeError("sqlite indisponible")
+
+    monkeypatch.setattr("xerocr.app.jobs.record_run", _boom)
+    job_id = runner.launch(
+        lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="hist-fail")
+    )
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    assert (tmp_path / "hist-fail.json").exists()
 
 
 def test_cancel_unknown_or_terminal_is_false(tmp_path: Path) -> None:

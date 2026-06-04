@@ -188,6 +188,9 @@ class HuggingFaceCatalogue:
                     "seul : %s",
                     exc,
                 )
+        # Accept #9 : socle de référence d'abord, API ensuite, puis troncature
+        # finale à `limit` — la référence (curée) prime sur l'API si l'union
+        # dépasse. Choix de découverte (display), pas de classement par score.
         return tuple(results[:limit])
 
 

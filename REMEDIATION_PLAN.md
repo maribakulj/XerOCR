@@ -57,9 +57,9 @@
 - [x] **F3** atomicité import : `CorpusStore.materialize` nettoie le dossier partiel (`shutil.rmtree`) sur échec du builder (`except BaseException`) → pas de corpus à demi importé.
 - [~] **F2** *(optionnel, gros)* import = job de fond (annulable, SSE) : **différé** — pas de consommateur réel aujourd'hui (corpus visés petits/moyens ; `limit` borne déjà). À reprendre si de gros corpus apparaissent. Conforme au garde-fou §5.3 (on ne pose pas l'infra d'avance).
 
-### Lot G — Housekeeping
-- [ ] Vérifier/narrower les `except Exception` de `jobs.py`.
-- [ ] Accepts mineurs **documentés** : HF `results[:limit]` (#9), pk non-int + warning (#14), `errors=replace` OCR (#15), insert non compté `mufi_err` (#17).
+### Lot G — Housekeeping ✅ (D-056)
+- [x] Vérifié les 3 `except Exception` de `jobs.py` : **intentionnels et corrects**, pas narrowables — le catch-all worker doit empêcher un thread de mourir en silence (→ FAILED) ; `_record_safe`/`_publish_safe` sont des **effets secondaires** dont une erreur inattendue ne doit pas marquer FAILED un run *réussi* (narrower les ferait remonter au catch-all). Commentaires de rationale renforcés + **tests de non-régression** (échec publish / historique → run **DONE**).
+- [x] Accepts mineurs **documentés** (commentaire `Accept #n` au site) : HF `results[:limit]` (#9, référence prime), pk non-int eScriptorium (#14, **+ warning** ajouté), `errors="replace"` OCR distant (#15), insert MUFI non compté (#17, dénominateur = MUFI attendus de la réf).
 
 ## Contraintes honnêtes
 - **Lot E** (cassettes) + toute vraie validation distante : **impossible dans ce sandbox** (allowlist réseau).

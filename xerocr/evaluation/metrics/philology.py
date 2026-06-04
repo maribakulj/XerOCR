@@ -64,6 +64,9 @@ def mufi_error(ctx: DocContext) -> Observation | None:
     targets = [i for i, char in enumerate(ctx.reference) if _is_mufi(char)]
     if not targets:
         return None
+    # Accept #17 : on compte les glyphes MUFI **de la référence** mal reconnus
+    # (substitués/supprimés). Un MUFI *inséré* (présent en hyp, absent en réf)
+    # n'est pas compté : le dénominateur est l'ensemble des MUFI attendus.
     wrong = {
         op.src_pos
         for op in Levenshtein.editops(ctx.reference, ctx.hypothesis)

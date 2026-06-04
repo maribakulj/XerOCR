@@ -131,7 +131,10 @@ class JobRunner:
         except XerOCRError as exc:
             logger.warning("[jobs] run %s échoué : %s", job_id, exc)
             self._store.update(job_id, state=JobState.FAILED, error=str(exc))
-        except Exception as exc:  # le worker ne doit jamais mourir en silence
+        except Exception as exc:
+            # Catch-all **intentionnel** (vérifié Lot G) : un thread worker ne doit
+            # jamais mourir en silence — toute erreur inattendue du run est tracée
+            # et le job passe FAILED (jamais bloqué en RUNNING).
             logger.warning("[jobs] run %s erreur inattendue : %s", job_id, exc)
             self._store.update(job_id, state=JobState.FAILED, error=str(exc))
         else:
@@ -149,7 +152,11 @@ class JobRunner:
             return
         try:
             record_run(self._history, result)
-        except Exception as exc:  # best-effort : on trace, on n'échoue pas
+        except Exception as exc:
+            # Catch-all **intentionnel** (vérifié Lot G) : l'historique est un
+            # effet secondaire. Le narrower laisserait une erreur inattendue
+            # remonter au catch-all worker et marquer FAILED un run pourtant
+            # **réussi** (RunResult déjà écrit + publié). On trace, on n'échoue pas.
             logger.warning(
                 "[jobs] historique de %s échoué : %s", result.manifest.run_id, exc
             )
@@ -159,7 +166,11 @@ class JobRunner:
         le run — le résultat local est déjà écrit."""
         try:
             return self._publisher.publish(run_id, result_path)
-        except Exception as exc:  # best-effort : on trace, on n'échoue pas
+        except Exception as exc:
+            # Catch-all **intentionnel** (vérifié Lot G) : `publish` est un effet
+            # secondaire au comportement variable (réseau, dépôt distant, impls
+            # tierces). Une publication ratée ne doit jamais faire échouer un run
+            # réussi (résultat local déjà écrit). On trace, on renvoie None.
             logger.warning("[jobs] publication de %s échouée : %s", run_id, exc)
             return None
 
