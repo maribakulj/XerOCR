@@ -32,9 +32,9 @@
 - [x] Test : `getaddrinfo` mocké (public à la validation, loopback ensuite) → la connexion vise l'IP **validée** (interception de la cible réelle du transport) + une **seule** résolution DNS (`test_connection_pins_validated_ip_not_rebind`). Non-régression SSRF + redirect-auth verte.
 - Risque TLS/SNI : **évité** (URL/Host/SNI préservés, seule la cible TCP change). `httpcore` ajouté à la whitelist archi adapters + aux extras (`httpx` le co-installe).
 
-### Lot B — Robustesse transport
-- [ ] **B1** `download` en **flux disque** (`.part` au fil de l'eau, cap, `os.replace` atomique, pas de fichier partiel).
-- [ ] **B2** média eScriptorium : `Authorization` autorisé **même-hôte** sur le download (règle host de D-050).
+### Lot B — Robustesse transport ✅ (D-052)
+- [x] **B1** `download` en **flux disque** (`.part` au fil de l'eau, cap `IMAGE_MAX_BYTES`, `os.replace` atomique, `.part` supprimé sur toute erreur → pas de fichier partiel). Plus de buffer RAM intégral (limite assumée de D-050 levée).
+- [x] **B2** média eScriptorium : `download` accepte `headers` ; `import_escriptorium_corpus` ne joint le jeton qu'à un média **même-hôte** que `base_url` (règle host de D-050) — média sur hôte tiers (CDN) téléchargé sans jeton (+ `_stream_validated` strip cross-hôte sur redirection en défense en profondeur).
 
 ### Lot C — Domaine : type « OCR-référence » (D1)
 - [ ] `ArtifactType.REFERENCE_TEXT` (couche 1) ; Gallica écrit `GroundTruthRef(REFERENCE_TEXT)`.

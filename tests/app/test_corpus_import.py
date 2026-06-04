@@ -19,7 +19,9 @@ class _FakeImporter:
 
 
 def _writer(record: dict[str, Path]):
-    def _download(url: str, dest: Path) -> None:
+    def _download(
+        url: str, dest: Path, *, headers: dict[str, str] | None = None
+    ) -> None:
         dest.write_bytes(b"fake-image-bytes")
         record[url] = dest
 

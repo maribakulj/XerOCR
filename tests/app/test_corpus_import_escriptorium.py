@@ -20,7 +20,9 @@ class _FakeImporter:
 
 
 def _writer() -> object:
-    def _download(url: str, dest: Path) -> None:
+    def _download(
+        url: str, dest: Path, *, headers: dict[str, str] | None = None
+    ) -> None:
         dest.write_bytes(b"fake-image")
 
     return _download
@@ -90,3 +92,37 @@ def test_no_usable_page_raises(tmp_path: Path) -> None:
             importer=_FakeImporter(pages),  # type: ignore[arg-type]
             download=_writer(),  # type: ignore[arg-type]
         )
+
+
+def _auth_recorder(seen: dict[str, str | None]) -> object:
+    def _download(
+        url: str, dest: Path, *, headers: dict[str, str] | None = None
+    ) -> None:
+        seen[url] = headers.get("Authorization") if headers else None
+        dest.write_bytes(b"img")
+
+    return _download
+
+
+def test_media_auth_only_same_host(tmp_path: Path) -> None:
+    # part 1 : média sur l'hôte d'eScriptorium → jeton joint ;
+    # part 2 : média sur un CDN tiers → téléchargé SANS jeton (pas de fuite, D-050).
+    pages = (
+        EScriptoriumPage(
+            pk=1, image_url="http://e.org/media/a.png", gt_text="g", title="t"
+        ),
+        EScriptoriumPage(
+            pk=2, image_url="http://cdn.other/b.png", gt_text="g", title="t"
+        ),
+    )
+    seen: dict[str, str | None] = {}
+    import_escriptorium_corpus(
+        "http://e.org",
+        "sekret",
+        5,
+        tmp_path,
+        importer=_FakeImporter(pages),  # type: ignore[arg-type]
+        download=_auth_recorder(seen),  # type: ignore[arg-type]
+    )
+    assert seen["http://e.org/media/a.png"] == "Token sekret"  # même hôte : jeton
+    assert seen["http://cdn.other/b.png"] is None  # hôte tiers : pas de jeton

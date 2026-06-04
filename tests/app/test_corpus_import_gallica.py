@@ -53,7 +53,9 @@ def test_ocr_mapped_by_vue_in_url_not_position(tmp_path: Path) -> None:
 
 
 def _writer() -> object:
-    def _download(url: str, dest: Path) -> None:
+    def _download(
+        url: str, dest: Path, *, headers: dict[str, str] | None = None
+    ) -> None:
         dest.write_bytes(b"img")
 
     return _download

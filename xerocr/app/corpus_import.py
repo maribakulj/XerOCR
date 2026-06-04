@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 from pathlib import Path
+from typing import Protocol
 from urllib.parse import urlsplit
 
 from xerocr.adapters.corpus import _http
@@ -35,8 +36,15 @@ _IMAGE_EXT = frozenset({".png", ".jpg", ".jpeg", ".tif", ".tiff", ".jp2"})
 _DEFAULT_EXT = ".jpg"
 
 ImageFetcher = Callable[[str], "tuple[IIIFImage, ...]"]
-Downloader = Callable[[str, Path], None]
 OcrFetcher = Callable[[int], str]
+
+
+class Downloader(Protocol):
+    """Télécharge ``url`` vers ``dest`` ; ``headers`` optionnels (auth même-hôte)."""
+
+    def __call__(
+        self, url: str, dest: Path, *, headers: dict[str, str] | None = None
+    ) -> None: ...
 
 
 class CorpusImportError(XerOCRError):
@@ -49,11 +57,21 @@ def _image_ext(image_url: str) -> str:
 
 
 def _download_image(
-    fetch_bytes: Downloader, image_url: str, doc_id: str, dest_dir: Path
+    fetch_bytes: Downloader,
+    image_url: str,
+    doc_id: str,
+    dest_dir: Path,
+    *,
+    headers: dict[str, str] | None = None,
 ) -> str:
-    """Télécharge une image sous ``dest_dir`` (chemin validé) ; renvoie l'URI local."""
+    """Télécharge une image sous ``dest_dir`` (chemin validé) ; renvoie l'URI local.
+
+    ``headers`` (ex. ``Authorization``) n'est fourni que pour un média **même-hôte**
+    (cf. ``import_escriptorium_corpus``) ; les imports publics (IIIF/Gallica)
+    passent ``None``.
+    """
     target = validated_path(f"{doc_id}{_image_ext(image_url)}", dest_dir)
-    fetch_bytes(image_url, target)
+    fetch_bytes(image_url, target, headers=headers)
     return str(target)
 
 
@@ -116,9 +134,16 @@ def import_escriptorium_corpus(
     Pour chaque page : télécharge l'image et écrit le texte de la couche ``layer``
     comme vérité-terrain (``.gt.txt`` → ``GroundTruthRef`` ``RAW_TEXT``). Une page
     sans texte reste image-seule ; une page sans image est ignorée (avertie).
+
+    Média gardé : le jeton ``Authorization`` n'est joint au download que si le
+    média est **sur le même hôte** que ``base_url`` (règle host de D-050). Un média
+    servi par un autre hôte (CDN tiers) est téléchargé **sans jeton** — on ne livre
+    pas le credential à un tiers (un média gardé y répondra 401, sans fuite).
     """
     imp = importer or EScriptoriumImporter(base_url, token, layer=layer)
     fetch_bytes: Downloader = download or _http.download
+    base_host = urlsplit(base_url).hostname
+    media_auth = {"Authorization": f"Token {token}"}
     dest_dir = Path(dest)
     dest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -132,7 +157,18 @@ def import_escriptorium_corpus(
             logger.warning("[escriptorium] part %s sans image — ignorée.", page.pk)
             continue
         doc_id = f"part_{page.pk:05d}"
-        image_uri = _download_image(fetch_bytes, page.image_url, doc_id, dest_dir)
+        same_host = urlsplit(page.image_url).hostname == base_host
+        headers = media_auth if same_host else None
+        if not same_host:
+            logger.warning(
+                "[escriptorium] média part %s hors hôte (%s) — téléchargé sans "
+                "jeton (pas de fuite vers un tiers).",
+                page.pk,
+                urlsplit(page.image_url).hostname,
+            )
+        image_uri = _download_image(
+            fetch_bytes, page.image_url, doc_id, dest_dir, headers=headers
+        )
         ground_truths: tuple[GroundTruthRef, ...] = ()
         if page.gt_text.strip():
             gt_target = validated_path(f"{doc_id}.gt.txt", dest_dir)
