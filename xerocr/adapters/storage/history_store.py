@@ -75,11 +75,18 @@ class HistoryStore:
     """Historique longitudinal sur un fichier SQLite."""
 
     def __init__(self, db_path: str | Path) -> None:
+        # **Initialisation paresseuse** : on ne touche pas au filesystem ici.
+        # ``create_app`` peut instancier le store avec un chemin par défaut
+        # (``/data`` sur un Space) non writable au moment de la construction ;
+        # le dossier + le schéma sont créés à la **première** opération réelle.
         self._path = Path(db_path)
+
+    def _connect(self) -> sqlite3.Connection:
+        """Ouvre une connexion, créant dossier + schéma au besoin (idempotent)."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        with closing(sqlite3.connect(self._path)) as conn:
-            conn.executescript(_SCHEMA)
-            conn.commit()
+        conn = sqlite3.connect(self._path)
+        conn.executescript(_SCHEMA)
+        return conn
 
     def add(self, records: Iterable[HistoryRecord]) -> int:
         """Enregistre des lignes (``INSERT OR REPLACE``) ; renvoie le compte."""
@@ -98,7 +105,7 @@ class HistoryStore:
         ]
         if not rows:
             return 0
-        with closing(sqlite3.connect(self._path)) as conn:
+        with closing(self._connect()) as conn:
             conn.executemany(
                 f"INSERT OR REPLACE INTO run_metrics ({_COLUMNS}) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -111,7 +118,7 @@ class HistoryStore:
         self, pipeline: str, view: str, metric: str
     ) -> tuple[HistoryRecord, ...]:
         """Suite chronologique (croissante) d'une métrique pour un pipeline/vue."""
-        with closing(sqlite3.connect(self._path)) as conn:
+        with closing(self._connect()) as conn:
             cur = conn.execute(
                 f"SELECT {_COLUMNS} FROM run_metrics "
                 "WHERE pipeline = ? AND view = ? AND metric = ? "
@@ -122,7 +129,7 @@ class HistoryStore:
 
     def all_records(self) -> tuple[HistoryRecord, ...]:
         """Toutes les lignes, les plus récentes d'abord (pour la vue Historique)."""
-        with closing(sqlite3.connect(self._path)) as conn:
+        with closing(self._connect()) as conn:
             cur = conn.execute(
                 f"SELECT {_COLUMNS} FROM run_metrics "
                 "ORDER BY completed_at DESC, pipeline, view, metric"
@@ -142,7 +149,7 @@ class HistoryStore:
         ``higher_is_better=False`` (défaut, CER/WER) : régression = la valeur a
         **augmenté** de plus de ``threshold``. ``True`` inverse le sens.
         """
-        with closing(sqlite3.connect(self._path)) as conn:
+        with closing(self._connect()) as conn:
             cur = conn.execute(
                 "SELECT pipeline, completed_at, value, run_id FROM run_metrics "
                 "WHERE view = ? AND metric = ? ORDER BY pipeline, completed_at",

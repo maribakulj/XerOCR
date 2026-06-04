@@ -26,7 +26,7 @@ tesseract = ["pytesseract"]
 openai = ["openai"]
 mistral = ["mistralai"]
 ollama = ["httpx"]
-serve = ["fastapi", "uvicorn", "jinja2", "python-multipart"]
+serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"
