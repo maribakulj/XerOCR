@@ -16,13 +16,18 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from xerocr.adapters.corpus.htr_united import fetch_catalogue
-from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue
+from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, fetch_catalogue
+from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFaceDataset
 from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.engines import StatusProvider
+from xerocr.interfaces.web._cache import TTLCache
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
+
+#: TTL des catalogues de découverte (F1) : la page Bibliothèque ne refetch plus
+#: à chaque chargement. Fenêtre courte — la fraîcheur prime sur le cache.
+_CATALOGUE_TTL_SECONDS = 300.0
 
 #: Emplacements de nav réservés dès TU1 (ordre fixé par la spec).
 _NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engines")
@@ -73,6 +78,13 @@ def build_home_router(
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
     router = APIRouter()
     app_version = resolve_code_version()
+    # Caches TTL partagés par toutes les requêtes /library (F1) : fin du fetch
+    # réseau à chaque chargement. HTR-United (index, indépendant de la requête)
+    # et HuggingFace (par requête ``q``).
+    htr_cache: TTLCache[str, HTRUnitedCatalogue] = TTLCache(_CATALOGUE_TTL_SECONDS)
+    hf_cache: TTLCache[str, tuple[HuggingFaceDataset, ...]] = TTLCache(
+        _CATALOGUE_TTL_SECONDS
+    )
 
     def _base_context(
         lang: str, active: str, metas: dict[str, str]
@@ -112,10 +124,11 @@ def build_home_router(
         lang = normalize_lang(lang)
         # Découverte best-effort : HTR-United (réseau → repli démo `is_demo`),
         # HuggingFace (socle de référence + API best-effort). Aucun blocage si
-        # hors-ligne. (Cache des catalogues : amélioration incrémentale.)
-        catalogue = fetch_catalogue()
+        # hors-ligne. Catalogues mis en cache TTL (F1) → pas de refetch par
+        # chargement ; ``.search(q)`` de HTR-United reste en mémoire (gratuit).
+        catalogue = htr_cache.get_or_compute("htr_united", fetch_catalogue)
         htr = catalogue.search(q) if q else catalogue.entries
-        hf = HuggingFaceCatalogue().search(q)
+        hf = hf_cache.get_or_compute(q, lambda: HuggingFaceCatalogue().search(q))
         context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
         context["query"] = q
         context["htr_entries"] = htr

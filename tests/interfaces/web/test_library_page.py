@@ -72,6 +72,39 @@ def _client(
     return TestClient(app)
 
 
+def test_library_caches_catalogue_across_loads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # F1 : deux chargements de /library ne refetchent pas le catalogue HTR-United
+    # (cache TTL partagé par le routeur). Compteur sur fetch_catalogue.
+    calls = {"n": 0}
+
+    def counting_fetch() -> HTRUnitedCatalogue:
+        calls["n"] += 1
+        return _HTR_REMOTE
+
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.routers.home.fetch_catalogue", counting_fetch
+    )
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
+    )
+    templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+    app = FastAPI()
+    app.include_router(
+        build_home_router(
+            tmp_path / "reports",
+            templates,
+            statuses=lambda: (),
+            history_store=HistoryStore(tmp_path / "h.db"),
+        )
+    )
+    client = TestClient(app)
+    assert client.get("/library").status_code == 200
+    assert client.get("/library").status_code == 200
+    assert calls["n"] == 1  # un seul fetch réseau pour deux chargements
+
+
 def test_library_lists_both_catalogues(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

@@ -52,10 +52,10 @@
 - [ ] Transport « replay » déterministe → valide le **parsing réel** + l'hypothèse Gallica `/f{n}/`.
 - ⚠️ **Dépendance** : capture impossible dans le sandbox actuel (allowlist) → nécessite un environnement réseau (ou exécution du script par l'utilisateur).
 
-### Lot F — UX / scalabilité
-- [ ] **F1** cache TTL des catalogues découverte (fin du fetch par chargement `/library`).
-- [ ] **F3** atomicité import : nettoyage du dossier partiel sur échec.
-- [ ] **F2** *(optionnel, gros)* import = job de fond (infra runs : annulable, SSE) si gros corpus visés.
+### Lot F — UX / scalabilité ✅ (F1+F3 ; F2 différé) (D-055)
+- [x] **F1** cache TTL des catalogues découverte (`TTLCache`, horloge injectable) : `/library` ne refetch plus HTR-United/HF à chaque chargement.
+- [x] **F3** atomicité import : `CorpusStore.materialize` nettoie le dossier partiel (`shutil.rmtree`) sur échec du builder (`except BaseException`) → pas de corpus à demi importé.
+- [~] **F2** *(optionnel, gros)* import = job de fond (annulable, SSE) : **différé** — pas de consommateur réel aujourd'hui (corpus visés petits/moyens ; `limit` borne déjà). À reprendre si de gros corpus apparaissent. Conforme au garde-fou §5.3 (on ne pose pas l'infra d'avance).
 
 ### Lot G — Housekeeping
 - [ ] Vérifier/narrower les `except Exception` de `jobs.py`.
