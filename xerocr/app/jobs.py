@@ -21,13 +21,16 @@ from collections.abc import Callable
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.adapters.storage.job_store import JobState, JobStore
 from xerocr.adapters.storage.publisher import NoopPublisher, ResultPublisher
+from xerocr.app.history import record_run
 from xerocr.app.modules.registry import ModuleRegistry
 from xerocr.app.orchestrator import run as run_orchestrator
 from xerocr.app.results import dump_run_result
 from xerocr.domain.errors import RunCancelledError, XerOCRError
 from xerocr.domain.run_spec import RunSpec
+from xerocr.evaluation.result import RunResult
 from xerocr.pipeline.run_control import RunControl
 
 logger = logging.getLogger(__name__)
@@ -48,6 +51,7 @@ class JobRunner:
         reports_dir: Path,
         code_version: str,
         publisher: ResultPublisher | None = None,
+        history_store: HistoryStore | None = None,
     ) -> None:
         self._store = store
         self._registry = registry
@@ -56,6 +60,9 @@ class JobRunner:
         #: Persistance (S3) : pousse le RunResult vers un dépôt distant. Inactif
         #: par défaut (``NoopPublisher``) → aucun effet réseau sans secret.
         self._publisher = publisher if publisher is not None else NoopPublisher()
+        #: Historique longitudinal (S6) : enregistre les agrégats de chaque run
+        #: terminé. ``None`` → pas de suivi (rétro-compatible).
+        self._history = history_store
         self._controls: dict[str, RunControl] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
@@ -118,6 +125,7 @@ class JobRunner:
                 result_path = self._reports_dir / f"{run_id}.json"
                 dump_run_result(result, result_path)
                 published_url = self._publish_safe(run_id, result_path)
+                self._record_safe(result)
         except RunCancelledError:
             self._store.update(job_id, state=JobState.CANCELLED)
         except XerOCRError as exc:
@@ -132,6 +140,18 @@ class JobRunner:
                 state=JobState.DONE,
                 report_name=run_id,
                 published_url=published_url,
+            )
+
+    def _record_safe(self, result: RunResult) -> None:
+        """Enregistre le run dans l'historique (best-effort) : un échec d'écriture
+        ne fait **pas** échouer le run — son résultat est déjà écrit et publié."""
+        if self._history is None:
+            return
+        try:
+            record_run(self._history, result)
+        except Exception as exc:  # best-effort : on trace, on n'échoue pas
+            logger.warning(
+                "[jobs] historique de %s échoué : %s", result.manifest.run_id, exc
             )
 
     def _publish_safe(self, run_id: str, result_path: Path) -> str | None:
