@@ -41,11 +41,11 @@
 - [x] **Évaluation** : une GT `REFERENCE_TEXT` **n'est pas scorée** par une vue par défaut (la vue `text` ne déclare pas la projection → GT ignorée, pas de faux score d'exactitude). **Matérialisé de bout en bout** (≠ type dormant) : vue *référence* dédiée (opt-in via projection `reference_text → raw_text`, projecteur `identity_text`), **construite automatiquement** par `_views_for_corpus` quand le corpus porte une GT `REFERENCE_TEXT` → **rapport distinct** (le nom de la vue porte l'avertissement « pas une vérité-terrain manuelle », rendu tel quel par le rapport).
 - [x] Round-trip JSON (valeur `reference_text` stable) ; golden démo inchangé (corpus précalculé = GT manuelle `RAW_TEXT`, non concerné).
 
-### Lot D — Import HuggingFace (D2 : convention XerOCR + streaming)
-- [ ] Doc **convention XerOCR** (schéma : `image`, `ground_truth`, opt. `segmentation`).
-- [ ] Adapter via lib `datasets` (**extra `[huggingface]`**, `streaming=True`) → corpus de travail page-par-page (pas de snapshot).
-- [ ] Service `app.import_hf_corpus` + endpoint `/api/corpus/import/huggingface` (CSRF, **gate public 403**) ; dataset non conforme → 422 clair.
-- [ ] GT d'un dataset XerOCR curé = **vraie GT** (`RAW_TEXT`).
+### Lot D — Import HuggingFace (D2 : convention XerOCR + streaming) ✅ (D-054)
+- [x] Doc **convention XerOCR** ([`docs/corpus_huggingface.md`](docs/corpus_huggingface.md)) : colonnes `image` (octets) + `ground_truth` requises, `segmentation` réservée (future).
+- [x] Adapter `corpus/huggingface.stream_pages` via lib `datasets` (**extra `[huggingface]`**, import paresseux, `streaming=True`, `Image(decode=False)` → octets, **pas de PIL**) → pages **une par une** (pas de snapshot) ; `loader` injectable (test sans la lib).
+- [x] Service `app.import_hf_corpus` + endpoint `POST /api/corpus/import/huggingface` (CSRF, **gate public 403**) ; dataset non conforme → **422** clair ; extra absent → **409**.
+- [x] GT d'un dataset XerOCR curé = **vraie GT** (`GroundTruthRef` `RAW_TEXT`).
 
 ### Lot E — Vérification cassettes (D3) + fixture Gallica réelle
 - [ ] Script de capture (réseau ouvert, **hors sandbox**) → fixtures (IIIF/Gallica `texteBrut`/eScriptorium/HF).

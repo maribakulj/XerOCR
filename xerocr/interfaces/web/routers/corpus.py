@@ -26,10 +26,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from xerocr.adapters.corpus._http import CorpusHttpError
 from xerocr.adapters.corpus.gallica import GallicaArkError
+from xerocr.adapters.corpus.huggingface import (
+    HuggingFaceConventionError,
+    HuggingFaceUnavailableError,
+)
 from xerocr.app.corpus_import import (
     CorpusImportError,
     import_escriptorium_corpus,
     import_gallica_corpus,
+    import_hf_corpus,
     import_iiif_corpus,
 )
 from xerocr.app.corpus_upload import MAX_ZIP_BYTES, CorpusStore, CorpusUploadError
@@ -37,7 +42,12 @@ from xerocr.domain.corpus import CorpusSpec
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
 #: Échecs d'import « attendus » (entrée invalide / source injoignable) → 422.
-_IMPORT_ERRORS = (CorpusImportError, CorpusHttpError, GallicaArkError)
+_IMPORT_ERRORS = (
+    CorpusImportError,
+    CorpusHttpError,
+    GallicaArkError,
+    HuggingFaceConventionError,
+)
 
 
 class IIIFImportRequest(BaseModel):
@@ -75,6 +85,18 @@ class GallicaImportRequest(BaseModel):
     include_ocr: bool = True
 
 
+class HuggingFaceImportRequest(BaseModel):
+    """Corps d'``POST /api/corpus/import/huggingface``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dataset_id: str = Field(min_length=1, max_length=256)
+    split: str = Field(default="train", min_length=1, max_length=64)
+    name: str | None = Field(default=None, max_length=128)
+    #: Borne le nombre de pages **streamées** (les premières) — protège le Space.
+    limit: int | None = Field(default=None, ge=1, le=2000)
+
+
 def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> APIRouter:
     """Construit le routeur corpus (upload + imports distants)."""
     router = APIRouter()
@@ -87,6 +109,9 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
             )
         try:
             corpus_id, spec = store.materialize(builder)
+        except HuggingFaceUnavailableError as exc:
+            # Extra absent côté serveur (≠ faute de l'appelant) → indisponible.
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except _IMPORT_ERRORS as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {
@@ -142,6 +167,22 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
         )
 
     @router.post(
+        "/api/corpus/import/huggingface",
+        status_code=201,
+        dependencies=[Depends(csrf_protect)],
+    )
+    def import_huggingface(req: HuggingFaceImportRequest) -> dict[str, object]:
+        return _materialize(
+            lambda dest: import_hf_corpus(
+                req.dataset_id,
+                dest,
+                name=req.name,
+                split=req.split,
+                limit=req.limit,
+            )
+        )
+
+    @router.post(
         "/api/corpus", status_code=201, dependencies=[Depends(csrf_protect)]
     )
     async def upload_corpus(
@@ -178,6 +219,7 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
 __all__ = [
     "EScriptoriumImportRequest",
     "GallicaImportRequest",
+    "HuggingFaceImportRequest",
     "IIIFImportRequest",
     "build_corpus_router",
 ]

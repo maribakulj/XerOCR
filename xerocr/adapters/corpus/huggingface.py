@@ -13,14 +13,31 @@ sait d'où vient chaque résultat (``source`` : ``reference`` | ``api``).
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
+from pathlib import PurePosixPath
 from urllib.parse import urlencode
 
-from xerocr.adapters.corpus._http import DEFAULT_TIMEOUT, HttpFetchError, fetch_json
+from xerocr.adapters.corpus._http import (
+    DEFAULT_TIMEOUT,
+    IMAGE_MAX_BYTES,
+    HttpFetchError,
+    fetch_json,
+)
+from xerocr.domain.errors import XerOCRError
 
 logger = logging.getLogger(__name__)
 
 HF_API_BASE = "https://huggingface.co/api"
+
+#: Convention XerOCR (cf. ``docs/corpus_huggingface.md``) : un dataset importable
+#: porte **au minimum** une colonne image et une colonne vérité-terrain. La
+#: segmentation est une extension *future* (non requise ici).
+XEROCR_IMAGE_COLUMN = "image"
+XEROCR_GT_COLUMN = "ground_truth"
+
+#: Extensions image reconnues (sinon ``.jpg`` par défaut) pour nommer le fichier.
+_IMAGE_EXTS = frozenset({".png", ".jpg", ".jpeg", ".tif", ".tiff", ".jp2", ".webp"})
 
 
 @dataclass(frozen=True)
@@ -174,9 +191,133 @@ class HuggingFaceCatalogue:
         return tuple(results[:limit])
 
 
+class HuggingFaceConventionError(XerOCRError):
+    """Le dataset ne respecte pas la **convention XerOCR** (colonnes attendues)."""
+
+
+class HuggingFaceUnavailableError(XerOCRError):
+    """La lib ``datasets`` (extra ``[huggingface]``) n'est pas installée."""
+
+
+@dataclass(frozen=True)
+class HFPage:
+    """Une page **streamée** : octets image encodés + extension + texte GT.
+
+    Type neutre à la frontière adapter→app : l'image est livrée en **octets**
+    (jamais un objet PIL) pour que la matérialisation disque (couche 6) n'ait
+    aucune dépendance image.
+    """
+
+    image_bytes: bytes
+    image_ext: str
+    gt_text: str
+
+
+#: Charge un dataset en streaming → itérable de lignes. Injectable (test).
+HFLoader = Callable[[str, str], Iterable[object]]
+
+
+def _default_loader(dataset_id: str, split: str) -> Iterable[object]:
+    """Charge le dataset HF **en streaming** (jamais de snapshot local complet).
+
+    Import **paresseux** de ``datasets`` (extra ``[huggingface]``) : sans l'extra,
+    lève ``HuggingFaceUnavailableError`` (message actionnable). Les images sont
+    castées en ``Image(decode=False)`` → octets bruts (pas de décodage PIL).
+    """
+    try:
+        from datasets import Image, load_dataset  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise HuggingFaceUnavailableError(
+            "import HuggingFace indisponible : installer 'xerocr[huggingface]' "
+            "(lib 'datasets')."
+        ) from exc
+    dataset = load_dataset(dataset_id, split=split, streaming=True)
+    features = getattr(dataset, "features", None) or {}
+    if XEROCR_IMAGE_COLUMN in features:
+        dataset = dataset.cast_column(XEROCR_IMAGE_COLUMN, Image(decode=False))
+    return dataset  # type: ignore[no-any-return]
+
+
+def _ext_from_path(path: object) -> str:
+    if isinstance(path, str) and path:
+        suffix = PurePosixPath(path).suffix.lower()
+        if suffix in _IMAGE_EXTS:
+            return suffix
+    return ".jpg"
+
+
+def _extract_image(value: object) -> tuple[bytes, str]:
+    """Octets image + extension depuis une cellule ``image`` (``decode=False``)."""
+    if isinstance(value, dict):
+        raw = value.get("bytes")
+        if isinstance(raw, bytes) and raw:
+            return raw, _ext_from_path(value.get("path"))
+    raise HuggingFaceConventionError(
+        f"colonne {XEROCR_IMAGE_COLUMN!r} : octets image absents (le dataset "
+        "doit stocker l'image en octets ; cf. convention XerOCR)."
+    )
+
+
+def _validate_columns(row: dict[str, object]) -> None:
+    missing = [c for c in (XEROCR_IMAGE_COLUMN, XEROCR_GT_COLUMN) if c not in row]
+    if missing:
+        raise HuggingFaceConventionError(
+            f"dataset non conforme à la convention XerOCR : colonnes manquantes "
+            f"{missing} (attendu : {XEROCR_IMAGE_COLUMN!r} + {XEROCR_GT_COLUMN!r})."
+        )
+
+
+def stream_pages(
+    dataset_id: str,
+    *,
+    split: str = "train",
+    limit: int | None = None,
+    loader: HFLoader | None = None,
+) -> Iterator[HFPage]:
+    """Streame les pages d'un dataset HF conforme à la **convention XerOCR**.
+
+    Page-par-page (``streaming=True`` côté ``datasets``) : on ne télécharge jamais
+    le snapshot complet ; ``limit`` borne le nombre de pages lues. La conformité
+    (colonnes ``image`` + ``ground_truth``) est validée sur la **1ʳᵉ ligne**. Une
+    image dépassant ``IMAGE_MAX_BYTES`` est **ignorée** (avertie), pas fatale.
+
+    ``loader`` (``(dataset_id, split) → itérable de lignes``) est injectable pour
+    tester sans la lib ``datasets`` ; défaut = streaming réel.
+    """
+    load = loader or _default_loader
+    validated = False
+    count = 0
+    for row in load(dataset_id, split):
+        if not isinstance(row, dict):
+            continue
+        if not validated:
+            _validate_columns(row)
+            validated = True
+        image_bytes, ext = _extract_image(row[XEROCR_IMAGE_COLUMN])
+        if len(image_bytes) > IMAGE_MAX_BYTES:
+            logger.warning(
+                "[huggingface] image > %d octets ignorée (dataset %s).",
+                IMAGE_MAX_BYTES,
+                dataset_id,
+            )
+            continue
+        gt_value = row.get(XEROCR_GT_COLUMN)
+        gt_text = gt_value if isinstance(gt_value, str) else ""
+        yield HFPage(image_bytes=image_bytes, image_ext=ext, gt_text=gt_text)
+        count += 1
+        if limit is not None and count >= limit:
+            return
+
+
 __all__ = [
     "HF_API_BASE",
+    "XEROCR_GT_COLUMN",
+    "XEROCR_IMAGE_COLUMN",
+    "HFPage",
     "HuggingFaceCatalogue",
+    "HuggingFaceConventionError",
     "HuggingFaceDataset",
+    "HuggingFaceUnavailableError",
     "search_reference",
+    "stream_pages",
 ]

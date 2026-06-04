@@ -102,8 +102,11 @@ ADAPTERS_ALLOWED_PKG = (
 #: ``yaml`` : catalogue HTR-United (``htr-united.yml``).
 #: ``httpcore`` : moteur de transport de ``httpx`` (toujours co-installé), requis
 #: pour l'épinglage d'IP anti-DNS-rebinding (``corpus/_http._PinnedBackend``).
+#: ``datasets`` : import de corpus HuggingFace en streaming (extra ``[huggingface]``,
+#: import paresseux dans ``corpus/huggingface``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
-    "pytesseract", "openai", "mistralai", "httpx", "httpcore", "PIL", "yaml"
+    "pytesseract", "openai", "mistralai", "httpx", "httpcore", "datasets",
+    "PIL", "yaml",
 }
 
 

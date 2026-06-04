@@ -14,7 +14,7 @@ se teste sans réseau ; le test ``live`` couvre le vrai fetch IIIF.
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Protocol
 from urllib.parse import urlsplit
@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 from xerocr.adapters.corpus import _http
 from xerocr.adapters.corpus.escriptorium import DEFAULT_LAYER, EScriptoriumImporter
 from xerocr.adapters.corpus.gallica import GALLICA_BASE, GallicaImporter, vue_number
+from xerocr.adapters.corpus.huggingface import HFPage, stream_pages
 from xerocr.adapters.corpus.iiif import IIIFImage, IIIFImporter
 from xerocr.app.security import validated_path
 from xerocr.domain.artifacts import ArtifactType
@@ -37,6 +38,8 @@ _DEFAULT_EXT = ".jpg"
 
 ImageFetcher = Callable[[str], "tuple[IIIFImage, ...]"]
 OcrFetcher = Callable[[int], str]
+#: Streame les pages d'un dataset HF conforme. Injectable (test sans ``datasets``).
+HFStreamer = Callable[..., "Iterator[HFPage]"]
 
 
 class Downloader(Protocol):
@@ -269,9 +272,57 @@ def import_gallica_corpus(
     )
 
 
+def import_hf_corpus(
+    dataset_id: str,
+    dest: str | Path,
+    *,
+    name: str | None = None,
+    split: str = "train",
+    limit: int | None = None,
+    stream: HFStreamer | None = None,
+) -> CorpusSpec:
+    """Importe un dataset **HuggingFace** (convention XerOCR) → ``CorpusSpec`` scorable.
+
+    Streamé **page-par-page** (jamais de snapshot complet) : chaque page écrit son
+    image et son texte de vérité-terrain. La GT d'un dataset XerOCR curé est une
+    **vraie GT** (``GroundTruthRef`` ``RAW_TEXT``), pas une référence OCR. ``limit``
+    borne le nombre de pages. ``stream`` est injectable (test sans ``datasets``).
+    """
+    pages = (stream or stream_pages)(dataset_id, split=split, limit=limit)
+    dest_dir = Path(dest)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    documents: list[DocumentRef] = []
+    for index, page in enumerate(pages, start=1):
+        doc_id = f"page_{index:04d}"
+        target = validated_path(f"{doc_id}{page.image_ext}", dest_dir)
+        target.write_bytes(page.image_bytes)
+        ground_truths: tuple[GroundTruthRef, ...] = ()
+        if page.gt_text.strip():
+            gt_target = validated_path(f"{doc_id}.gt.txt", dest_dir)
+            gt_target.write_text(page.gt_text, encoding="utf-8")
+            ground_truths = (
+                GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(gt_target)),
+            )
+        documents.append(
+            DocumentRef(id=doc_id, image_uri=str(target), ground_truths=ground_truths)
+        )
+
+    if not documents:
+        raise CorpusImportError(
+            f"dataset HuggingFace {dataset_id!r} (split {split!r}) : aucune page."
+        )
+    return CorpusSpec(
+        name=name or f"hf-{dataset_id.replace('/', '-')}",
+        documents=tuple(documents),
+        metadata={"source": "huggingface", "dataset_id": dataset_id, "split": split},
+    )
+
+
 __all__ = [
     "CorpusImportError",
     "import_escriptorium_corpus",
     "import_gallica_corpus",
+    "import_hf_corpus",
     "import_iiif_corpus",
 ]
