@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ t.library_title }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div>
+    <div class="view-hero-eyebrow">{{ t.library_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.library_title }}</div>
+    <div class="view-hero-desc">{{ t.library_desc }}</div>
+  </div>
+</section>
+
+<section class="sec">
+  <form class="search" method="get" action="/library">
+    <input type="hidden" name="lang" value="{{ lang }}">
+    <input type="search" name="q" value="{{ query }}"
+           placeholder="{{ t.library_search_placeholder }}" aria-label="{{ t.library_search_placeholder }}">
+    <button type="submit">{{ t.library_search_button }}</button>
+  </form>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">
+      {{ t.library_htr_title }}
+      {% if htr_is_demo %}<span class="badge">{{ t.library_demo_badge }}</span>{% endif %}
+    </div>
+  </div>
+  {% if htr_entries %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t.library_col_name }}</th>
+        <th>{{ t.library_col_langs }}</th>
+        <th>{{ t.library_col_link }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in htr_entries %}
+      <tr>
+        <td>{{ e.title }}</td>
+        <td>{{ e.languages|join(", ") }}</td>
+        <td><a href="{{ e.url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ t.library_empty }}</p>
+  {% endif %}
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.library_hf_title }}</div>
+  </div>
+  {% if hf_datasets %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t.library_col_name }}</th>
+        <th>{{ t.library_col_langs }}</th>
+        <th>{{ t.library_col_downloads }}</th>
+        <th>{{ t.library_col_link }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for d in hf_datasets %}
+      <tr>
+        <td class="mono">{{ d.dataset_id }}</td>
+        <td>{{ d.languages|join(", ") }}</td>
+        <td class="mono">{{ d.downloads }}</td>
+        <td><a href="{{ d.hf_url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ t.library_empty }}</p>
+  {% endif %}
+</section>
+{% endblock %}

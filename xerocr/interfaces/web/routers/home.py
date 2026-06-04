@@ -16,6 +16,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from xerocr.adapters.corpus.htr_united import fetch_catalogue
+from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue
 from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.engines import StatusProvider
@@ -26,6 +28,7 @@ from xerocr.interfaces.web.i18n import normalize_lang, strings_for
 _NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engines")
 #: Vues **vivantes** : id de nav → chemin. Les autres restent « à venir ».
 _LIVE_VIEWS = {
+    "library": "/library",
     "reports": "/",
     "benchmark": "/benchmark",
     "history": "/history",
@@ -103,6 +106,22 @@ def build_home_router(
         # testables) ; le JS ne fait que l'upload + le lancement.
         context["engines"] = statuses()
         return templates.TemplateResponse(request, "benchmark.html", context)
+
+    @router.get("/library", response_class=HTMLResponse)
+    def library(request: Request, lang: str = "fr", q: str = "") -> HTMLResponse:
+        lang = normalize_lang(lang)
+        # Découverte best-effort : HTR-United (réseau → repli démo `is_demo`),
+        # HuggingFace (socle de référence + API best-effort). Aucun blocage si
+        # hors-ligne. (Cache des catalogues : amélioration incrémentale.)
+        catalogue = fetch_catalogue()
+        htr = catalogue.search(q) if q else catalogue.entries
+        hf = HuggingFaceCatalogue().search(q)
+        context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
+        context["query"] = q
+        context["htr_entries"] = htr
+        context["htr_is_demo"] = catalogue.is_demo
+        context["hf_datasets"] = hf
+        return templates.TemplateResponse(request, "library.html", context)
 
     @router.get("/history", response_class=HTMLResponse)
     def history(request: Request, lang: str = "fr") -> HTMLResponse:
