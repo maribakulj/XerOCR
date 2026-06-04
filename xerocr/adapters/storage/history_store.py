@@ -122,17 +122,19 @@ class HistoryStore:
             cur = conn.execute(
                 f"SELECT {_COLUMNS} FROM run_metrics "
                 "WHERE pipeline = ? AND view = ? AND metric = ? "
-                "ORDER BY completed_at",
+                "ORDER BY completed_at, run_id",  # run_id = bris d'égalité déterministe
                 (pipeline, view, metric),
             )
             return tuple(HistoryRecord(*row) for row in cur.fetchall())
 
-    def all_records(self) -> tuple[HistoryRecord, ...]:
-        """Toutes les lignes, les plus récentes d'abord (pour la vue Historique)."""
+    def all_records(self, *, limit: int = 1000) -> tuple[HistoryRecord, ...]:
+        """Lignes les plus récentes d'abord, **bornées** (pour la vue Historique)."""
         with closing(self._connect()) as conn:
             cur = conn.execute(
                 f"SELECT {_COLUMNS} FROM run_metrics "
-                "ORDER BY completed_at DESC, pipeline, view, metric"
+                "ORDER BY completed_at DESC, run_id, pipeline, view, metric "
+                "LIMIT ?",
+                (limit,),
             )
             return tuple(HistoryRecord(*row) for row in cur.fetchall())
 
@@ -152,7 +154,8 @@ class HistoryStore:
         with closing(self._connect()) as conn:
             cur = conn.execute(
                 "SELECT pipeline, completed_at, value, run_id FROM run_metrics "
-                "WHERE view = ? AND metric = ? ORDER BY pipeline, completed_at",
+                "WHERE view = ? AND metric = ? "
+                "ORDER BY pipeline, completed_at, run_id",  # bris d'égalité stable
                 (view, metric),
             )
             rows = cur.fetchall()

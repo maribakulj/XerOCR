@@ -20,7 +20,7 @@ from urllib.parse import urlsplit
 
 from xerocr.adapters.corpus import _http
 from xerocr.adapters.corpus.escriptorium import DEFAULT_LAYER, EScriptoriumImporter
-from xerocr.adapters.corpus.gallica import GALLICA_BASE, GallicaImporter
+from xerocr.adapters.corpus.gallica import GALLICA_BASE, GallicaImporter, vue_number
 from xerocr.adapters.corpus.iiif import IIIFImage, IIIFImporter
 from xerocr.app.security import validated_path
 from xerocr.domain.artifacts import ArtifactType
@@ -176,9 +176,12 @@ def import_gallica_corpus(
 
     Les images viennent du **manifeste IIIF** Gallica ; si ``include_ocr``, l'OCR
     brut de chaque vue (``texteBrut``) est écrit comme **référence étiquetée**
-    (``gt_source=gallica_ocr`` — pas une GT manuelle). La vue en position ``i``
-    (1-based) correspond directement à ``f{i}.texteBrut`` : pas d'indirection, donc
-    pas de décalage de page.
+    (``gt_source=gallica_ocr`` — pas une GT manuelle).
+
+    Le numéro de vue est **lu dans l'URL de l'image** (``/f{n}/``), pas déduit de la
+    position : un canvas sans image sauté par le parseur IIIF décalerait sinon tout
+    l'OCR (le bug ``selected_indices+1`` réintroduit). Position 1-based = repli si
+    l'URL ne porte pas de ``/f{n}/``.
     """
     gallica = GallicaImporter(ark, base_url=base_url)
     fetch_bytes: Downloader = download or _http.download
@@ -194,12 +197,13 @@ def import_gallica_corpus(
 
     documents: list[DocumentRef] = []
     has_ocr_gt = False
-    for page, image in enumerate(images, start=1):
-        doc_id = f"f{page:04d}"
+    for position, image in enumerate(images, start=1):
+        vue = vue_number(image.image_url) or position
+        doc_id = f"f{vue:04d}"
         image_uri = _download_image(fetch_bytes, image.image_url, doc_id, dest_dir)
         ground_truths: tuple[GroundTruthRef, ...] = ()
         if include_ocr:
-            text = ocr_of(page)
+            text = ocr_of(vue)
             if text.strip():
                 gt_target = validated_path(f"{doc_id}.gallica_ocr.txt", dest_dir)
                 gt_target.write_text(text, encoding="utf-8")

@@ -24,6 +24,34 @@ class _FakeIIIF:
         )
 
 
+def test_ocr_mapped_by_vue_in_url_not_position(tmp_path: Path) -> None:
+    # Canvas 1 (f1) sans image → sauté par le parseur ; restent f2 et f5.
+    # Le mapping doit lire la vue dans l'URL (/f{n}/), pas la position dans la liste
+    # (sinon décalage : on récupérerait f1/f2 au lieu de f2/f5).
+    fake = _FakeIIIF(
+        (
+            "https://gallica.bnf.fr/iiif/ark:/12148/x/f2/full/full/0/native.jpg",
+            "https://gallica.bnf.fr/iiif/ark:/12148/x/f5/full/full/0/native.jpg",
+        )
+    )
+    requested: list[int] = []
+
+    def ocr(vue: int) -> str:
+        requested.append(vue)
+        return f"ocr vue {vue}"
+
+    spec = import_gallica_corpus(
+        "12148/x",
+        tmp_path,
+        image_importer=fake,  # type: ignore[arg-type]
+        download=_writer(),  # type: ignore[arg-type]
+        fetch_ocr=ocr,
+    )
+    assert [d.id for d in spec.documents] == ["f0002", "f0005"]
+    assert requested == [2, 5]  # vues lues dans l'URL — pas 1, 2
+    assert Path(spec.documents[0].ground_truths[0].uri).read_text() == "ocr vue 2"
+
+
 def _writer() -> object:
     def _download(url: str, dest: Path) -> None:
         dest.write_bytes(b"img")

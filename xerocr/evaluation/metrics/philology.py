@@ -22,12 +22,14 @@ from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
 
 #: Plages Unicode où vivent les glyphes MUFI / médiévaux.
+#: ⚠️ **Pas de signes combinants** ici (bloc U+1DC0–U+1DFF volontairement exclu) :
+#: ils relèvent de ``diacritic_err`` (catégorie ``Mn``). ``mufi_err`` mesure des
+#: **lettres/ligatures/abréviations** à codepoint propre → axe disjoint.
 _MUFI_RANGES: tuple[tuple[int, int], ...] = (
     (0xE000, 0xF8FF),      # Private Use Area (zone MUFI principale)
     (0xF0000, 0xFFFFD),    # Supplementary PUA-A
     (0x100000, 0x10FFFD),  # Supplementary PUA-B
     (0xA720, 0xA7FF),      # Latin Extended-D (abréviations latines médiévales)
-    (0x1DC0, 0x1DFF),      # Combining Diacritical Marks Supplement (médiéval)
     (0xFB00, 0xFB06),      # Ligatures latines (ﬀ ﬁ ﬂ ﬃ ﬄ ﬅ ﬆ)
 )
 

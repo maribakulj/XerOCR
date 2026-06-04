@@ -32,6 +32,9 @@ GALLICA_BASE = "https://gallica.bnf.fr"
 #: ARK normalisé : ``naID/identifiant`` (ex. ``12148/btv1b8453561w``).
 _ARK_RE = re.compile(r"^[0-9]+/[A-Za-z0-9_.\-]+$")
 
+#: Numéro de **vue** Gallica dans une URL d'image IIIF (``…/ark:/12148/X/f3/…``).
+_VUE_RE = re.compile(r"/f(\d+)/")
+
 
 class GallicaArkError(XerOCRError):
     """ARK Gallica malformé."""
@@ -49,6 +52,17 @@ def normalize_ark(ark: str) -> str:
             "(ex. '12148/btv1b8453561w')."
         )
     return value
+
+
+def vue_number(image_url: str) -> int | None:
+    """Numéro de vue Gallica extrait d'une URL d'image (``/f{n}/``), sinon ``None``.
+
+    C'est la source **autoritaire** pour apparier une image à son
+    ``f{n}.texteBrut`` : se fier à la position dans la liste d'images est faux dès
+    qu'un canvas sans image est sauté par le parseur IIIF (décalage de page).
+    """
+    match = _VUE_RE.search(image_url)
+    return int(match.group(1)) if match else None
 
 
 def _looks_like_html(text: str) -> bool:
@@ -90,4 +104,10 @@ class GallicaImporter:
         return "" if _looks_like_html(text) else text
 
 
-__all__ = ["GALLICA_BASE", "GallicaArkError", "GallicaImporter", "normalize_ark"]
+__all__ = [
+    "GALLICA_BASE",
+    "GallicaArkError",
+    "GallicaImporter",
+    "normalize_ark",
+    "vue_number",
+]

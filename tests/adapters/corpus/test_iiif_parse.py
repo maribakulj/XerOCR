@@ -77,6 +77,25 @@ def test_label_fallback_when_missing() -> None:
     assert images[0].label == "canvas_1"
 
 
+def test_v3_label_nested_list_is_stringified() -> None:
+    # Une map de langue dont la valeur est une liste non-str ne doit pas casser
+    # le type str de IIIFImage.label (régression d'audit).
+    manifest = {
+        "@context": "http://iiif.io/api/presentation/3/context.json",
+        "type": "Manifest",
+        "items": [
+            {
+                "label": {"none": [42]},
+                "items": [
+                    {"items": [{"body": {"id": "http://e.org/x", "type": "Image"}}]}
+                ],
+            }
+        ],
+    }
+    (image,) = parse_manifest(manifest)
+    assert image.label == "42" and isinstance(image.label, str)
+
+
 def test_empty_manifest_yields_no_images() -> None:
     assert parse_manifest({"@context": "…/presentation/3/…", "type": "Manifest"}) == ()
     assert parse_manifest({}) == ()

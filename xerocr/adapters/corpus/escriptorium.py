@@ -21,11 +21,14 @@ projets/connexion (surface morte ~40 %), et surtout le bug latent
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from xerocr.adapters.corpus._http import DEFAULT_TIMEOUT, HttpFetchError, fetch_json
+
+logger = logging.getLogger(__name__)
 
 #: Couche de transcription par défaut (libellé eScriptorium usuel pour la GT).
 DEFAULT_LAYER = "manual"
@@ -111,7 +114,12 @@ class EScriptoriumImporter:
         return data
 
     def _paginate(self, path: str) -> list[dict[str, Any]]:
-        """Suit les liens ``next`` (URL absolues) jusqu'à épuisement."""
+        """Suit les liens ``next`` jusqu'à épuisement, **sans quitter l'hôte**.
+
+        Le ``next`` est contrôlé par le serveur : on **n'envoie jamais le jeton**
+        vers un hôte différent de ``base_url`` (un ``next`` cross-hôte est ignoré).
+        """
+        base_host = urlsplit(self._base_url).hostname
         results: list[dict[str, Any]] = []
         url: str | None = f"{self._base_url}/api/{path.lstrip('/')}"
         for _ in range(_MAX_PAGES):
@@ -121,7 +129,16 @@ class EScriptoriumImporter:
             page = data.get("results")
             results.extend(page if isinstance(page, list) else [])
             nxt = data.get("next")
-            url = nxt if isinstance(nxt, str) and nxt else None
+            if not (isinstance(nxt, str) and nxt):
+                break
+            if urlsplit(nxt).hostname != base_host:
+                logger.warning(
+                    "[escriptorium] lien 'next' hors hôte ignoré (pas de jeton "
+                    "envoyé à un tiers) : %s",
+                    nxt,
+                )
+                break
+            url = nxt
         return results
 
     def _transcriptions(self, doc_pk: int, part_pk: int) -> list[dict[str, Any]]:

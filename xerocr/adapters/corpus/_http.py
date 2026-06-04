@@ -13,10 +13,18 @@ sans borne (DoS mémoire/disque). Défenses, toutes testées :
 - **taille plafonnée** au fil de l'eau (on ne fait pas confiance à
   ``Content-Length``).
 
-Limite résiduelle assumée : **TOCTOU/DNS-rebinding** (l'IP peut changer entre la
-validation et la connexion) — acceptable pour un banc d'essai, documenté ici.
-Une seule pile HTTP dans la couche (``httpx``, déjà dép. cœur via l'adapter
-Ollama) ; **aucun état global** (pas d'``install_opener``).
+**Limite réelle, assumée — DNS-rebinding.** ``assert_public_url`` résout l'hôte
+puis ``httpx`` re-résout indépendamment à la connexion : un DNS hostile peut
+renvoyer une IP publique au validateur et une IP interne à la connexion. La
+validation d'IP est donc une **défense en profondeur best-effort**, pas une
+barrière étanche. La vraie frontière contre une entrée non fiable est le **gate
+« mode public » (403)** côté interface (les imports distants y sont refusés) ;
+en mode privé l'opérateur fournit ses propres URLs. Pinner l'IP résolue
+(anti-rebind strict) reste un durcissement futur.
+
+Auth & redirections : les en-têtes (jeton) ne suivent **pas** un changement
+d'hôte (cf. ``_send_validated``). Une seule pile HTTP (``httpx``) ; **aucun état
+global** (pas d'``install_opener``).
 """
 
 from __future__ import annotations
@@ -92,11 +100,19 @@ def assert_public_url(url: str) -> None:
 def _send_validated(
     client: httpx.Client, url: str, *, headers: dict[str, str] | None = None
 ) -> httpx.Response:
-    """GET en streaming, SSRF re-validé à chaque redirection (bornée)."""
+    """GET en streaming, SSRF re-validé à chaque redirection (bornée).
+
+    Les en-têtes fournis (ex. ``Authorization: Token …``) ne sont **jamais**
+    propagés vers un **hôte différent** de l'origine : une redirection vers un
+    tiers ne doit pas lui livrer le jeton (fuite de credentials sur redirection).
+    """
+    origin_host = urlsplit(url).hostname
     current = url
     for _ in range(_MAX_REDIRECTS + 1):
         assert_public_url(current)
-        request = client.build_request("GET", current, headers=headers)
+        # Auth conservée seulement tant qu'on reste sur l'hôte d'origine.
+        hop_headers = headers if urlsplit(current).hostname == origin_host else None
+        request = client.build_request("GET", current, headers=hop_headers)
         response = client.send(request, stream=True)
         if response.is_redirect:
             location = response.headers.get("location", "")

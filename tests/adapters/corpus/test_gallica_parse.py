@@ -9,7 +9,14 @@ from xerocr.adapters.corpus.gallica import (
     GallicaImporter,
     _looks_like_html,
     normalize_ark,
+    vue_number,
 )
+
+
+def test_vue_number_from_image_url() -> None:
+    url = "https://gallica.bnf.fr/iiif/ark:/12148/btv1bX/f7/full/full/0/native.jpg"
+    assert vue_number(url) == 7
+    assert vue_number("http://127.0.0.1/iiif/1.png") is None  # repli position
 
 
 @pytest.mark.parametrize(

@@ -36,7 +36,7 @@ def _extract_label(raw: object) -> str:
         for lang in ("fr", "en", "none", "@value"):
             val = raw.get(lang)
             if val:
-                return val[0] if isinstance(val, list) and val else str(val)
+                return str(val[0]) if isinstance(val, list) and val else str(val)
         for val in raw.values():
             return _extract_label(val)
     return str(raw) if raw else ""
