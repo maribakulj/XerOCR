@@ -100,8 +100,10 @@ ADAPTERS_ALLOWED_PKG = (
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
 #: ``PIL`` : découpage des blocs (``layout/crop``) du pipeline hybride seg→OCR.
 #: ``yaml`` : catalogue HTR-United (``htr-united.yml``).
+#: ``httpcore`` : moteur de transport de ``httpx`` (toujours co-installé), requis
+#: pour l'épinglage d'IP anti-DNS-rebinding (``corpus/_http._PinnedBackend``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
-    "pytesseract", "openai", "mistralai", "httpx", "PIL", "yaml"
+    "pytesseract", "openai", "mistralai", "httpx", "httpcore", "PIL", "yaml"
 }
 
 
