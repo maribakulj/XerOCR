@@ -157,6 +157,13 @@ class EScriptoriumImporter:
         for item in self._paginate(f"documents/{doc_pk}/parts/"):
             pk = item.get("pk")
             if not isinstance(pk, int):
+                # Accept #14 : une *part* sans pk entier (schéma inattendu) est
+                # ignorée — on ne devine pas un identifiant. Avertir, pas planter.
+                logger.warning(
+                    "[escriptorium] part sans 'pk' entier ignorée (doc %s) : %r",
+                    doc_pk,
+                    item.get("pk"),
+                )
                 continue
             transcriptions = self._transcriptions(doc_pk, pk)
             pages.append(

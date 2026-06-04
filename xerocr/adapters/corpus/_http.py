@@ -318,6 +318,9 @@ def fetch_text(
             raise HttpFetchError(
                 f"statut HTTP {exc.response.status_code} sur {url!r}."
             ) from exc
+    # Accept #15 : un OCR brut distant (ex. texteBrut Gallica) peut contenir des
+    # octets non-UTF-8 isolés ; `errors="replace"` insère U+FFFD plutôt que de
+    # faire échouer tout l'import sur une page mal encodée (référence, pas GT).
     return raw.decode("utf-8", errors="replace")
 
 
