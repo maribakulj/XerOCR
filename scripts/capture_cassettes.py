@@ -42,13 +42,25 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-import httpx
+# Permet de lancer le script depuis un checkout sans réinstaller le paquet, tant
+# que les dépendances (httpx, pydantic, …) sont présentes dans l'environnement.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import xerocr.adapters.corpus._http as _http
-from xerocr.app.corpus_import import (
-    import_gallica_corpus,
-    import_iiif_corpus,
-)
+try:
+    import httpx
+
+    import xerocr.adapters.corpus._http as _http
+    from xerocr.app.corpus_import import (
+        import_gallica_corpus,
+        import_iiif_corpus,
+    )
+except ModuleNotFoundError as exc:  # paquet ou dépendance non installé
+    raise SystemExit(
+        f"Dépendance introuvable : {exc.name!r}.\n"
+        "Installe XerOCR et ses deps depuis la racine du repo :\n"
+        '    pip install -e ".[dev]"\n'
+        "puis relance le script."
+    ) from exc
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger("capture")
