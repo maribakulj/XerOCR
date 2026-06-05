@@ -88,7 +88,7 @@ mécanisme vérifiable, et **c'est elle qui justifie la découpe en tranches**.
 | Principe | Mécanisme qui le garantit |
 |---|---|
 | **Simplicité** | 1 contrat de module (pas 4 registres) · 1 format de sortie `RunResult` (pas le double `BenchmarkResult`) · 1 signature de section · 1 pile HTTP. Chaque tranche **ajoute un seul concept**. |
-| **Maintenabilité** | Budgets `<400 LOC` + `test_file_budgets` · garde-fous d'archi **dès la 1ʳᵉ tranche** · **zéro shim** · « pas de consommateur = supprimé » · golden **octet-stable** (déterminisme prouvé, pas espéré). |
+| **Maintenabilité** | Budgets `<600 LOC` + `test_file_budgets` · garde-fous d'archi **dès la 1ʳᵉ tranche** · **zéro shim** · « pas de consommateur = supprimé » · golden **octet-stable** (déterminisme prouvé, pas espéré). |
 | **Intelligence conceptuelle** | L'**enveloppe est dimensionnée plein-scope une fois** (axe 1, §1) : `RunResult` porte structure/NER/taxonomy **dès sa conception**, le registre est **générique sur `input_types`**. On coule des fondations pour 3 étages, on meuble un étage à la fois. |
 | **Extensibilité (tranche→tranche & futur)** | **Un seul point d'extension** : le `Module` Protocol + entry-points `xerocr.modules`. Chaque tranche ne fait qu'**ajouter** (un module, une métrique, une section) sur des contrats **stables** → elle ne modifie jamais l'enveloppe précédente. **Inner→outer** : chaque tranche ne dépend que de couches finies. |
 
@@ -243,7 +243,7 @@ importeurs / extensibilité / infra).
 | F3 | 4 registres parallèles | **T1** | 1 registre type-driven |
 | F4 | Code mort (`cache.py`,`yaml_io.py`,½ partial_store) | **jamais porté** | « pas de conso = supprimé » |
 | F5 | 424 annotations de sprint | **transverse** | « garder le pourquoi, jeter la datation » |
-| F6 | Fichiers >400 LOC | **transverse** | `test_file_budgets` |
+| F6 | Fichiers >600 LOC | **transverse** | `test_file_budgets` |
 | F7 | Moteur narratif | **jamais porté** | supprimé (D2) |
 | F8 | 2 JobStore (SSE perdu) | **S2** | 1 store + SSE réabsorbé avant suppression legacy |
 | F9 | Bugs latents masqués par mocks | **T7 importeurs** | corrigés + test `live`/`network` |
@@ -281,7 +281,7 @@ importeurs / extensibilité / infra).
 ## 7. Garde-fous transverses (actifs à chaque tranche)
 
 1. **Tests d'archi dès le 1ᵉʳ commit de code de la tranche** : `layer_dependencies`, `no_legacy_imports`, **`no_side_effect_imports`**, **`file_budgets`**, `no_broad_except`, `single_version_source` (+ `no-orphan métrique↔section` dès T1).
-2. **Budgets `<400 LOC`** ou entrée justifiée.
+2. **Budgets `<600 LOC`** ou entrée justifiée.
 3. **Zéro shim, rupture nette** : un seul chemin, jamais d'ancien gardé « le temps de migrer ».
 4. **« Pas de consommateur = supprimé »** : aucune surface spéculative.
 5. **Golden déterministe refait** (jamais hérité de Picarones — incompatibilité numérique assumée, `MIGRATION_COUCHE_2.md` MIG-2).

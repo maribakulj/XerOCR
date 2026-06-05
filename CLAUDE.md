@@ -206,8 +206,10 @@ les sens ». Ils étaient absents de Picarones.
 1. **Rupture nette, zéro shim.** Un seul format de sortie (`RunResult`). Jamais
    d'ancien chemin gardé « le temps de migrer ». Aucun helper de conversion
    entre deux représentations.
-2. **Budgets par fichier.** Pas de fichier > 400 LOC sans entrée justifiée dans
-   `test_file_budgets`. Un fichier ne peut pas enfler en silence.
+2. **Budgets par fichier.** Pas de fichier > 600 LOC sans entrée justifiée dans
+   `test_file_budgets`. Un fichier ne peut pas enfler en silence. (Seuil détendu
+   de 400 → 600 : on préfère un fichier cohérent à une floraison de petits
+   modules éclatés.)
 3. **Pas de consommateur = supprimé.** Tout symbole/fichier sans usage réel en
    CI est retiré. Aucune feature spéculative « au cas où ». **Y compris une API
    créée en anticipation d'une *sous-tranche future*** : chaque (sous-)tranche ne

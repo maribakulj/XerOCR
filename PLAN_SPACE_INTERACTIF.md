@@ -97,7 +97,7 @@ surface.
 
 ## 9. Garde-fous (inchangés)
 
-Tranches fines de pleine profondeur · budgets `<400 LOC` · zéro shim · tests
+Tranches fines de pleine profondeur · budgets `<600 LOC` · zéro shim · tests
 d'archi · « pas de consommateur = supprimé » · docs durables committées · **ne
 pas tout faire dans une seule conversation**.
 

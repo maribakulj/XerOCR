@@ -8,7 +8,7 @@ conscient :
 2. **Relever le budget délibérément** : ajouter une entrée ici, justifiée dans le
    message de commit. La hausse devient un acte conscient, pas une dérive.
 
-XerOCR démarre avec une table **vide** : aucun fichier ≥ 400 LOC aujourd'hui. La
+XerOCR démarre avec une table **vide** : aucun fichier ≥ 600 LOC aujourd'hui. La
 table se remplira au fil des tranches, chaque entrée portant sa justification.
 """
 
@@ -21,8 +21,8 @@ import pytest
 XEROCR = Path(__file__).resolve().parents[2] / "xerocr"
 
 #: Seuil de surveillance. Sous ce seuil, la couverture suffit ; au-dessus, une
-#: entrée justifiée est obligatoire.
-THRESHOLD = 400
+#: entrée justifiée est obligatoire. (Détendu de 400 → 600 : changement de règle.)
+THRESHOLD = 600
 
 #: Chemin relatif (depuis ``xerocr/``) → budget en lignes. Vide au démarrage.
 FILE_BUDGETS: dict[str, int] = {}
