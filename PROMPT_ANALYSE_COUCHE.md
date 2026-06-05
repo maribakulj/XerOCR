@@ -46,7 +46,7 @@ Source en lecture seule : `../Picarones/picarones/<COUCHE>/`.
   (2) IDÉE DE RÉORGANISATION CIBLE XerOCR — périssable, marquée « à confirmer à
       la tranche », conforme à la discipline `CLAUDE.md` : deux axes (enveloppe
       plein-scope vs surface incrémentale), « pas de consommateur = supprimé »,
-      budgets < 400 LOC, rupture nette zéro shim, moteur narratif supprimé.
+      budgets < 600 LOC, rupture nette zéro shim, moteur narratif supprimé.
 - Liste les RISQUES DE TRANSFERT et les DETTES POTENTIELLES à surveiller, avec,
   quand c'est possible, comment les détecter / les désamorcer.
 
