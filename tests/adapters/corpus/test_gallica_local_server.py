@@ -1,13 +1,15 @@
 """Transport Gallica **réel** contre un serveur loopback (déterministe, CI).
 
-Sert un manifeste IIIF v2 Gallica + des images + l'OCR brut par vue, et fait
-tourner `import_gallica_corpus` sur le **vrai chemin httpx** (IIIF + download +
-`texteBrut`). Prouve sur transport réel :
+Sert un manifeste **IIIF** (préfixe ``/iiif/``) + images + OCR **ALTO**
+(``RequestDigitalElement``), et fait tourner ``import_gallica_corpus`` sur le
+**vrai chemin httpx**. Prouve sur transport réel :
 
-- le **mapping page→OCR corrigé** (vue 1 ↔ ``f1``, vue 2 ↔ ``f2``) — la régression
-  ``selected_indices[i]+1`` aurait décalé l'OCR ;
-- le **filtrage HTML** : une vue dont ``texteBrut`` renvoie du HTML (pas d'OCR)
-  reste image-seule.
+- l'URL de manifeste **IIIF correcte** (``/iiif/…`` — l'ancienne renvoyait 403) ;
+- le **mapping vue→OCR** lu dans l'URL d'image (``/f{n}/``), **pas la position** :
+  les vues f8 et f10 sont aux positions 1 et 2 → docs ``f0008``/``f0010`` (la
+  régression ``selected_indices[i]+1`` aurait produit f1/f2) ;
+- l'extraction **ALTO** (``String/@CONTENT``) à la bonne vue ;
+- l'absence d'ALTO (404) → page **image-seule**.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import threading
 from collections.abc import Iterator
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
@@ -28,26 +31,40 @@ _PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HBOwAAAAC0lEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"
 )
 ARK = "12148/btv1bTEST"
-_OCR_VUE_1 = "Texte OCR de la vue 1."
-_HTML_NO_OCR = "<!DOCTYPE html><html><body>pas d'OCR</body></html>"
+
+
+def _alto(*words: str) -> bytes:
+    strings = "".join(f'<String CONTENT="{w}"/>' for w in words)
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<alto xmlns="http://www.loc.gov/standards/alto/ns-v2#"><Layout><Page>'
+        f"<PrintSpace><TextBlock><TextLine>{strings}</TextLine>"
+        "</TextBlock></PrintSpace></Page></Layout></alto>"
+    ).encode()
 
 
 def _manifest(port: int) -> bytes:
     base = f"http://127.0.0.1:{port}"
+    # Vues f8 et f10 AUX POSITIONS 1 et 2 (la vue ≠ la position).
+    img = "{b}/iiif/ark:/{a}/f{n}/full/max/0/default.jpg"
     return json.dumps(
         {
             "@context": "http://iiif.io/api/presentation/2/context.json",
-            "@id": f"{base}/ark:/{ARK}/manifest.json",
+            "@id": f"{base}/iiif/ark:/{ARK}/manifest.json",
             "sequences": [
                 {
                     "canvases": [
                         {
-                            "label": "f1",
-                            "images": [{"resource": {"@id": f"{base}/iiif/1.png"}}],
+                            "label": "f8",
+                            "images": [
+                                {"resource": {"@id": img.format(b=base, a=ARK, n=8)}}
+                            ],
                         },
                         {
-                            "label": "f2",
-                            "images": [{"resource": {"@id": f"{base}/iiif/2.png"}}],
+                            "label": "f10",
+                            "images": [
+                                {"resource": {"@id": img.format(b=base, a=ARK, n=10)}}
+                            ],
                         },
                     ]
                 }
@@ -65,16 +82,20 @@ def server() -> Iterator[int]:
             pass
 
         def do_GET(self) -> None:
-            path = self.path
+            parts = urlsplit(self.path)
+            path = parts.path
             body: bytes
-            ctype = "text/plain; charset=utf-8"
-            if path == f"/ark:/{ARK}/manifest.json":
+            ctype = "application/xml"
+            if path == f"/iiif/ark:/{ARK}/manifest.json":
                 body, ctype = _manifest(holder["port"]), "application/json"
-            elif path == f"/ark:/{ARK}/f1.texteBrut":
-                body = _OCR_VUE_1.encode("utf-8")
-            elif path == f"/ark:/{ARK}/f2.texteBrut":
-                body, ctype = _HTML_NO_OCR.encode("utf-8"), "text/html"
-            elif path.startswith("/iiif/"):
+            elif path == "/RequestDigitalElement":
+                deb = parse_qs(parts.query).get("Deb", [""])[0]
+                if deb == "8":
+                    body = _alto("Texte", "vue", "huit")
+                else:  # f10 : pas d'OCR disponible → 404 → image-seule
+                    self.send_error(404)
+                    return
+            elif path.endswith("default.jpg"):
                 body, ctype = _PNG, "image/png"
             else:
                 self.send_error(404)
@@ -96,24 +117,22 @@ def server() -> Iterator[int]:
         thread.join(timeout=5)
 
 
-def test_real_transport_images_and_mapped_ocr(
+def test_real_transport_iiif_manifest_and_alto_ocr(
     server: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(_http, "assert_public_url", lambda url: None)
 
-    spec = import_gallica_corpus(
-        ARK, tmp_path, base_url=f"http://127.0.0.1:{server}"
-    )
+    spec = import_gallica_corpus(ARK, tmp_path, base_url=f"http://127.0.0.1:{server}")
 
-    assert [d.id for d in spec.documents] == ["f0001", "f0002"]
-    # vue 1 → f1.texteBrut (mapping correct, transport réel)
-    gt1 = spec.documents[0].ground_truths
-    assert len(gt1) == 1
-    assert Path(gt1[0].uri).read_text(encoding="utf-8") == _OCR_VUE_1
-    # vue 2 → f2.texteBrut renvoie du HTML → filtré → image seule
+    # vue lue dans l'URL (/f{n}/), pas la position : f8 et f10 (pas f1/f2)
+    assert [d.id for d in spec.documents] == ["f0008", "f0010"]
+    # vue 8 → ALTO Deb=8 → texte extrait (String/@CONTENT en ordre de lecture)
+    gt8 = spec.documents[0].ground_truths
+    assert len(gt8) == 1
+    assert Path(gt8[0].uri).read_text(encoding="utf-8") == "Texte vue huit"
+    # vue 10 → ALTO 404 → image-seule
     assert spec.documents[1].ground_truths == ()
-    # images réellement téléchargées
+    # images réellement téléchargées via le vrai chemin httpx
     assert Path(spec.documents[0].image_uri).read_bytes() == _PNG  # type: ignore[arg-type]
     assert spec.metadata["source"] == "gallica"
-    assert spec.metadata["ark"] == ARK
     assert spec.metadata["gt_source"] == "gallica_ocr"

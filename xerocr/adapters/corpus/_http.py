@@ -300,6 +300,27 @@ def download(
         raise
 
 
+def fetch_bytes(
+    url: str,
+    *,
+    timeout: float = DEFAULT_TIMEOUT,
+    headers: dict[str, str] | None = None,
+) -> bytes:
+    """Récupère un corps **binaire** en mémoire ; anti-SSRF + plafond manifeste.
+
+    Pour les ressources qui doivent être parsées depuis des **octets** (ex. ALTO
+    Gallica : lxml refuse un ``str`` portant une déclaration d'encodage XML).
+    """
+    with _stream_validated(url, timeout=timeout, headers=headers) as response:
+        try:
+            response.raise_for_status()
+            return _read_capped(response, MANIFEST_MAX_BYTES)
+        except httpx.HTTPStatusError as exc:
+            raise HttpFetchError(
+                f"statut HTTP {exc.response.status_code} sur {url!r}."
+            ) from exc
+
+
 def fetch_text(
     url: str,
     *,
@@ -308,20 +329,14 @@ def fetch_text(
 ) -> str:
     """Récupère un corps **texte** (UTF-8, erreurs remplacées) ; anti-SSRF + plafond.
 
-    Pour les endpoints qui ne servent pas du JSON (ex. OCR brut Gallica).
+    Pour les endpoints qui ne servent pas du JSON (ex. catalogue HTR-United).
     """
-    with _stream_validated(url, timeout=timeout, headers=headers) as response:
-        try:
-            response.raise_for_status()
-            raw = _read_capped(response, MANIFEST_MAX_BYTES)
-        except httpx.HTTPStatusError as exc:
-            raise HttpFetchError(
-                f"statut HTTP {exc.response.status_code} sur {url!r}."
-            ) from exc
-    # Accept #15 : un OCR brut distant (ex. texteBrut Gallica) peut contenir des
-    # octets non-UTF-8 isolés ; `errors="replace"` insère U+FFFD plutôt que de
-    # faire échouer tout l'import sur une page mal encodée (référence, pas GT).
-    return raw.decode("utf-8", errors="replace")
+    # Accept #15 : un corps distant peut contenir des octets non-UTF-8 isolés ;
+    # `errors="replace"` insère U+FFFD plutôt que d'échouer sur une donnée mal
+    # encodée (le contenu reste exploitable, pas une GT manuelle).
+    return fetch_bytes(url, timeout=timeout, headers=headers).decode(
+        "utf-8", errors="replace"
+    )
 
 
 __all__ = [
@@ -332,6 +347,7 @@ __all__ = [
     "SsrfError",
     "assert_public_url",
     "download",
+    "fetch_bytes",
     "fetch_json",
     "fetch_text",
 ]

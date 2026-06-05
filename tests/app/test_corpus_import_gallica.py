@@ -78,9 +78,9 @@ def test_images_plus_labeled_ocr_with_correct_mapping(tmp_path: Path) -> None:
     assert Path(spec.documents[0].ground_truths[0].uri).read_text() == "ocr p1"
     assert Path(spec.documents[1].ground_truths[0].uri).read_text() == "ocr p2"
     assert spec.documents[0].ground_truths[0].uri.endswith("f0001.gallica_ocr.txt")
-    # le manifeste interrogé est bien celui de Gallica pour cet ARK
+    # le manifeste interrogé est bien le manifeste IIIF Gallica (préfixe /iiif/)
     assert fake.seen_manifest == (
-        "https://gallica.bnf.fr/ark:/12148/btv1bTEST/manifest.json"
+        "https://gallica.bnf.fr/iiif/ark:/12148/btv1bTEST/manifest.json"
     )
     assert spec.name == "gallica-btv1bTEST"
     assert spec.metadata["source"] == "gallica"

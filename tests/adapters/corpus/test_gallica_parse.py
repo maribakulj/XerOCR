@@ -1,4 +1,4 @@
-"""Gallica pur (sans réseau) : normalisation ARK, détection HTML, URL manifeste."""
+"""Gallica pur (sans réseau) : normalisation ARK, vue, URLs manifeste IIIF + ALTO."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import pytest
 from xerocr.adapters.corpus.gallica import (
     GallicaArkError,
     GallicaImporter,
-    _looks_like_html,
     normalize_ark,
     vue_number,
 )
@@ -38,15 +37,18 @@ def test_normalize_ark_rejects_malformed(bad: str) -> None:
         normalize_ark(bad)
 
 
-def test_looks_like_html() -> None:
-    assert _looks_like_html("<!DOCTYPE html><html>…")
-    assert _looks_like_html("<html lang='fr'>")
-    assert not _looks_like_html("Texte OCR brut de la vue.")
-
-
-def test_manifest_url() -> None:
-    imp = GallicaImporter("ark:/12148/btv1b8453561w")
+def test_manifest_url_has_iiif_prefix() -> None:
+    # Le manifeste IIIF Gallica est sous /iiif/ (sans le préfixe → 403 en prod).
+    imp = GallicaImporter("ark:/12148/bpt6k5619759j")
     assert imp.manifest_url == (
-        "https://gallica.bnf.fr/ark:/12148/btv1b8453561w/manifest.json"
+        "https://gallica.bnf.fr/iiif/ark:/12148/bpt6k5619759j/manifest.json"
     )
-    assert imp.ark == "12148/btv1b8453561w"
+    assert imp.ark == "12148/bpt6k5619759j"
+
+
+def test_alto_url_uses_request_digital_element() -> None:
+    # OCR via l'endpoint ALTO officiel ; O = identifiant seul (sans le naID 12148).
+    imp = GallicaImporter("ark:/12148/bpt6k5619759j")
+    assert imp.alto_url(8) == (
+        "https://gallica.bnf.fr/RequestDigitalElement?O=bpt6k5619759j&E=ALTO&Deb=8"
+    )
