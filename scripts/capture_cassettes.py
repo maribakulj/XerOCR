@@ -129,11 +129,18 @@ class _RecordingTransport(httpx.BaseTransport):
     peut recevoir un placeholder pour les grosses images.
     """
 
-    def __init__(self, recorder: _Recorder) -> None:
+    def __init__(self, recorder: _Recorder, *, user_agent: str | None = None) -> None:
         self._recorder = recorder
+        self._user_agent = user_agent
         self._inner = httpx.HTTPTransport()
 
     def handle_request(self, request: httpx.Request) -> httpx.Response:
+        # Demande une réponse **non compressée** : évite le piège content-encoding
+        # quand on reconstruit la réponse (sinon double décompression côté
+        # appelant → « incorrect header check »).
+        request.headers["accept-encoding"] = "identity"
+        if self._user_agent:
+            request.headers["user-agent"] = self._user_agent
         inner = self._inner.handle_request(request)
         try:
             raw = inner.read()
@@ -142,11 +149,20 @@ class _RecordingTransport(httpx.BaseTransport):
         self._recorder.record(
             request.method, str(request.url), inner.status_code, inner.headers, raw
         )
+        # ``read()`` a déjà décodé le corps : on retire content-encoding/length
+        # (et transfer-encoding) pour que l'appelant ne re-décompresse pas, puis
+        # on recale content-length sur le corps réel.
+        headers = httpx.Headers(inner.headers)
+        for name in ("content-encoding", "content-length", "transfer-encoding"):
+            if name in headers:
+                del headers[name]
+        headers["content-length"] = str(len(raw))
         return httpx.Response(
             status_code=inner.status_code,
-            headers=inner.headers,
+            headers=headers,
             content=raw,
             request=request,
+            extensions=inner.extensions,
         )
 
     def close(self) -> None:
@@ -154,7 +170,9 @@ class _RecordingTransport(httpx.BaseTransport):
 
 
 @contextlib.contextmanager
-def _recording(placeholder_threshold: int) -> Iterator[_Recorder]:
+def _recording(
+    placeholder_threshold: int, *, user_agent: str | None = None
+) -> Iterator[_Recorder]:
     """Installe le transport enregistreur dans ``_http`` le temps d'un scénario.
 
     Neutralise aussi l'anti-SSRF pendant la capture (on cible des hôtes publics
@@ -166,7 +184,7 @@ def _recording(placeholder_threshold: int) -> Iterator[_Recorder]:
 
     def _make_client(pins: object, timeout: float) -> httpx.Client:
         return httpx.Client(
-            transport=_RecordingTransport(recorder),
+            transport=_RecordingTransport(recorder, user_agent=user_agent),
             timeout=timeout,
             follow_redirects=False,
         )
@@ -211,11 +229,15 @@ def _run_scenario(
     out_dir: Path,
     placeholder_threshold: int,
     body: Callable[[Path], None],
+    *,
+    user_agent: str | None = None,
 ) -> bool:
     """Exécute ``body`` (l'import réel) sous enregistrement → écrit la cassette."""
     logger.info("• %s …", scenario)
     try:
-        with _recording(placeholder_threshold) as recorder, TemporaryDirectory(
+        with _recording(
+            placeholder_threshold, user_agent=user_agent
+        ) as recorder, TemporaryDirectory(
             prefix=f"xerocr-cassette-{scenario}-"
         ) as workspace:
             body(Path(workspace))
@@ -298,6 +320,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--placeholder-threshold", type=int, default=_DEFAULT_PLACEHOLDER_THRESHOLD
     )
+    parser.add_argument(
+        "--user-agent",
+        default=None,
+        help="User-Agent à envoyer (un UA navigateur peut débloquer certaines "
+        "sources ; un 403 Gallica sur IP cloud peut toutefois persister).",
+    )
     args = parser.parse_args(argv)
 
     selected = {s.strip() for s in args.only.split(",") if s.strip()}
@@ -316,7 +344,13 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if body is None:  # escriptorium non configuré → skip propre
             continue
-        if _run_scenario(scenario, out_dir, args.placeholder_threshold, body):
+        if _run_scenario(
+            scenario,
+            out_dir,
+            args.placeholder_threshold,
+            body,
+            user_agent=args.user_agent,
+        ):
             ok.append(scenario)
         else:
             failed.append(scenario)
