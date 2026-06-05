@@ -47,11 +47,12 @@
 - [x] Service `app.import_hf_corpus` + endpoint `POST /api/corpus/import/huggingface` (CSRF, **gate public 403**) ; dataset non conforme → **422** clair ; extra absent → **409**.
 - [x] GT d'un dataset XerOCR curé = **vraie GT** (`GroundTruthRef` `RAW_TEXT`).
 
-### Lot E — Vérification cassettes (D3) + fixture Gallica réelle 🚧 (D-057 ; Gallica en attente)
+### Lot E — Vérification cassettes (D3) + fixture Gallica réelle ✅ (D-057, D-058 ; eScriptorium en option)
 - [x] Script de capture (`scripts/capture_cassettes.py`, réseau ouvert hors sandbox) → cassettes JSON. **Capturé & commité : IIIF + HuggingFace** (`tests/fixtures/cassettes/{iiif,hf}.json`).
 - [x] Transport **replay** déterministe (`tests/adapters/corpus/_cassette.py::replaying`) → valide le **parsing réel** hors-ligne en CI : IIIF (manifeste v3 → `CorpusSpec` 2 pages + download), HuggingFace (découverte du Hub).
-- [~] **Gallica** (`texteBrut` + hypothèse `/f{n}/`) + **eScriptorium** : cassettes **en attente** — Gallica renvoie 403 sur IP cloud (Codespace/sandbox) → capture depuis une IP résidentielle ; eScriptorium = instance privée + token. Le test `/f{n}/` sera ajouté dès la cassette `gallica.json` fournie.
-- ⚠️ **Dépendance** : la **capture** reste hors sandbox (allowlist) ; le **replay** tourne en CI sur les cassettes commitées.
+- [x] **Gallica (D-058)** : la capture réelle a révélé **2 bugs prod** + résolu l'hypothèse `/f{n}/`. (1) **URL manifeste** corrigée `…/iiif/ark:/…` (l'ancienne renvoyait **403** — masquée par les mocks). (2) **OCR via ALTO** (`RequestDigitalElement?…&E=ALTO`) en remplacement de `texteBrut` (désormais ALTCHA-gated en automatisé) → extraction `String/@CONTENT` via `formats/alto`. Mapping **vue *i* ↔ f{i}** prouvé sur transport réel (loopback : f8/f10 aux positions 1/2) + extraction sur **vraies pages Gallica** (`tests/fixtures/gallica_alto/{f8,f10}.alto.xml`, *Pourceaugnac*).
+- [~] **eScriptorium** : cassette **optionnelle** (instance privée + token) — le loopback réel couvre déjà le transport (D-039).
+- ⚠️ **Dépendance** : la **capture** reste hors sandbox (allowlist) ; le **replay**/fixtures tournent en CI.
 
 ### Lot F — UX / scalabilité ✅ (F1+F3 ; F2 différé) (D-055)
 - [x] **F1** cache TTL des catalogues découverte (`TTLCache`, horloge injectable) : `/library` ne refetch plus HTR-United/HF à chaque chargement.
