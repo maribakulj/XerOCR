@@ -1,4 +1,4 @@
-"""``MistralAdapter`` : conformité Module + 3 modes (text_only/image/zero_shot)."""
+"""``AnthropicAdapter`` : conformité Module + 3 modes (text/image/zero_shot)."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm.mistral import MistralAdapter
+from xerocr.adapters.llm.anthropic import AnthropicAdapter
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
 from xerocr.pipeline.protocols import Module
@@ -44,46 +44,41 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock_text(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.mistral._invoke_mistral", lambda **_: text
+        "xerocr.adapters.llm.anthropic._invoke_anthropic", lambda **_: text
     )
 
 
 def _mock_vision(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.mistral._invoke_mistral_vision", lambda **_: text
+        "xerocr.adapters.llm.anthropic._invoke_anthropic_vision",
+        lambda **_: text,
     )
 
 
 def test_satisfies_module_protocol() -> None:
-    adapter = MistralAdapter(label="ministral", model="mistral-small-latest")
+    adapter = AnthropicAdapter(label="claude")
     assert isinstance(adapter, Module)
-    assert adapter.name == "mistral:ministral"
+    assert adapter.name == "anthropic:claude"
     assert adapter.input_types == frozenset({ArtifactType.RAW_TEXT})
     assert adapter.output_types == frozenset({ArtifactType.CORRECTED_TEXT})
 
 
 def test_invalid_label_rejected() -> None:
     with pytest.raises(AdapterStepError):
-        MistralAdapter(label="bad label")
+        AnthropicAdapter(label="bad label")
 
 
 def test_invalid_role_rejected() -> None:
     with pytest.raises(AdapterStepError):
-        MistralAdapter(label="m", role="bogus")
+        AnthropicAdapter(label="claude", role="bogus")
 
 
-def test_role_types() -> None:
-    zs = MistralAdapter(label="pix", role="zero_shot")
-    assert zs.input_types == frozenset({ArtifactType.IMAGE})
-    assert zs.output_types == frozenset({ArtifactType.RAW_TEXT})
-
-
-def test_execute_produces_corrected_text(
+def test_text_only_corrects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    (tmp_path / "ocr.txt").write_text("Hello wrld", encoding="utf-8")
-    _mock_text(monkeypatch, "Hello world")
-    adapter = MistralAdapter(label="m")
+    (tmp_path / "ocr.txt").write_text("Helo", encoding="utf-8")
+    _mock_text(monkeypatch, "Hello")
+    adapter = AnthropicAdapter(label="claude")
     out = adapter.execute(
         {ArtifactType.RAW_TEXT: _raw_text(tmp_path / "ocr.txt")},
         {},
@@ -91,17 +86,33 @@ def test_execute_produces_corrected_text(
         RunControl(),
     )
     artifact = out[ArtifactType.CORRECTED_TEXT]
-    assert artifact.type == ArtifactType.CORRECTED_TEXT
     assert artifact.uri is not None
-    assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello world"
-    assert artifact.content_hash is not None
+    assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello"
 
 
-def test_zero_shot_produces_raw_text(
+def test_text_and_image_corrects(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    _mock_vision(monkeypatch, "Transcrit")
-    adapter = MistralAdapter(label="pix", role="zero_shot")
+    (tmp_path / "ocr.txt").write_text("Helo", encoding="utf-8")
+    _mock_vision(monkeypatch, "Hello")
+    adapter = AnthropicAdapter(label="v", role="text_and_image")
+    out = adapter.execute(
+        {
+            ArtifactType.RAW_TEXT: _raw_text(tmp_path / "ocr.txt"),
+            ArtifactType.IMAGE: _image(tmp_path / "doc1.png"),
+        },
+        {},
+        _ctx(tmp_path),
+        RunControl(),
+    )
+    assert out[ArtifactType.CORRECTED_TEXT].uri is not None
+
+
+def test_zero_shot_transcribes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_vision(monkeypatch, "Transcribed")
+    adapter = AnthropicAdapter(label="v", role="zero_shot")
     out = adapter.execute(
         {ArtifactType.IMAGE: _image(tmp_path / "doc1.png")},
         {},
@@ -109,12 +120,13 @@ def test_zero_shot_produces_raw_text(
         RunControl(),
     )
     artifact = out[ArtifactType.RAW_TEXT]
+    assert artifact.type == ArtifactType.RAW_TEXT
     assert artifact.uri is not None
-    assert Path(artifact.uri).read_text(encoding="utf-8") == "Transcrit"
+    assert Path(artifact.uri).read_text(encoding="utf-8") == "Transcribed"
 
 
 def test_requires_workspace() -> None:
-    adapter = MistralAdapter(label="m")
+    adapter = AnthropicAdapter(label="claude")
     ctx = RunContext(document_id="doc1", code_version="t", pipeline_name="p")
     with pytest.raises(AdapterStepError):
         adapter.execute(
@@ -125,14 +137,8 @@ def test_requires_workspace() -> None:
         )
 
 
-def test_missing_input_raises(tmp_path: Path) -> None:
-    adapter = MistralAdapter(label="m")
-    with pytest.raises(AdapterStepError):
-        adapter.execute({}, {}, _ctx(tmp_path), RunControl())
-
-
 def test_cancellation_raises(tmp_path: Path) -> None:
-    adapter = MistralAdapter(label="m")
+    adapter = AnthropicAdapter(label="claude")
     control = RunControl()
     control.trigger_cancel()
     with pytest.raises(RunCancelledError):

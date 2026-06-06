@@ -19,11 +19,9 @@ from typing import NoReturn
 
 from xerocr.adapters.llm._base import (
     DEFAULT_CORRECTION_PROMPT,
-    build_prompt,
-    load_ocr_text,
     normalize_llm_content,
+    run_llm_step,
     validate_llm_label,
-    write_corrected,
 )
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.deadline import Deadline
@@ -118,26 +116,25 @@ class OllamaAdapter:
         context: RunContext,
         control: RunControl,
     ) -> dict[ArtifactType, Artifact]:
-        control.raise_if_cancelled()
-        if context.workspace_uri is None:
-            raise AdapterStepError(
-                f"{self.name} : workspace requis (RunContext.workspace_uri)."
+        def text_invoke(prompt: str) -> str:
+            return _invoke_ollama(
+                model=self._model,
+                prompt=prompt,
+                host=self._host,
+                deadline=context.deadline,
+                control=control,
             )
-        ocr_text = load_ocr_text(inputs, self.name)
-        prompt = build_prompt(self._prompt, ocr_text)
-        corrected = _invoke_ollama(
-            model=self._model,
-            prompt=prompt,
-            host=self._host,
-            deadline=context.deadline,
+
+        return run_llm_step(
+            role="text_only",
+            label=self._label,
+            name=self.name,
+            prompt=self._prompt,
+            inputs=inputs,
+            context=context,
             control=control,
-        )
-        return write_corrected(
-            context.workspace_uri,
-            context.document_id,
-            self._label,
-            self.name,
-            corrected,
+            text_invoke=text_invoke,
+            vision_invoke=None,
         )
 
 

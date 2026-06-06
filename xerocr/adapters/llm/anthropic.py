@@ -1,10 +1,11 @@
-"""``MistralAdapter`` — post-correction LLM **et** transcription VLM (API Mistral).
+"""``AnthropicAdapter`` — post-correction LLM **et** transcription VLM (Claude).
 
 Implémente le ``Module`` Protocol, trois modes (``PipelineMode``) selon le rôle :
-``text_only`` (texte → corrigé), ``text_and_image`` (Pixtral : image + texte →
-corrigé), ``zero_shot`` (Pixtral : image → texte). Clé ``MISTRAL_API_KEY`` ; SDK
-``mistralai`` = **extra** importé paresseusement dans ``_invoke_mistral`` /
-``_invoke_mistral_vision`` (isolés → **mockables**, CI sans clé ni réseau).
+``text_only`` (texte → corrigé), ``text_and_image`` (Claude vision : image +
+texte → corrigé), ``zero_shot`` (Claude vision : image → texte). Clé
+``ANTHROPIC_API_KEY`` ; SDK ``anthropic`` = **extra** importé paresseusement dans
+``_invoke_anthropic`` / ``_invoke_anthropic_vision`` (isolés → **mockables**, CI
+sans clé ni réseau). La ``Deadline`` borne l'appel.
 """
 
 from __future__ import annotations
@@ -27,63 +28,72 @@ from xerocr.pipeline.run_control import RunControl
 from xerocr.pipeline.types import RunContext
 
 _VERSION = "1.0"
-_DEFAULT_MODEL = "mistral-small-latest"
+_DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+_MAX_TOKENS = 4096
 _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
 
 
-def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
+def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
     model: str, content: object, deadline: Deadline
 ) -> str:
-    """Appel ``chat.complete`` partagé (texte ou multimodal)."""
+    """Appel ``messages.create`` partagé (texte ou multimodal)."""
     import os
 
-    api_key = os.environ.get("MISTRAL_API_KEY")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        raise AdapterStepError("mistral : MISTRAL_API_KEY manquante.")
+        raise AdapterStepError("anthropic : ANTHROPIC_API_KEY manquante.")
     try:
-        from mistralai import Mistral  # type: ignore[import-not-found]
+        from anthropic import (  # type: ignore[import-not-found]
+            Anthropic,
+            AnthropicError,
+        )
     except ImportError as exc:
         raise AdapterStepError(
-            "mistral : SDK non installé (pip install 'xerocr[mistral]')."
+            "anthropic : SDK non installé (pip install 'xerocr[anthropic]')."
         ) from exc
     client_kwargs: dict[str, object] = {"api_key": api_key}
     timeout = deadline.as_sdk_timeout()
     if timeout is not None:
-        client_kwargs["timeout_ms"] = int(timeout * 1000)
+        client_kwargs["timeout"] = timeout
     try:
-        client = Mistral(**client_kwargs)
-        response = client.chat.complete(
+        client = Anthropic(**client_kwargs)
+        response = client.messages.create(
             model=model,
+            max_tokens=_MAX_TOKENS,
             messages=[{"role": "user", "content": content}],
-            temperature=0.0,
         )
-    except Exception as exc:  # le SDK lève des erreurs HTTP/SDK variées
+    except AnthropicError as exc:
         raise AdapterStepError(
-            f"mistral a échoué ({model}) : {type(exc).__name__}: {exc}"
+            f"anthropic a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
-    if not response.choices:
-        return ""
-    return normalize_llm_content(response.choices[0].message.content)
+    return normalize_llm_content(response.content)
 
 
-def _invoke_mistral(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
+def _invoke_anthropic(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     *, model: str, prompt: str, deadline: Deadline
 ) -> str:
-    return _mistral_client(model, prompt, deadline)
+    return _anthropic_client(model, prompt, deadline)
 
 
-def _invoke_mistral_vision(  # pragma: no cover -- réseau + clé API (cf. 'live')
+def _invoke_anthropic_vision(  # pragma: no cover -- réseau + clé API (cf. 'live')
     *, model: str, prompt: str, media_type: str, image_b64: str, deadline: Deadline
 ) -> str:
     content = [
         {"type": "text", "text": prompt},
-        {"type": "image_url", "image_url": f"data:{media_type};base64,{image_b64}"},
+        {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": media_type,
+                "data": image_b64,
+            },
+        },
     ]
-    return _mistral_client(model, content, deadline)
+    return _anthropic_client(model, content, deadline)
 
 
-class MistralAdapter:
-    """Adapter Mistral multi-mode (post-correction texte/image, transcription VLM)."""
+class AnthropicAdapter:
+    """Adapter Anthropic multi-mode (post-correction texte/image, transcription)."""
 
     def __init__(
         self,
@@ -93,16 +103,16 @@ class MistralAdapter:
         role: str = "text_only",
         prompt: str | None = None,
     ) -> None:
-        self._label = validate_llm_label(label, "MistralAdapter")
+        self._label = validate_llm_label(label, "AnthropicAdapter")
         self._model = model
-        self._role: PipelineMode = validate_role(role, "MistralAdapter", _SUPPORTED)
+        self._role: PipelineMode = validate_role(role, "AnthropicAdapter", _SUPPORTED)
         self._prompt = (
             prompt if prompt is not None else default_prompt_for_role(self._role)
         )
 
     @property
     def name(self) -> str:
-        return f"mistral:{self._label}"
+        return f"anthropic:{self._label}"
 
     @property
     def version(self) -> str:
@@ -124,12 +134,12 @@ class MistralAdapter:
         control: RunControl,
     ) -> dict[ArtifactType, Artifact]:
         def text_invoke(prompt: str) -> str:
-            return _invoke_mistral(
+            return _invoke_anthropic(
                 model=self._model, prompt=prompt, deadline=context.deadline
             )
 
         def vision_invoke(prompt: str, media_type: str, image_b64: str) -> str:
-            return _invoke_mistral_vision(
+            return _invoke_anthropic_vision(
                 model=self._model,
                 prompt=prompt,
                 media_type=media_type,
@@ -150,4 +160,4 @@ class MistralAdapter:
         )
 
 
-__all__ = ["MistralAdapter"]
+__all__ = ["AnthropicAdapter"]

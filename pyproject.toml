@@ -24,6 +24,7 @@ dev = [
 ]
 tesseract = ["pytesseract"]
 openai = ["openai"]
+anthropic = ["anthropic"]
 mistral = ["mistralai"]
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]

@@ -1,4 +1,4 @@
-"""Registre + factory de modules : résolution, validations."""
+"""Registre + factory de modules : résolution, validations, rôles LLM."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from xerocr.app.modules.registry import (
     ModuleResolutionError,
     register_default_modules,
 )
+from xerocr.domain.artifacts import ArtifactType
 from xerocr.pipeline.protocols import Module
 
 
@@ -27,6 +28,7 @@ def test_builds_precomputed_module() -> None:
 def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
+        "anthropic",
         "mistral",
         "ollama",
         "openai",
@@ -41,6 +43,24 @@ def test_kinds_listed() -> None:
 def test_builds_tesseract_module() -> None:
     module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
     assert module.name == "tesseract:fra"
+
+
+def test_builds_anthropic_with_role() -> None:
+    module = _registry().build(
+        "anthropic:claude", {"label": "claude", "role": "zero_shot"}
+    )
+    assert module.name == "anthropic:claude"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
+
+
+def test_builds_openai_with_vision_role() -> None:
+    module = _registry().build(
+        "openai:v", {"label": "v", "role": "text_and_image"}
+    )
+    assert module.input_types == frozenset(
+        {ArtifactType.RAW_TEXT, ArtifactType.IMAGE}
+    )
 
 
 def test_unknown_kind_raises() -> None:
