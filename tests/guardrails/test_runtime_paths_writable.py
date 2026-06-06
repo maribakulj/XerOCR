@@ -7,9 +7,10 @@ ne doit pas y être écrite — sinon ``/history`` et l'enregistrement des runs
 échouent. Picarones écrivait dans ``~/.picarones/`` (inscriptible) ; XerOCR doit
 résoudre un emplacement de données **distinct** du dossier rapports.
 
-On fixe ``XEROCR_DATA_DIR`` (compat avant : ignoré aujourd'hui) et on vérifie
-qu'aucun ``history.db`` n'apparaît dans le dossier rapports après un appel à
-``/history``. ``xfail(strict)`` jusqu'à la séparation des deux emplacements.
+On fixe ``XEROCR_DATA_DIR`` et on vérifie qu'aucun ``history.db`` n'apparaît dans
+le dossier rapports après un appel à ``/history`` : l'historique vit dans le
+dossier de données inscriptible, distinct du dossier baké. Verrou de
+non-régression (échoue si l'écriture runtime retombe dans le dossier rapports).
 """
 
 from __future__ import annotations
@@ -22,11 +23,6 @@ from fastapi.testclient import TestClient
 from xerocr.interfaces.web.app import create_app
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="la base d'historique ne doit pas être écrite dans le dossier "
-    "rapports (non inscriptible sur un Space).",
-)
 def test_history_db_is_not_written_into_reports_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

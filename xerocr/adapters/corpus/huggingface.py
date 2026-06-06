@@ -21,7 +21,7 @@ from urllib.parse import urlencode
 from xerocr.adapters.corpus._http import (
     DEFAULT_TIMEOUT,
     IMAGE_MAX_BYTES,
-    HttpFetchError,
+    CorpusHttpError,
     fetch_json,
 )
 from xerocr.domain.errors import XerOCRError
@@ -182,7 +182,7 @@ class HuggingFaceCatalogue:
                     if ds.dataset_id not in seen:
                         results.append(ds)
                         seen.add(ds.dataset_id)
-            except HttpFetchError as exc:
+            except CorpusHttpError as exc:
                 logger.warning(
                     "[huggingface] recherche API indisponible — socle de référence "
                     "seul : %s",

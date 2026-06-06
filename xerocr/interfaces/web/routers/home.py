@@ -9,6 +9,8 @@ emplacements de nav ; les vivants sont liés, les autres restent « à venir ».
 
 from __future__ import annotations
 
+import logging
+import sqlite3
 from pathlib import Path
 from urllib.parse import quote
 
@@ -26,6 +28,8 @@ from xerocr.interfaces.web._cache import TTLCache
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
 from xerocr.reports.layout_svg import layout_to_svg
+
+logger = logging.getLogger(__name__)
 
 #: TTL des catalogues de découverte (F1) : la page Bibliothèque ne refetch plus
 #: à chaque chargement. Fenêtre courte — la fraîcheur prime sur le cache.
@@ -172,15 +176,21 @@ def build_home_router(
     @router.get("/history", response_class=HTMLResponse)
     def history(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
-        records = history_store.all_records()
-        # Régressions pour chaque (vue, métrique) effectivement enregistrée :
-        # lecture du store, pas de ré-agrégation (cf. CLAUDE §8.3).
-        pairs = sorted({(r.view, r.metric) for r in records})
-        regressions = [
-            reg
-            for view, metric in pairs
-            for reg in history_store.regressions(view, metric)
-        ]
+        try:
+            records = history_store.all_records()
+            # Régressions pour chaque (vue, métrique) enregistrée : lecture du
+            # store, pas de ré-agrégation (cf. CLAUDE §8.3).
+            pairs = sorted({(r.view, r.metric) for r in records})
+            regressions = [
+                reg
+                for view, metric in pairs
+                for reg in history_store.regressions(view, metric)
+            ]
+        except sqlite3.Error as exc:
+            # Stockage indisponible (ex. dossier non inscriptible sur un Space) :
+            # la page se dégrade au lieu de renvoyer une 500.
+            logger.warning("[history] historique indisponible : %s", exc)
+            records, regressions = (), []
         context = _base_context(lang, "history", {"history": str(len(records))})
         context["records"] = records
         context["regressions"] = regressions

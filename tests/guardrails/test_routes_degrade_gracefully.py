@@ -49,11 +49,6 @@ def _raise_sqlite(
     raise sqlite3.OperationalError("unable to open database file")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="/library doit dégrader (catalogue distant injoignable) "
-    "au lieu de renvoyer 500.",
-)
 def test_library_degrades_when_network_is_blocked(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -63,11 +58,6 @@ def test_library_degrades_when_network_is_blocked(
     assert resp.status_code == 200
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="/history doit dégrader (stockage indisponible) "
-    "au lieu de renvoyer 500.",
-)
 def test_history_degrades_when_store_is_unavailable(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

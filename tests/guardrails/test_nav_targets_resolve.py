@@ -7,9 +7,9 @@ une *Internal Server Error* est une incohérence d'UI. Ce test itère
 **programmatiquement** sur ``_LIVE_VIEWS`` → il attrape aussi tout futur lien
 ajouté sans route fonctionnelle.
 
-Aujourd'hui ``/library`` tombe en 500 hors-ligne (cf.
-``test_routes_degrade_gracefully``) → ``xfail(strict)`` jusqu'à ce que toutes
-les vies vivantes répondent.
+Verrou de non-régression : toutes les vues vivantes répondent hors-ligne (le
+repli des catalogues couvre ``/library``) ; le test échoue si un lien annoncé
+se remet à renvoyer 500.
 """
 
 from __future__ import annotations
@@ -29,11 +29,6 @@ def _raise_ssrf(url: str) -> tuple[str, ...]:
     raise SsrfError("réseau sortant indisponible (simulé)")
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="tout lien de navigation vivant doit répondre hors-ligne "
-    "sans renvoyer 500.",
-)
 def test_all_live_nav_targets_resolve_offline(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

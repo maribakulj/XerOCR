@@ -23,11 +23,6 @@ def test_explicit_choice_overrides_space(monkeypatch: pytest.MonkeyPatch) -> Non
     assert _resolve_public_mode(True) is True
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="un HuggingFace Space (SPACE_ID présent) doit activer le mode "
-    "public par défaut.",
-)
 def test_space_defaults_to_public_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SPACE_ID", "user/space")
     monkeypatch.delenv("XEROCR_PUBLIC_MODE", raising=False)

@@ -11,6 +11,7 @@ sortir du dossier (défense path-traversal, invariant §12).
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from xerocr.app.security import validated_path
@@ -36,4 +37,21 @@ def resolve_report(reports_dir: Path, name: str) -> Path:
     return validated_path(f"{name}.json", reports_dir, must_exist=True)
 
 
-__all__ = ["available_reports", "resolve_report"]
+def seed_reports(src: Path, dst: Path) -> None:
+    """Copie les rapports *bakés* (``src``) dans le dossier inscriptible ``dst``.
+
+    Permet à la vitrine de servir, depuis un **seul** dossier inscriptible, à la
+    fois les rapports livrés dans l'image (graine) et ceux produits au runtime.
+    Idempotent et best-effort : un rapport déjà présent n'est jamais réécrit (un
+    run produit prime sur la graine homonyme) ; ``src`` absent → no-op.
+    """
+    if src == dst or not src.is_dir():
+        return
+    dst.mkdir(parents=True, exist_ok=True)
+    for path in src.glob("*.json"):
+        target = dst / path.name
+        if not target.exists():
+            shutil.copy2(path, target)
+
+
+__all__ = ["available_reports", "resolve_report", "seed_reports"]
