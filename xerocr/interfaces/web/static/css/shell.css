@@ -386,6 +386,21 @@ button:focus-visible { outline: 2px solid var(--fern-deep); outline-offset: 2px;
 }
 .run-log:empty::before { content: "—"; color: var(--g-300); }
 
+/* === Segmentation (canevas SVG des régions) === */
+.seg-canvas {
+  display: flex;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--g-100);
+  border-radius: var(--r-md);
+  padding: 16px;
+}
+.seg-canvas .seg-svg {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--r-sm);
+}
+
 /* === Moteurs (table d'état) === */
 table.engines { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.engines th {

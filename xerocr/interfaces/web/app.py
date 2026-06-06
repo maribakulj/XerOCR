@@ -35,12 +35,14 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
+from xerocr.app.segmentation import SegmentationStore, demo_layout, demo_page_image
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.history import build_history_router
 from xerocr.interfaces.web.routers.home import build_home_router
 from xerocr.interfaces.web.routers.reports import build_reports_router
 from xerocr.interfaces.web.routers.runs import build_runs_router
+from xerocr.interfaces.web.routers.segmentation import build_segmentation_router
 from xerocr.interfaces.web.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
@@ -150,6 +152,15 @@ def create_app(
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 
+    # Segmentation (S6, squelette) : un store disque par application + une graine
+    # de **démo** (layout + image de page) qui exerce de bout en bout l'enveloppe
+    # de visualisation (persistance → endpoint image → SVG de régions). La Tranche
+    # 2 (vrai segmenteur) écrira ses layouts via le **même** store.
+    seg_store = SegmentationStore(Path(tempfile.mkdtemp(prefix="xerocr-seg-")))
+    demo_seg_id = seg_store.save(
+        demo_layout(), image_ext=".png", image_bytes=demo_page_image()
+    )
+
     # Un seul fournisseur de statuts moteurs (même mode) partagé par le lanceur
     # et l'onglet Moteurs → pas de closures jumelles qui pourraient diverger.
     def engine_status_provider() -> tuple[EngineStatus, ...]:
@@ -161,10 +172,13 @@ def create_app(
             templates,
             statuses=engine_status_provider,
             history_store=history_store,
+            segmentation_store=seg_store,
+            demo_segmentation_id=demo_seg_id,
             public_mode=is_public,
         )
     )
     app.include_router(build_reports_router(catalog_dir))
+    app.include_router(build_segmentation_router(seg_store))
     app.include_router(
         build_runs_router(
             runner,

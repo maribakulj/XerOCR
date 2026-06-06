@@ -12,8 +12,15 @@ from fastapi.testclient import TestClient
 from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
 from xerocr.adapters.corpus.huggingface import HuggingFaceDataset
 from xerocr.adapters.storage.history_store import HistoryStore
+from xerocr.app.segmentation import SegmentationStore, demo_layout
 from xerocr.interfaces.web.app import _TEMPLATES_DIR, create_app
 from xerocr.interfaces.web.routers.home import build_home_router
+
+
+def _seg(tmp_path: Path) -> tuple[SegmentationStore, str]:
+    """Store de segmentation + id de démo (la page Bibliothèque ne l'exerce pas)."""
+    store = SegmentationStore(tmp_path / "seg")
+    return store, store.save(demo_layout())
 
 _HTR_REMOTE = HTRUnitedCatalogue(
     entries=(
@@ -60,6 +67,7 @@ def _client(
         "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+    seg_store, seg_id = _seg(tmp_path)
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -67,6 +75,8 @@ def _client(
             templates,
             statuses=lambda: (),
             history_store=HistoryStore(tmp_path / "h.db"),
+            segmentation_store=seg_store,
+            demo_segmentation_id=seg_id,
         )
     )
     return TestClient(app)
@@ -90,6 +100,7 @@ def test_library_caches_catalogue_across_loads(
         "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+    seg_store, seg_id = _seg(tmp_path)
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -97,6 +108,8 @@ def test_library_caches_catalogue_across_loads(
             templates,
             statuses=lambda: (),
             history_store=HistoryStore(tmp_path / "h.db"),
+            segmentation_store=seg_store,
+            demo_segmentation_id=seg_id,
         )
     )
     client = TestClient(app)
