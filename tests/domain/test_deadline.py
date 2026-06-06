@@ -8,6 +8,13 @@ from pydantic import BaseModel
 from xerocr.domain import Deadline
 from xerocr.domain.errors import XerOCRError
 
+# ``in_seconds(b)`` stocke ``monotonic() + b`` (un grand flottant) ; le calcul
+# de ``remaining = (monotonic() + b) - monotonic()`` peut, par arrondi du flottant,
+# rendre une valeur dépassant ``b`` de quelques epsilon (observé ~6e-14 sous Windows).
+# On tolère cette marge sur la borne haute — l'invariant testé reste « positif et
+# ~= budget », pas l'égalité exacte au bit près.
+_CLOCK_EPS = 1e-6
+
 
 def test_infinite():
     d = Deadline.infinite()
@@ -19,7 +26,7 @@ def test_infinite():
 def test_in_seconds_positive():
     d = Deadline.in_seconds(10)
     remaining = d.remaining_seconds()
-    assert remaining is not None and 0 < remaining <= 10
+    assert remaining is not None and 0 < remaining <= 10 + _CLOCK_EPS
     assert not d.is_expired()
 
 
@@ -47,13 +54,13 @@ def test_roundtrip_dict_infinite():
 def test_roundtrip_dict_finite():
     d = Deadline.from_dict(Deadline.in_seconds(30).to_dict())
     remaining = d.remaining_seconds()
-    assert remaining is not None and 0 < remaining <= 30
+    assert remaining is not None and 0 < remaining <= 30 + _CLOCK_EPS
 
 
 def test_pickle():
     d = pickle.loads(pickle.dumps(Deadline.in_seconds(30)))
     remaining = d.remaining_seconds()
-    assert remaining is not None and 0 < remaining <= 30
+    assert remaining is not None and 0 < remaining <= 30 + _CLOCK_EPS
 
 
 def test_pydantic_field():
