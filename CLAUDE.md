@@ -250,6 +250,12 @@ les sens ». Ils étaient absents de Picarones.
 - **Renommage racine d'erreurs** : `PicaronesError` → `XerOCRError`.
 - **Nettoyage transverse** : aucune annotation de sprint (`S4`, `A14`, `Phase
   7.1`…), aucune référence à `BACKLOG_POST_LIVRAISON.md`.
+- **Bibliothèque = hub de préparation des corpus** (D-065, décision produit) :
+  upload ZIP (glisser-déposer) + imports distants vivent en **`/library`**
+  (renverse D-059) ; le Banc d'essai **sélectionne** un corpus existant ; la
+  construction de specs vit en `app/run_planning` (couche 8 = transport mince,
+  garde-fou `test_interfaces_thin`) ; stockage runtime via `app/data_dir`
+  (≠ dossier rapports baké). Détail : `MIGRATION_PLAN.md` D-065.
 
 ---
 
