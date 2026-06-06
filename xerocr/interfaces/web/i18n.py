@@ -62,6 +62,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_split": "Split",
         "imp_limit": "Limite (pages)",
         "imp_name": "Nom (optionnel)",
+        # Segmentation (S6, squelette de visualisation)
+        "seg_eyebrow": "Vitrine · mise en page",
+        "seg_desc": "Visualisation des régions d'une page segmentée "
+        "(boîtes + étiquettes), rendue côté serveur.",
+        "seg_regions": "régions",
+        "seg_demo_title": "Page de démonstration",
+        "seg_demo_desc": "Layout de démonstration déterministe : l'image de page "
+        "en fond, les régions détectées en surimpression.",
+        "seg_regions_title": "Régions",
+        "seg_col_id": "Identifiant",
+        "seg_col_type": "Type",
+        "seg_col_bbox": "Boîte (x, y · l×h)",
         "open_report_full": "Ouvrir le rapport",
         "sys_status": "Système",
         "sys_version": "Version",
@@ -161,6 +173,18 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_split": "Split",
         "imp_limit": "Limit (pages)",
         "imp_name": "Name (optional)",
+        # Segmentation (S6, visualization skeleton)
+        "seg_eyebrow": "Showcase · layout",
+        "seg_desc": "Region visualization of a segmented page "
+        "(boxes + labels), server-rendered.",
+        "seg_regions": "regions",
+        "seg_demo_title": "Demonstration page",
+        "seg_demo_desc": "Deterministic demonstration layout: the page image as "
+        "background, detected regions overlaid.",
+        "seg_regions_title": "Regions",
+        "seg_col_id": "Identifier",
+        "seg_col_type": "Type",
+        "seg_col_bbox": "Box (x, y · w×h)",
         "open_report_full": "Open the report",
         "sys_status": "System",
         "sys_version": "Version",

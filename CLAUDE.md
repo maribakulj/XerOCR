@@ -34,15 +34,17 @@ avant d'écrire la moindre ligne.**
   (couches 1–7) · **`S#`** = app web/Space (couche 8) qui consomme le moteur, avec
   **dépendances explicites**. `PLAN_SPACE_INTERACTIF.md` = **spec UX**, pas
   autorité de statut. *(Anciens « TU# » = alias des `S#`.)*
-- **Prochaine étape = S6** (axe **Space** : surfaces UI restantes — **forms HTML
-  d'import** reliant `/library`/`/benchmark` aux endpoints `/api/corpus/import/*`,
-  et **écran segmentation**). **Axe moteur complet** : T1→T4 ✅ · **T5**
-  (structure/segmentation : `CanonicalLayout`, fan-out par région, pipeline hybride
-  seg→OCR par bloc) · **T6** (extensibilité tierce : découverte entry-points
+- **Prochaine étape = S6** (axe **Space**, en finition : il reste la **Tranche 2
+  segmentation** — brancher un vrai run de segmentation web au store, par-dessus
+  l'enveloppe de visualisation déjà posée). **Axe moteur complet** : T1→T4 ✅ ·
+  **T5** (structure/segmentation : `CanonicalLayout`, fan-out par région, pipeline
+  hybride seg→OCR par bloc) · **T6** (extensibilité tierce : découverte entry-points
   `xerocr.modules`, plugin de réf, fail-closed public) · **T7** (importeurs cœur,
   longitudinal, philologie, `synthesis`) **livrés**. **Space S1→S5 ✅** ; **S6 en
-  cours** : importeurs distants (API) + pages `/history`/`/library` faits ; reste
-  les forms d'import + l'écran segmentation. Détail vivant : roll-up `MIGRATION_PLAN.md`.
+  cours** : importeurs distants (API) + pages `/history`/`/library` + forms d'import
+  + **page `/segmentation`** (squelette de visualisation : SVG serveur des régions
+  + endpoint image, sur un layout de démo) faits ; reste le **vrai run de
+  segmentation web**. Détail vivant : roll-up `MIGRATION_PLAN.md`.
 - Familles de métriques riches (NER/taxonomy/calibration) restent **additives**
   (enveloppe `RunResult` déjà dimensionnée), non implémentées — pas de dette. Les
   types `domain` jadis « sans consommateur » (`EvaluationSpec`/`ProjectionSpec`)

@@ -21,9 +21,11 @@ from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFace
 from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.engines import StatusProvider
+from xerocr.app.segmentation import SegmentationStore
 from xerocr.interfaces.web._cache import TTLCache
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
+from xerocr.reports.layout_svg import layout_to_svg
 
 #: TTL des catalogues de découverte (F1) : la page Bibliothèque ne refetch plus
 #: à chaque chargement. Fenêtre courte — la fraîcheur prime sur le cache.
@@ -36,6 +38,7 @@ _LIVE_VIEWS = {
     "library": "/library",
     "reports": "/",
     "benchmark": "/benchmark",
+    "segmentation": "/segmentation",
     "history": "/history",
     "engines": "/engines",
 }
@@ -74,6 +77,8 @@ def build_home_router(
     *,
     statuses: StatusProvider,
     history_store: HistoryStore,
+    segmentation_store: SegmentationStore,
+    demo_segmentation_id: str,
     public_mode: bool = False,
 ) -> APIRouter:
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
@@ -122,6 +127,25 @@ def build_home_router(
         # testables) ; le JS ne fait que l'upload + le lancement.
         context["engines"] = statuses()
         return templates.TemplateResponse(request, "benchmark.html", context)
+
+    @router.get("/segmentation", response_class=HTMLResponse)
+    def segmentation(request: Request, lang: str = "fr") -> HTMLResponse:
+        lang = normalize_lang(lang)
+        # Squelette S6 : un layout de **démo** alimente toute l'enveloppe de
+        # visualisation (persistance + endpoint image + SVG). La Tranche 2 (vrai
+        # segmenteur) écrira son ``CanonicalLayout`` via le **même** store.
+        layout = segmentation_store.get_layout(demo_segmentation_id)
+        page = layout.pages[0] if layout and layout.pages else None
+        regions = page.regions if page else ()
+        image_href = (
+            f"/api/segmentation/{quote(demo_segmentation_id, safe='')}/image"
+        )
+        metas = {"segmentation": str(len(regions))}
+        context = _base_context(lang, "segmentation", metas)
+        context["svg"] = layout_to_svg(layout, image_href=image_href) if layout else ""
+        context["regions"] = regions
+        context["n_regions"] = len(regions)
+        return templates.TemplateResponse(request, "segmentation.html", context)
 
     @router.get("/library", response_class=HTMLResponse)
     def library(request: Request, lang: str = "fr", q: str = "") -> HTMLResponse:
