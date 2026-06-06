@@ -47,6 +47,29 @@ def test_benchmark_has_upload_and_engine_controls(tmp_path: Path) -> None:
         assert label in body
 
 
+def test_benchmark_renders_remote_import_section(tmp_path: Path) -> None:
+    # S6 : la section d'import distant (4 sources) est rendue serveur.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="import-source"' in body
+    assert 'id="import-btn"' in body
+    for value in ('value="iiif"', 'value="gallica"', 'value="escriptorium"',
+                  'value="huggingface"'):
+        assert value in body
+    # champs spécifiques par source (rendus serveur, testables sans navigateur)
+    for name in ("manifest_url", "ark", "base_url", "token", "dataset_id"):
+        assert f'name="{name}"' in body
+
+
+def test_import_section_hidden_in_public_mode(tmp_path: Path) -> None:
+    # Les imports fetchent côté serveur → masqués en mode public (endpoint 403).
+    client = TestClient(
+        create_app(reports_dir=tmp_path, rate_limit=1000, public_mode=True)
+    )
+    body = client.get("/benchmark").text
+    assert 'id="import-source"' not in body
+    assert 'id="upload"' in body  # l'upload ZIP reste, lui
+
+
 def test_benchmark_engine_select_disables_unavailable(tmp_path: Path) -> None:
     # tesseract indisponible ici (ni binaire ni pytesseract) → option disabled.
     body = _client(tmp_path).get("/benchmark").text

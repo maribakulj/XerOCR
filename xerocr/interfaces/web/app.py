@@ -161,6 +161,7 @@ def create_app(
             templates,
             statuses=engine_status_provider,
             history_store=history_store,
+            public_mode=is_public,
         )
     )
     app.include_router(build_reports_router(catalog_dir))

@@ -58,6 +58,74 @@
       });
     }
 
+    // --- Import d'un corpus distant (S6) ----------------------------------
+    // POST /api/corpus/import/{source} (JSON, CSRF) → corpus_id, qui devient
+    // le corpus actif du lancement (même flux que l'upload ZIP).
+    var importSource = document.getElementById("import-source");
+    var importBtn = document.getElementById("import-btn");
+    var importStatus = document.getElementById("import-status");
+    if (importSource && importBtn && importStatus) {
+      var groups = document.querySelectorAll(".import-fields");
+
+      importSource.addEventListener("change", function () {
+        for (var i = 0; i < groups.length; i++) {
+          groups[i].hidden =
+            groups[i].getAttribute("data-source") !== importSource.value;
+        }
+      });
+
+      importBtn.addEventListener("click", function () {
+        var group = document.querySelector(
+          '.import-fields[data-source="' + importSource.value + '"]'
+        );
+        if (!group) return;
+        var payload = {};
+        var fields = group.querySelectorAll("input[name]");
+        for (var i = 0; i < fields.length; i++) collectField(payload, fields[i]);
+        collectField(payload, document.getElementById("import-limit"));
+        collectField(payload, document.getElementById("import-name"));
+
+        var headers = { "Content-Type": "application/json" };
+        headers[CSRF] = "1";
+        importBtn.disabled = true;
+        importStatus.textContent = "…";
+        fetchJson("/api/corpus/import/" + importSource.value, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) {
+            importBtn.disabled = false;
+            if (!r.ok) {
+              corpusId = null;
+              importStatus.textContent = r.body.detail || "HTTP " + r.status;
+              return;
+            }
+            corpusId = r.body.corpus_id;
+            importStatus.textContent =
+              r.body.name + " — " + r.body.n_documents + " doc";
+            if (corpusEl) corpusEl.textContent = importStatus.textContent;
+          })
+          .catch(function () {
+            importBtn.disabled = false;
+            importStatus.textContent = resultEl.dataset.neterror || "error";
+          });
+      });
+    }
+
+    // Ajoute la valeur d'un champ au payload : case→bool, nombre coercé, texte
+    // non vide tel quel ; un champ optionnel vide est ignoré.
+    function collectField(payload, el) {
+      if (!el || !el.name) return;
+      if (el.type === "checkbox") {
+        payload[el.name] = el.checked;
+        return;
+      }
+      var v = (el.value || "").trim();
+      if (v === "") return;
+      payload[el.name] = el.type === "number" ? parseInt(v, 10) : v;
+    }
+
     // --- Lancement d'un run -----------------------------------------------
     btn.addEventListener("click", function () {
       btn.disabled = true;

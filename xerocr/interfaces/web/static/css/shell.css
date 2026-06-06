@@ -349,6 +349,19 @@ button:focus-visible { outline: 2px solid var(--fern-deep); outline-offset: 2px;
   color: var(--ink);
 }
 .field input[type="file"] { font-family: var(--sans); font-size: 12px; color: var(--g-500); }
+.input {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  padding: 7px 12px;
+  border: 1px solid var(--g-100);
+  border-radius: var(--r-pill);
+  background: var(--raised-2);
+  color: var(--ink);
+  min-width: 220px;
+}
+.import-fields { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.field-sep { border-top: 1px solid var(--g-100); margin: 4px 0; width: 100%; }
 .run-line { display: flex; align-items: center; gap: 12px; }
 .run-status {
   font-family: var(--mono);
