@@ -112,3 +112,52 @@ def test_benchmark_js_syntax_is_valid() -> None:
         [node, "--check", str(_JS)], capture_output=True, text=True
     )
     assert result.returncode == 0, result.stderr
+
+
+# --- Bouton « Segmenter » (S6/T2) ----------------------------------------------
+
+def _benchmark_body(tmp_path: Path, segmenter_available: bool) -> str:
+    from fastapi import FastAPI
+    from fastapi.templating import Jinja2Templates
+
+    from xerocr.adapters.storage.history_store import HistoryStore
+    from xerocr.app.engines import EngineStatus
+    from xerocr.app.segmentation import SegmentationStore, demo_layout
+    from xerocr.interfaces.web.app import _TEMPLATES_DIR
+    from xerocr.interfaces.web.routers.home import build_home_router
+
+    seg_store = SegmentationStore(tmp_path / "seg")
+    seg_id = seg_store.save(demo_layout())
+    detail = "ok" if segmenter_available else "PaddleX absent (extra [segment])"
+    status = EngineStatus(
+        kind="pp_doclayout",
+        label="PP-DocLayout",
+        available=segmenter_available,
+        detail=detail,
+    )
+    app = FastAPI()
+    app.include_router(
+        build_home_router(
+            tmp_path / "reports",
+            Jinja2Templates(directory=_TEMPLATES_DIR),
+            statuses=lambda: (),
+            segmenters=lambda: (status,),
+            history_store=HistoryStore(tmp_path / "h.db"),
+            segmentation_store=seg_store,
+            demo_segmentation_id=seg_id,
+        )
+    )
+    return TestClient(app).get("/benchmark").text
+
+
+def test_segment_button_shown_when_available(tmp_path: Path) -> None:
+    body = _benchmark_body(tmp_path, segmenter_available=True)
+    assert 'id="segment-btn"' in body
+    assert "Segmenter (PP-DocLayout)" in body
+
+
+def test_segment_button_hidden_when_unavailable(tmp_path: Path) -> None:
+    body = _benchmark_body(tmp_path, segmenter_available=False)
+    assert 'id="segment-btn"' not in body  # pas de bouton actif
+    assert "indisponible" in body  # motif affiché
+    assert "[segment]" in body

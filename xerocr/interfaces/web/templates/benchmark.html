@@ -86,6 +86,20 @@
     <button id="launch" class="btn btn-primary"
             data-launching="{{ t.bench_launching }}">{{ t.bench_run }}</button>
 
+    <div class="field-sep"></div>
+    <div class="field" id="segment-block">
+      <label class="label">{{ t.seg_run_title }}</label>
+      {% if segmenter and segmenter.available %}
+      <button id="segment-btn" class="btn btn-sm" disabled
+              data-launching="{{ t.bench_launching }}"
+              data-open="{{ t.seg_run_open }}">{{ t.seg_run_btn }}</button>
+      <span id="segment-status" class="run-status">{{ t.seg_run_hint }}</span>
+      {% else %}
+      <span class="run-status">{{ t.seg_run_unavailable }}{% if segmenter %} —
+        {{ segmenter.detail }}{% endif %}</span>
+      {% endif %}
+    </div>
+
     <div class="run-line">
       <span class="label">{{ t.bench_status }}</span>
       <span id="run-status" class="run-status">{{ t.bench_idle }}</span>

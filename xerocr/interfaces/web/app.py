@@ -177,6 +177,7 @@ def create_app(
             catalog_dir,
             templates,
             statuses=engine_status_provider,
+            segmenters=segmenter_status_provider,
             history_store=history_store,
             segmentation_store=seg_store,
             demo_segmentation_id=demo_seg_id,
