@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import yaml
 
-from xerocr.adapters.corpus._http import DEFAULT_TIMEOUT, HttpFetchError, fetch_text
+from xerocr.adapters.corpus._http import DEFAULT_TIMEOUT, CorpusHttpError, fetch_text
 
 logger = logging.getLogger(__name__)
 
@@ -157,7 +157,7 @@ def fetch_catalogue(
     try:
         raw = fetch_text(catalogue_url, timeout=timeout)
         entries = parse_catalogue(raw)
-    except (HttpFetchError, yaml.YAMLError) as exc:
+    except (CorpusHttpError, yaml.YAMLError) as exc:
         logger.warning(
             "[htr_united] index distant indisponible (%s) — repli démo : %s",
             catalogue_url,

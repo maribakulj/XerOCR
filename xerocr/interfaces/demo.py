@@ -8,6 +8,7 @@ duplication (DRY) quand le web a eu besoin du même corpus.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from xerocr.domain.artifacts import ArtifactType
@@ -115,4 +116,20 @@ def demo_run_spec(corpus: CorpusSpec, *, run_id: str = "demo") -> RunSpec:
     )
 
 
-__all__ = ["DEMO_ENGINES", "demo_run_spec", "write_demo_corpus"]
+def demo_spec_builder(run_id: str = "demo") -> Callable[[Path], RunSpec]:
+    """Builder de spec de la **démonstration** : matérialise le mini-corpus dans
+    le workspace fourni, puis construit le ``RunSpec`` précalculé (``precomputed``).
+    """
+
+    def build(workspace: Path) -> RunSpec:
+        return demo_run_spec(write_demo_corpus(workspace), run_id=run_id)
+
+    return build
+
+
+__all__ = [
+    "DEMO_ENGINES",
+    "demo_run_spec",
+    "demo_spec_builder",
+    "write_demo_corpus",
+]

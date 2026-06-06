@@ -26,16 +26,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import StatusProvider
 from xerocr.app.jobs import JobRunner
+from xerocr.app.run_planning import SEGMENTER_KIND, plan_segmentation_run
 from xerocr.app.segmentation import SegmentationStore
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.evaluation import EvaluationSpec
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run_spec import RunSpec
 from xerocr.interfaces.web.security.csrf import csrf_protect
-
-#: Kind du segmenteur du socle lancé par cet endpoint.
-_SEGMENTER_KIND = "pp_doclayout"
 
 #: Type MIME par extension d'image persistée (défaut binaire opaque).
 _MEDIA_TYPES = {
@@ -55,34 +48,6 @@ class SegmentationRunRequest(BaseModel):
     corpus_id: str = Field(min_length=1, max_length=128)
 
 
-def _segmentation_spec(corpus: CorpusSpec, run_id: str) -> RunSpec:
-    """Pipeline de segmentation à 1 étape : ``pp_doclayout`` (IMAGE→LAYOUT).
-
-    Aucune vue d'évaluation : un run de segmentation produit de la **géométrie**
-    (captée par le sink), pas une métrique scalaire. Le ``RunResult`` reste
-    l'output formel du run (sans score), la visualisation vit sur ``/segmentation``.
-    """
-    step = PipelineStep(
-        id="seg",
-        kind="layout",
-        adapter_name=_SEGMENTER_KIND,
-        input_types=(ArtifactType.IMAGE,),
-        output_types=(ArtifactType.LAYOUT,),
-    )
-    return RunSpec(
-        corpus=corpus,
-        pipelines=(
-            PipelineSpec(
-                name=_SEGMENTER_KIND,
-                initial_inputs=(ArtifactType.IMAGE,),
-                steps=(step,),
-            ),
-        ),
-        evaluation=EvaluationSpec(views=()),
-        run_id=run_id,
-    )
-
-
 def build_segmentation_router(
     store: SegmentationStore,
     *,
@@ -100,7 +65,7 @@ def build_segmentation_router(
     )
     def launch_segmentation(req: SegmentationRunRequest) -> dict[str, str]:
         available = any(
-            s.available for s in segmenters() if s.kind == _SEGMENTER_KIND
+            s.available for s in segmenters() if s.kind == SEGMENTER_KIND
         )
         if not available:
             raise HTTPException(
@@ -111,9 +76,7 @@ def build_segmentation_router(
         if corpus is None:
             raise HTTPException(status_code=404, detail="corpus introuvable")
         run_id = f"seg-{uuid.uuid4().hex[:12]}"
-        return {
-            "job_id": runner.launch(lambda _ws: _segmentation_spec(corpus, run_id))
-        }
+        return {"job_id": runner.launch(plan_segmentation_run(corpus, run_id))}
 
     @router.get("/api/segmentation/{seg_id}/image")
     def segmentation_image(seg_id: str) -> FileResponse:

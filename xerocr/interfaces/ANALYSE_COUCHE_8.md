@@ -289,3 +289,28 @@ xerocr/interfaces/
 ---
 
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/pipeline/adapters/app non encore implémentés) prévaut.*
+
+---
+
+## Mise à jour D-065 (réconciliation post-audit) — supersède les détails de page ci-dessus
+
+Suite à l'audit de migration (et à une **dette de doc admise** : le code a d'abord
+été poussé sans mettre à jour cette DoD), **décision produit** : la Bibliothèque
+est le **hub de préparation des corpus**, pas un écran de découverte. Les détails
+de page de la DoD ci-dessus sont donc **dépassés sur ces points** :
+
+- **upload ZIP (glisser-déposer) + imports IIIF/Gallica/eScriptorium/HF** :
+  déplacés de `/benchmark` vers **`/library`** (`static/js/corpus.js`) — **renverse
+  D-059** et « UI upload/sélection sur `/benchmark` » (`PLAN_SPACE_INTERACTIF` TU2.f.2).
+- **`/library` n'est plus « 0 JS »** : elle porte `corpus.js` + une section
+  « Mes corpus » (`CorpusStore.list_corpora`) ; le **Banc d'essai sélectionne**
+  un corpus existant (`<select>`), il ne téléverse plus.
+- **Couche 8 = transport mince** : la construction de specs vit en
+  `app/run_planning.py` (`plan_ocr_run`/`plan_segmentation_run`), plus dans les
+  routeurs (garde-fou `tests/guardrails/test_interfaces_thin.py`).
+- **Stockage runtime** : historique + rapports de run via `app/data_dir`
+  (inscriptible, ≠ dossier baké) ; pages dégradées (réseau/SQLite) — `tests/guardrails/`.
+
+Détail complet : `MIGRATION_PLAN.md` **D-065**. Limites assumées : interaction
+navigateur non testée en CI ; `/data` non gué sur `SPACE_ID` ; déploiement non
+encore aligné — au backlog.

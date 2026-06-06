@@ -31,67 +31,16 @@ from pydantic import BaseModel, ConfigDict
 from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import CLOUD_KINDS, StatusProvider
-from xerocr.app.jobs import JobRunner, SpecBuilder
-from xerocr.domain.artifacts import ArtifactType
+from xerocr.app.jobs import JobRunner
+from xerocr.app.run_planning import RunPlanningError, plan_ocr_run
 from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.projection import ProjectionSpec
-from xerocr.domain.run_spec import RunSpec
-from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
+from xerocr.interfaces.demo import demo_spec_builder
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
 #: Kinds de **post-correction** LLM : pas de run autonome (chaîne OCR→LLM = TU3+).
 #: (Les kinds *cloud* bloqués en mode public sont ``CLOUD_KINDS`` — source unique
 #: en couche 6, ``app.engines`` ; on ne les redéclare pas ici.)
 LLM_KINDS = frozenset({"openai", "ollama"})
-
-_OCR_VIEW = EvaluationView(
-    name="text",
-    candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-    metric_names=("cer", "wer", "mer"),
-)
-
-#: Vue **référence OCR** (opt-in) : compare le candidat ``RAW_TEXT`` à une
-#: référence ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le
-#: **nom de la vue porte l'avertissement** (rendu tel quel par le rapport) : ce
-#: n'est PAS une vérité-terrain manuelle, le score mesure l'accord avec un autre
-#: OCR. La vue ``text`` par défaut, elle, ne déclare pas cette projection → elle
-#: ignore les GT ``REFERENCE_TEXT`` (pas de faux score d'exactitude).
-_REFERENCE_VIEW = EvaluationView(
-    name="référence OCR (pas une vérité-terrain manuelle)",
-    candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-    projections_by_source_type={
-        ArtifactType.REFERENCE_TEXT: ProjectionSpec(
-            source_type=ArtifactType.REFERENCE_TEXT,
-            target_type=ArtifactType.RAW_TEXT,
-            projector_name="identity_text",
-        )
-    },
-    metric_names=("cer", "wer", "mer"),
-    ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
-)
-
-
-def _views_for_corpus(corpus: CorpusSpec) -> tuple[EvaluationView, ...]:
-    """Vues à évaluer selon les **types de GT présents** dans le corpus.
-
-    GT manuelle ``RAW_TEXT`` → vue ``text`` ; référence ``REFERENCE_TEXT`` (OCR
-    Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
-    défaut (le run reste OCR-able, simplement non scoré). On n'émet une vue que
-    si elle a de quoi être renseignée : pas de vue vide spéculative.
-    """
-    gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
-    views: list[EvaluationView] = []
-    if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_OCR_VIEW)
-    if ArtifactType.REFERENCE_TEXT in gt_types:
-        views.append(_REFERENCE_VIEW)
-    if not views:
-        # Aucune GT (ex. corpus IIIF images-seules) : vue OCR par défaut — le run
-        # s'exécute et reste lisible, simplement non scoré (pas de référence).
-        views.append(_OCR_VIEW)
-    return tuple(views)
 
 
 class LaunchRequest(BaseModel):
@@ -101,40 +50,6 @@ class LaunchRequest(BaseModel):
 
     engine: str = "precomputed"
     corpus_id: str | None = None
-
-
-def _tesseract_spec(corpus: CorpusSpec, run_id: str, *, lang: str = "fra") -> RunSpec:
-    label = "tesseract"
-    step = PipelineStep(
-        id="ocr",
-        kind="ocr",
-        adapter_name=f"tesseract:{label}",
-        input_types=(ArtifactType.IMAGE,),
-        output_types=(ArtifactType.RAW_TEXT,),
-    )
-    return RunSpec(
-        corpus=corpus,
-        pipelines=(PipelineSpec(name=label, initial_inputs=(ArtifactType.IMAGE,),
-                                steps=(step,)),),
-        evaluation=EvaluationSpec(views=_views_for_corpus(corpus)),
-        adapter_kwargs={f"tesseract:{label}": {"label": label, "lang": lang}},
-        run_id=run_id,
-    )
-
-
-def _spec_builder(engine: str, corpus: CorpusSpec | None, run_id: str) -> SpecBuilder:
-    """Construit le *builder* de spec pour (moteur, corpus) — ou refuse (``422``)."""
-    if engine == "precomputed":
-        if corpus is not None:
-            raise HTTPException(
-                status_code=422,
-                detail="precomputed = démonstration (ne s'exécute pas sur un corpus).",
-            )
-        return lambda ws: demo_run_spec(write_demo_corpus(ws), run_id=run_id)
-    # engine == "tesseract" (seul OCR réel du socle exécutable sur un corpus)
-    if corpus is None:
-        raise HTTPException(status_code=422, detail="tesseract : corpus_id requis.")
-    return lambda _ws: _tesseract_spec(corpus, run_id)
 
 
 def _parse_last_event_id(raw: str | None) -> int:
@@ -219,7 +134,19 @@ def build_runs_router(
                 status_code=409, detail=f"moteur indisponible : {req.engine!r}"
             )
         run_id = f"web-{uuid.uuid4().hex[:12]}"
-        build = _spec_builder(req.engine, corpus, run_id)
+        if req.engine == "precomputed":
+            if corpus is not None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="precomputed = démonstration "
+                    "(ne s'exécute pas sur un corpus).",
+                )
+            build = demo_spec_builder(run_id)
+        else:
+            try:
+                build = plan_ocr_run(req.engine, corpus, run_id)
+            except RunPlanningError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"job_id": runner.launch(build)}
 
     @router.get("/api/runs/{job_id}")

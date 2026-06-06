@@ -8,10 +8,10 @@ Gallica) → vue *référence* distincte (étiquetée dans son nom) ; aucune GT 
 
 from __future__ import annotations
 
+from xerocr.app.run_planning import _views_for_corpus
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.interfaces.web.routers.runs import _views_for_corpus
 
 
 def _corpus(*gt_types: ArtifactType) -> CorpusSpec:

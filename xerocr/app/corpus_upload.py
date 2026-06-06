@@ -193,6 +193,12 @@ class CorpusStore:
         with self._lock:
             return self._corpora.get(corpus_id)
 
+    def list_corpora(self) -> list[tuple[str, CorpusSpec]]:
+        """Corpus enregistrés ``(id, spec)``, triés par nom puis id (ordre stable)."""
+        with self._lock:
+            items = list(self._corpora.items())
+        return sorted(items, key=lambda kv: (kv[1].name, kv[0]))
+
 
 __all__ = [
     "MAX_ZIP_BYTES",

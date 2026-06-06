@@ -244,14 +244,16 @@ def fetch_json(
     ``headers`` permet l'authentification d'API (ex. ``Authorization: Token …``) ;
     il n'est jamais journalisé (les messages d'erreur ne portent que l'URL).
     """
-    with _stream_validated(url, timeout=timeout, headers=headers) as response:
-        try:
+    try:
+        with _stream_validated(url, timeout=timeout, headers=headers) as response:
             response.raise_for_status()
             raw = _read_capped(response, MANIFEST_MAX_BYTES)
-        except httpx.HTTPStatusError as exc:
-            raise HttpFetchError(
-                f"statut HTTP {exc.response.status_code} sur {url!r}."
-            ) from exc
+    except httpx.HTTPStatusError as exc:
+        raise HttpFetchError(
+            f"statut HTTP {exc.response.status_code} sur {url!r}."
+        ) from exc
+    except httpx.HTTPError as exc:
+        raise HttpFetchError(f"échec de transport sur {url!r} : {exc}.") from exc
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
@@ -311,14 +313,19 @@ def fetch_bytes(
     Pour les ressources qui doivent être parsées depuis des **octets** (ex. ALTO
     Gallica : lxml refuse un ``str`` portant une déclaration d'encodage XML).
     """
-    with _stream_validated(url, timeout=timeout, headers=headers) as response:
-        try:
+    try:
+        with _stream_validated(url, timeout=timeout, headers=headers) as response:
             response.raise_for_status()
             return _read_capped(response, MANIFEST_MAX_BYTES)
-        except httpx.HTTPStatusError as exc:
-            raise HttpFetchError(
-                f"statut HTTP {exc.response.status_code} sur {url!r}."
-            ) from exc
+    except httpx.HTTPStatusError as exc:
+        raise HttpFetchError(
+            f"statut HTTP {exc.response.status_code} sur {url!r}."
+        ) from exc
+    except httpx.HTTPError as exc:
+        # Échec de transport (connexion/timeout/protocole) : on l'enveloppe en
+        # HttpFetchError pour que les appelants n'aient qu'un type réseau à gérer
+        # (jamais une exception httpx brute qui échapperait au repli).
+        raise HttpFetchError(f"échec de transport sur {url!r} : {exc}.") from exc
 
 
 def fetch_text(

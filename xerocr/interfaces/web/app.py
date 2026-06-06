@@ -28,6 +28,7 @@ from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.adapters.storage.publisher import resolve_publisher
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
+from xerocr.app.data_dir import resolve_data_dir
 from xerocr.app.engines import EngineStatus, engine_statuses, segmenter_statuses
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules import (
@@ -36,6 +37,7 @@ from xerocr.app.modules import (
     register_default_modules,
 )
 from xerocr.app.segmentation import SegmentationStore, demo_layout, demo_page_image
+from xerocr.interfaces.web.catalog import seed_reports
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.history import build_history_router
@@ -47,6 +49,7 @@ from xerocr.interfaces.web.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
 )
+from xerocr.interfaces.web.security.headers import is_huggingface_space
 
 #: Assets de la coquille (CSS + polices auto-hébergées) et gabarits Jinja2,
 #: livrés **dans le paquet** (cf. ``[tool.setuptools.package-data]``) pour être
@@ -87,16 +90,25 @@ def _resolve_uploads_dir(uploads_dir: Path | str | None) -> Path:
 
 
 def _resolve_public_mode(public_mode: bool | None) -> bool:
-    """Argument explicite > env (``1``/``true``/``yes``) > défaut ``False``."""
+    """Argument explicite > env (``1``/``true``/``yes``) > **Space HF** > ``False``.
+
+    Un Space est exposé publiquement : sans choix explicite ni variable d'env, on
+    **verrouille par défaut** (moteurs cloud masqués, imports distants refusés,
+    découverte de plugins tiers désactivée) plutôt que d'ouvrir la surface sur une
+    instance publique.
+    """
     if public_mode is not None:
         return public_mode
-    return os.environ.get(PUBLIC_MODE_ENV, "").strip().lower() in {"1", "true", "yes"}
+    if os.environ.get(PUBLIC_MODE_ENV, "").strip().lower() in {"1", "true", "yes"}:
+        return True
+    return is_huggingface_space()
 
 
 def create_app(
     *,
     reports_dir: Path | str | None = None,
     uploads_dir: Path | str | None = None,
+    data_dir: Path | str | None = None,
     rate_limit: int = 60,
     public_mode: bool | None = None,
 ) -> FastAPI:
@@ -113,6 +125,11 @@ def create_app(
     if rate_limit < 1:
         raise ValueError("create_app : rate_limit doit être >= 1.")
     catalog_dir = _resolve_reports_dir(reports_dir)
+    # Dossier **inscriptible** (≠ rapports bakés, souvent root-only sur un Space) :
+    # l'historique et le puits des rapports de run y vivent. On y recopie la graine
+    # des rapports bakés → la vitrine sert depuis un seul dossier inscriptible.
+    runtime_dir = resolve_data_dir(data_dir)
+    seed_reports(catalog_dir, runtime_dir)
     is_public = _resolve_public_mode(public_mode)
     app = FastAPI(title="XerOCR", version=API_VERSION)
     # Ordre : le limiteur (ajouté en dernier) s'exécute en premier → il borne
@@ -139,7 +156,7 @@ def create_app(
     discover_plugins(registry, enabled=not is_public)
     # Historique longitudinal (S6) : un store SQLite par application ; le runner
     # y enregistre chaque run terminé, le routeur Historique le lit.
-    history_store = HistoryStore(catalog_dir / "history.db")
+    history_store = HistoryStore(runtime_dir / "history.db")
     # Segmentation (S6) : un store disque par application + une graine de **démo**
     # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
     # runs réels ; ``/segmentation`` affiche le plus récent (run réel > démo). Créé
@@ -151,7 +168,7 @@ def create_app(
     runner = JobRunner(
         store=JobStore(),
         registry=registry,
-        reports_dir=catalog_dir,
+        reports_dir=runtime_dir,
         code_version=resolve_code_version(),
         # Persistance (S3) : actif uniquement si dépôt + jeton sont en secrets ;
         # sinon NoopPublisher → la vitrine read-only ne fait aucune sortie réseau.
@@ -174,17 +191,18 @@ def create_app(
 
     app.include_router(
         build_home_router(
-            catalog_dir,
+            runtime_dir,
             templates,
             statuses=engine_status_provider,
             segmenters=segmenter_status_provider,
             history_store=history_store,
             segmentation_store=seg_store,
             demo_segmentation_id=demo_seg_id,
+            corpus_store=corpus_store,
             public_mode=is_public,
         )
     )
-    app.include_router(build_reports_router(catalog_dir))
+    app.include_router(build_reports_router(runtime_dir))
     app.include_router(
         build_segmentation_router(
             seg_store,
