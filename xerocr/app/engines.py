@@ -121,4 +121,32 @@ def _ollama_status(has_module: ModuleProbe) -> EngineStatus:
     return EngineStatus(kind="ollama", label="Ollama", available=ok, detail=detail)
 
 
-__all__ = ["CLOUD_KINDS", "EngineStatus", "StatusProvider", "engine_statuses"]
+def segmenter_statuses(
+    *, has_module: ModuleProbe = _module_present
+) -> tuple[EngineStatus, ...]:
+    """Disponibilité des **segmenteurs** de mise en page du socle (PP-DocLayout).
+
+    Catégorie **distincte** des moteurs de transcription : un segmenteur produit
+    un ``LAYOUT`` (géométrie), pas du texte — il n'apparaît donc pas dans le
+    ``<select>`` moteur du lanceur OCR. **Jamais masqué en mode public** : un
+    segmenteur du socle tourne en **local** (poids, pas de clé d'API) → comme
+    ``tesseract``, pas comme un moteur cloud.
+    """
+    if has_module("paddlex"):
+        detail, ok = "prêt (PaddleX installé)", True
+    else:
+        detail, ok = "PaddleX non installé (extra [segment])", False
+    return (
+        EngineStatus(
+            kind="pp_doclayout", label="PP-DocLayout", available=ok, detail=detail
+        ),
+    )
+
+
+__all__ = [
+    "CLOUD_KINDS",
+    "EngineStatus",
+    "StatusProvider",
+    "engine_statuses",
+    "segmenter_statuses",
+]
