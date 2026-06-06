@@ -104,9 +104,11 @@ ADAPTERS_ALLOWED_PKG = (
 #: pour l'épinglage d'IP anti-DNS-rebinding (``corpus/_http._PinnedBackend``).
 #: ``datasets`` : import de corpus HuggingFace en streaming (extra ``[huggingface]``,
 #: import paresseux dans ``corpus/huggingface``).
+#: ``paddlex`` : segmenteur de mise en page PP-DocLayout (extra ``[segment]``,
+#: import paresseux dans ``layout/pp_doclayout``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "mistralai", "httpx", "httpcore", "datasets",
-    "PIL", "yaml",
+    "PIL", "yaml", "paddlex",
 }
 
 

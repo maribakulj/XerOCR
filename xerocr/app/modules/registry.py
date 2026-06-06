@@ -124,6 +124,12 @@ def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
 
     return PrecomputedLayoutSource()
 
+
+def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:
+    from xerocr.adapters.layout.pp_doclayout import PPDocLayoutSegmenter
+
+    return PPDocLayoutSegmenter()
+
 def _build_precomputed_region(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("source_label")
     if not isinstance(label, str):
@@ -149,6 +155,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
+    registry.register_builder("pp_doclayout", _build_pp_doclayout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
 
