@@ -58,3 +58,42 @@ def test_segmentation_page_english(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/segmentation?lang=en").text
     assert "Regions" in body
     assert "Demonstration page" in body
+
+
+def test_segmentation_page_shows_latest_persisted_run(tmp_path: Path) -> None:
+    # Quand un run réel a persisté un LAYOUT, /segmentation l'affiche (plus récent
+    # que la graine de démo), via build_home_router monté avec un store amorcé.
+    import os
+
+    from fastapi import FastAPI
+    from fastapi.templating import Jinja2Templates
+
+    from xerocr.adapters.storage.history_store import HistoryStore
+    from xerocr.app.segmentation import SegmentationStore, demo_layout
+    from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
+    from xerocr.interfaces.web.app import _TEMPLATES_DIR
+    from xerocr.interfaces.web.routers.home import build_home_router
+
+    store = SegmentationStore(tmp_path / "seg")
+    demo_id = store.save(demo_layout())
+    run_layout = CanonicalLayout(
+        pages=(LayoutPage(regions=(Region(id="rx", region_type="headline"),)),)
+    )
+    run_id = store.save(run_layout)
+    os.utime(tmp_path / "seg" / demo_id, (1_000_000_000, 1_000_000_000))
+    os.utime(tmp_path / "seg" / run_id, (2_000_000_000, 2_000_000_000))
+
+    app = FastAPI()
+    app.include_router(
+        build_home_router(
+            tmp_path / "reports",
+            Jinja2Templates(directory=_TEMPLATES_DIR),
+            statuses=lambda: (),
+            history_store=HistoryStore(tmp_path / "h.db"),
+            segmentation_store=store,
+            demo_segmentation_id=demo_id,
+        )
+    )
+    body = TestClient(app).get("/segmentation").text
+    assert "headline" in body  # le run réel le plus récent
+    assert "figure" not in body  # un type propre à la démo n'apparaît pas

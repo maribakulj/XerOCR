@@ -12,7 +12,7 @@ loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -36,6 +36,14 @@ class OrchestrationError(XerOCRError):
     """Run impossible à exécuter (document sans image, etc.)."""
 
 
+#: Sorties d'un run, indexées ``pipeline → document → type → artefact``.
+PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
+#: Sink optionnel d'artefacts : reçoit les sorties **avant** le nettoyage du
+#: workspace (les URI sont encore lisibles). La couche 6 (app) le fournit ;
+#: l'orchestrateur l'invoque sans rien connaître de sa cible (un store, etc.).
+ArtifactSink = Callable[[PipelineOutputs, RunManifest], None]
+
+
 def run(
     spec: RunSpec,
     *,
@@ -43,12 +51,18 @@ def run(
     code_version: str,
     deadline: Deadline | None = None,
     control: RunControl | None = None,
+    artifact_sink: ArtifactSink | None = None,
 ) -> RunResult:
     """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques).
 
     ``control`` (optionnel) porte l'**annulation coopérative** de bout en bout :
     le worker d'un job (``JobRunner``, couche 6) le déclenche, l'exécuteur le
     sonde avant chaque étape. Absent → un ``RunControl`` neutre est utilisé.
+
+    ``artifact_sink`` (optionnel) reçoit les artefacts produits **avant** le
+    nettoyage du workspace (URI encore lisibles) : c'est par lui qu'un LAYOUT
+    produit est persisté (ex. ``SegmentationStore``) sans que l'orchestrateur
+    connaisse la destination, et sans second chemin d'exécution.
     """
     started_at = utcnow()
     needed = sorted(
@@ -91,6 +105,10 @@ def run(
         manifest = _manifest(
             spec, modules, code_version, started_at, completed_at
         )
+        # Sink avant la sortie du ``with`` : les URI des artefacts (LAYOUT…)
+        # pointent encore dans le workspace vivant. Best-effort côté appelant.
+        if artifact_sink is not None:
+            artifact_sink(pipeline_outputs, manifest)
         return evaluate_run(
             corpus=spec.corpus,
             evaluation=spec.evaluation,
@@ -144,4 +162,4 @@ def _manifest(
     )
 
 
-__all__ = ["OrchestrationError", "run"]
+__all__ = ["ArtifactSink", "OrchestrationError", "PipelineOutputs", "run"]

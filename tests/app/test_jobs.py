@@ -280,3 +280,70 @@ def test_cancel_interrupts_a_running_job(tmp_path: Path) -> None:
     job = runner.store.get(job_id)
     assert job is not None and job.state is JobState.CANCELLED
     assert not (tmp_path / "web-cancel.json").exists()  # aucun résultat écrit
+
+
+# --- Sink LAYOUT → SegmentationStore (T2) --------------------------------------
+
+def _layout_build(layout_text_id: str = "r1"):
+    """Builder d'un run de segmentation precomputed (IMAGE→LAYOUT) dans le ws."""
+    from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
+
+    layout = CanonicalLayout(
+        pages=(LayoutPage(regions=(Region(id=layout_text_id, region_type="text"),)),)
+    )
+
+    def build(ws: Path) -> RunSpec:
+        image = ws / "doc1.png"
+        image.write_bytes(b"\x89PNG stub")
+        (ws / "doc1.layout.json").write_bytes(
+            layout.model_dump_json().encode("utf-8")
+        )
+        step = PipelineStep(
+            id="seg", kind="layout", adapter_name="precomputed_layout",
+            input_types=(ArtifactType.IMAGE,), output_types=(ArtifactType.LAYOUT,),
+        )
+        return RunSpec(
+            corpus=CorpusSpec(
+                name="c", documents=(DocumentRef(id="doc1", image_uri=str(image)),)
+            ),
+            pipelines=(
+                PipelineSpec(
+                    name="seg", initial_inputs=(ArtifactType.IMAGE,), steps=(step,)
+                ),
+            ),
+            evaluation=EvaluationSpec(views=()),
+            run_id="seg-run",
+        )
+
+    return build
+
+
+def test_run_persists_layout_to_segmentation_store(tmp_path: Path) -> None:
+    from xerocr.app.segmentation import SegmentationStore
+
+    seg = SegmentationStore(tmp_path / "seg")
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    runner = JobRunner(
+        store=JobStore(), registry=registry, reports_dir=tmp_path,
+        code_version="1.0", segmentation_store=seg,
+    )
+    job_id = runner.launch(_layout_build())
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    # le LAYOUT produit par le run est persisté → /segmentation le verra
+    seg_id = seg.latest()
+    assert seg_id is not None
+    persisted = seg.get_layout(seg_id)
+    assert persisted is not None
+    assert persisted.pages[0].regions[0].id == "r1"
+
+
+def test_run_without_segmentation_store_still_done(tmp_path: Path) -> None:
+    # Sink optionnel : sans store, un run produisant un LAYOUT aboutit quand même.
+    runner = _runner(tmp_path)  # pas de segmentation_store
+    job_id = runner.launch(_layout_build())
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
