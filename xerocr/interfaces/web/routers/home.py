@@ -76,6 +76,16 @@ def _nav(
     return items
 
 
+def _corpora_summaries(corpus_store: CorpusStore | None) -> list[dict[str, object]]:
+    """Résumés des corpus enregistrés (id, nom, nb de documents) — vide si aucun."""
+    if corpus_store is None:
+        return []
+    return [
+        {"id": cid, "name": spec.name, "n_documents": len(spec.documents)}
+        for cid, spec in corpus_store.list_corpora()
+    ]
+
+
 def build_home_router(
     reports_dir: Path,
     templates: Jinja2Templates,
@@ -133,6 +143,8 @@ def build_home_router(
         # Le <select> des moteurs est rendu **serveur** (options dans le HTML,
         # testables) ; le JS ne fait que l'upload + le lancement.
         context["engines"] = statuses()
+        # Le corpus est préparé dans la Bibliothèque ; ici on le sélectionne.
+        context["corpora"] = _corpora_summaries(corpus_store)
         # Segmenteur (catégorie séparée) : son statut alimente le bouton
         # « Segmenter » — désactivé + motif si l'extra [segment] manque.
         context["segmenter"] = next(
@@ -168,19 +180,9 @@ def build_home_router(
         catalogue = htr_cache.get_or_compute("htr_united", fetch_catalogue)
         htr = catalogue.search(q) if q else catalogue.entries
         hf = hf_cache.get_or_compute(q, lambda: HuggingFaceCatalogue().search(q))
-        # Corpus de l'utilisateur (téléversés/importés) : visibles et gérés dans
-        # la Bibliothèque — plus « perdus de vue » après upload.
-        corpora = (
-            [
-                {"id": cid, "name": spec.name, "n_documents": len(spec.documents)}
-                for cid, spec in corpus_store.list_corpora()
-            ]
-            if corpus_store is not None
-            else []
-        )
         context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
         context["query"] = q
-        context["corpora"] = corpora
+        context["corpora"] = _corpora_summaries(corpus_store)
         context["htr_entries"] = htr
         context["htr_is_demo"] = catalogue.is_demo
         context["hf_datasets"] = hf

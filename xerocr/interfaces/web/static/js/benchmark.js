@@ -1,9 +1,9 @@
-/* Lanceur « Banc d'essai » (S2) — JS léger, sans dépendance.
+/* Lanceur « Banc d'essai » — JS léger, sans dépendance.
  *
- * Pilote les endpoints existants :
- *   POST /api/corpus (multipart, CSRF)  → upload d'un corpus ZIP → corpus_id
- *   POST /api/runs {engine, corpus_id}  → lance un run (gardes côté serveur)
- *   GET  /api/runs/{id}/events (SSE)     → progression en direct → lien rapport
+ * Le corpus est préparé dans la Bibliothèque ; ici on le SÉLECTIONNE.
+ *   POST /api/runs {engine, corpus_id?}    → lance un run (gardes côté serveur)
+ *   POST /api/segmentation/run {corpus_id} → run de segmentation (même flux SSE)
+ *   GET  /api/runs/{id}/events (SSE)        → progression → lien rapport
  * Le serveur fait foi (403/409/404/422) ; on affiche son message d'erreur.
  */
 (function () {
@@ -23,117 +23,22 @@
     var logEl = document.getElementById("run-log");
     var resultEl = document.getElementById("run-result");
     var engineEl = document.getElementById("engine");
-    var fileEl = document.getElementById("corpus-file");
-    var uploadBtn = document.getElementById("upload");
-    var corpusEl = document.getElementById("corpus-status");
+    var corpusSelect = document.getElementById("corpus-select");
     var segBtn = document.getElementById("segment-btn");
     var segStatus = document.getElementById("segment-status");
     if (!btn || !statusEl || !logEl || !resultEl) return;
 
-    var corpusId = null;
-
-    // Active le bouton « Segmenter » dès qu'un corpus est sélectionné.
-    function enableSeg() {
-      if (segBtn) segBtn.disabled = false;
+    // Corpus actif = sélection (valeur vide ⇒ démonstration précalculée).
+    function currentCorpusId() {
+      return corpusSelect && corpusSelect.value ? corpusSelect.value : null;
     }
 
-    // --- Upload d'un corpus ZIP -------------------------------------------
-    if (uploadBtn && fileEl && corpusEl) {
-      uploadBtn.addEventListener("click", function () {
-        var file = fileEl.files && fileEl.files[0];
-        if (!file) return;
-        var headers = {};
-        headers[CSRF] = "1";
-        var form = new FormData();
-        form.append("file", file);
-        uploadBtn.disabled = true;
-        fetchJson("/api/corpus", { method: "POST", headers: headers, body: form })
-          .then(function (r) {
-            uploadBtn.disabled = false;
-            if (!r.ok) {
-              corpusId = null;
-              corpusEl.textContent = r.body.detail || "HTTP " + r.status;
-              return;
-            }
-            corpusId = r.body.corpus_id;
-            corpusEl.textContent = r.body.name + " — " + r.body.n_documents + " doc";
-            enableSeg();
-          })
-          .catch(function () {
-            uploadBtn.disabled = false;
-            corpusEl.textContent = resultEl.dataset.neterror || "error";
-          });
-      });
+    // « Segmenter » exige un corpus sélectionné.
+    function syncSeg() {
+      if (segBtn) segBtn.disabled = !currentCorpusId();
     }
-
-    // --- Import d'un corpus distant (S6) ----------------------------------
-    // POST /api/corpus/import/{source} (JSON, CSRF) → corpus_id, qui devient
-    // le corpus actif du lancement (même flux que l'upload ZIP).
-    var importSource = document.getElementById("import-source");
-    var importBtn = document.getElementById("import-btn");
-    var importStatus = document.getElementById("import-status");
-    if (importSource && importBtn && importStatus) {
-      var groups = document.querySelectorAll(".import-fields");
-
-      importSource.addEventListener("change", function () {
-        for (var i = 0; i < groups.length; i++) {
-          groups[i].hidden =
-            groups[i].getAttribute("data-source") !== importSource.value;
-        }
-      });
-
-      importBtn.addEventListener("click", function () {
-        var group = document.querySelector(
-          '.import-fields[data-source="' + importSource.value + '"]'
-        );
-        if (!group) return;
-        var payload = {};
-        var fields = group.querySelectorAll("input[name]");
-        for (var i = 0; i < fields.length; i++) collectField(payload, fields[i]);
-        collectField(payload, document.getElementById("import-limit"));
-        collectField(payload, document.getElementById("import-name"));
-
-        var headers = { "Content-Type": "application/json" };
-        headers[CSRF] = "1";
-        importBtn.disabled = true;
-        importStatus.textContent = "…";
-        fetchJson("/api/corpus/import/" + importSource.value, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(payload),
-        })
-          .then(function (r) {
-            importBtn.disabled = false;
-            if (!r.ok) {
-              corpusId = null;
-              importStatus.textContent = r.body.detail || "HTTP " + r.status;
-              return;
-            }
-            corpusId = r.body.corpus_id;
-            importStatus.textContent =
-              r.body.name + " — " + r.body.n_documents + " doc";
-            if (corpusEl) corpusEl.textContent = importStatus.textContent;
-            enableSeg();
-          })
-          .catch(function () {
-            importBtn.disabled = false;
-            importStatus.textContent = resultEl.dataset.neterror || "error";
-          });
-      });
-    }
-
-    // Ajoute la valeur d'un champ au payload : case→bool, nombre coercé, texte
-    // non vide tel quel ; un champ optionnel vide est ignoré.
-    function collectField(payload, el) {
-      if (!el || !el.name) return;
-      if (el.type === "checkbox") {
-        payload[el.name] = el.checked;
-        return;
-      }
-      var v = (el.value || "").trim();
-      if (v === "") return;
-      payload[el.name] = el.type === "number" ? parseInt(v, 10) : v;
-    }
+    if (corpusSelect) corpusSelect.addEventListener("change", syncSeg);
+    syncSeg();
 
     // --- Lancement d'un run -----------------------------------------------
     btn.addEventListener("click", function () {
@@ -145,6 +50,7 @@
       var headers = { "Content-Type": "application/json" };
       headers[CSRF] = "1";
       var payload = { engine: engineEl ? engineEl.value : "precomputed" };
+      var corpusId = currentCorpusId();
       if (corpusId) payload.corpus_id = corpusId;
 
       fetchJson("/api/runs", {
@@ -167,11 +73,10 @@
         });
     });
 
-    // --- Run de segmentation (S6/T2) --------------------------------------
-    // POST /api/segmentation/run {corpus_id} → suit le MÊME flux SSE que les
-    // runs OCR (un seul exécuteur) ; à la fin, lien vers /segmentation.
+    // --- Run de segmentation ----------------------------------------------
     if (segBtn) {
       segBtn.addEventListener("click", function () {
+        var corpusId = currentCorpusId();
         if (!corpusId) return;
         segBtn.disabled = true;
         resultEl.textContent = "";

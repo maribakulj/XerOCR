@@ -17,60 +17,15 @@
 
   <div class="launcher">
     <div class="field">
-      <label class="label" for="corpus-file">{{ t.bench_corpus }}</label>
-      <input type="file" id="corpus-file" accept=".zip,application/zip">
-      <button id="upload" class="btn btn-sm">{{ t.bench_upload }}</button>
-      <span id="corpus-status" class="run-status">{{ t.bench_corpus_none }}</span>
-    </div>
-
-    {% if not public_mode %}
-    <div class="field-sep"></div>
-    <div class="field" id="import-block">
-      <label class="label" for="import-source">{{ t.imp_title }}</label>
-      <select id="import-source" class="select" aria-label="{{ t.imp_source }}">
-        <option value="iiif">IIIF</option>
-        <option value="gallica">Gallica</option>
-        <option value="escriptorium">eScriptorium</option>
-        <option value="huggingface">HuggingFace</option>
+      <label class="label" for="corpus-select">{{ t.bench_corpus }}</label>
+      <select id="corpus-select" class="select">
+        <option value="">{{ t.bench_corpus_none }}</option>
+        {% for c in corpora %}
+        <option value="{{ c.id }}">{{ c.name }} ({{ c.n_documents }})</option>
+        {% endfor %}
       </select>
+      <a class="btn btn-sm" href="/library?lang={{ lang }}">{{ t.bench_corpus_prepare }}</a>
     </div>
-    <div class="field">
-      <div class="import-fields" data-source="iiif">
-        <input class="input" type="text" name="manifest_url"
-               placeholder="{{ t.imp_manifest }}" aria-label="{{ t.imp_manifest }}">
-      </div>
-      <div class="import-fields" data-source="gallica" hidden>
-        <input class="input" type="text" name="ark"
-               placeholder="{{ t.imp_ark }}" aria-label="{{ t.imp_ark }}">
-        <label class="check"><input type="checkbox" name="include_ocr" checked>
-          {{ t.imp_ocr }}</label>
-      </div>
-      <div class="import-fields" data-source="escriptorium" hidden>
-        <input class="input" type="text" name="base_url"
-               placeholder="{{ t.imp_base }}" aria-label="{{ t.imp_base }}">
-        <input class="input" type="password" name="token"
-               placeholder="{{ t.imp_token }}" aria-label="{{ t.imp_token }}">
-        <input class="input" type="number" name="doc_pk" min="1"
-               placeholder="{{ t.imp_doc }}" aria-label="{{ t.imp_doc }}">
-        <input class="input" type="text" name="layer"
-               placeholder="{{ t.imp_layer }}" aria-label="{{ t.imp_layer }}">
-      </div>
-      <div class="import-fields" data-source="huggingface" hidden>
-        <input class="input" type="text" name="dataset_id"
-               placeholder="{{ t.imp_dataset }}" aria-label="{{ t.imp_dataset }}">
-        <input class="input" type="text" name="split"
-               placeholder="{{ t.imp_split }}" aria-label="{{ t.imp_split }}">
-      </div>
-    </div>
-    <div class="field">
-      <input class="input" type="number" id="import-limit" name="limit" min="1"
-             placeholder="{{ t.imp_limit }}" aria-label="{{ t.imp_limit }}">
-      <input class="input" type="text" id="import-name" name="name"
-             placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
-      <button id="import-btn" class="btn btn-sm">{{ t.imp_btn }}</button>
-      <span id="import-status" class="run-status"></span>
-    </div>
-    {% endif %}
 
     <div class="field">
       <label class="label" for="engine">{{ t.bench_engine }}</label>

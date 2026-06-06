@@ -15,6 +15,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from xerocr.app.corpus_upload import CorpusStore
 from xerocr.interfaces.web.app import create_app
 
 _JS = Path(__file__).resolve().parents[3] / (
@@ -36,38 +37,16 @@ def test_benchmark_page_renders_with_launcher(tmp_path: Path) -> None:
     assert "Lancer la démonstration" in body  # libellé du lanceur (FR par défaut)
 
 
-def test_benchmark_has_upload_and_engine_controls(tmp_path: Path) -> None:
-    # S2.2b : l'UI upload de corpus + sélection de moteur est rendue (serveur).
+def test_benchmark_has_corpus_and_engine_controls(tmp_path: Path) -> None:
+    # Le corpus est SÉLECTIONNÉ ici (préparé dans la Bibliothèque), pas téléversé.
     body = _client(tmp_path).get("/benchmark").text
-    assert 'id="corpus-file"' in body  # input fichier ZIP
-    assert 'id="upload"' in body  # bouton téléverser
+    assert 'id="corpus-select"' in body  # <select> de corpus existants
     assert 'id="engine"' in body  # <select> moteur
-    # options de moteur rendues côté serveur (testables sans navigateur)
     for label in ("Pré-calculé", "Tesseract", "OpenAI", "Ollama"):
         assert label in body
-
-
-def test_benchmark_renders_remote_import_section(tmp_path: Path) -> None:
-    # S6 : la section d'import distant (4 sources) est rendue serveur.
-    body = _client(tmp_path).get("/benchmark").text
-    assert 'id="import-source"' in body
-    assert 'id="import-btn"' in body
-    for value in ('value="iiif"', 'value="gallica"', 'value="escriptorium"',
-                  'value="huggingface"'):
-        assert value in body
-    # champs spécifiques par source (rendus serveur, testables sans navigateur)
-    for name in ("manifest_url", "ark", "base_url", "token", "dataset_id"):
-        assert f'name="{name}"' in body
-
-
-def test_import_section_hidden_in_public_mode(tmp_path: Path) -> None:
-    # Les imports fetchent côté serveur → masqués en mode public (endpoint 403).
-    client = TestClient(
-        create_app(reports_dir=tmp_path, rate_limit=1000, public_mode=True)
-    )
-    body = client.get("/benchmark").text
+    # upload + imports ne sont plus ici : déplacés dans la Bibliothèque
+    assert 'id="corpus-file"' not in body
     assert 'id="import-source"' not in body
-    assert 'id="upload"' in body  # l'upload ZIP reste, lui
 
 
 def test_benchmark_engine_select_disables_unavailable(tmp_path: Path) -> None:
@@ -116,7 +95,11 @@ def test_benchmark_js_syntax_is_valid() -> None:
 
 # --- Bouton « Segmenter » (S6/T2) ----------------------------------------------
 
-def _benchmark_body(tmp_path: Path, segmenter_available: bool) -> str:
+def _benchmark_body(
+    tmp_path: Path,
+    segmenter_available: bool,
+    corpus_store: CorpusStore | None = None,
+) -> str:
     from fastapi import FastAPI
     from fastapi.templating import Jinja2Templates
 
@@ -145,6 +128,7 @@ def _benchmark_body(tmp_path: Path, segmenter_available: bool) -> str:
             history_store=HistoryStore(tmp_path / "h.db"),
             segmentation_store=seg_store,
             demo_segmentation_id=seg_id,
+            corpus_store=corpus_store,
         )
     )
     return TestClient(app).get("/benchmark").text
@@ -161,3 +145,18 @@ def test_segment_button_hidden_when_unavailable(tmp_path: Path) -> None:
     assert 'id="segment-btn"' not in body  # pas de bouton actif
     assert "indisponible" in body  # motif affiché
     assert "[segment]" in body
+
+
+def test_benchmark_corpus_select_lists_corpora(tmp_path: Path) -> None:
+    from xerocr.domain.corpus import CorpusSpec
+    from xerocr.domain.documents import DocumentRef
+
+    store = CorpusStore(tmp_path / "corpora")
+    store.materialize(
+        lambda dest: CorpusSpec(
+            name="Mon corpus", documents=(DocumentRef(id="d1", image_uri="a.png"),)
+        )
+    )
+    body = _benchmark_body(tmp_path, segmenter_available=False, corpus_store=store)
+    assert 'id="corpus-select"' in body
+    assert "Mon corpus" in body  # rendu comme option du <select>

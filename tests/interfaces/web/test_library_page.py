@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -63,6 +65,7 @@ def _client(
     *,
     catalogue: HTRUnitedCatalogue = _HTR_REMOTE,
     corpus_store: CorpusStore | None = None,
+    public_mode: bool = False,
 ) -> TestClient:
     monkeypatch.setattr(
         "xerocr.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
@@ -83,6 +86,7 @@ def _client(
             segmentation_store=seg_store,
             demo_segmentation_id=seg_id,
             corpus_store=corpus_store,
+            public_mode=public_mode,
         )
     )
     return TestClient(app)
@@ -151,11 +155,11 @@ def test_library_search_passes_query(
     assert 'value="latin"' in body  # et est réaffichée dans le formulaire
 
 
-def test_library_server_rendered_active_nav(
+def test_library_links_corpus_js_and_active_nav(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     body = _client(tmp_path, monkeypatch).get("/library").text
-    assert "<script" not in body
+    assert 'src="/static/js/corpus.js"' in body  # JS de préparation de corpus
     assert 'aria-current="page"' in body
 
 
@@ -202,3 +206,36 @@ def test_library_corpora_empty_state(
 ) -> None:
     body = _client(tmp_path, monkeypatch).get("/library").text
     assert "Aucun corpus enregistré" in body
+
+
+def test_library_has_upload_and_import_controls(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = _client(tmp_path, monkeypatch).get("/library").text
+    assert 'id="corpus-file"' in body  # upload ZIP
+    assert 'id="dropzone"' in body  # zone de glisser-déposer
+    assert 'id="import-source"' in body  # imports distants
+    for value in ('value="iiif"', 'value="gallica"',
+                  'value="escriptorium"', 'value="huggingface"'):
+        assert value in body
+    for name in ("manifest_url", "ark", "base_url", "token", "dataset_id"):
+        assert f'name="{name}"' in body
+
+
+def test_library_imports_hidden_in_public_mode(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = _client(tmp_path, monkeypatch, public_mode=True).get("/library").text
+    assert 'id="import-source"' not in body  # fetch serveur → masqué en public
+    assert 'id="corpus-file"' in body  # l'upload de fichier local reste
+
+
+def test_corpus_js_syntax_is_valid() -> None:
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node absent : vérification de syntaxe JS ignorée")
+    js = Path(__file__).resolve().parents[3] / (
+        "xerocr/interfaces/web/static/js/corpus.js"
+    )
+    result = subprocess.run([node, "--check", str(js)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
