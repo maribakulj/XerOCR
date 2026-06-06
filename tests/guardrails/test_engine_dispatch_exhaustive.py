@@ -1,25 +1,18 @@
 """Garde-fou : le dispatch moteur→spec est **exhaustif**, sans retombée muette.
 
-``runs._spec_builder`` ne doit jamais assembler silencieusement une spec
-*tesseract* pour un moteur **différent**. Aujourd'hui, sélectionner ``mistral``
-(moteur enregistré au registre, hors ``LLM_KINDS``) retombe sur la branche
-tesseract → un run faux et silencieux. Comportement correct : soit une spec du
-bon moteur, soit un **refus explicite** (``HTTPException``).
-
-``xfail(strict)`` jusqu'à ce que ``_spec_builder`` traite ``mistral``
-correctement ou le refuse.
+``app.run_planning.plan_ocr_run`` ne doit jamais assembler silencieusement une
+spec *tesseract* pour un moteur **différent**. Comportement correct : soit une
+spec du bon moteur, soit un **refus explicite** (``RunPlanningError``). Verrou de
+non-régression : il échoue si un moteur non câblé retombe sur tesseract.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-from fastapi import HTTPException
-
+from xerocr.app.run_planning import RunPlanningError, plan_ocr_run
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef
-from xerocr.interfaces.web.routers.runs import _spec_builder
 
 
 def _corpus() -> CorpusSpec:
@@ -29,18 +22,13 @@ def _corpus() -> CorpusSpec:
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="dispatch moteur non exhaustif : 'mistral' ne doit pas produire "
-    "une spec tesseract (retombée muette).",
-)
 def test_non_tesseract_engine_never_silently_builds_tesseract(
     tmp_path: Path,
 ) -> None:
     try:
-        build = _spec_builder("mistral", _corpus(), "r-1")
-    except HTTPException:
-        return  # refus explicite = comportement acceptable
+        build = plan_ocr_run("mistral", _corpus(), "r-1")
+    except RunPlanningError:
+        return  # refus explicite = comportement attendu
     spec = build(tmp_path)
     adapters = {
         step.adapter_name for pipe in spec.pipelines for step in pipe.steps

@@ -7,17 +7,15 @@ assembler une spec est un acte de la couche ``app``, jamais d'une feuille de
 transport. Le test d'``layer_dependencies`` autorise (légalement) ``interfaces``
 à importer ``domain`` ; il ne capture donc pas cette fuite d'orchestration.
 
-Actuellement ``runs.py`` et ``segmentation.py`` assemblent les specs dans le
-handler → ``xfail(strict)``. Le jour où cette construction migre en couche
-``app``, le test passe (XPASS) et le marqueur strict force son retrait.
+La construction des specs vit en couche ``app`` (``run_planning``) ; les routeurs
+délèguent. Verrou de non-régression : ce test échoue si un routeur se remet à
+fabriquer une spec d'orchestration.
 """
 
 from __future__ import annotations
 
 import ast
 from pathlib import Path
-
-import pytest
 
 ROUTERS = (
     Path(__file__).resolve().parents[2]
@@ -60,11 +58,6 @@ def _spec_constructions(path: Path) -> list[str]:
     return found
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="un routeur (couche 8) ne doit pas construire de spec "
-    "d'orchestration : déplacer la construction en couche app.",
-)
 def test_routers_do_not_build_orchestration_specs() -> None:
     offenders: dict[str, list[str]] = {}
     for path in sorted(ROUTERS.glob("*.py")):
