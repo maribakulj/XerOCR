@@ -131,15 +131,14 @@ def build_home_router(
     @router.get("/segmentation", response_class=HTMLResponse)
     def segmentation(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
-        # Squelette S6 : un layout de **démo** alimente toute l'enveloppe de
-        # visualisation (persistance + endpoint image + SVG). La Tranche 2 (vrai
-        # segmenteur) écrira son ``CanonicalLayout`` via le **même** store.
-        layout = segmentation_store.get_layout(demo_segmentation_id)
+        # Affiche le **run le plus récent** persisté par le sink (run réel >
+        # graine de démo) ; à défaut, la démo. Même store que le runner → un
+        # vrai run de segmentation apparaît ici sans second chemin.
+        current_id = segmentation_store.latest() or demo_segmentation_id
+        layout = segmentation_store.get_layout(current_id)
         page = layout.pages[0] if layout and layout.pages else None
         regions = page.regions if page else ()
-        image_href = (
-            f"/api/segmentation/{quote(demo_segmentation_id, safe='')}/image"
-        )
+        image_href = f"/api/segmentation/{quote(current_id, safe='')}/image"
         metas = {"segmentation": str(len(regions))}
         context = _base_context(lang, "segmentation", metas)
         context["svg"] = layout_to_svg(layout, image_href=image_href) if layout else ""

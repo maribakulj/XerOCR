@@ -140,6 +140,14 @@ def create_app(
     # Historique longitudinal (S6) : un store SQLite par application ; le runner
     # y enregistre chaque run terminé, le routeur Historique le lit.
     history_store = HistoryStore(catalog_dir / "history.db")
+    # Segmentation (S6) : un store disque par application + une graine de **démo**
+    # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
+    # runs réels ; ``/segmentation`` affiche le plus récent (run réel > démo). Créé
+    # **avant** le runner pour le lui passer (même instance lue par /segmentation).
+    seg_store = SegmentationStore(Path(tempfile.mkdtemp(prefix="xerocr-seg-")))
+    demo_seg_id = seg_store.save(
+        demo_layout(), image_ext=".png", image_bytes=demo_page_image()
+    )
     runner = JobRunner(
         store=JobStore(),
         registry=registry,
@@ -149,17 +157,9 @@ def create_app(
         # sinon NoopPublisher → la vitrine read-only ne fait aucune sortie réseau.
         publisher=resolve_publisher(),
         history_store=history_store,
+        segmentation_store=seg_store,
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
-
-    # Segmentation (S6, squelette) : un store disque par application + une graine
-    # de **démo** (layout + image de page) qui exerce de bout en bout l'enveloppe
-    # de visualisation (persistance → endpoint image → SVG de régions). La Tranche
-    # 2 (vrai segmenteur) écrira ses layouts via le **même** store.
-    seg_store = SegmentationStore(Path(tempfile.mkdtemp(prefix="xerocr-seg-")))
-    demo_seg_id = seg_store.save(
-        demo_layout(), image_ext=".png", image_bytes=demo_page_image()
-    )
 
     # Un seul fournisseur de statuts moteurs (même mode) partagé par le lanceur
     # et l'onglet Moteurs → pas de closures jumelles qui pourraient diverger.

@@ -8,12 +8,14 @@ import pytest
 
 from xerocr.app import run
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.orchestrator import OrchestrationError
+from xerocr.app.orchestrator import OrchestrationError, PipelineOutputs
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
+from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
+from xerocr.domain.run import RunManifest
 from xerocr.domain.run_spec import RunSpec
 from xerocr.evaluation.result import RunResult
 
@@ -186,3 +188,65 @@ def test_manifest_captures_module_versions(
         "precomputed:engA": "1.0",
         "precomputed:engB": "1.0",
     }
+
+
+# --- Sink d'artefacts (LAYOUT → persistance, T2) -------------------------------
+
+def _layout_spec(corpus: CorpusSpec) -> RunSpec:
+    """Pipeline segmentation à 1 étape : ``precomputed_layout`` (IMAGE→LAYOUT)."""
+    step = PipelineStep(
+        id="seg", kind="layout", adapter_name="precomputed_layout",
+        input_types=(ArtifactType.IMAGE,), output_types=(ArtifactType.LAYOUT,),
+    )
+    pipeline = PipelineSpec(
+        name="seg", initial_inputs=(ArtifactType.IMAGE,), steps=(step,)
+    )
+    return RunSpec(
+        corpus=corpus,
+        pipelines=(pipeline,),
+        evaluation=EvaluationSpec(views=()),
+    )
+
+
+def _layout_scene(tmp_path: Path) -> CorpusSpec:
+    layout = CanonicalLayout(
+        pages=(LayoutPage(regions=(Region(id="r1", region_type="text"),)),)
+    )
+    (tmp_path / "doc1.png").write_bytes(b"\x89PNG stub")
+    (tmp_path / "doc1.layout.json").write_bytes(
+        layout.model_dump_json().encode("utf-8")
+    )
+    document = DocumentRef(id="doc1", image_uri=str(tmp_path / "doc1.png"))
+    return CorpusSpec(name="c", documents=(document,))
+
+
+def test_artifact_sink_receives_readable_layout(tmp_path: Path) -> None:
+    seen: list[tuple[str, str]] = []
+
+    def sink(outputs: PipelineOutputs, manifest: RunManifest) -> None:
+        for pipeline_name, per_doc in outputs.items():
+            for doc_id, artifacts in per_doc.items():
+                art = artifacts.get(ArtifactType.LAYOUT)
+                assert art is not None and art.uri is not None
+                # URI lisible PENDANT le run (avant nettoyage du workspace)
+                got = CanonicalLayout.model_validate_json(Path(art.uri).read_bytes())
+                assert got.pages[0].regions[0].id == "r1"
+                seen.append((pipeline_name, doc_id))
+
+    run(
+        _layout_spec(_layout_scene(tmp_path)),
+        registry=_registry(),
+        code_version="1.0",
+        artifact_sink=sink,
+    )
+    assert seen == [("seg", "doc1")]
+
+
+def test_run_without_sink_still_succeeds(tmp_path: Path) -> None:
+    # Le sink est optionnel : un run sans sink produit son RunResult normalement.
+    result = run(
+        _layout_spec(_layout_scene(tmp_path)),
+        registry=_registry(),
+        code_version="1.0",
+    )
+    assert result.manifest.corpus_name == "c"

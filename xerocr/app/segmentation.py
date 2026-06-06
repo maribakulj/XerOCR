@@ -119,6 +119,24 @@ class SegmentationStore:
             return None
         return CanonicalLayout.model_validate_json(path.read_text(encoding="utf-8"))
 
+    def latest(self) -> str | None:
+        """Id du layout le plus récemment écrit (mtime), ou ``None`` si vide.
+
+        Consommé par ``/segmentation`` : un **run réel** persisté par le sink est
+        plus récent que la graine de démo → il s'affiche automatiquement. (Un
+        sélecteur multi-runs est une amélioration ultérieure.)
+        """
+        if not self._base.is_dir():
+            return None
+        folders = [
+            child
+            for child in self._base.iterdir()
+            if child.is_dir() and (child / _LAYOUT_FILE).is_file()
+        ]
+        if not folders:
+            return None
+        return max(folders, key=lambda child: child.stat().st_mtime).name
+
     def image_path(self, seg_id: str) -> Path | None:
         """Chemin de l'image source persistée (``None`` si aucune)."""
         folder = self._folder(seg_id)

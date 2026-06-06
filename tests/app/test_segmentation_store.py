@@ -40,6 +40,22 @@ def test_traversal_id_is_rejected(tmp_path: Path) -> None:
     assert store.image_path("../../secret") is None
 
 
+def test_latest_is_none_when_empty(tmp_path: Path) -> None:
+    assert SegmentationStore(tmp_path).latest() is None
+
+
+def test_latest_returns_most_recent(tmp_path: Path) -> None:
+    import os
+
+    store = SegmentationStore(tmp_path)
+    older = store.save(demo_layout())
+    newer = store.save(demo_layout())
+    # mtime déterministe (la résolution disque pourrait égaliser deux save rapides)
+    os.utime(tmp_path / older, (1_000_000_000, 1_000_000_000))
+    os.utime(tmp_path / newer, (2_000_000_000, 2_000_000_000))
+    assert store.latest() == newer
+
+
 def test_demo_page_image_is_deterministic_png() -> None:
     first = demo_page_image()
     assert first[:8] == b"\x89PNG\r\n\x1a\n"
