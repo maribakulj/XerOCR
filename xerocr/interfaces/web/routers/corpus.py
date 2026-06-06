@@ -213,6 +213,14 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
             "documents": [doc.id for doc in spec.documents],
         }
 
+    @router.delete(
+        "/api/corpus/{corpus_id}", dependencies=[Depends(csrf_protect)]
+    )
+    def delete_corpus(corpus_id: str) -> dict[str, bool]:
+        if not store.delete(corpus_id):
+            raise HTTPException(status_code=404, detail="corpus introuvable.")
+        return {"deleted": True}
+
     return router
 
 

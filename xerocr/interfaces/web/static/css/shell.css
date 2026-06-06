@@ -466,3 +466,141 @@ table.engines .eng-detail { font-size: 12px; color: var(--g-500); }
   .app { grid-template-columns: 1fr; }
   .rail { position: static; height: auto; overflow: visible; }
 }
+
+/* === Boutons compacts / variantes === */
+.btn-sm { padding: 6px 12px; font-size: 11.5px; }
+
+/* === Tables de données (corpus, catalogues, historique) === */
+.mono { font-family: var(--mono); }
+.muted {
+  font-size: 13px;
+  color: var(--g-400);
+  padding-left: 12px;
+  border-left: 2px solid var(--g-100);
+}
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--g-400);
+  font-weight: 500;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--g-100);
+}
+table.data td { padding: 10px 12px; border-bottom: 1px solid var(--g-50); }
+table.data tr:last-child td { border-bottom: none; }
+table.data a { color: var(--fern-deep); font-weight: 500; }
+
+/* === Badge === */
+.badge {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--g-500);
+  background: var(--g-50);
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* === Cartes corpus (« Mes corpus ») === */
+.corpus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: 12px;
+}
+.corpus-card {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.corpus-card .c-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+  word-break: break-word;
+}
+.corpus-card .c-meta {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--g-400);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.corpus-card .c-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+.c-del {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--g-400);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+}
+.c-del:hover { color: var(--err); background: var(--g-50); }
+.c-del:disabled { opacity: 0.5; cursor: default; }
+
+/* === Dropzone (upload ZIP) === */
+.dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 280px;
+  min-height: 84px;
+  padding: 16px 20px;
+  border: 1.5px dashed var(--g-150);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--g-400);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.dropzone:hover { border-color: var(--g-300); color: var(--g-500); }
+.dropzone.is-dragover {
+  border-color: var(--fern);
+  background: var(--fern-soft);
+  color: var(--fern-deep);
+}
+.dropzone input[type="file"] { display: none; }
+.dropzone-hint { font-size: 12.5px; }
+
+/* === Recherche (catalogues) === */
+.search { display: flex; gap: 8px; }
+.search input[type="search"] {
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 9px 14px;
+  border: 1px solid var(--g-100);
+  border-radius: var(--r-pill);
+  background: var(--raised-2);
+  color: var(--ink);
+}
+.search button {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border: none;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r-pill);
+  cursor: pointer;
+}

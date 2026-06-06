@@ -15,24 +15,23 @@
     <div class="sec-sub">{{ t.library_corpora_desc }}</div>
   </div>
   {% if corpora %}
-  <table class="data">
-    <thead>
-      <tr>
-        <th>{{ t.library_col_name }}</th>
-        <th>{{ t.library_col_id }}</th>
-        <th>{{ t.library_col_docs }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for c in corpora %}
-      <tr>
-        <td>{{ c.name }}</td>
-        <td class="mono">{{ c.id }}</td>
-        <td class="mono">{{ c.n_documents }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="corpus-grid">
+    {% for c in corpora %}
+    <div class="corpus-card">
+      <div class="c-name">{{ c.name }}</div>
+      <div class="c-meta">
+        <span>{{ c.id[:10] }}…</span>
+        <span>{{ c.n_documents }} {{ t.library_col_docs|lower }}</span>
+      </div>
+      <div class="c-actions">
+        <a class="btn btn-sm btn-primary"
+           href="/benchmark?lang={{ lang }}&corpus={{ c.id }}">{{ t.library_use }}</a>
+        <button class="c-del" data-corpus="{{ c.id }}"
+                title="{{ t.library_delete }}">✕ {{ t.library_delete }}</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
   {% else %}
   <p class="muted">{{ t.library_corpora_empty }}</p>
   {% endif %}
