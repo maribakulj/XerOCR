@@ -1,4 +1,4 @@
-"""Lanceur web (TU2.a) : CSRF d'abord, puis launch→exécute→résultat, mode public."""
+"""Lanceur web : CSRF d'abord, démo, puis concurrents (gardes HTTP), mode public."""
 
 from __future__ import annotations
 
@@ -41,7 +41,6 @@ def _poll_until_terminal(
 def test_post_without_csrf_is_403(tmp_path: Path) -> None:
     resp = _client(tmp_path).post("/api/runs")
     assert resp.status_code == 403
-    # rien n'a été lancé
     assert _client(tmp_path).get("/api/reports").json() == {"reports": []}
 
 
@@ -50,12 +49,13 @@ def test_cancel_without_csrf_is_403(tmp_path: Path) -> None:
 
 
 def test_csrf_header_allows_post(tmp_path: Path) -> None:
+    # Sans corps → démonstration → 201.
     resp = _client(tmp_path).post("/api/runs", headers=_CSRF)
     assert resp.status_code == 201
     assert "job_id" in resp.json()
 
 
-# --- Bout-en-bout : lancer → exécuter → résultat visible ---------------------
+# --- Bout-en-bout démo : lancer → exécuter → résultat visible ----------------
 
 
 def test_launch_runs_and_result_appears(tmp_path: Path) -> None:
@@ -64,7 +64,6 @@ def test_launch_runs_and_result_appears(tmp_path: Path) -> None:
     job = _poll_until_terminal(client, job_id)
     assert job["state"] == "done"
     name = job["report_name"]
-    # le RunResult produit est listé et rendu par la vitrine read-only
     assert name in client.get("/api/reports").json()["reports"]
     assert client.get(f"/reports/{name}").status_code == 200
 
@@ -78,18 +77,14 @@ def test_cancel_unknown_job_is_404(tmp_path: Path) -> None:
     assert resp.status_code == 404
 
 
-# --- Mode public : la gate ---------------------------------------------------
-
-
 def test_public_mode_allows_local_demo(tmp_path: Path) -> None:
-    # la démo n'utilise que `precomputed` (local) → autorisée même en mode public.
     client = _client(tmp_path, public_mode=True)
     resp = client.post("/api/runs", headers=_CSRF)
     assert resp.status_code == 201
     assert _poll_until_terminal(client, resp.json()["job_id"])["state"] == "done"
 
 
-# --- TU2.d : sélection de moteur + corpus, gardes HTTP -----------------------
+# --- Concurrents : sélection + gardes HTTP -----------------------------------
 
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
@@ -108,48 +103,91 @@ def _upload_demo_corpus(client: TestClient) -> str:
 
 
 def test_unknown_engine_is_422(tmp_path: Path) -> None:
-    assert _post(_client(tmp_path), {"engine": "bogus"}).status_code == 422
-
-
-def test_extra_field_is_422(tmp_path: Path) -> None:
-    # corps strict (extra interdit) → rejet net.
-    resp = _post(_client(tmp_path), {"engine": "precomputed", "x": 1})
+    resp = _post(_client(tmp_path), {"competitors": [{"engine": "bogus"}]})
     assert resp.status_code == 422
+
+
+def test_extra_field_on_request_is_422(tmp_path: Path) -> None:
+    assert _post(_client(tmp_path), {"competitors": [], "x": 1}).status_code == 422
+
+
+def test_extra_field_on_competitor_is_422(tmp_path: Path) -> None:
+    resp = _post(_client(tmp_path), {"competitors": [{"engine": "tesseract", "x": 1}]})
+    assert resp.status_code == 422
+
+
+def test_invalid_mode_is_422(tmp_path: Path) -> None:
+    # mode hors Literal → rejet net par Pydantic.
+    body = {"competitors": [{"engine": "tesseract", "mode": "bogus"}]}
+    assert _post(_client(tmp_path), body).status_code == 422
 
 
 def test_cloud_engine_in_public_mode_is_403(tmp_path: Path) -> None:
     # LE chemin sécurité : un moteur cloud, exposé publiquement, refusé en HTTP.
-    resp = _post(_client(tmp_path, public_mode=True), {"engine": "openai"})
+    resp = _post(
+        _client(tmp_path, public_mode=True), {"competitors": [{"engine": "openai"}]}
+    )
     assert resp.status_code == 403
 
 
-def test_llm_engine_standalone_is_422(tmp_path: Path) -> None:
-    # post-correction LLM seule (sans chaîne OCR→LLM) → non exposée.
-    assert _post(_client(tmp_path), {"engine": "ollama"}).status_code == 422
+def test_demo_with_corpus_is_422(tmp_path: Path) -> None:
+    # aucun concurrent (= démo) mais un corpus fourni → incohérent.
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    assert _post(client, {"corpus_id": corpus_id}).status_code == 422
+
+
+def test_unknown_corpus_is_404(tmp_path: Path) -> None:
+    resp = _post(
+        _client(tmp_path),
+        {"competitors": [{"engine": "tesseract"}], "corpus_id": "nope"},
+    )
+    assert resp.status_code == 404
 
 
 def test_unavailable_engine_is_409(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # On FORCE l'indisponibilité du binaire (déterministe : indépendant du fait
-    # que tesseract soit installé ou non sur la machine de test/CI).
+    # binaire forcé absent → tesseract indisponible (déterministe), sans corpus.
     monkeypatch.setattr(
         "xerocr.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
     )
-    resp = _post(_client(tmp_path), {"engine": "tesseract", "corpus_id": "x"})
-    assert resp.status_code in (404, 409)  # 404 si corpus d'abord ; sinon 409
-    # sans corpus_id, c'est franchement l'indisponibilité qui parle :
-    assert _post(_client(tmp_path), {"engine": "tesseract"}).status_code == 409
+    resp = _post(_client(tmp_path), {"competitors": [{"engine": "tesseract"}]})
+    assert resp.status_code == 409
 
 
-def test_unknown_corpus_is_404(tmp_path: Path) -> None:
-    resp = _post(_client(tmp_path), {"engine": "precomputed", "corpus_id": "nope"})
-    assert resp.status_code == 404
-
-
-def test_precomputed_with_corpus_is_422(tmp_path: Path) -> None:
+def test_precomputed_as_competitor_is_422(tmp_path: Path) -> None:
+    # precomputed est le moteur de DÉMO, pas un concurrent OCR câblé → 422.
     client = _client(tmp_path)
     corpus_id = _upload_demo_corpus(client)
-    resp = _post(client, {"engine": "precomputed", "corpus_id": corpus_id})
+    resp = _post(
+        client, {"competitors": [{"engine": "precomputed"}], "corpus_id": corpus_id}
+    )
     assert resp.status_code == 422
+
+
+def test_ocr_llm_chain_reaches_availability_not_preblocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # OCR→LLM n'est plus pré-bloqué (ex-422 « LLM non exposé »). tesseract forcé
+    # dispo, openai indispo (pas de clé/SDK en CI) → 409 sur openai : la chaîne
+    # atteint bien la garde de disponibilité.
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.app.engine_statuses",
+        lambda **kw: engine_statuses(
+            has_binary=lambda _name: "/usr/bin/tesseract", **kw
+        ),
+    )
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {
+            "competitors": [
+                {"engine": "tesseract", "mode": "text_only", "llm": "openai"}
+            ],
+            "corpus_id": corpus_id,
+        },
+    )
+    assert resp.status_code == 409

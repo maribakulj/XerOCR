@@ -1,7 +1,7 @@
 /* Lanceur « Banc d'essai » — JS léger, sans dépendance.
  *
  * Le corpus est préparé dans la Bibliothèque ; ici on le SÉLECTIONNE.
- *   POST /api/runs {engine, corpus_id?}    → lance un run (gardes côté serveur)
+ *   POST /api/runs {competitors[], corpus_id?} → lance un run (gardes serveur)
  *   POST /api/segmentation/run {corpus_id} → run de segmentation (même flux SSE)
  *   GET  /api/runs/{id}/events (SSE)        → progression → lien rapport
  * Le serveur fait foi (403/409/404/422) ; on affiche son message d'erreur.
@@ -49,7 +49,12 @@
 
       var headers = { "Content-Type": "application/json" };
       headers[CSRF] = "1";
-      var payload = { engine: engineEl ? engineEl.value : "precomputed" };
+      var engine = engineEl ? engineEl.value : "";
+      var payload = {};
+      // precomputed / vide ⇒ démonstration (aucun concurrent) ; sinon 1 concurrent.
+      if (engine && engine !== "precomputed") {
+        payload.competitors = [{ engine: engine }];
+      }
       var corpusId = currentCorpusId();
       if (corpusId) payload.corpus_id = corpusId;
 
