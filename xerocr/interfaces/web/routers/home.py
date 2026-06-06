@@ -76,6 +76,7 @@ def build_home_router(
     templates: Jinja2Templates,
     *,
     statuses: StatusProvider,
+    segmenters: StatusProvider,
     history_store: HistoryStore,
     segmentation_store: SegmentationStore,
     demo_segmentation_id: str,
@@ -126,6 +127,11 @@ def build_home_router(
         # Le <select> des moteurs est rendu **serveur** (options dans le HTML,
         # testables) ; le JS ne fait que l'upload + le lancement.
         context["engines"] = statuses()
+        # Segmenteur (catégorie séparée) : son statut alimente le bouton
+        # « Segmenter » — désactivé + motif si l'extra [segment] manque.
+        context["segmenter"] = next(
+            (s for s in segmenters() if s.kind == "pp_doclayout"), None
+        )
         return templates.TemplateResponse(request, "benchmark.html", context)
 
     @router.get("/segmentation", response_class=HTMLResponse)

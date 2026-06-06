@@ -62,6 +62,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_split": "Split",
         "imp_limit": "Limite (pages)",
         "imp_name": "Nom (optionnel)",
+        # Run de segmentation (S6/T2) — bouton sur le lanceur
+        "seg_run_title": "…ou segmenter la mise en page",
+        "seg_run_btn": "Segmenter (PP-DocLayout)",
+        "seg_run_hint": "détecte les régions du corpus sélectionné.",
+        "seg_run_unavailable": "segmenteur indisponible",
+        "seg_run_open": "Voir la segmentation",
         # Segmentation (S6, squelette de visualisation)
         "seg_eyebrow": "Vitrine · mise en page",
         "seg_desc": "Visualisation des régions d'une page segmentée "
@@ -173,6 +179,12 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_split": "Split",
         "imp_limit": "Limit (pages)",
         "imp_name": "Name (optional)",
+        # Segmentation run (S6/T2) — button on the launcher
+        "seg_run_title": "…or segment the page layout",
+        "seg_run_btn": "Segment (PP-DocLayout)",
+        "seg_run_hint": "detects regions of the selected corpus.",
+        "seg_run_unavailable": "segmenter unavailable",
+        "seg_run_open": "View the segmentation",
         # Segmentation (S6, visualization skeleton)
         "seg_eyebrow": "Showcase · layout",
         "seg_desc": "Region visualization of a segmented page "

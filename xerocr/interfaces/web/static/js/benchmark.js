@@ -26,9 +26,16 @@
     var fileEl = document.getElementById("corpus-file");
     var uploadBtn = document.getElementById("upload");
     var corpusEl = document.getElementById("corpus-status");
+    var segBtn = document.getElementById("segment-btn");
+    var segStatus = document.getElementById("segment-status");
     if (!btn || !statusEl || !logEl || !resultEl) return;
 
     var corpusId = null;
+
+    // Active le bouton « Segmenter » dès qu'un corpus est sélectionné.
+    function enableSeg() {
+      if (segBtn) segBtn.disabled = false;
+    }
 
     // --- Upload d'un corpus ZIP -------------------------------------------
     if (uploadBtn && fileEl && corpusEl) {
@@ -50,6 +57,7 @@
             }
             corpusId = r.body.corpus_id;
             corpusEl.textContent = r.body.name + " — " + r.body.n_documents + " doc";
+            enableSeg();
           })
           .catch(function () {
             uploadBtn.disabled = false;
@@ -105,6 +113,7 @@
             importStatus.textContent =
               r.body.name + " — " + r.body.n_documents + " doc";
             if (corpusEl) corpusEl.textContent = importStatus.textContent;
+            enableSeg();
           })
           .catch(function () {
             importBtn.disabled = false;
@@ -150,7 +159,7 @@
             btn.disabled = false;
             return;
           }
-          subscribe(r.body.job_id);
+          subscribe(r.body.job_id, reportTerminal);
         })
         .catch(function () {
           statusEl.textContent = resultEl.dataset.neterror || "error";
@@ -158,8 +167,48 @@
         });
     });
 
-    function subscribe(jobId) {
+    // --- Run de segmentation (S6/T2) --------------------------------------
+    // POST /api/segmentation/run {corpus_id} → suit le MÊME flux SSE que les
+    // runs OCR (un seul exécuteur) ; à la fin, lien vers /segmentation.
+    if (segBtn) {
+      segBtn.addEventListener("click", function () {
+        if (!corpusId) return;
+        segBtn.disabled = true;
+        resultEl.textContent = "";
+        statusEl.textContent = segBtn.dataset.launching || "…";
+        var headers = { "Content-Type": "application/json" };
+        headers[CSRF] = "1";
+        fetchJson("/api/segmentation/run", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify({ corpus_id: corpusId }),
+        })
+          .then(function (r) {
+            if (!r.ok) {
+              statusEl.textContent = "HTTP " + r.status;
+              if (segStatus) segStatus.textContent = r.body.detail || "";
+              segBtn.disabled = false;
+              return;
+            }
+            subscribe(r.body.job_id, segTerminal);
+          })
+          .catch(function () {
+            statusEl.textContent = resultEl.dataset.neterror || "error";
+            segBtn.disabled = false;
+          });
+      });
+    }
+
+    // Suit un job par SSE ; `onTerminal(state, job)` gère l'état final (lien).
+    function subscribe(jobId, onTerminal) {
       var es = new EventSource("/api/runs/" + encodeURIComponent(jobId) + "/events");
+      var finished = false;
+      function done(state, job) {
+        if (finished) return;
+        finished = true;
+        es.close();
+        onTerminal(state, job);
+      }
       STATES.forEach(function (state) {
         es.addEventListener(state, function (ev) {
           var job = JSON.parse(ev.data);
@@ -167,19 +216,16 @@
           var line = document.createElement("div");
           line.textContent = job.updated_at + "  ·  " + state;
           logEl.appendChild(line);
-          if (TERMINAL[state]) {
-            es.close();
-            btn.disabled = false;
-            finish(state, job);
-          }
+          if (TERMINAL[state]) done(state, job);
         });
       });
       es.onerror = function () {
-        if (es.readyState === EventSource.CLOSED) btn.disabled = false;
+        if (es.readyState === EventSource.CLOSED) done("failed", {});
       };
     }
 
-    function finish(state, job) {
+    function reportTerminal(state, job) {
+      btn.disabled = false;
       if (state === "done" && job.report_name) {
         var a = document.createElement("a");
         a.href = "/reports/" + encodeURIComponent(job.report_name);
@@ -187,6 +233,19 @@
         a.textContent = resultEl.dataset.open || "report";
         resultEl.appendChild(a);
       } else if (job.error) {
+        resultEl.textContent = job.error;
+      }
+    }
+
+    function segTerminal(state, job) {
+      segBtn.disabled = false;
+      if (state === "done") {
+        var a = document.createElement("a");
+        a.href = "/segmentation";
+        a.className = "btn btn-primary";
+        a.textContent = segBtn.dataset.open || "segmentation";
+        resultEl.appendChild(a);
+      } else if (job && job.error) {
         resultEl.textContent = job.error;
       }
     }

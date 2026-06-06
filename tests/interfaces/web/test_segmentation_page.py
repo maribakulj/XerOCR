@@ -89,6 +89,7 @@ def test_segmentation_page_shows_latest_persisted_run(tmp_path: Path) -> None:
             tmp_path / "reports",
             Jinja2Templates(directory=_TEMPLATES_DIR),
             statuses=lambda: (),
+            segmenters=lambda: (),
             history_store=HistoryStore(tmp_path / "h.db"),
             segmentation_store=store,
             demo_segmentation_id=demo_id,
