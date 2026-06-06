@@ -28,7 +28,7 @@ from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.adapters.storage.publisher import resolve_publisher
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import EngineStatus, engine_statuses
+from xerocr.app.engines import EngineStatus, engine_statuses, segmenter_statuses
 from xerocr.app.jobs import JobRunner
 from xerocr.app.modules import (
     ModuleRegistry,
@@ -166,6 +166,12 @@ def create_app(
     def engine_status_provider() -> tuple[EngineStatus, ...]:
         return engine_statuses(public_mode=is_public)
 
+    # Segmenteurs : catégorie distincte (pas dans le <select> moteur OCR), jamais
+    # masquée en public (segmenteur local, pas de clé). Alimente le gate du run
+    # de segmentation et (ultérieurement) le bouton de /segmentation.
+    def segmenter_status_provider() -> tuple[EngineStatus, ...]:
+        return segmenter_statuses()
+
     app.include_router(
         build_home_router(
             catalog_dir,
@@ -178,7 +184,14 @@ def create_app(
         )
     )
     app.include_router(build_reports_router(catalog_dir))
-    app.include_router(build_segmentation_router(seg_store))
+    app.include_router(
+        build_segmentation_router(
+            seg_store,
+            runner=runner,
+            corpus_store=corpus_store,
+            segmenters=segmenter_status_provider,
+        )
+    )
     app.include_router(
         build_runs_router(
             runner,

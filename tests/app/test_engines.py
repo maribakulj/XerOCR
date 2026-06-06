@@ -99,3 +99,28 @@ def test_default_probes_run_without_error() -> None:
     kinds = {s.kind for s in statuses}
     assert kinds == {"precomputed", "tesseract", "openai", "mistral", "ollama"}
     assert next(s for s in statuses if s.kind == "precomputed").available
+
+
+# --- Segmenteurs (catégorie distincte des moteurs OCR, T2) ---------------------
+
+def test_segmenter_available_when_sdk_present() -> None:
+    from xerocr.app.engines import segmenter_statuses
+
+    (status,) = segmenter_statuses(has_module=lambda n: n == "paddlex")
+    assert status.kind == "pp_doclayout"
+    assert status.available is True
+
+
+def test_segmenter_unavailable_signals_extra() -> None:
+    from xerocr.app.engines import segmenter_statuses
+
+    (status,) = segmenter_statuses(has_module=lambda _n: False)
+    assert status.available is False
+    assert "[segment]" in status.detail
+
+
+def test_segmenter_not_in_ocr_engine_list() -> None:
+    # le segmenteur ne doit PAS apparaître parmi les moteurs de transcription
+    # (sinon il polluerait le <select> du lanceur OCR).
+    kinds = {s.kind for s in engine_statuses(public_mode=False)}
+    assert "pp_doclayout" not in kinds
