@@ -74,6 +74,7 @@ def build_home_router(
     *,
     statuses: StatusProvider,
     history_store: HistoryStore,
+    public_mode: bool = False,
 ) -> APIRouter:
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
     router = APIRouter()
@@ -96,6 +97,9 @@ def build_home_router(
             "nav": _nav(t, lang, active, metas),
             "version": app_version,
             "view_path": _LIVE_VIEWS[active],
+            # Les imports distants fetchent côté serveur → masqués en mode public
+            # (l'endpoint les refuse de toute façon : 403).
+            "public_mode": public_mode,
         }
 
     @router.get("/", response_class=HTMLResponse)
