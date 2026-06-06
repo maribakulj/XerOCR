@@ -10,6 +10,35 @@
 </section>
 
 <section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.library_corpora_title }}</div>
+    <div class="sec-sub">{{ t.library_corpora_desc }}</div>
+  </div>
+  {% if corpora %}
+  <table class="data">
+    <thead>
+      <tr>
+        <th>{{ t.library_col_name }}</th>
+        <th>{{ t.library_col_id }}</th>
+        <th>{{ t.library_col_docs }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in corpora %}
+      <tr>
+        <td>{{ c.name }}</td>
+        <td class="mono">{{ c.id }}</td>
+        <td class="mono">{{ c.n_documents }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">{{ t.library_corpora_empty }}</p>
+  {% endif %}
+</section>
+
+<section class="sec">
   <form class="search" method="get" action="/library">
     <input type="hidden" name="lang" value="{{ lang }}">
     <input type="search" name="q" value="{{ query }}"

@@ -198,6 +198,7 @@ def create_app(
             history_store=history_store,
             segmentation_store=seg_store,
             demo_segmentation_id=demo_seg_id,
+            corpus_store=corpus_store,
             public_mode=is_public,
         )
     )

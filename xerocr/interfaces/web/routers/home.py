@@ -22,6 +22,7 @@ from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, fetch_catalogu
 from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFaceDataset
 from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app import resolve_code_version
+from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import StatusProvider
 from xerocr.app.segmentation import SegmentationStore
 from xerocr.interfaces.web._cache import TTLCache
@@ -84,6 +85,7 @@ def build_home_router(
     history_store: HistoryStore,
     segmentation_store: SegmentationStore,
     demo_segmentation_id: str,
+    corpus_store: CorpusStore | None = None,
     public_mode: bool = False,
 ) -> APIRouter:
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
@@ -166,8 +168,19 @@ def build_home_router(
         catalogue = htr_cache.get_or_compute("htr_united", fetch_catalogue)
         htr = catalogue.search(q) if q else catalogue.entries
         hf = hf_cache.get_or_compute(q, lambda: HuggingFaceCatalogue().search(q))
+        # Corpus de l'utilisateur (téléversés/importés) : visibles et gérés dans
+        # la Bibliothèque — plus « perdus de vue » après upload.
+        corpora = (
+            [
+                {"id": cid, "name": spec.name, "n_documents": len(spec.documents)}
+                for cid, spec in corpus_store.list_corpora()
+            ]
+            if corpus_store is not None
+            else []
+        )
         context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
         context["query"] = q
+        context["corpora"] = corpora
         context["htr_entries"] = htr
         context["htr_is_demo"] = catalogue.is_demo
         context["hf_datasets"] = hf

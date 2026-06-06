@@ -12,7 +12,10 @@ from fastapi.testclient import TestClient
 from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
 from xerocr.adapters.corpus.huggingface import HuggingFaceDataset
 from xerocr.adapters.storage.history_store import HistoryStore
+from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.segmentation import SegmentationStore, demo_layout
+from xerocr.domain.corpus import CorpusSpec
+from xerocr.domain.documents import DocumentRef
 from xerocr.interfaces.web.app import _TEMPLATES_DIR, create_app
 from xerocr.interfaces.web.routers.home import build_home_router
 
@@ -59,6 +62,7 @@ def _client(
     monkeypatch: pytest.MonkeyPatch,
     *,
     catalogue: HTRUnitedCatalogue = _HTR_REMOTE,
+    corpus_store: CorpusStore | None = None,
 ) -> TestClient:
     monkeypatch.setattr(
         "xerocr.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
@@ -78,6 +82,7 @@ def _client(
             history_store=HistoryStore(tmp_path / "h.db"),
             segmentation_store=seg_store,
             demo_segmentation_id=seg_id,
+            corpus_store=corpus_store,
         )
     )
     return TestClient(app)
@@ -169,3 +174,31 @@ def test_library_is_live_nav_link_from_home(tmp_path: Path) -> None:
         )
     )
     assert 'href="/library?lang=fr"' in client.get("/").text
+
+
+def _seed_corpora(tmp_path: Path, *names: str) -> CorpusStore:
+    store = CorpusStore(tmp_path / "corpora")
+    for name in names:
+        store.materialize(
+            lambda dest, n=name: CorpusSpec(
+                name=n, documents=(DocumentRef(id="d1", image_uri="a.png"),)
+            )
+        )
+    return store
+
+
+def test_library_lists_stored_corpora(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = _seed_corpora(tmp_path, "Beta corpus", "Alpha corpus")
+    body = _client(tmp_path, monkeypatch, corpus_store=store).get("/library").text
+    assert "Alpha corpus" in body and "Beta corpus" in body
+    # triés par nom : Alpha avant Beta
+    assert body.index("Alpha corpus") < body.index("Beta corpus")
+
+
+def test_library_corpora_empty_state(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    body = _client(tmp_path, monkeypatch).get("/library").text
+    assert "Aucun corpus enregistré" in body
