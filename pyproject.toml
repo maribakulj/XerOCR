@@ -27,6 +27,7 @@ openai = ["openai"]
 mistral = ["mistralai"]
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
+segment = ["paddlex"]
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
 
 [project.scripts]

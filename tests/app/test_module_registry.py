@@ -30,6 +30,7 @@ def test_kinds_listed() -> None:
         "mistral",
         "ollama",
         "openai",
+        "pp_doclayout",
         "precomputed",
         "precomputed_layout",
         "precomputed_region",
