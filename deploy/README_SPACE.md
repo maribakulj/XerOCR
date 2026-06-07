@@ -24,26 +24,26 @@ Les calculs sont faits **hors ligne** (CLI `xerocr run`, avec vos clés et vos
 moteurs) ; seuls les rapports figés sont publiés ici. Aucun secret n'est requis
 ni stocké par la vitrine.
 
-## Activer un moteur cloud (Mistral) sur un Space — ⚠️ Space PRIVÉ uniquement
+## Activer Mistral sur votre Space — ⚠️ Space PRIVÉ uniquement
 
-Par défaut, un Space tourne en **mode public** : les moteurs cloud sont **masqués**
-(personne ne peut dépenser de clé). Pour exécuter des runs **OCR → Mistral** sur
-votre propre Space :
+Modèle « clé posée → ça marche » : un moteur cloud est disponible **dès que sa clé
+est présente**. Donc, sur **votre** Space :
 
-> 🔴 **Sécurité** : en mode ouvert, **n'importe quel visiteur du Space peut lancer
-> un run et donc dépenser VOTRE clé Mistral**. Ne faites ceci que sur un Space dont
-> la visibilité est **Private** (Settings → Visibility → Private). Sur un Space
-> public, votre crédit Mistral est exposé à tous.
+> 🔴 **Sécurité** : si la clé est présente, **n'importe quel visiteur peut lancer un
+> run et donc dépenser VOTRE clé**. Mettez donc le Space en **Private** (Settings →
+> Visibility → Private). Sur un Space public, **retirez la clé** (comme on faisait).
 
 1. **Rendre le Space privé** (Settings → Visibility → **Private**).
 2. **Secret** : `MISTRAL_API_KEY` = votre clé (Settings → Variables and secrets →
    *New secret*).
-3. **Variable** : `XEROCR_PUBLIC_MODE` = `false` (même écran, *New variable*) — sans
-   ça, le Space reste verrouillé et Mistral masqué.
-4. Le SDK `mistralai` est déjà inclus dans `requirements.txt`. Redéployez/rebuild.
+3. C'est tout : le SDK `mistralai` est déjà dans `requirements.txt`. Redéployez.
 
-Le menu déroulant « Modèle » du Banc d'essai se remplira alors directement depuis
+Le menu déroulant « Modèle » du Banc d'essai se remplit alors directement depuis
 l'API Mistral (`models.list`), et les prompts sont éditables par concurrent.
+
+> La variable `XEROCR_PUBLIC_MODE=false` n'est **plus nécessaire pour les moteurs**
+> cloud. Elle ne sert plus qu'à ré-ouvrir les **imports distants** (IIIF/Gallica/…)
+> et les plugins tiers, verrouillés par défaut sur un Space pour la sécurité SSRF.
 
 > Ce fichier est l'en-tête de configuration du Space Hugging Face (`sdk: docker`).
 > Au déploiement, il devient le `README.md` racine du dépôt du Space ; le

@@ -33,8 +33,10 @@ def test_precomputed_is_available(tmp_path: Path) -> None:
     assert pre["available"] is True
 
 
-def test_public_mode_marks_cloud_unavailable(tmp_path: Path) -> None:
+def test_cloud_unavailable_reason_is_key_not_mode(tmp_path: Path) -> None:
+    # Plus de masquage « mode public » : openai est indisponible faute de clé
+    # (et/ou de SDK), pas à cause du mode. Le motif n'est plus « public ».
     engines = _client(tmp_path, public_mode=True).get("/api/engines").json()["engines"]
     openai = next(e for e in engines if e["kind"] == "openai")
     assert openai["available"] is False
-    assert "public" in openai["detail"]
+    assert "public" not in openai["detail"]

@@ -75,6 +75,9 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           SPACE_INPUT: ${{ github.event.inputs.space }}
         run: |
+          # pipefail : sinon `git push | sed` masque l'échec (sortie = sed = 0)
+          # et un push REJETÉ passerait pour un déploiement réussi (bug observé).
+          set -o pipefail
           space="${SPACE_INPUT:-$DEFAULT_SPACE}"
           if [ -z "$HF_TOKEN" ]; then
             echo "::error::secret HF_TOKEN absent du dépôt — déploiement impossible."
@@ -83,6 +86,11 @@ jobs:
           owner="${space%%/*}"
           cd space
           git init -q
+          # HuggingFace REFUSE les binaires en git ordinaire (politique Xet/LFS) :
+          # on suit les fontes/images en **Git LFS**. Le build du Space résout les
+          # fichiers LFS, donc les fontes restent servies normalement.
+          git lfs install --local
+          git lfs track "*.woff2" "*.woff" "*.otf" "*.ttf" "*.png" "*.jpg" "*.jpeg" "*.pdf"
           git config user.name  "xerocr-deploy"
           git config user.email "deploy@xerocr.local"
           git checkout -q -b main

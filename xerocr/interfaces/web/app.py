@@ -189,7 +189,7 @@ def create_app(
     # Un seul fournisseur de statuts moteurs (même mode) partagé par le lanceur
     # et l'onglet Moteurs → pas de closures jumelles qui pourraient diverger.
     def engine_status_provider() -> tuple[EngineStatus, ...]:
-        return engine_statuses(public_mode=is_public)
+        return engine_statuses()
 
     # Segmenteurs : catégorie distincte (pas dans le <select> moteur OCR), jamais
     # masquée en public (segmenteur local, pas de clé). Alimente le gate du run
@@ -223,7 +223,6 @@ def create_app(
         build_runs_router(
             runner,
             corpus_store,
-            public_mode=is_public,
             statuses=engine_status_provider,
         )
     )

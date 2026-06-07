@@ -31,7 +31,7 @@ from xerocr.domain.documents import DocumentRef
 def _catalog() -> dict[str, list[dict[str, object]]]:
     # Sondes réelles : la *liste* des moteurs par rôle est déterministe (seule la
     # disponibilité varie selon l'environnement — ici on ne teste que la liste).
-    return benchmark_engine_catalog(engine_statuses(public_mode=False))
+    return benchmark_engine_catalog(engine_statuses())
 
 
 def _registry_kinds() -> set[str]:

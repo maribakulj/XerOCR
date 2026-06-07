@@ -4,8 +4,9 @@ Alimente l'onglet « Moteurs » : pour chaque kind du socle, dit s'il est
 **utilisable ici et maintenant** et *pourquoi pas* le cas échéant. Les sondes
 sont **bon marché et sans effet de bord** — on ne lance aucun moteur, on ne
 touche pas le réseau : présence d'un binaire (``shutil.which``), d'un SDK
-(``importlib.util.find_spec``, **sans importer**), d'une clé d'API (env). Le
-**mode public** masque les moteurs *cloud* porteurs de clé (sécurité d'exposition).
+(``importlib.util.find_spec``, **sans importer**), d'une clé d'API (env). Un
+moteur cloud est dispo dès que **SDK + clé** sont là (« clé posée → ça marche »),
+sans masquage par mode public — la sécurité d'un Space exposé tient à sa visibilité.
 
 Sondes **injectables** → la détection est déterministe en test, indépendante de
 l'environnement de CI (où tesseract peut être présent ou non).
@@ -19,9 +20,6 @@ import shutil
 from collections.abc import Callable
 
 from pydantic import BaseModel, ConfigDict
-
-#: Kinds *cloud* (clé API) masqués en mode public.
-CLOUD_KINDS = frozenset({"openai", "anthropic", "mistral"})
 
 BinaryProbe = Callable[[str], str | None]
 ModuleProbe = Callable[[str], bool]
@@ -53,12 +51,17 @@ def _module_present(name: str) -> bool:
 
 def engine_statuses(
     *,
-    public_mode: bool,
     has_binary: BinaryProbe = shutil.which,
     has_module: ModuleProbe = _module_present,
     get_env: EnvProbe = os.environ.get,
 ) -> tuple[EngineStatus, ...]:
-    """État de chaque moteur du socle (ordre stable), selon les sondes fournies."""
+    """État de chaque moteur du socle (ordre stable), selon les sondes fournies.
+
+    Un moteur cloud (OpenAI/Anthropic/Mistral) est disponible **dès que son SDK et
+    sa clé sont présents** — indépendamment du mode public (« clé posée → ça
+    marche »). La protection d'un Space exposé relève de sa **visibilité** (privé)
+    et de la présence/absence de la clé, pas d'un masquage côté appli.
+    """
     return (
         EngineStatus(
             kind="precomputed",
@@ -67,9 +70,9 @@ def engine_statuses(
             detail="intégré (aucune dépendance)",
         ),
         _tesseract_status(has_binary, has_module),
-        _openai_status(public_mode, has_module, get_env),
-        _anthropic_status(public_mode, has_module, get_env),
-        _mistral_status(public_mode, has_module, get_env),
+        _openai_status(has_module, get_env),
+        _anthropic_status(has_module, get_env),
+        _mistral_status(has_module, get_env),
         _ollama_status(has_module),
     )
 
@@ -86,12 +89,8 @@ def _tesseract_status(has_binary: BinaryProbe, has_module: ModuleProbe) -> Engin
     )
 
 
-def _openai_status(
-    public_mode: bool, has_module: ModuleProbe, get_env: EnvProbe
-) -> EngineStatus:
-    if public_mode:
-        detail, ok = "moteur cloud désactivé (mode public)", False
-    elif not has_module("openai"):
+def _openai_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("openai"):
         detail, ok = "SDK openai non installé (extra [openai])", False
     elif not get_env("OPENAI_API_KEY"):
         detail, ok = "clé OPENAI_API_KEY absente", False
@@ -100,12 +99,8 @@ def _openai_status(
     return EngineStatus(kind="openai", label="OpenAI", available=ok, detail=detail)
 
 
-def _anthropic_status(
-    public_mode: bool, has_module: ModuleProbe, get_env: EnvProbe
-) -> EngineStatus:
-    if public_mode:
-        detail, ok = "moteur cloud désactivé (mode public)", False
-    elif not has_module("anthropic"):
+def _anthropic_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("anthropic"):
         detail, ok = "SDK anthropic non installé (extra [anthropic])", False
     elif not get_env("ANTHROPIC_API_KEY"):
         detail, ok = "clé ANTHROPIC_API_KEY absente", False
@@ -116,12 +111,8 @@ def _anthropic_status(
     )
 
 
-def _mistral_status(
-    public_mode: bool, has_module: ModuleProbe, get_env: EnvProbe
-) -> EngineStatus:
-    if public_mode:
-        detail, ok = "moteur cloud désactivé (mode public)", False
-    elif not has_module("mistralai"):
+def _mistral_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("mistralai"):
         detail, ok = "SDK mistralai non installé (extra [mistral])", False
     elif not get_env("MISTRAL_API_KEY"):
         detail, ok = "clé MISTRAL_API_KEY absente", False
@@ -185,7 +176,6 @@ def installed_mistral_models() -> tuple[str, ...]:
 
 
 __all__ = [
-    "CLOUD_KINDS",
     "EngineStatus",
     "StatusProvider",
     "engine_statuses",

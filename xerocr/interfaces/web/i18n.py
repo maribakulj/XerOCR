@@ -118,8 +118,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         # Page « Moteurs »
         "engines_eyebrow": "Vitrine · moteurs",
         "engines_title": "Moteurs",
-        "engines_desc": "Disponibilité runtime des moteurs du socle (binaire · SDK · "
-        "clé). Le mode public masque les moteurs cloud.",
+        "engines_desc": "Disponibilité runtime des moteurs du socle : binaire, SDK, "
+        "clé d'API. Un moteur cloud est prêt dès que son SDK et sa clé sont là.",
         "stat_ready": "prêts",
         "engines_col_engine": "Moteur",
         "engines_col_status": "État",
@@ -293,8 +293,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "sys_pipeline_ready": "engines ready",
         "engines_eyebrow": "Showcase · engines",
         "engines_title": "Engines",
-        "engines_desc": "Runtime availability of the built-in engines (binary · SDK · "
-        "key). Public mode hides cloud engines.",
+        "engines_desc": "Runtime availability of the built-in engines: binary, SDK, "
+        "API key. A cloud engine is ready as soon as its SDK and key are present.",
         "stat_ready": "ready",
         "engines_col_engine": "Engine",
         "engines_col_status": "Status",

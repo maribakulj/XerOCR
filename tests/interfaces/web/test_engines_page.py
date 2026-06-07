@@ -34,11 +34,11 @@ def test_moteurs_is_not_listed_in_home_nav(tmp_path: Path) -> None:
     assert 'href="/engines?lang=fr"' not in home
 
 
-def test_public_mode_marks_cloud_unavailable(tmp_path: Path) -> None:
+def test_cloud_engine_unavailable_without_key(tmp_path: Path) -> None:
     body = _client(tmp_path, public_mode=True).get("/engines").text
-    # openai (cloud) doit apparaître indisponible + motif mode public
+    # openai (cloud) apparaît indisponible faute de clé — plus de motif « mode
+    # public » : la disponibilité ne dépend que du SDK + clé.
     assert "indisponible" in body
-    assert "public" in body
 
 
 def test_engines_page_english(tmp_path: Path) -> None:

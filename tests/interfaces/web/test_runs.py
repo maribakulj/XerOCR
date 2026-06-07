@@ -122,12 +122,13 @@ def test_invalid_mode_is_422(tmp_path: Path) -> None:
     assert _post(_client(tmp_path), body).status_code == 422
 
 
-def test_cloud_engine_in_public_mode_is_403(tmp_path: Path) -> None:
-    # LE chemin sécurité : un moteur cloud, exposé publiquement, refusé en HTTP.
+def test_cloud_engine_without_key_is_409(tmp_path: Path) -> None:
+    # Plus de masquage « mode public » : un moteur cloud sans clé tombe en 409
+    # (indisponible), pas en 403. Avec sa clé, il serait autorisé (Picarones).
     resp = _post(
         _client(tmp_path, public_mode=True), {"competitors": [{"engine": "openai"}]}
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 409
 
 
 def test_demo_with_corpus_is_422(tmp_path: Path) -> None:

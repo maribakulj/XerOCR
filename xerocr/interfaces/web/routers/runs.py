@@ -5,12 +5,12 @@ OCR→LLM texte/image, ou VLM zero-shot) sur un **corpus** (``corpus_id``). N
 concurrents → **un seul run** comparé (cross-engine). Sans concurrent → le run de
 **démonstration** (``precomputed``, local).
 
-Ordre de garde (sécurité d'abord), par moteur référencé (``engine`` + ``llm``) :
+Ordre de garde, par moteur référencé (``engine`` + ``llm``) :
 1. moteur inconnu → ``422`` ;
-2. moteur **cloud** en **mode public** → ``403`` (jamais de secret en public) ;
-3. ``corpus_id`` fourni mais introuvable → ``404`` ;
-4. moteur **indisponible** (binaire/SDK/clé absent) → ``409`` ;
-5. concurrent incohérent (mode⇄moteur) → ``422`` (``plan_benchmark_run``).
+2. ``corpus_id`` fourni mais introuvable → ``404`` ;
+3. moteur **indisponible** (binaire/SDK/clé absent) → ``409`` — un moteur cloud
+   sans clé y tombe ; avec sa clé, il est autorisé (modèle « clé posée → marche ») ;
+4. concurrent incohérent (mode⇄moteur) → ``422`` (``plan_benchmark_run``).
 
 ``GET`` restitue l'état ; ``cancel`` déclenche l'annulation coopérative. Écritures
 protégées **CSRF**. Le ``RunResult`` produit atterrit dans le dossier vitrine.
@@ -29,7 +29,7 @@ from pydantic import BaseModel, ConfigDict
 
 from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import CLOUD_KINDS, StatusProvider
+from xerocr.app.engines import StatusProvider
 from xerocr.app.jobs import JobRunner
 from xerocr.app.run_planning import Competitor, RunPlanningError, plan_benchmark_run
 from xerocr.domain.corpus import CorpusSpec
@@ -98,7 +98,6 @@ def build_runs_router(
     runner: JobRunner,
     corpus_store: CorpusStore,
     *,
-    public_mode: bool,
     statuses: StatusProvider,
 ) -> APIRouter:
     """Construit le routeur du lanceur (monté par ``create_app``)."""
@@ -123,17 +122,13 @@ def build_runs_router(
         sts = statuses()
         known = {s.kind for s in sts}
         available = {s.kind for s in sts if s.available}
-        # 1-2 : sécurité d'abord (moteur connu, pas de cloud en mode public).
+        # 1 : moteur connu (la disponibilité runtime — binaire/SDK/clé — est
+        # vérifiée à l'étape 4 : un moteur cloud sans clé y tombe en 409).
         for comp in req.competitors:
             for kind in _referenced_kinds(comp):
                 if kind not in known:
                     raise HTTPException(
                         status_code=422, detail=f"moteur inconnu : {kind!r}"
-                    )
-                if public_mode and kind in CLOUD_KINDS:
-                    raise HTTPException(
-                        status_code=403,
-                        detail=f"moteur cloud refusé (mode public) : {kind!r}",
                     )
         # 3 : corpus.
         corpus: CorpusSpec | None = None
