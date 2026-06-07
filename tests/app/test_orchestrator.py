@@ -88,6 +88,39 @@ def test_missing_image_uri_raises(tmp_path: Path) -> None:
         run(_spec(corpus), registry=_registry(), code_version="1.0")
 
 
+def test_failing_competitor_does_not_abort_run(tmp_path: Path) -> None:
+    # Un concurrent qui échoue (source absente → AdapterStepError) ne doit PAS
+    # tuer le banc d'essai : l'autre concurrent reste exécuté et scoré, le run
+    # produit bien un RunResult. (Régression : avant, une branche en échec —
+    # ex. clé Mistral absente — faisait planter tout le run.)
+    (tmp_path / "doc1.eng.txt").write_text("abxd", encoding="utf-8")
+    (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
+    document = DocumentRef(
+        id="doc1",
+        image_uri=str(tmp_path / "doc1.png"),
+        ground_truths=(
+            GroundTruthRef(
+                type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "doc1.gt.txt")
+            ),
+        ),
+    )
+    spec = RunSpec(
+        corpus=CorpusSpec(name="c", documents=(document,)),
+        pipelines=(_pipeline("ok", "eng"), _pipeline("ko", "absent")),
+        evaluation=EvaluationSpec(views=(TEXT_VIEW,)),
+        adapter_kwargs={
+            "precomputed:eng": {"source_label": "eng"},
+            "precomputed:absent": {"source_label": "absent"},  # source manquante
+        },
+    )
+    result = run(spec, registry=_registry(), code_version="1.0")  # ne lève pas
+    by_name = {p.pipeline: p for p in result.pipelines}
+    assert by_name["ok"].aggregate[0].value == pytest.approx(0.25)  # scoré
+    # « ko » a échoué : soit absent du rapport, soit présent mais non scoré.
+    ko = by_name.get("ko")
+    assert ko is None or not ko.aggregate or ko.aggregate[0].value is None
+
+
 # ── isolation des workspaces + provenance (corrections d'audit) ─────────────
 def _ocr_llm_pipeline(name: str, ocr_label: str) -> PipelineSpec:
     return PipelineSpec(

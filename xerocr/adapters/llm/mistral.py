@@ -51,10 +51,12 @@ def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'li
     if timeout is not None:
         client_kwargs["timeout_ms"] = int(timeout * 1000)
     try:
-        client = Mistral(**client_kwargs)
+        # Le SDK mistralai 1.x type strictement ses kwargs/messages ; on lui
+        # passe des dicts valides à l'exécution (cf. tests live). ``ignore`` ciblé.
+        client = Mistral(**client_kwargs)  # type: ignore[arg-type]
         response = client.chat.complete(
             model=model,
-            messages=[{"role": "user", "content": content}],
+            messages=[{"role": "user", "content": content}],  # type: ignore[arg-type]
             temperature=0.0,
         )
     except Exception as exc:  # le SDK lève des erreurs HTTP/SDK variées
@@ -150,4 +152,30 @@ class MistralAdapter:
         )
 
 
-__all__ = ["MistralAdapter"]
+def list_mistral_models(*, timeout: float = 5.0) -> tuple[str, ...]:
+    """IDs des modèles disponibles pour la clé Mistral courante (``models.list``).
+
+    **Best-effort, commodité d'UI** : ``MISTRAL_API_KEY`` absente, SDK absent ou
+    erreur réseau → ``()`` (l'interface retombe sur la saisie libre). Rien de
+    hardcodé : la liste vient **directement de l'API Mistral**.
+    """
+    import os
+
+    api_key = os.environ.get("MISTRAL_API_KEY")
+    if not api_key:
+        return ()
+    try:
+        from mistralai import Mistral  # type: ignore[import-not-found]
+    except ImportError:
+        return ()
+    try:
+        client = Mistral(api_key=api_key, timeout_ms=int(timeout * 1000))
+        response = client.models.list()
+    except Exception:  # noqa: BLE001 — commodité UI : ne jamais casser la page
+        return ()
+    data = getattr(response, "data", None) or ()
+    ids = [m.id for m in data if isinstance(getattr(m, "id", None), str)]
+    return tuple(sorted(set(ids)))
+
+
+__all__ = ["MistralAdapter", "list_mistral_models"]

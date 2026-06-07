@@ -14,3 +14,8 @@ python-multipart>=0.0.9,<1
 # httpcore : moteur de httpx (co-installé) — épinglage d'IP anti-DNS-rebinding.
 httpx>=0.27,<1
 httpcore>=1,<2
+# Moteur cloud OPT-IN (Mistral) : permet les runs OCR→LLM / VLM sur un Space
+# **privé** qui ouvre la surface (``XEROCR_PUBLIC_MODE=false`` + secret
+# ``MISTRAL_API_KEY``). SDK léger (aucune dépendance lourde / GPU). En mode public
+# (le défaut), les moteurs cloud restent **masqués** : ce paquet est inutilisé.
+mistralai>=1.5,<2

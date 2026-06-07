@@ -25,7 +25,7 @@ dev = [
 tesseract = ["pytesseract"]
 openai = ["openai"]
 anthropic = ["anthropic"]
-mistral = ["mistralai"]
+mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistralai import Mistral`)
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
 segment = ["paddlex"]

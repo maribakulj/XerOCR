@@ -56,11 +56,12 @@ def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
     if timeout is not None:
         client_kwargs["timeout"] = timeout
     try:
-        client = Anthropic(**client_kwargs)
+        # SDK anthropic typé strictement ; dicts valides à l'exécution (tests live).
+        client = Anthropic(**client_kwargs)  # type: ignore[arg-type]
         response = client.messages.create(
             model=model,
             max_tokens=_MAX_TOKENS,
-            messages=[{"role": "user", "content": content}],
+            messages=[{"role": "user", "content": content}],  # type: ignore[typeddict-item]
         )
     except AnthropicError as exc:
         raise AdapterStepError(

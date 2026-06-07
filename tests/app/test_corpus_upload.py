@@ -14,6 +14,7 @@ from xerocr.app.corpus_upload import (
     CorpusUploadError,
     extract_corpus_zip,
 )
+from xerocr.domain.artifacts import ArtifactType
 
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32  # en-tête PNG valide + remplissage
 
@@ -144,3 +145,79 @@ def test_store_save_and_get(tmp_path: Path) -> None:
     assert store.get(corpus_id) is spec
     assert store.get("absent") is None
     assert (tmp_path / corpus_id / "a.png").exists()
+
+
+# --- Vérité-terrain ALTO / PAGE (XML) ----------------------------------------
+
+_ALTO = b"""<?xml version="1.0" encoding="UTF-8"?>
+<alto xmlns="http://www.loc.gov/standards/alto/ns-v4#">
+ <Layout><Page WIDTH="100" HEIGHT="100" PHYSICAL_IMG_NR="1"><PrintSpace>
+  <TextBlock ID="b1">
+   <TextLine><String CONTENT="Beatus uir qui"/></TextLine>
+   <TextLine><String CONTENT="non abiit"/></TextLine>
+  </TextBlock>
+ </PrintSpace></Page></Layout>
+</alto>"""
+
+_PAGE = b"""<?xml version="1.0" encoding="UTF-8"?>
+<PcGts xmlns="http://schema.primaresearch.org/PAGE/gts/pagecontent/2019-07-15">
+ <Page imageWidth="100" imageHeight="100"><TextRegion id="r1">
+  <TextLine id="l1"><TextEquiv><Unicode>Gloria patri</Unicode></TextEquiv></TextLine>
+ </TextRegion></Page></PcGts>"""
+
+
+def test_alto_ground_truth_extracted_to_text(tmp_path: Path) -> None:
+    spec = extract_corpus_zip(
+        _zip({"0006.jpg": _JPEG, "0006.xml": _ALTO}), tmp_path / "c", name="c"
+    )
+    (doc,) = spec.documents
+    (gt,) = doc.ground_truths
+    assert gt.type is ArtifactType.RAW_TEXT
+    assert Path(gt.uri).read_text(encoding="utf-8") == "Beatus uir qui\nnon abiit"
+
+
+def test_page_ground_truth_extracted_to_text(tmp_path: Path) -> None:
+    spec = extract_corpus_zip(
+        _zip({"p1.png": _PNG, "p1.xml": _PAGE}), tmp_path / "c", name="c"
+    )
+    (doc,) = spec.documents
+    (gt,) = doc.ground_truths
+    assert gt.type is ArtifactType.RAW_TEXT
+    assert "Gloria patri" in Path(gt.uri).read_text(encoding="utf-8")
+
+
+def test_manual_txt_wins_over_xml(tmp_path: Path) -> None:
+    spec = extract_corpus_zip(
+        _zip({"a.png": _PNG, "a.xml": _ALTO, "a.gt.txt": b"texte manuel"}),
+        tmp_path / "c",
+        name="c",
+    )
+    (doc,) = spec.documents
+    (gt,) = doc.ground_truths
+    assert Path(gt.uri).read_text(encoding="utf-8") == "texte manuel"
+
+
+def test_macos_appledouble_and_dir_entries_ignored(tmp_path: Path) -> None:
+    # Les ZIP macOS ajoutent des sidecars AppleDouble ``._x`` et un dossier
+    # ``__MACOSX/`` : ils doivent être ignorés, pas rejetés en « image non reconnue ».
+    data = _zip(
+        {
+            "0006.png": _PNG,
+            "0006.gt.txt": b"verite",
+            "._0006.png": b"junk-applefile",
+            "__MACOSX/._0006.png": b"junk",
+        }
+    )
+    spec = extract_corpus_zip(data, tmp_path / "c", name="c")
+    (doc,) = spec.documents
+    assert doc.id == "0006"
+    assert not (tmp_path / "c" / "._0006.png").exists()
+
+
+def test_unreadable_xml_ground_truth_clean_reject(tmp_path: Path) -> None:
+    with pytest.raises(CorpusUploadError, match="illisible|sans texte"):
+        extract_corpus_zip(
+            _zip({"a.png": _PNG, "a.xml": b"<alto>pas valable"}),
+            tmp_path / "c",
+            name="c",
+        )

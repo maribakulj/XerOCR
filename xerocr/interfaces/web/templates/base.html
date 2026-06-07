@@ -32,28 +32,34 @@
       <div class="wordmark-sub">{{ t.wordmark_sub }}</div>
     </div>
 
-    <nav class="rail-nav" aria-label="Navigation">
-      {% for item in nav %}
-      {% if item.state == 'soon' %}
-      <span class="nav-item soon" aria-disabled="true" title="{{ t.soon }}">
-        <span class="nav-glyph">{{ glyph(item.id) }}</span>
-        <span class="nav-label">{{ item.label }}</span>
-        <span class="nav-meta">{{ t.soon }}</span>
-      </span>
-      {% else %}
-      <a class="nav-item{% if item.state == 'active' %} active{% endif %}"
-         href="{{ item.href }}"{% if item.state == 'active' %} aria-current="page"{% endif %}>
-        <span class="nav-glyph">{{ glyph(item.id) }}</span>
-        <span class="nav-label">{{ item.label }}</span>
-        <span class="nav-meta">{{ item.meta }}</span>
-      </a>
-      {% endif %}
-      {% endfor %}
-    </nav>
+    <div class="rail-nav-window">
+      <nav class="rail-nav" aria-label="Navigation">
+        {% for item in primary_nav %}
+        <a class="nav-item{% if item.state == 'active' %} active{% endif %}"
+           href="{{ item.href }}"{% if item.state == 'active' %} aria-current="page"{% endif %}>
+          <span class="nav-glyph">{{ glyph(item.id) }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-meta">{{ item.meta }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+    </div>
 
     <div class="rail-system">
       <div class="sys-card">
-        <div class="sys-card-title"><span>{{ t.sys_status }}</span><span class="dot on"></span></div>
+        <div class="sys-card-title"><span>{{ t.sys_pipeline }}</span><span class="dot on"></span></div>
+        <div class="pipeline-stat">
+          <span class="pipeline-value">{{ system_pipeline.ready }}/{{ system_pipeline.total }}</span>
+          <span class="pipeline-copy">{{ t.sys_pipeline_ready }}</span>
+        </div>
+        <div class="pipeline-tags">
+          {% for label in system_pipeline.labels %}
+          <span class="preview-chip">{{ label }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="sys-card">
+        <div class="sys-card-title"><span>{{ t.sys_details }}</span><span class="dot on"></span></div>
         <div class="sys-row"><span class="k">{{ t.sys_version }}</span><span class="v">{{ version }}</span></div>
         <div class="sys-row"><span class="k">{{ t.sys_mode }}</span><span class="v">{{ t.sys_mode_value }}</span></div>
         <div class="sys-row"><span class="k">{{ t.sys_active_job }}</span><span class="v">{{ t.sys_idle }}</span></div>

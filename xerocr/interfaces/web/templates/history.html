@@ -2,108 +2,126 @@
 {% block title %}{{ t.history_title }}{% endblock %}
 {% block main %}
 <section class="view-hero">
-  <div>
+  <div class="view-hero-title">
     <div class="view-hero-eyebrow">{{ t.history_eyebrow }}</div>
     <div class="view-hero-name">{{ t.history_title }}</div>
     <div class="view-hero-desc">{{ t.history_desc }}</div>
   </div>
-  <div class="hero-stat">
-    <div class="v">{{ records|length }}</div>
-    <div class="k">{{ t.history_stat_runs }}</div>
+  <div class="view-hero-stats">
+    <div class="hero-stat">
+      <div class="v">{{ records|length }}</div>
+      <div class="k">{{ t.history_stat_runs }}</div>
+    </div>
   </div>
 </section>
 
 {% if trends %}
 <section class="sec">
   <div class="sec-head">
-    <div class="sec-title">{{ t.history_trends_title }}</div>
-    <div class="sec-sub">{{ t.history_trends_desc }}</div>
-  </div>
-  <div class="trend-grid">
-    {% for tr in trends %}
-    <div class="trend-card">
-      <div class="trend-head">
-        <span class="t-pipe">{{ tr.pipeline }}</span>
-        <span class="badge">{{ tr.view }}</span>
-      </div>
-      <div class="trend-spark">{{ tr.svg|safe }}</div>
-      <div class="trend-meta">
-        {% if tr.latest is not none %}
-        <span class="mono">CER {{ "%.4f"|format(tr.latest) }}</span>
-        {% endif %}
-        <span class="mono">{{ tr.n }}×</span>
-      </div>
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.history_trends_title }}</div>
+      <div class="sec-sub">{{ t.history_trends_desc }}</div>
     </div>
-    {% endfor %}
+  </div>
+  <div class="sec-body">
+    <div class="trend-grid">
+      {% for tr in trends %}
+      <div class="panel trend-card">
+        <div class="trend-head">
+          <span class="t-pipe">{{ tr.pipeline }}</span>
+          <span class="badge">{{ tr.view }}</span>
+        </div>
+        <div class="trend-spark">{{ tr.svg|safe }}</div>
+        <div class="trend-meta">
+          {% if tr.latest is not none %}
+          <span class="mono">CER {{ "%.4f"|format(tr.latest) }}</span>
+          {% endif %}
+          <span class="mono">{{ tr.n }}×</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
   </div>
 </section>
 {% endif %}
 
 <section class="sec">
   <div class="sec-head">
-    <div class="sec-title">{{ t.history_regressions_title }}</div>
-    <div class="sec-sub">{{ t.history_regressions_desc }}</div>
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.history_regressions_title }}</div>
+      <div class="sec-sub">{{ t.history_regressions_desc }}</div>
+    </div>
   </div>
-  {% if regressions %}
-  <table class="data">
-    <thead>
-      <tr>
-        <th>{{ t.history_col_pipeline }}</th>
-        <th>{{ t.history_col_view }}</th>
-        <th>{{ t.history_col_metric }}</th>
-        <th>{{ t.history_col_change }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in regressions %}
-      <tr>
-        <td>{{ r.pipeline }}</td>
-        <td>{{ r.view }}</td>
-        <td>{{ r.metric }}</td>
-        <td>
-          <span class="dot off"></span>
-          {{ "%.4f"|format(r.previous) }} → {{ "%.4f"|format(r.latest) }}
-          (+{{ "%.4f"|format(r.delta) }})
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">{{ t.history_no_regressions }}</p>
-  {% endif %}
+  <div class="sec-body">
+    {% if regressions %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>{{ t.history_col_pipeline }}</th>
+            <th>{{ t.history_col_view }}</th>
+            <th>{{ t.history_col_metric }}</th>
+            <th>{{ t.history_col_change }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in regressions %}
+          <tr>
+            <td>{{ r.pipeline }}</td>
+            <td>{{ r.view }}</td>
+            <td>{{ r.metric }}</td>
+            <td>
+              <span class="dot off"></span>
+              {{ "%.4f"|format(r.previous) }} → {{ "%.4f"|format(r.latest) }}
+              (+{{ "%.4f"|format(r.delta) }})
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">{{ t.history_no_regressions }}</p>
+    {% endif %}
+  </div>
 </section>
 
 <section class="sec">
   <div class="sec-head">
-    <div class="sec-title">{{ t.history_log_title }}</div>
-    <div class="sec-sub">{{ t.history_log_desc }}</div>
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.history_log_title }}</div>
+      <div class="sec-sub">{{ t.history_log_desc }}</div>
+    </div>
   </div>
-  {% if records %}
-  <table class="data">
-    <thead>
-      <tr>
-        <th>{{ t.history_col_run }}</th>
-        <th>{{ t.history_col_pipeline }}</th>
-        <th>{{ t.history_col_view }}</th>
-        <th>{{ t.history_col_metric }}</th>
-        <th>{{ t.history_col_value }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in records %}
-      <tr>
-        <td class="mono">{{ r.run_id }}</td>
-        <td>{{ r.pipeline }}</td>
-        <td>{{ r.view }}</td>
-        <td>{{ r.metric }}</td>
-        <td class="mono">{{ "%.4f"|format(r.value) }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">{{ t.history_empty }}</p>
-  {% endif %}
+  <div class="sec-body">
+    {% if records %}
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr>
+            <th>{{ t.history_col_run }}</th>
+            <th>{{ t.history_col_pipeline }}</th>
+            <th>{{ t.history_col_view }}</th>
+            <th>{{ t.history_col_metric }}</th>
+            <th>{{ t.history_col_value }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in records %}
+          <tr>
+            <td class="mono">{{ r.run_id }}</td>
+            <td>{{ r.pipeline }}</td>
+            <td>{{ r.view }}</td>
+            <td>{{ r.metric }}</td>
+            <td class="mono">{{ "%.4f"|format(r.value) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="empty">{{ t.history_empty }}</p>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

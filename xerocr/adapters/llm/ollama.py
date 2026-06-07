@@ -62,19 +62,65 @@ def _invoke_ollama(  # pragma: no cover -- réseau (serveur ollama ; cf. marqueu
         raise AdapterStepError(
             "ollama : httpx non installé (pip install 'xerocr[ollama]')."
         ) from exc
-    payload = {"model": model, "prompt": prompt, "stream": False}
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+    }
     client = httpx.Client(timeout=deadline.as_sdk_timeout())
     # Annulation câblée : fermer le client interrompt la requête en vol.
     control.register_cancel_handle(client.close)
     try:
-        response = client.post(f"{host}/api/generate", json=payload)
+        # **/api/chat** (et non /api/generate) : applique le gabarit de chat du
+        # modèle. Indispensable pour les modèles *instruct* (ex. churro), qui
+        # échouent sur /api/generate (complétion brute). C'est l'endpoint
+        # qu'utilise ``ollama run``.
+        response = client.post(f"{host}/api/chat", json=payload)
         response.raise_for_status()
         data = response.json()
     except httpx.HTTPError as exc:
         _fail_or_cancel(control, model, exc)
     finally:
         client.close()
-    return normalize_llm_content(data.get("response"))
+    # Ollama peut renvoyer une **erreur en HTTP 200** (modèle introuvable sous ce
+    # nom, mémoire insuffisante…) : ``raise_for_status`` ne la voit pas. On la
+    # remonte explicitement, sinon la « correction » serait un texte vide silencieux.
+    if isinstance(data, dict) and data.get("error"):
+        raise AdapterStepError(f"ollama a échoué ({model}) : {data['error']}")
+    message = data.get("message") if isinstance(data, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    return normalize_llm_content(content)
+
+
+def list_installed_models(
+    host: str = _DEFAULT_HOST, *, timeout: float = 3.0
+) -> tuple[str, ...]:
+    """Noms des modèles installés sur le serveur ollama (``GET /api/tags``).
+
+    **Best-effort, commodité d'UI** : serveur injoignable, ``httpx`` absent ou
+    réponse inattendue → ``()`` (l'interface retombe alors sur la saisie libre).
+    Aucune exception propagée. Le ``name`` renvoyé est le **tag exact** servable à
+    ``/api/generate`` (ex. ``gemma3:1b`` ou ``hf.co/…/churro-3B-GGUF:Q4_K_M``).
+    """
+    try:
+        import httpx  # type: ignore[import-not-found]
+    except ImportError:
+        return ()
+    try:
+        with httpx.Client(timeout=timeout) as client:
+            response = client.get(f"{host}/api/tags")
+            response.raise_for_status()
+            data = response.json()
+    except (httpx.HTTPError, ValueError):
+        return ()
+    models = data.get("models") if isinstance(data, dict) else None
+    if not isinstance(models, list):
+        return ()
+    return tuple(
+        m["name"]
+        for m in models
+        if isinstance(m, dict) and isinstance(m.get("name"), str)
+    )
 
 
 class OllamaAdapter:

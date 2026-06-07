@@ -205,7 +205,7 @@ def test_library_corpora_empty_state(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     body = _client(tmp_path, monkeypatch).get("/library").text
-    assert "Aucun corpus enregistré" in body
+    assert "Aucun corpus local" in body
 
 
 def test_library_has_upload_and_import_controls(
@@ -214,11 +214,12 @@ def test_library_has_upload_and_import_controls(
     body = _client(tmp_path, monkeypatch).get("/library").text
     assert 'id="corpus-file"' in body  # upload ZIP
     assert 'id="dropzone"' in body  # zone de glisser-déposer
-    assert 'id="import-source"' in body  # imports distants
-    for value in ('value="iiif"', 'value="gallica"',
-                  'value="escriptorium"', 'value="huggingface"'):
-        assert value in body
-    for name in ("manifest_url", "ark", "base_url", "token", "dataset_id"):
+    for source in ("iiif", "gallica", "escriptorium", "huggingface"):
+        assert f'data-source-tab="{source}"' in body
+    for source in ("iiif", "gallica", "escriptorium"):
+        assert f'data-import-source="{source}"' in body
+    assert 'data-import-source="huggingface"' in body
+    for name in ("manifest_url", "ark", "base_url", "token"):
         assert f'name="{name}"' in body
 
 

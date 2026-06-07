@@ -123,12 +123,17 @@ class JobRunner:
         try:
             with TemporaryDirectory(prefix="xerocr-job-") as workspace:
                 spec = build_spec(Path(workspace))
+
+                def _on_progress(done: int, total: int) -> None:
+                    self._store.progress(job_id, done, total)
+
                 result = run_orchestrator(
                     spec,
                     registry=self._registry,
                     code_version=self._code_version,
                     control=control,
                     artifact_sink=self._persist_layouts,
+                    on_progress=_on_progress,
                 )
                 self._reports_dir.mkdir(parents=True, exist_ok=True)
                 run_id = result.manifest.run_id

@@ -25,7 +25,7 @@
 | **Stack UI** | **Rendu serveur** (Jinja2 + tokens/polices du design + JS léger htmx/Alpine). Le design React = **spec visuelle**, pas de SPA livrée. | Conforme à « pas de SPA lourde » (D-β) ; 1 seule stack ; réutilise le backend ; le look reste identique. |
 | **Persistance des rapports** | **Push vers le dépôt GitHub** (ou Dataset HF) après chaque run. | HF Space = disque **éphémère** ; le push survit aux redémarrages **et** alimente la Phase B via `deploy-space.yml`. |
 | **Moteurs** | **API cloud + Tesseract = disponibles** (légers, clés en secrets) ; **Pero/Kraken/Calamari = listés mais indisponibles**. | Pero & co = PyTorch + modèles + **GPU payant** → hors Space gratuit (cf. §6). |
-| **Typographie** | **Titres = FluxischElse · corps = OCR-A.** | Remplace `tokens.css` hérité. FluxischElse = OFL 1.1. OCR-A = **John Sauter, domaine public** (`.pfa` à convertir en woff2) ; les OCR-A BT Bitstream sont écartées (propriétaires). Lisibilité à valider. |
+| **Typographie** | **Titres = Mona Sans VF · corps/UI = IBM Plex Sans · données = IBM Plex Mono · accents = Fluxisch Else · logo/tags courts = OCR-A.** | Remplace `tokens.css` hérité. Toutes les fontes sont auto-hébergées en woff2 ; Fluxisch Else = OFL 1.1, IBM Plex = OFL 1.1, OCR-A = **John Sauter, domaine public**. Lisibilité à valider. |
 
 ## 3. Le pivot d'archi (assumé)
 
@@ -71,7 +71,7 @@ synthesis. **Manque : segmentation** (cf. §8).
 
 | Écran (alias `TU#` → `S#`) | Livre | Note |
 |---|---|---|
-| **TU1 — Coquille / design shell** | tokens + polices (FluxischElse/OCR-A) + chrome (rail, hero, panneau système) appliqués à l'app **actuelle** (read-only), **déployé**. Réserve les emplacements de nav : Bibliothèque · Banc d'essai · Rapports · **Segmentation** · Historique · Moteurs. | fine, pleine profondeur, faible risque ; valide l'approche design-en-Jinja2 |
+| **TU1 — Coquille / design shell** | tokens + polices (Mona Sans VF / IBM Plex Sans / IBM Plex Mono / Fluxisch Else / OCR-A) + chrome (rail, hero, panneau système) appliqués à l'app **actuelle** (read-only), **déployé**. Réserve les emplacements de nav : Bibliothèque · Banc d'essai · Rapports · **Segmentation** · Historique · Moteurs. | fine, pleine profondeur, faible risque ; valide l'approche design-en-Jinja2 |
 | **TU2 — Lanceur « Banc d'essai »** (cœur Phase A) | POST run + upload corpus + **SSE** progression + onglet Moteurs (dispo/indispo) ; clés depuis secrets ; écrit un `RunResult` | la grosse tranche ; sécurité d'exécution. **TU2.a fait** : walking skeleton `POST/GET/cancel /api/runs` → run de fond annulable (`JobRunner`+`JobStore`) → `RunResult` écrit (démo `precomputed`), **CSRF** + **gate mode public**. **TU2.b fait** : onglet Moteurs — `GET /api/engines`. **TU2.c fait** : upload corpus ZIP (`/api/corpus`) — ingestion durcie. **TU2.d fait** : `POST /api/runs {engine, corpus_id}` — sélection moteur + gardes HTTP (422/403/404/409). **TU2.e fait** : SSE (`/events` + `Last-Event-ID`). **TU2.f.1 fait** : page `/benchmark` interactive (rendu serveur + JS auto-hébergé : lance la démo, suit en SSE, lien rapport ; CSP ouverte `script/connect 'self'`). Reste : **TU2.f.2** page Moteurs + UI upload/sélection **(déplacée en Bibliothèque, D-065)** ; run tesseract réel = test `live`. |
 | **TU3 — Persistance** | push `RunResult`(+HTML) vers dépôt/Dataset après run (token en secret) | rend durable + alimente Phase B |
 | **TU4 — Vues rapport** | overview/by-engine/by-document/crosses/synthesis au design | consomme `RunResult`, zéro data-layer |

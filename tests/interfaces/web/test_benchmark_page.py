@@ -41,9 +41,9 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     # Le corpus est SÉLECTIONNÉ ici (préparé dans la Bibliothèque), pas téléversé.
     body = _client(tmp_path).get("/benchmark").text
     assert 'id="corpus-select"' in body  # <select> de corpus existants
-    assert 'id="competitors"' in body  # file de concurrents (composeur)
-    assert 'id="competitor-tpl"' in body  # gabarit de concurrent
-    assert 'class="select comp-mode"' in body  # sélecteur de mode
+    assert 'id="queue-list"' in body  # file de concurrents rendue côté client
+    assert 'id="queue-row-tpl"' in body  # gabarit de ligne de file
+    assert 'data-mode="ocr_only"' in body  # sélecteur de mode par onglets
     # moteurs câblés présents dans le catalogue (par rôle) ; precomputed = démo, exclu.
     for label in ("Tesseract", "OpenAI", "Ollama"):
         assert label in body
@@ -96,7 +96,7 @@ def test_benchmark_js_syntax_is_valid() -> None:
     assert result.returncode == 0, result.stderr
 
 
-# --- Bouton « Segmenter » (S6/T2) ----------------------------------------------
+# --- Intégration segmentation : hors du composeur principal --------------------
 
 def _benchmark_body(
     tmp_path: Path,
@@ -137,17 +137,10 @@ def _benchmark_body(
     return TestClient(app).get("/benchmark").text
 
 
-def test_segment_button_shown_when_available(tmp_path: Path) -> None:
+def test_segmentation_is_not_exposed_in_benchmark_shell(tmp_path: Path) -> None:
     body = _benchmark_body(tmp_path, segmenter_available=True)
-    assert 'id="segment-btn"' in body
-    assert "Segmenter (PP-DocLayout)" in body
-
-
-def test_segment_button_hidden_when_unavailable(tmp_path: Path) -> None:
-    body = _benchmark_body(tmp_path, segmenter_available=False)
-    assert 'id="segment-btn"' not in body  # pas de bouton actif
-    assert "indisponible" in body  # motif affiché
-    assert "[segment]" in body
+    assert 'id="segment-btn"' not in body
+    assert "PP-DocLayout" not in body
 
 
 def test_benchmark_corpus_select_lists_corpora(tmp_path: Path) -> None:

@@ -26,14 +26,12 @@ def test_engines_page_lists_socle(tmp_path: Path) -> None:
 
 def test_engines_page_nav_active_and_no_script(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/engines").text
-    assert 'aria-current="page"' in body  # l'onglet Moteurs est actif
     assert "<script" not in body  # 100 % rendu serveur, aucun JS
 
 
-def test_moteurs_is_a_live_nav_link_from_home(tmp_path: Path) -> None:
-    # « Moteurs » n'est plus un placeholder « à venir » : c'est un lien vivant.
+def test_moteurs_is_not_listed_in_home_nav(tmp_path: Path) -> None:
     home = _client(tmp_path).get("/").text
-    assert 'href="/engines?lang=fr"' in home
+    assert 'href="/engines?lang=fr"' not in home
 
 
 def test_public_mode_marks_cloud_unavailable(tmp_path: Path) -> None:

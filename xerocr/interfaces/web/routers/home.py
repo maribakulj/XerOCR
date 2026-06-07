@@ -23,7 +23,11 @@ from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFace
 from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import StatusProvider
+from xerocr.app.engines import (
+    StatusProvider,
+    installed_mistral_models,
+    installed_ollama_models,
+)
 from xerocr.app.run_planning import benchmark_engine_catalog
 from xerocr.app.segmentation import SegmentationStore
 from xerocr.formats.text import NORMALIZATION_PROFILES
@@ -39,10 +43,8 @@ logger = logging.getLogger(__name__)
 #: à chaque chargement. Fenêtre courte — la fraîcheur prime sur le cache.
 _CATALOGUE_TTL_SECONDS = 300.0
 
-#: Emplacements de nav réservés dès TU1 (ordre fixé par la spec).
-_NAV_IDS = ("library", "benchmark", "reports", "segmentation", "history", "engines")
-#: Vues **vivantes** : id de nav → chemin. Les autres restent « à venir ».
-_LIVE_VIEWS = {
+#: Vues **vivantes** : id de nav → chemin.
+_VIEW_PATHS = {
     "library": "/library",
     "reports": "/",
     "benchmark": "/benchmark",
@@ -50,29 +52,26 @@ _LIVE_VIEWS = {
     "history": "/history",
     "engines": "/engines",
 }
+_PRIMARY_NAV_IDS = ("library", "benchmark", "reports", "history")
+_SECONDARY_NAV_IDS = ("segmentation", "engines")
 
 
-def _nav(
-    t: dict[str, str], lang: str, active: str, metas: dict[str, str]
+def _nav_items(
+    ids: tuple[str, ...],
+    t: dict[str, str],
+    lang: str,
+    active: str,
+    metas: dict[str, str],
 ) -> list[dict[str, str]]:
-    """Construit les entrées de nav (états active/link/soon) pour la vue ``active``."""
+    """Construit les entrées de navigation pour un groupe d'identifiants."""
     items: list[dict[str, str]] = []
-    for nav_id in _NAV_IDS:
-        if nav_id == active:
-            state = "active"
-        elif nav_id in _LIVE_VIEWS:
-            state = "link"
-        else:
-            state = "soon"
-        href = (
-            f"{_LIVE_VIEWS[nav_id]}?lang={lang}" if nav_id in _LIVE_VIEWS else ""
-        )
+    for nav_id in ids:
         items.append(
             {
                 "id": nav_id,
                 "label": t[f"nav_{nav_id}"],
-                "state": state,
-                "href": href,
+                "state": "active" if nav_id == active else "link",
+                "href": f"{_VIEW_PATHS[nav_id]}?lang={lang}",
                 "meta": metas.get(nav_id, ""),
             }
         )
@@ -80,13 +79,24 @@ def _nav(
 
 
 def _corpora_summaries(corpus_store: CorpusStore | None) -> list[dict[str, object]]:
-    """Résumés des corpus enregistrés (id, nom, nb de documents) — vide si aucun."""
+    """Résumés des corpus enregistrés pour l'UI Bibliothèque/Benchmark."""
     if corpus_store is None:
         return []
-    return [
-        {"id": cid, "name": spec.name, "n_documents": len(spec.documents)}
-        for cid, spec in corpus_store.list_corpora()
-    ]
+    summaries: list[dict[str, object]] = []
+    for cid, spec in corpus_store.list_corpora():
+        docs = spec.documents
+        summaries.append(
+            {
+                "id": cid,
+                "name": spec.name,
+                "n_documents": len(docs),
+                "n_ground_truth": sum(1 for doc in docs if doc.ground_truths),
+                "preview_ids": [doc.id for doc in docs[:3]],
+                "source": spec.metadata.get("source", ""),
+                "language": spec.metadata.get("language", ""),
+            }
+        )
+    return summaries
 
 
 def _cer_trends(
@@ -147,12 +157,21 @@ def build_home_router(
         lang: str, active: str, metas: dict[str, str]
     ) -> dict[str, object]:
         t = strings_for(lang)
+        engine_list = tuple(statuses())
+        n_ready = sum(1 for status in engine_list if status.available)
+        engine_labels = [status.label for status in engine_list if status.available][:3]
         return {
             "lang": lang,
             "t": t,
-            "nav": _nav(t, lang, active, metas),
+            "primary_nav": _nav_items(_PRIMARY_NAV_IDS, t, lang, active, metas),
+            "secondary_nav": _nav_items(_SECONDARY_NAV_IDS, t, lang, active, metas),
             "version": app_version,
-            "view_path": _LIVE_VIEWS[active],
+            "view_path": _VIEW_PATHS[active],
+            "system_pipeline": {
+                "ready": n_ready,
+                "total": len(engine_list),
+                "labels": engine_labels,
+            },
             # Les imports distants fetchent côté serveur → masqués en mode public
             # (l'endpoint les refuse de toute façon : 403).
             "public_mode": public_mode,
@@ -177,6 +196,11 @@ def build_home_router(
         # Catalogue moteurs par rôle (ocr/llm/vlm) : options rendues **serveur**
         # (testables) ; le composeur JS ne fait qu'assembler les concurrents.
         context["catalog"] = benchmark_engine_catalog(statuses())
+        # Modèles ollama installés → menu déroulant (au lieu d'une saisie à
+        # l'aveugle). Best-effort : serveur éteint → liste vide, saisie libre.
+        context["ollama_models"] = installed_ollama_models()
+        # Modèles Mistral disponibles pour la clé → menu déroulant dynamique.
+        context["mistral_models"] = installed_mistral_models()
         # Le corpus est préparé dans la Bibliothèque ; ici on le sélectionne.
         context["corpora"] = _corpora_summaries(corpus_store)
         # Profils de normalisation lus **dynamiquement** depuis formats/text
@@ -220,12 +244,17 @@ def build_home_router(
         catalogue = htr_cache.get_or_compute("htr_united", fetch_catalogue)
         htr = catalogue.search(q) if q else catalogue.entries
         hf = hf_cache.get_or_compute(q, lambda: HuggingFaceCatalogue().search(q))
+        corpora = _corpora_summaries(corpus_store)
         context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
         context["query"] = q
-        context["corpora"] = _corpora_summaries(corpus_store)
+        context["corpora"] = corpora
         context["htr_entries"] = htr
         context["htr_is_demo"] = catalogue.is_demo
         context["hf_datasets"] = hf
+        context["n_corpora"] = len(corpora)
+        context["n_htr"] = len(htr)
+        context["n_hf"] = len(hf)
+        context["n_pages"] = sum(int(c["n_documents"]) for c in corpora)  # type: ignore[call-overload]
         return templates.TemplateResponse(request, "library.html", context)
 
     @router.get("/history", response_class=HTMLResponse)
@@ -268,4 +297,3 @@ def build_home_router(
 
 
 __all__ = ["build_home_router"]
-

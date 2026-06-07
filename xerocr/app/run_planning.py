@@ -74,6 +74,9 @@ class Competitor(BaseModel):
     llm: str | None = Field(default=None, max_length=64)
     model: str | None = Field(default=None, max_length=128)
     lang: str = Field(default="fra", max_length=64)
+    #: Prompt de post-correction/transcription (modes LLM/VLM). ``None`` → prompt
+    #: par défaut du rôle (``default_prompt_for_role``). Exposé à l'UI.
+    prompt: str | None = Field(default=None, max_length=8000)
 
 
 #: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
@@ -138,6 +141,8 @@ def _llm_kwargs(
     kwargs: dict[str, str | int | float | bool] = {"label": label, "role": role}
     if comp.model:
         kwargs["model"] = comp.model
+    if comp.prompt:
+        kwargs["prompt"] = comp.prompt
     return kwargs
 
 

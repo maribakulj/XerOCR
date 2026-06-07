@@ -62,6 +62,10 @@ class Job(BaseModel):
     error: str | None = None
     #: URL distante du rapport publié (S3) si la persistance est active, sinon ``None``.
     published_url: str | None = None
+    #: Progression : unités (document × concurrent) traitées / total. ``0/0`` =
+    #: inconnu (job pas encore démarré). Alimente la barre de progression (SSE).
+    done: int = 0
+    total: int = 0
 
 
 class JobStore:
@@ -112,6 +116,28 @@ class JobStore:
                     "report_name": report_name,
                     "error": error,
                     "published_url": published_url,
+                    "updated_at": utcnow().isoformat(),
+                }
+            )
+            self._jobs[job_id] = updated
+            self._history[job_id].append(updated)
+        return updated
+
+    def progress(self, job_id: str, done: int, total: int) -> Job:
+        """Met à jour la progression (``done``/``total``) **sans changer l'état**.
+
+        Ajoute un instantané au journal → un **événement SSE** (de type ``running``)
+        par unité traitée, que l'UI consomme pour la barre de progression. Les
+        autres champs (état, rapport…) sont préservés (``model_copy`` ciblé).
+        """
+        with self._lock:
+            current = self._jobs.get(job_id)
+            if current is None:
+                raise JobError(f"job {job_id!r} introuvable.")
+            updated = current.model_copy(
+                update={
+                    "done": done,
+                    "total": total,
                     "updated_at": utcnow().isoformat(),
                 }
             )

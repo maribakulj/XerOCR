@@ -56,7 +56,8 @@ def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
     if timeout is not None:
         kwargs["timeout"] = timeout
     try:
-        response = OpenAI(api_key=api_key).chat.completions.create(**kwargs)
+        # SDK openai typé strictement ; kwargs valides à l'exécution (tests live).
+        response = OpenAI(api_key=api_key).chat.completions.create(**kwargs)  # type: ignore[call-overload]
     except OpenAIError as exc:
         raise AdapterStepError(
             f"openai a échoué ({model}) : {type(exc).__name__}: {exc}"

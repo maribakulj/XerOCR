@@ -81,7 +81,35 @@ def _compare_command(path_a: str, path_b: str, output: str) -> int:
     return 0
 
 
+def _load_dotenv(path: Path = Path(".env")) -> list[str]:
+    """Charge un fichier ``.env`` (``CLE=valeur`` par ligne) dans l'environnement.
+
+    Sans dépendance. **Ne remplace jamais** une variable déjà définie : l'env réel
+    prime (un secret HuggingFace l'emporte sur le ``.env`` local). ``#`` et lignes
+    vides ignorés. Renvoie les **noms** chargés (jamais les valeurs) pour une trace
+    lisible. C'est le moyen d'entrer ses clés en local (``MISTRAL_API_KEY=…``).
+    """
+    if not path.is_file():
+        return []
+    loaded: list[str] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if key and key not in os.environ:
+            os.environ[key] = value.strip().strip('"').strip("'")
+            loaded.append(key)
+    return loaded
+
+
 def _serve_command(host: str, port: int, reports_dir: str | None) -> int:
+    # Clés locales depuis ``.env`` (avant tout : la disponibilité des moteurs est
+    # capturée au démarrage). Sur HuggingFace, les secrets du Space priment.
+    loaded = _load_dotenv()
+    if loaded:
+        print(f"Clés chargées depuis .env : {', '.join(loaded)}")
     # uvicorn = extra [serve], importé paresseusement : la CLI reste utilisable
     # (demo/run/compare) sans la pile web installée.
     try:

@@ -12,6 +12,7 @@ loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
@@ -21,15 +22,17 @@ from xerocr.app.modules.registry import ModuleRegistry
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.deadline import Deadline
 from xerocr.domain.documents import DocumentRef
-from xerocr.domain.errors import XerOCRError
+from xerocr.domain.errors import AdapterStepError, XerOCRError
 from xerocr.domain.run import RunManifest, utcnow
 from xerocr.domain.run_spec import RunSpec
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
 from xerocr.evaluation.result import RunResult
 from xerocr.evaluation.runner import evaluate_run
-from xerocr.pipeline.executor import PipelineExecutor
+from xerocr.pipeline.executor import PipelineExecutor, PipelineStepError
 from xerocr.pipeline.protocols import Module
 from xerocr.pipeline.run_control import RunControl
+
+logger = logging.getLogger(__name__)
 
 
 class OrchestrationError(XerOCRError):
@@ -42,6 +45,9 @@ PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
 #: workspace (les URI sont encore lisibles). La couche 6 (app) le fournit ;
 #: l'orchestrateur l'invoque sans rien connaître de sa cible (un store, etc.).
 ArtifactSink = Callable[[PipelineOutputs, RunManifest], None]
+#: Callback de progression : ``(unités traitées, total)``. Émis après chaque
+#: document (succès **ou** échec isolé). Une unité = un (concurrent × document).
+ProgressCallback = Callable[[int, int], None]
 
 
 def run(
@@ -52,6 +58,7 @@ def run(
     deadline: Deadline | None = None,
     control: RunControl | None = None,
     artifact_sink: ArtifactSink | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> RunResult:
     """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques).
 
@@ -83,6 +90,8 @@ def run(
     # différents) écriraient sinon le même fichier de sortie, et le second
     # écraserait le premier → évaluation contaminée. L'isolation par pipeline
     # tue cette collision sans que les adapters aient à connaître la topologie.
+    total_units = len(spec.pipelines) * len(spec.corpus.documents)
+    done_units = 0
     with TemporaryDirectory(prefix="xerocr-run-") as workspace:
         pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
         for index, pipeline in enumerate(spec.pipelines):
@@ -90,15 +99,36 @@ def run(
             pipeline_workspace.mkdir()
             per_document: dict[str, dict[ArtifactType, Artifact]] = {}
             for document in spec.corpus.documents:
-                per_document[document.id] = executor.execute_document(
-                    pipeline,
-                    modules,
-                    _initial_inputs(document),
-                    document_id=document.id,
-                    deadline=deadline,
-                    control=control,
-                    workspace_uri=str(pipeline_workspace),
-                )
+                inputs = _initial_inputs(document)
+                try:
+                    per_document[document.id] = executor.execute_document(
+                        pipeline,
+                        modules,
+                        inputs,
+                        document_id=document.id,
+                        deadline=deadline,
+                        control=control,
+                        workspace_uri=str(pipeline_workspace),
+                    )
+                except (AdapterStepError, PipelineStepError) as exc:
+                    # Un concurrent qui échoue (clé d'API absente, moteur
+                    # indisponible, sortie invalide) ne doit PAS abattre tout le
+                    # banc d'essai : on **isole** l'échec à ce (concurrent,
+                    # document), on journalise, et les autres concurrents restent
+                    # exécutés et scorés. Le document non produit n'a pas de
+                    # candidat → l'évaluation le laisse simplement non scoré.
+                    # L'annulation (`RunCancelledError`, hors de ces classes)
+                    # n'est PAS rattrapée : elle arrête bien tout le run.
+                    logger.warning(
+                        "[orchestrator] concurrent %r · document %r échoué : %s",
+                        pipeline.name,
+                        document.id,
+                        exc,
+                    )
+                    per_document[document.id] = {}
+                done_units += 1
+                if on_progress is not None:
+                    on_progress(done_units, total_units)
             pipeline_outputs[pipeline.name] = per_document
 
         completed_at = utcnow()

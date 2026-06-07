@@ -27,3 +27,12 @@ def test_space_defaults_to_public_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SPACE_ID", "user/space")
     monkeypatch.delenv("XEROCR_PUBLIC_MODE", raising=False)
     assert _resolve_public_mode(None) is True
+
+
+def test_space_explicit_false_env_opens(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Un Space PRIVÉ peut ouvrir explicitement (moteurs cloud avec sa clé) via
+    # XEROCR_PUBLIC_MODE=false. Sans ça, impossible de débloquer Mistral/OpenAI
+    # sur un Space (le défaut reste verrouillé). L'opérateur assume l'exposition.
+    monkeypatch.setenv("SPACE_ID", "user/space")
+    monkeypatch.setenv("XEROCR_PUBLIC_MODE", "false")
+    assert _resolve_public_mode(None) is False

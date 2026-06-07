@@ -3,8 +3,9 @@
 Produit un document autonome (**CSS inline**, aucune dépendance CDN/JS), donc
 hébergeable tel quel **et déterministe** (cf. plan §Cibles de distribution). Le
 style reprend le **design** (gris chaud, chrome pilule, cartes ``sec``, tables
-tabulaires) ; les **polices du design** — titres *Fluxisch Else*, corps + données
-*OCR-A* — sont **incorporées en data-URI** (``_style.font_face_css``) pour garder
+tabulaires) ; les **polices du design** — titres *Mona Sans*, corps *IBM Plex
+Sans*, données *IBM Plex Mono*, accents *Fluxisch Else*, logo *OCR-A* — sont
+**incorporées en data-URI** (``_style.font_face_css``) pour garder
 l'identité typographique **et** l'autonomie (S4.b.1a, option (a) — cf. D-019). Les
 **données** sont échappées via ``escape`` ; la **structure** est de l'``Html`` de
 confiance.
@@ -18,16 +19,18 @@ from xerocr.reports._style import font_face_css
 from xerocr.reports.section import Html
 
 #: CSS du rapport au design (sous-ensemble de ``design/tokens.css``). Les
-#: ``@font-face`` (Fluxisch Else + OCR-A, data-URI) sont préfixés au rendu par
+#: ``@font-face`` (Mona/IBM Plex/Fluxisch/OCR-A, data-URI) sont préfixés au rendu par
 #: ``font_face_css()``. Statique → le rapport reste octet-stable.
 _CSS = (
     ":root{--paper:#EBE8E0;--surface:#F4F1EA;--raised:#FBFAF6;--g-50:#E4E0D7;"
     "--g-100:#D6D2C8;--g-300:#8D8879;--g-400:#6F6B60;--g-500:#54514A;"
     "--g-700:#26241F;--ink:#1A1917;--fern:oklch(0.50 0.07 145);"
     "--r-md:14px;--r-lg:20px;--r-pill:999px;"
-    "--display:'Fluxisch Else',Georgia,serif;"
-    "--sans:'OCRA',ui-monospace,monospace;"
-    "--mono:'OCRA',ui-monospace,monospace;}"
+    "--display:'Mona Sans VF','IBM Plex Sans',system-ui,sans-serif;"
+    "--sans:'IBM Plex Sans',system-ui,sans-serif;"
+    "--mono:'IBM Plex Mono',ui-monospace,monospace;"
+    "--accent:'Fluxisch Else',Georgia,serif;"
+    "--ocr:'OCRA','IBM Plex Mono',ui-monospace,monospace;}"
     "*{box-sizing:border-box;margin:0;padding:0;}"
     "body.report-board{background-color:var(--paper);"
     "background-image:url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'"
@@ -42,16 +45,18 @@ _CSS = (
     ".report-chrome .wm-mark{display:inline-flex;align-items:center;"
     "justify-content:center;width:24px;height:24px;border-radius:50%;"
     "background:var(--paper);color:var(--ink);font-weight:700;font-size:12px;}"
-    ".report-chrome .wm-name{font-family:var(--display);font-weight:600;"
-    "font-size:18px;letter-spacing:-0.02em;}"
+    ".report-chrome .wm-name{font-family:var(--ocr);font-weight:400;"
+    "font-size:18px;letter-spacing:0.01em;}"
     ".report-chrome .wm-sep{width:1px;height:16px;background:rgba(239,237,232,0.2);}"
     ".report-chrome .wm-sub{font-family:var(--mono);font-size:11px;"
     "letter-spacing:0.04em;color:rgba(239,237,232,0.6);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
-    ".sec h1{font-family:var(--display);font-size:24px;letter-spacing:-0.02em;"
+    ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
+    "font-optical-sizing:auto;letter-spacing:0;"
     "margin-bottom:6px;}"
-    ".sec h2{font-family:var(--display);font-size:18px;letter-spacing:-0.015em;"
+    ".sec h2{font-family:var(--display);font-size:18px;font-weight:800;"
+    "font-optical-sizing:auto;letter-spacing:0;"
     "color:var(--ink);margin:18px 0 10px;}.sec h2:first-of-type{margin-top:0;}"
     ".sec p.muted{font-size:12.5px;color:var(--g-400);margin-bottom:10px;}"
     "table{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0;}"
@@ -70,7 +75,8 @@ _CSS = (
     ".readout .r-label{font-size:10px;font-weight:500;letter-spacing:0.06em;"
     "text-transform:uppercase;color:var(--g-400);}"
     ".readout .r-value{font-family:var(--display);font-size:30px;"
-    "letter-spacing:-0.03em;font-variant-numeric:tabular-nums;"
+    "font-weight:800;font-optical-sizing:auto;letter-spacing:0;"
+    "font-variant-numeric:tabular-nums;"
     "line-height:1;color:var(--ink);}"
     "table.data{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0 0;}"
     "table.data th{text-align:left;font-size:10.5px;letter-spacing:0.04em;"

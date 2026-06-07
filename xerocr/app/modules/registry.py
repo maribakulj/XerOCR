@@ -88,10 +88,12 @@ def _build_openai(kwargs: Mapping[str, ParamValue]) -> Module:
         )
     from xerocr.adapters.llm.openai import OpenAIAdapter
 
+    prompt = kwargs.get("prompt")
     return OpenAIAdapter(
         label=label,
         model=str(kwargs.get("model", "gpt-4o-mini")),
         role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
     )
 
 
@@ -103,10 +105,13 @@ def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
         )
     from xerocr.adapters.llm.ollama import OllamaAdapter
 
+    prompt = kwargs.get("prompt")
+    extra = {"prompt": prompt} if isinstance(prompt, str) else {}
     return OllamaAdapter(
         label=label,
         model=str(kwargs.get("model", "llama3")),
         host=str(kwargs.get("host", "http://localhost:11434")),
+        **extra,
     )
 
 
@@ -118,10 +123,12 @@ def _build_mistral(kwargs: Mapping[str, ParamValue]) -> Module:
         )
     from xerocr.adapters.llm.mistral import MistralAdapter
 
+    prompt = kwargs.get("prompt")
     return MistralAdapter(
         label=label,
         model=str(kwargs.get("model", "mistral-small-latest")),
         role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
     )
 
 
@@ -133,10 +140,12 @@ def _build_anthropic(kwargs: Mapping[str, ParamValue]) -> Module:
         )
     from xerocr.adapters.llm.anthropic import AnthropicAdapter
 
+    prompt = kwargs.get("prompt")
     return AnthropicAdapter(
         label=label,
         model=str(kwargs.get("model", "claude-haiku-4-5-20251001")),
         role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
     )
 
 

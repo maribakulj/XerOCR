@@ -58,8 +58,12 @@ def test_stream_replays_full_history(tmp_path: Path) -> None:
     events = _parse_sse(resp.text)
     ids = [eid for eid, _ in events]
     states = [ev for _, ev in events]
-    assert ids == ["1", "2", "3"]  # pending → running → done
-    assert states[0] == "pending" and states[-1] == "done"
+    # pending → running (un évènement par document, progression) → done.
+    # Les ids sont une séquence 1-based contiguë ; bornes pending/done.
+    assert ids == [str(i) for i in range(1, len(ids) + 1)]
+    assert states[0] == "pending"
+    assert states[-1] == "done"
+    assert all(s == "running" for s in states[1:-1])
 
 
 def test_stream_resumes_from_last_event_id(tmp_path: Path) -> None:
@@ -68,8 +72,9 @@ def test_stream_resumes_from_last_event_id(tmp_path: Path) -> None:
     resp = client.get(
         f"/api/runs/{job_id}/events", headers={"Last-Event-ID": "1"}
     )
-    events = _parse_sse(resp.text)
-    assert [eid for eid, _ in events] == ["2", "3"]  # 1 (pending) déjà vu, omis
+    ids = [eid for eid, _ in _parse_sse(resp.text)]
+    assert ids and ids[0] == "2"  # 1 (pending) déjà vu, repris à partir de 2
+    assert "1" not in ids
 
 
 def test_stream_invalid_last_event_id_replays_all(tmp_path: Path) -> None:
@@ -78,7 +83,8 @@ def test_stream_invalid_last_event_id_replays_all(tmp_path: Path) -> None:
     resp = client.get(
         f"/api/runs/{job_id}/events", headers={"Last-Event-ID": "pas-un-entier"}
     )
-    assert [eid for eid, _ in _parse_sse(resp.text)] == ["1", "2", "3"]
+    ids = [eid for eid, _ in _parse_sse(resp.text)]
+    assert ids == [str(i) for i in range(1, len(ids) + 1)]  # rejeu intégral dès 1
 
 
 def test_events_unknown_job_is_404(tmp_path: Path) -> None:

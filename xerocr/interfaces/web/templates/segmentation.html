@@ -2,51 +2,63 @@
 {% block title %}{{ t.nav_segmentation }}{% endblock %}
 {% block main %}
 <section class="view-hero">
-  <div>
+  <div class="view-hero-title">
     <div class="view-hero-eyebrow">{{ t.seg_eyebrow }}</div>
     <div class="view-hero-name">{{ t.nav_segmentation }}</div>
     <div class="view-hero-desc">{{ t.seg_desc }}</div>
   </div>
-  <div class="hero-stat">
-    <div class="v">{{ n_regions }}</div>
-    <div class="k">{{ t.seg_regions }}</div>
+  <div class="view-hero-stats">
+    <div class="hero-stat">
+      <div class="v">{{ n_regions }}</div>
+      <div class="k">{{ t.seg_regions }}</div>
+    </div>
   </div>
 </section>
 
 <section class="sec">
   <div class="sec-head">
-    <div class="sec-title">{{ t.seg_demo_title }}</div>
-    <div class="sec-sub">{{ t.seg_demo_desc }}</div>
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.seg_demo_title }}</div>
+      <div class="sec-sub">{{ t.seg_demo_desc }}</div>
+    </div>
   </div>
-  <div class="seg-canvas">{{ svg | safe }}</div>
+  <div class="sec-body">
+    <div class="seg-canvas">{{ svg | safe }}</div>
+  </div>
 </section>
 
 <section class="sec">
   <div class="sec-head">
-    <div class="sec-title">{{ t.seg_regions_title }}</div>
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.seg_regions_title }}</div>
+    </div>
   </div>
-  <table class="engines">
-    <thead>
-      <tr>
-        <th>{{ t.seg_col_id }}</th>
-        <th>{{ t.seg_col_type }}</th>
-        <th>{{ t.seg_col_bbox }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in regions %}
-      <tr>
-        <td class="eng-name">{{ r.id }}</td>
-        <td>{{ r.region_type or "—" }}</td>
-        <td class="eng-detail">
-          {% if r.geometry and r.geometry.bbox %}
-          {{ r.geometry.bbox.x }}, {{ r.geometry.bbox.y }} ·
-          {{ r.geometry.bbox.width }}×{{ r.geometry.bbox.height }}
-          {% else %}—{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+  <div class="sec-body">
+    <div class="table-wrap">
+      <table class="engines">
+        <thead>
+          <tr>
+            <th>{{ t.seg_col_id }}</th>
+            <th>{{ t.seg_col_type }}</th>
+            <th>{{ t.seg_col_bbox }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in regions %}
+          <tr>
+            <td class="eng-name">{{ r.id }}</td>
+            <td>{{ r.region_type or "—" }}</td>
+            <td class="eng-detail">
+              {% if r.geometry and r.geometry.bbox %}
+              {{ r.geometry.bbox.x }}, {{ r.geometry.bbox.y }} ·
+              {{ r.geometry.bbox.width }}×{{ r.geometry.bbox.height }}
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </section>
 {% endblock %}

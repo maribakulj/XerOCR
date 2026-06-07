@@ -90,17 +90,25 @@ def _resolve_uploads_dir(uploads_dir: Path | str | None) -> Path:
 
 
 def _resolve_public_mode(public_mode: bool | None) -> bool:
-    """Argument explicite > env (``1``/``true``/``yes``) > **Space HF** > ``False``.
+    """Mode public : arg explicite > env (``true``/``false``) > Space HF > ``False``.
 
     Un Space est exposé publiquement : sans choix explicite ni variable d'env, on
     **verrouille par défaut** (moteurs cloud masqués, imports distants refusés,
     découverte de plugins tiers désactivée) plutôt que d'ouvrir la surface sur une
     instance publique.
+
+    L'opérateur peut **forcer** via ``XEROCR_PUBLIC_MODE`` : ``true`` pour
+    verrouiller, ``false`` pour **ouvrir** (ex. un Space **privé** exécutant des
+    moteurs cloud avec sa propre clé — il assume l'exposition). Le ``false``
+    explicite est nécessaire : sur un Space, le défaut reste verrouillé.
     """
     if public_mode is not None:
         return public_mode
-    if os.environ.get(PUBLIC_MODE_ENV, "").strip().lower() in {"1", "true", "yes"}:
+    raw = os.environ.get(PUBLIC_MODE_ENV, "").strip().lower()
+    if raw in {"1", "true", "yes"}:
         return True
+    if raw in {"0", "false", "no"}:
+        return False
     return is_huggingface_space()
 
 

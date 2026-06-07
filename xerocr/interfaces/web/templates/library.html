@@ -1,174 +1,320 @@
 {% extends "base.html" %}
 {% block title %}{{ t.library_title }}{% endblock %}
+{% macro search_form(hint) -%}
+<form class="search library-search" method="get" action="/library">
+  <input type="hidden" name="lang" value="{{ lang }}">
+  <input class="input search-input" type="search" name="q" value="{{ query }}"
+         placeholder="{{ hint }}" aria-label="{{ hint }}">
+  <button class="btn btn-primary" type="submit">{{ t.library_search_button }}</button>
+</form>
+{%- endmacro %}
 {% block main %}
 <section class="view-hero">
-  <div>
+  <div class="view-hero-title">
     <div class="view-hero-eyebrow">{{ t.library_eyebrow }}</div>
     <div class="view-hero-name">{{ t.library_title }}</div>
     <div class="view-hero-desc">{{ t.library_desc }}</div>
   </div>
+  <div class="view-hero-stats">
+    <div class="hero-stat"><div class="v">{{ n_corpora }}</div><div class="k">{{ t.library_stat_local }}</div></div>
+    <div class="hero-stat"><div class="v">{{ n_htr }}</div><div class="k">HTR-United</div></div>
+    <div class="hero-stat"><div class="v">{{ n_hf }}</div><div class="k">HuggingFace</div></div>
+    <div class="hero-stat"><div class="v">{{ n_pages }}</div><div class="k">{{ t.library_stat_pages }}</div></div>
+  </div>
 </section>
 
-<section class="sec">
-  <div class="sec-head">
-    <div class="sec-title">{{ t.library_corpora_title }}</div>
-    <div class="sec-sub">{{ t.library_corpora_desc }}</div>
-  </div>
-  {% if corpora %}
-  <div class="corpus-grid">
-    {% for c in corpora %}
-    <div class="corpus-card">
-      <div class="c-name">{{ c.name }}</div>
-      <div class="c-meta">
-        <span>{{ c.id[:10] }}…</span>
-        <span>{{ c.n_documents }} {{ t.library_col_docs|lower }}</span>
+<div class="tabs library-tabs" role="tablist" aria-label="{{ t.library_title }}">
+  <a class="on" href="#corpora" role="tab" aria-selected="true"
+     data-library-tab="corpora">{{ t.library_corpora_title }}</a>
+  <a href="#discover" role="tab" aria-selected="false"
+     data-library-tab="discover">{{ t.library_discover }}</a>
+</div>
+
+<section class="library-panel" data-library-panel="corpora">
+  <section class="sec">
+    <div class="sec-head">
+      <div class="sec-copy">
+        <div class="sec-title">{{ t.library_local_title }}</div>
+        <div class="sec-sub">{{ t.library_corpora_desc }}</div>
       </div>
-      <div class="c-actions">
-        <a class="btn btn-sm btn-primary"
-           href="/benchmark?lang={{ lang }}&corpus={{ c.id }}">{{ t.library_use }}</a>
-        <button class="c-del" data-corpus="{{ c.id }}"
-                title="{{ t.library_delete }}">✕ {{ t.library_delete }}</button>
+      <div class="sec-aside">{{ n_corpora }} {{ t.library_stat_local }} · {{ n_pages }} {{ t.library_stat_pages }}</div>
+    </div>
+
+    <div class="sec-body">
+      {% if corpora %}
+      <div class="library-local-grid">
+        <div class="panel upload-panel">
+          <div class="stack-head">
+            <div class="stack-title">{{ t.library_corpora_cta }}</div>
+            <div class="stack-sub">{{ t.library_add_desc }}</div>
+          </div>
+          <label class="dropzone dropzone-large" id="dropzone" for="corpus-file">
+            <input type="file" id="corpus-file" accept=".zip,application/zip">
+            <span class="dropzone-hint">{{ t.library_drop_hint }}</span>
+            <span class="dropzone-meta">{{ t.library_zip_meta }}</span>
+          </label>
+          <span id="corpus-status" class="run-status"></span>
+        </div>
+
+        <div class="corpus-stack">
+          <div class="stack-head corpus-stack-head">
+            <div class="stack-title">{{ t.library_corpora_manage }}</div>
+            <div class="stack-sub">{{ t.library_corpora_desc }}</div>
+          </div>
+          {% if corpora %}
+          {% for c in corpora %}
+          <article class="panel corpus-card">
+            <div class="c-top">
+              <div>
+                <div class="c-name">{{ c.name }}</div>
+                <div class="c-meta">
+                  <span>ID · {{ c.id[:10] }}…</span>
+                  <span>{{ c.n_documents }} {{ t.library_doc_preview }}</span>
+                  <span>{{ c.n_ground_truth }} {{ t.library_gt_preview }}</span>
+                </div>
+              </div>
+              <span class="badge">{{ t.library_ready }}</span>
+            </div>
+            <div class="corpus-detail-grid">
+              <div class="corpus-detail">
+                <span class="label">{{ t.library_doc_preview }}</span>
+                <div class="corpus-preview">
+                  {% for doc_id in c.preview_ids %}
+                  <span class="preview-chip">{{ doc_id }}</span>
+                  {% endfor %}
+                  {% if c.n_documents > c.preview_ids|length %}
+                  <span class="preview-chip">+{{ c.n_documents - (c.preview_ids|length) }}</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if c.source or c.language %}
+              <div class="corpus-detail">
+                {% if c.source %}
+                <div class="detail-line"><span class="label">{{ t.library_source_label }}</span><span>{{ c.source }}</span></div>
+                {% endif %}
+                {% if c.language %}
+                <div class="detail-line"><span class="label">{{ t.library_language_label }}</span><span>{{ c.language }}</span></div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+            <div class="c-actions">
+              <a class="btn btn-sm btn-primary"
+                 href="/benchmark?lang={{ lang }}&corpus={{ c.id }}">{{ t.library_use }}</a>
+              <button class="c-del" data-corpus="{{ c.id }}"
+                      title="{{ t.library_delete }}">{{ t.library_delete }}</button>
+            </div>
+          </article>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <div class="panel upload-panel upload-panel-empty">
+        <div class="stack-head">
+          <div class="stack-title">{{ t.library_corpora_cta }}</div>
+          <div class="stack-sub">{{ t.library_add_desc }}</div>
+        </div>
+        <label class="dropzone dropzone-large" id="dropzone" for="corpus-file">
+          <input type="file" id="corpus-file" accept=".zip,application/zip">
+          <span class="dropzone-hint">{{ t.library_drop_hint }}</span>
+          <span class="dropzone-meta">{{ t.library_zip_meta }}</span>
+        </label>
+        <span id="corpus-status" class="run-status"></span>
+        <div class="empty-panel">{{ t.library_corpora_empty }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</section>
+
+<section class="library-panel" data-library-panel="discover" hidden>
+  <section class="sec">
+    <div class="sec-head">
+      <div class="sec-copy">
+        <div class="sec-title">{{ t.library_discover }}</div>
+        <div class="sec-sub">{{ t.library_discover_desc }}</div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <p class="muted">{{ t.library_corpora_empty }}</p>
-  {% endif %}
-</section>
 
-<section class="sec">
-  <div class="sec-head">
-    <div class="sec-title">{{ t.library_add_title }}</div>
-    <div class="sec-sub">{{ t.library_add_desc }}</div>
-  </div>
-  <div class="field">
-    <label class="dropzone" id="dropzone" for="corpus-file">
-      <input type="file" id="corpus-file" accept=".zip,application/zip">
-      <span class="dropzone-hint">{{ t.library_drop_hint }}</span>
-    </label>
-    <button id="upload" class="btn btn-sm">{{ t.bench_upload }}</button>
-    <span id="corpus-status" class="run-status"></span>
-  </div>
+    <div class="sec-body">
+      <div class="source-switch" role="tablist" aria-label="{{ t.library_remote_title }}">
+        <a class="source-chip on" href="#discover:htr-united" role="tab" aria-selected="true"
+           data-source-tab="htr-united"><span class="src-glyph">HU</span><span>{{ t.library_source_htr }}</span><span class="src-count">{{ n_htr }}</span></a>
+        <a class="source-chip" href="#discover:huggingface" role="tab" aria-selected="false"
+           data-source-tab="huggingface"><span class="src-glyph">HF</span><span>{{ t.library_source_hf }}</span><span class="src-count">{{ n_hf }}</span></a>
+        {% if not public_mode %}
+        <a class="source-chip" href="#discover:iiif" role="tab" aria-selected="false"
+           data-source-tab="iiif"><span class="src-glyph">IIIF</span><span>{{ t.library_source_iiif }}</span><span class="src-count">{{ t.library_manifest }}</span></a>
+        <a class="source-chip" href="#discover:gallica" role="tab" aria-selected="false"
+           data-source-tab="gallica"><span class="src-glyph">BnF</span><span>{{ t.library_source_gallica }}</span><span class="src-count">ARK</span></a>
+        <a class="source-chip" href="#discover:escriptorium" role="tab" aria-selected="false"
+           data-source-tab="escriptorium"><span class="src-glyph">eS</span><span>{{ t.library_source_escriptorium }}</span><span class="src-count">API</span></a>
+        {% endif %}
+      </div>
 
-  {% if not public_mode %}
-  <div class="field-sep"></div>
-  <div class="field" id="import-block">
-    <label class="label" for="import-source">{{ t.imp_title }}</label>
-    <select id="import-source" class="select" aria-label="{{ t.imp_source }}">
-      <option value="iiif">IIIF</option>
-      <option value="gallica">Gallica</option>
-      <option value="escriptorium">eScriptorium</option>
-      <option value="huggingface">HuggingFace</option>
-    </select>
-  </div>
-  <div class="field">
-    <div class="import-fields" data-source="iiif">
-      <input class="input" type="text" name="manifest_url"
-             placeholder="{{ t.imp_manifest }}" aria-label="{{ t.imp_manifest }}">
-    </div>
-    <div class="import-fields" data-source="gallica" hidden>
-      <input class="input" type="text" name="ark"
-             placeholder="{{ t.imp_ark }}" aria-label="{{ t.imp_ark }}">
-      <label class="check"><input type="checkbox" name="include_ocr" checked>
-        {{ t.imp_ocr }}</label>
-    </div>
-    <div class="import-fields" data-source="escriptorium" hidden>
-      <input class="input" type="text" name="base_url"
-             placeholder="{{ t.imp_base }}" aria-label="{{ t.imp_base }}">
-      <input class="input" type="password" name="token"
-             placeholder="{{ t.imp_token }}" aria-label="{{ t.imp_token }}">
-      <input class="input" type="number" name="doc_pk" min="1"
-             placeholder="{{ t.imp_doc }}" aria-label="{{ t.imp_doc }}">
-      <input class="input" type="text" name="layer"
-             placeholder="{{ t.imp_layer }}" aria-label="{{ t.imp_layer }}">
-    </div>
-    <div class="import-fields" data-source="huggingface" hidden>
-      <input class="input" type="text" name="dataset_id"
-             placeholder="{{ t.imp_dataset }}" aria-label="{{ t.imp_dataset }}">
-      <input class="input" type="text" name="split"
-             placeholder="{{ t.imp_split }}" aria-label="{{ t.imp_split }}">
-    </div>
-  </div>
-  <div class="field">
-    <input class="input" type="number" id="import-limit" name="limit" min="1"
-           placeholder="{{ t.imp_limit }}" aria-label="{{ t.imp_limit }}">
-    <input class="input" type="text" id="import-name" name="name"
-           placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
-    <button id="import-btn" class="btn btn-sm">{{ t.imp_btn }}</button>
-    <span id="import-status" class="run-status"></span>
-  </div>
-  {% endif %}
-</section>
+      <div class="source-panel" data-source-panel="htr-united">
+        <div class="panel source-shell">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_htr }}</div>
+              <div class="stack-sub">{{ t.library_search_hint_htr }}</div>
+            </div>
+            {% if htr_is_demo %}<span class="badge">{{ t.library_demo_badge }}</span>{% endif %}
+          </div>
+          {{ search_form(t.library_search_hint_htr) }}
+        </div>
+        {% if htr_entries %}
+        <div class="catalog-card-grid">
+          {% for e in htr_entries %}
+          <article class="panel result-card">
+            <div class="result-card-head">
+              <div>
+                <div class="result-card-title">{{ e.title }}</div>
+                <div class="result-card-meta">{{ e.id }}</div>
+              </div>
+              <span class="badge">{{ t.library_catalogue }}</span>
+            </div>
+            <p class="result-card-copy">{{ e.description or "—" }}</p>
+            <div class="result-card-tags">
+              {% for lg in e.languages %}
+              <span class="preview-chip">{{ lg }}</span>
+              {% endfor %}
+            </div>
+            <div class="result-card-actions">
+              <a class="btn btn-sm" href="{{ e.url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open_source }}</a>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty">{{ t.library_empty }}</p>
+        {% endif %}
+      </div>
 
-<section class="sec">
-  <form class="search" method="get" action="/library">
-    <input type="hidden" name="lang" value="{{ lang }}">
-    <input type="search" name="q" value="{{ query }}"
-           placeholder="{{ t.library_search_placeholder }}" aria-label="{{ t.library_search_placeholder }}">
-    <button type="submit">{{ t.library_search_button }}</button>
-  </form>
-</section>
+      <div class="source-panel" data-source-panel="huggingface" hidden>
+        <div class="panel source-shell">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_hf }}</div>
+              <div class="stack-sub">{{ t.library_search_hint_hf }}</div>
+            </div>
+          </div>
+          {{ search_form(t.library_search_hint_hf) }}
+        </div>
+        {% if hf_datasets %}
+        <div class="catalog-card-grid">
+          {% for d in hf_datasets %}
+          <article class="panel result-card">
+            <div class="result-card-head">
+              <div>
+                <div class="result-card-title">{{ d.title or d.dataset_id }}</div>
+                <div class="result-card-meta mono">{{ d.dataset_id }}</div>
+              </div>
+              <span class="badge">{{ d.downloads }} ↓</span>
+            </div>
+            <p class="result-card-copy">{{ d.description or d.dataset_id }}</p>
+            <div class="result-card-tags">
+              {% for lg in d.languages %}
+              <span class="preview-chip">{{ lg }}</span>
+              {% endfor %}
+              <span class="preview-chip">{{ d.source }}</span>
+            </div>
+            <div class="result-card-actions">
+              <a class="btn btn-sm" href="{{ d.hf_url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open_source }}</a>
+              {% if not public_mode %}
+              <button class="btn btn-sm btn-primary" type="button"
+                      data-import-source="huggingface"
+                      data-dataset-id="{{ d.dataset_id }}">{{ t.library_import_source }}</button>
+              {% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty">{{ t.library_empty }}</p>
+        {% endif %}
+      </div>
 
-<section class="sec">
-  <div class="sec-head">
-    <div class="sec-title">
-      {{ t.library_htr_title }}
-      {% if htr_is_demo %}<span class="badge">{{ t.library_demo_badge }}</span>{% endif %}
+      {% if not public_mode %}
+      <div class="source-panel" data-source-panel="iiif" hidden>
+        <div class="panel import-card">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_iiif }}</div>
+              <div class="stack-sub">{{ t.imp_manifest }}</div>
+            </div>
+          </div>
+          <div class="import-fields" data-source="iiif">
+            <input class="input input-wide" type="text" name="manifest_url"
+                   placeholder="{{ t.imp_manifest }}" aria-label="{{ t.imp_manifest }}">
+          </div>
+          <div class="import-actions">
+            <input class="input" type="number" data-import-shared="limit" name="limit" min="1"
+                   placeholder="{{ t.imp_limit }}" aria-label="{{ t.imp_limit }}">
+            <input class="input" type="text" data-import-shared="name" name="name"
+                   placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
+            <button class="btn btn-primary" type="button" data-import-source="iiif">{{ t.imp_btn }}</button>
+            <span class="run-status" data-import-status="iiif"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="source-panel" data-source-panel="gallica" hidden>
+        <div class="panel import-card">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_gallica }}</div>
+              <div class="stack-sub">{{ t.imp_ark }}</div>
+            </div>
+          </div>
+          <div class="import-fields" data-source="gallica">
+            <input class="input input-wide" type="text" name="ark"
+                   placeholder="{{ t.imp_ark }}" aria-label="{{ t.imp_ark }}">
+            <label class="check"><input type="checkbox" name="include_ocr" checked>{{ t.imp_ocr }}</label>
+          </div>
+          <div class="import-actions">
+            <input class="input" type="number" data-import-shared="limit" name="limit" min="1"
+                   placeholder="{{ t.imp_limit }}" aria-label="{{ t.imp_limit }}">
+            <input class="input" type="text" data-import-shared="name" name="name"
+                   placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
+            <button class="btn btn-primary" type="button" data-import-source="gallica">{{ t.imp_btn }}</button>
+            <span class="run-status" data-import-status="gallica"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="source-panel" data-source-panel="escriptorium" hidden>
+        <div class="panel import-card">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_escriptorium }}</div>
+              <div class="stack-sub">{{ t.imp_base }}</div>
+            </div>
+          </div>
+          <div class="import-fields" data-source="escriptorium">
+            <input class="input" type="text" name="base_url"
+                   placeholder="{{ t.imp_base }}" aria-label="{{ t.imp_base }}">
+            <input class="input" type="password" name="token"
+                   placeholder="{{ t.imp_token }}" aria-label="{{ t.imp_token }}">
+            <input class="input" type="number" name="doc_pk" min="1"
+                   placeholder="{{ t.imp_doc }}" aria-label="{{ t.imp_doc }}">
+            <input class="input" type="text" name="layer"
+                   placeholder="{{ t.imp_layer }}" aria-label="{{ t.imp_layer }}">
+          </div>
+          <div class="import-actions">
+            <input class="input" type="number" data-import-shared="limit" name="limit" min="1"
+                   placeholder="{{ t.imp_limit }}" aria-label="{{ t.imp_limit }}">
+            <input class="input" type="text" data-import-shared="name" name="name"
+                   placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
+            <button class="btn btn-primary" type="button" data-import-source="escriptorium">{{ t.imp_btn }}</button>
+            <span class="run-status" data-import-status="escriptorium"></span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
     </div>
-  </div>
-  {% if htr_entries %}
-  <table class="data">
-    <thead>
-      <tr>
-        <th>{{ t.library_col_name }}</th>
-        <th>{{ t.library_col_langs }}</th>
-        <th>{{ t.library_col_link }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for e in htr_entries %}
-      <tr>
-        <td>{{ e.title }}</td>
-        <td>{{ e.languages|join(", ") }}</td>
-        <td><a href="{{ e.url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open }}</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">{{ t.library_empty }}</p>
-  {% endif %}
-</section>
-
-<section class="sec">
-  <div class="sec-head">
-    <div class="sec-title">{{ t.library_hf_title }}</div>
-  </div>
-  {% if hf_datasets %}
-  <table class="data">
-    <thead>
-      <tr>
-        <th>{{ t.library_col_name }}</th>
-        <th>{{ t.library_col_langs }}</th>
-        <th>{{ t.library_col_downloads }}</th>
-        <th>{{ t.library_col_link }}</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for d in hf_datasets %}
-      <tr>
-        <td class="mono">{{ d.dataset_id }}</td>
-        <td>{{ d.languages|join(", ") }}</td>
-        <td class="mono">{{ d.downloads }}</td>
-        <td><a href="{{ d.hf_url }}" rel="noopener noreferrer" target="_blank">{{ t.library_open }}</a></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">{{ t.library_empty }}</p>
-  {% endif %}
+  </section>
 </section>
 {% endblock %}
 {% block body_end %}<script src="/static/js/corpus.js"></script>{% endblock %}

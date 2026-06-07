@@ -14,14 +14,17 @@ PAS du code livré** : rien ici n'est importé par le paquet `xerocr/`.
 
 | Sujet | Décision | Où c'est câblé |
 |---|---|---|
-| **Titres** | **Fluxisch Else** (OFL 1.1) | `tokens.css` `--display` + `@font-face` |
-| **Corps + données** | **OCR-A** (John Sauter, domaine public) | `tokens.css` `--sans`/`--mono`/`--serif` + `@font-face` |
+| **Titres** | **Mona Sans VF** (OFL 1.1), poids gras | `tokens.css` `--display` + `@font-face` |
+| **Corps/UI** | **IBM Plex Sans** (OFL 1.1) | `tokens.css` `--sans` + `@font-face` |
+| **Données** | **IBM Plex Mono** (OFL 1.1) | `tokens.css` `--mono` + `@font-face` |
+| **Accents éditoriaux** | **Fluxisch Else** (OFL 1.1) | `tokens.css` `--accent`/`--serif` + `@font-face` |
+| **Logo/tags courts** | **OCR-A** (John Sauter, domaine public) | `tokens.css` `--ocr` + `@font-face` |
 | **Polices** | **self-hosted** (woff2 dans `fonts/`), **zéro CDN** | `tokens.css` (source **unique** des `@font-face`) |
 | **Fond** | trame de points **Xerox halftone** (data-URI SVG) | `tokens.css` `.report-board` · `picarones.css` `html,body` |
 | **Branding** | **XerOCR** / pastille « X » | `chrome.jsx`, `js/app.jsx` |
 
 > **Changer la typo = trivial** : déposer le woff2 dans `fonts/`, éditer le `src`
-> du `@font-face` + la variable (`--display`/`--sans`/…) dans **`tokens.css`
+> du `@font-face` + la variable (`--display`/`--sans`/`--mono`/…) dans **`tokens.css`
 > seulement**. `picarones.css` n'(re)définit plus aucune police : il hérite.
 > (Le rapport autonome `reports/html.py` a son propre bloc police inline —
 > contrainte d'autonomie — calqué sur les mêmes variables.)
@@ -35,9 +38,9 @@ PAS du code livré** : rien ici n'est importé par le paquet `xerocr/`.
 | `chrome.jsx` · `data.jsx` | Chrome partagé du rapport (`ReportChrome`, `HeroBand`, `ReportApp`) + données de démonstration. |
 | `view-synthesis.jsx` · `view-by-engine.jsx` · `view-by-document.jsx` · `view-crosses.jsx` | Les 4 **vues rapport** (référence pour la couche 7). |
 | `js/*.jsx` · `tweaks-panel.jsx` | App **lanceur** (« Banc d'essai ») — référence pour la coquille web. |
-| `fonts/` | **Fluxisch Else** (woff2 + otf) · **OCR-A** (woff2 + source `.pfa`) · `jgs` (schéma fig.1) + licences. |
+| `fonts/` | **Mona Sans VF** · **IBM Plex Sans/Mono** · **Fluxisch Else** (woff2 + otf) · **OCR-A** (woff2 + source `.pfa`) · `jgs` (schéma fig.1) + licences. |
 | `render/` | **Harnais de rendu offline** : régénère `screenshots/` depuis la source. |
-| `screenshots/*.png` | Rendus de référence, **régénérés** depuis la source (avec trame + Fluxisch Else + OCR-A). |
+| `screenshots/*.png` | Rendus de référence, **régénérés** depuis la source (avec trame + typographie self-hosted). |
 
 ## Régénérer les screenshots (le « moyen de le faire »)
 

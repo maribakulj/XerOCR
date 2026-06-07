@@ -28,9 +28,9 @@ def test_segmentation_page_renders_regions_and_svg(tmp_path: Path) -> None:
     assert "/image" in body
 
 
-def test_segmentation_is_a_live_nav_link_from_home(tmp_path: Path) -> None:
+def test_segmentation_is_not_listed_in_home_nav(tmp_path: Path) -> None:
     home = _client(tmp_path).get("/").text
-    assert 'href="/segmentation?lang=fr"' in home
+    assert 'href="/segmentation?lang=fr"' not in home
 
 
 def test_segmentation_image_endpoint_serves_png(tmp_path: Path) -> None:

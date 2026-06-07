@@ -1,17 +1,12 @@
-/* Bibliothèque — préparation de corpus (upload ZIP + import distant).
+/* Bibliothèque — états d'interface, upload ZIP, imports distants et suppression.
  *
- *   POST /api/corpus (multipart, CSRF)            → téléverse une archive ZIP
- *   POST /api/corpus/import/{source} (JSON, CSRF) → importe un corpus distant
- * À la réussite, on recharge la page : la liste « Mes corpus » (rendue serveur)
- * reflète le nouveau corpus. Le serveur fait foi (403/409/413/422).
- *
- * `fetchJson` est volontairement répété (≈ benchmark.js) : ces fichiers JS ne
- * sont pas exécutés en CI (pas de navigateur) → on évite tout couplage de
- * chargement entre eux (un helper partagé serait une dépendance non testée).
- * C'est du boilerplate de transport, pas de la logique.
+ * La page reste rendue serveur : ce script ne fait que piloter des onglets et
+ * appeler les endpoints existants. Après succès, on recharge la page pour que
+ * le HTML serveur reste la source de vérité.
  */
 (function () {
   "use strict";
+
   var CSRF = "X-XeroCR-CSRF";
 
   function ready(fn) {
@@ -19,161 +14,236 @@
     else document.addEventListener("DOMContentLoaded", fn);
   }
 
+  function fetchJson(url, opts) {
+    return fetch(url, opts).then(function (res) {
+      return res.json().then(
+        function (body) {
+          return { ok: res.ok, status: res.status, body: body };
+        },
+        function () {
+          return { ok: res.ok, status: res.status, body: {} };
+        }
+      );
+    });
+  }
+
+  function errorText(response) {
+    var detail = response && response.body && response.body.detail;
+    if (typeof detail === "string" && detail.trim()) return detail;
+    return "HTTP " + response.status;
+  }
+
+  function collectField(payload, el) {
+    if (!el || !el.name) return;
+    if (el.type === "checkbox") {
+      payload[el.name] = el.checked;
+      return;
+    }
+    var value = (el.value || "").trim();
+    if (value === "") return;
+    payload[el.name] = el.type === "number" ? parseInt(value, 10) : value;
+  }
+
   ready(function () {
+    bindLibraryTabs();
+    bindSourceTabs();
+    bindUpload();
+    bindImports();
+    bindDelete();
+  });
+
+  function bindLibraryTabs() {
+    var buttons = document.querySelectorAll("[data-library-tab]");
+    var panels = document.querySelectorAll("[data-library-panel]");
+    if (!buttons.length || !panels.length) return;
+
+    function activate(tab) {
+      for (var i = 0; i < buttons.length; i++) {
+        var isActive = buttons[i].getAttribute("data-library-tab") === tab;
+        buttons[i].classList.toggle("on", isActive);
+        buttons[i].setAttribute("aria-selected", isActive ? "true" : "false");
+      }
+      for (var j = 0; j < panels.length; j++) {
+        panels[j].hidden = panels[j].getAttribute("data-library-panel") !== tab;
+      }
+      if (window.location.hash !== "#" + tab) {
+        history.replaceState(null, "", window.location.pathname + window.location.search + "#" + tab);
+      }
+    }
+
+    for (var k = 0; k < buttons.length; k++) {
+      buttons[k].addEventListener("click", function (event) {
+        if (this.tagName === "A") {
+          event.preventDefault();
+        }
+        activate(this.getAttribute("data-library-tab"));
+      });
+    }
+
+    activate(window.location.hash.indexOf("#discover") === 0 ? "discover" : "corpora");
+  }
+
+  function bindSourceTabs() {
+    var chips = document.querySelectorAll("[data-source-tab]");
+    var panels = document.querySelectorAll("[data-source-panel]");
+    if (!chips.length || !panels.length) return;
+
+    // ``pushHash`` = false à l'initialisation : on prépare seulement le panneau
+    // source visible, SANS réécrire le hash global. Sinon l'activation au
+    // chargement forçait ``#discover:…`` même sur l'onglet « Mes corpus », et un
+    // reload (ex. après upload) atterrissait à tort sur « Découverte ».
+    function activate(source, pushHash) {
+      for (var i = 0; i < chips.length; i++) {
+        var isActive = chips[i].getAttribute("data-source-tab") === source;
+        chips[i].classList.toggle("on", isActive);
+        chips[i].setAttribute("aria-selected", isActive ? "true" : "false");
+      }
+      for (var j = 0; j < panels.length; j++) {
+        panels[j].hidden = panels[j].getAttribute("data-source-panel") !== source;
+      }
+      if (!pushHash) return;
+      var url = new URL(window.location.href);
+      url.hash = "discover:" + source;
+      history.replaceState(null, "", url.toString());
+      if (window.location.hash.indexOf("#discover") !== 0) {
+        var discoverBtn = document.querySelector('[data-library-tab="discover"]');
+        if (discoverBtn) discoverBtn.click();
+      }
+    }
+
+    for (var k = 0; k < chips.length; k++) {
+      chips[k].addEventListener("click", function (event) {
+        if (this.tagName === "A") {
+          event.preventDefault();
+        }
+        activate(this.getAttribute("data-source-tab"), true);
+      });
+    }
+
+    var hash = window.location.hash || "";
+    var initial = hash.indexOf("#discover:") === 0 ? hash.slice(10) : "htr-united";
+    activate(initial, false);
+  }
+
+  function bindUpload() {
     var fileEl = document.getElementById("corpus-file");
-    var uploadBtn = document.getElementById("upload");
     var statusEl = document.getElementById("corpus-status");
     var dropzone = document.getElementById("dropzone");
 
-    // --- Upload ZIP (bouton + glisser-déposer) ----------------------------
     function upload(file) {
       if (!file) return;
       var headers = {};
       headers[CSRF] = "1";
       var form = new FormData();
       form.append("file", file);
-      if (uploadBtn) uploadBtn.disabled = true;
       if (statusEl) statusEl.textContent = "…";
       fetchJson("/api/corpus", { method: "POST", headers: headers, body: form })
-        .then(function (r) {
-          if (uploadBtn) uploadBtn.disabled = false;
-          if (!r.ok) {
-            if (statusEl) statusEl.textContent = r.body.detail || "HTTP " + r.status;
+        .then(function (response) {
+          if (!response.ok) {
+            if (statusEl) statusEl.textContent = errorText(response);
             return;
           }
           window.location.reload();
         })
         .catch(function () {
-          if (uploadBtn) uploadBtn.disabled = false;
-          if (statusEl) statusEl.textContent = "error";
+          if (statusEl) statusEl.textContent = "HTTP 0";
         });
     }
 
-    if (uploadBtn && fileEl) {
-      uploadBtn.addEventListener("click", function () {
+    if (fileEl) {
+      fileEl.addEventListener("change", function () {
         upload(fileEl.files && fileEl.files[0]);
       });
     }
 
-    if (dropzone) {
-      ["dragenter", "dragover"].forEach(function (evt) {
-        dropzone.addEventListener(evt, function (e) {
-          e.preventDefault();
-          dropzone.classList.add("is-dragover");
-        });
+    if (!dropzone) return;
+    ["dragenter", "dragover"].forEach(function (evt) {
+      dropzone.addEventListener(evt, function (e) {
+        e.preventDefault();
+        dropzone.classList.add("is-dragover");
       });
-      ["dragleave", "drop"].forEach(function (evt) {
-        dropzone.addEventListener(evt, function (e) {
-          e.preventDefault();
-          dropzone.classList.remove("is-dragover");
-        });
+    });
+    ["dragleave", "drop"].forEach(function (evt) {
+      dropzone.addEventListener(evt, function (e) {
+        e.preventDefault();
+        dropzone.classList.remove("is-dragover");
       });
-      dropzone.addEventListener("drop", function (e) {
-        var dt = e.dataTransfer;
-        var file = dt && dt.files && dt.files[0];
-        if (file) upload(file);
+    });
+    dropzone.addEventListener("drop", function (e) {
+      var dataTransfer = e.dataTransfer;
+      var file = dataTransfer && dataTransfer.files && dataTransfer.files[0];
+      if (file) upload(file);
+    });
+  }
+
+  function bindImports() {
+    var buttons = document.querySelectorAll("[data-import-source]");
+    if (!buttons.length) return;
+
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () {
+        var source = this.getAttribute("data-import-source");
+        if (!source) return;
+        runImport(this, source);
       });
     }
+  }
 
-    // --- Import d'un corpus distant ---------------------------------------
-    var importSource = document.getElementById("import-source");
-    var importBtn = document.getElementById("import-btn");
-    var importStatus = document.getElementById("import-status");
-    if (importSource && importBtn && importStatus) {
-      var groups = document.querySelectorAll(".import-fields");
+  function runImport(button, source) {
+    var statusEl = document.querySelector('[data-import-status="' + source + '"]');
+    var group = document.querySelector('.import-fields[data-source="' + source + '"]');
+    var payload = {};
+    var fields = group ? group.querySelectorAll("input[name]") : [];
+    for (var i = 0; i < fields.length; i++) collectField(payload, fields[i]);
+    var shared = document.querySelectorAll(
+      '[data-source-panel="' + source + '"] [data-import-shared]'
+    );
+    for (var j = 0; j < shared.length; j++) collectField(payload, shared[j]);
 
-      importSource.addEventListener("change", function () {
-        for (var i = 0; i < groups.length; i++) {
-          groups[i].hidden =
-            groups[i].getAttribute("data-source") !== importSource.value;
+    var datasetId = button.getAttribute("data-dataset-id");
+    if (datasetId) payload.dataset_id = datasetId;
+
+    var headers = { "Content-Type": "application/json" };
+    headers[CSRF] = "1";
+    button.disabled = true;
+    if (statusEl) statusEl.textContent = "…";
+    fetchJson("/api/corpus/import/" + source, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    })
+      .then(function (response) {
+        button.disabled = false;
+        if (!response.ok) {
+          if (statusEl) statusEl.textContent = errorText(response);
+          return;
         }
+        window.location.reload();
+      })
+      .catch(function () {
+        button.disabled = false;
+        if (statusEl) statusEl.textContent = "HTTP 0";
       });
+  }
 
-      importBtn.addEventListener("click", function () {
-        var group = document.querySelector(
-          '.import-fields[data-source="' + importSource.value + '"]'
-        );
-        if (!group) return;
-        var payload = {};
-        var fields = group.querySelectorAll("input[name]");
-        for (var i = 0; i < fields.length; i++) collectField(payload, fields[i]);
-        collectField(payload, document.getElementById("import-limit"));
-        collectField(payload, document.getElementById("import-name"));
-
-        var headers = { "Content-Type": "application/json" };
-        headers[CSRF] = "1";
-        importBtn.disabled = true;
-        importStatus.textContent = "…";
-        fetchJson("/api/corpus/import/" + importSource.value, {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify(payload),
-        })
-          .then(function (r) {
-            importBtn.disabled = false;
-            if (!r.ok) {
-              importStatus.textContent = r.body.detail || "HTTP " + r.status;
-              return;
-            }
-            window.location.reload();
-          })
-          .catch(function () {
-            importBtn.disabled = false;
-            importStatus.textContent = "error";
-          });
-      });
-    }
-
-    // --- Suppression d'un corpus ------------------------------------------
-    var delButtons = document.querySelectorAll(".c-del");
-    for (var d = 0; d < delButtons.length; d++) bindDelete(delButtons[d]);
-
-    function bindDelete(btn) {
-      btn.addEventListener("click", function () {
-        var id = btn.getAttribute("data-corpus");
+  function bindDelete() {
+    var buttons = document.querySelectorAll(".c-del[data-corpus]");
+    for (var i = 0; i < buttons.length; i++) {
+      buttons[i].addEventListener("click", function () {
+        var id = this.getAttribute("data-corpus");
         if (!id) return;
         var headers = {};
         headers[CSRF] = "1";
-        btn.disabled = true;
+        this.disabled = true;
         fetchJson("/api/corpus/" + encodeURIComponent(id), {
           method: "DELETE",
           headers: headers,
         })
-          .then(function (r) {
-            if (r.ok) window.location.reload();
-            else btn.disabled = false;
+          .then(function (response) {
+            if (response.ok) window.location.reload();
           })
-          .catch(function () {
-            btn.disabled = false;
-          });
+          .catch(function () {});
       });
     }
-
-    // Ajoute la valeur d'un champ au payload : case→bool, nombre coercé, texte
-    // non vide tel quel ; un champ optionnel vide est ignoré.
-    function collectField(payload, el) {
-      if (!el || !el.name) return;
-      if (el.type === "checkbox") {
-        payload[el.name] = el.checked;
-        return;
-      }
-      var v = (el.value || "").trim();
-      if (v === "") return;
-      payload[el.name] = el.type === "number" ? parseInt(v, 10) : v;
-    }
-
-    // Renvoie {ok, status, body} en parsant le JSON quel que soit le code.
-    function fetchJson(url, opts) {
-      return fetch(url, opts).then(function (res) {
-        return res.json().then(
-          function (body) {
-            return { ok: res.ok, status: res.status, body: body };
-          },
-          function () {
-            return { ok: res.ok, status: res.status, body: {} };
-          }
-        );
-      });
-    }
-  });
+  }
 })();

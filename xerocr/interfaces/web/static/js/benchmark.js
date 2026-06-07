@@ -1,14 +1,12 @@
-/* Lanceur « Banc d'essai » — composeur multi-concurrent, JS léger sans dépendance.
+/* Banc d'essai — composeur de benchmark et suivi SSE.
  *
- * Le corpus est préparé dans la Bibliothèque ; ici on le SÉLECTIONNE et on
- * COMPOSE des concurrents (OCR seul, OCR→LLM texte/image, VLM zero-shot).
- *   POST /api/runs {competitors[], corpus_id?} → lance un run (gardes serveur)
- *   POST /api/segmentation/run {corpus_id}      → run de segmentation (même SSE)
- *   GET  /api/runs/{id}/events (SSE)            → progression → lien rapport
- * Le serveur fait foi (403/409/404/422) ; on affiche son message d'erreur.
+ * Un seul brouillon de concurrent alimente une file visible. Le serveur reste
+ * la source de vérité pour le lancement et les erreurs ; le client ne traduit
+ * que les états HTTP en messages lisibles.
  */
 (function () {
   "use strict";
+
   var CSRF = "X-XeroCR-CSRF";
   var STATES = ["pending", "running", "done", "failed", "cancelled"];
   var TERMINAL = { done: 1, failed: 1, cancelled: 1 };
@@ -18,222 +16,326 @@
     else document.addEventListener("DOMContentLoaded", fn);
   }
 
-  ready(function () {
-    var btn = document.getElementById("launch");
-    var statusEl = document.getElementById("run-status");
-    var logEl = document.getElementById("run-log");
-    var resultEl = document.getElementById("run-result");
-    var corpusSelect = document.getElementById("corpus-select");
-    var segBtn = document.getElementById("segment-btn");
-    var segStatus = document.getElementById("segment-status");
-    var list = document.getElementById("competitors");
-    var addBtn = document.getElementById("add-competitor");
-    var tpl = document.getElementById("competitor-tpl");
-    if (!btn || !statusEl || !logEl || !resultEl) return;
+  function fetchJson(url, opts) {
+    return fetch(url, opts).then(function (res) {
+      return res.json().then(
+        function (body) {
+          return { ok: res.ok, status: res.status, body: body };
+        },
+        function () {
+          return { ok: res.ok, status: res.status, body: {} };
+        }
+      );
+    });
+  }
 
-    // Corpus actif = sélection (valeur vide ⇒ démonstration précalculée).
+  ready(function () {
+    var launchBtn = document.getElementById("launch");
+    var statusEl = document.getElementById("run-status");
+    var resultEl = document.getElementById("run-result");
+    var logEl = document.getElementById("run-log");
+    var logShell = document.getElementById("run-log-shell");
+    var progressWrap = document.getElementById("run-progress");
+    var progressBar = document.getElementById("run-progress-bar");
+    var progressText = document.getElementById("run-progress-text");
+    var corpusSelect = document.getElementById("corpus-select");
+    var normalization = document.getElementById("normalization");
+    var addBtn = document.getElementById("add-competitor");
+    var queueTpl = document.getElementById("queue-row-tpl");
+    var queueList = document.getElementById("queue-list");
+    var queueEmpty = document.getElementById("queue-empty");
+    if (!launchBtn || !statusEl || !resultEl || !queueList || !queueTpl) return;
+
+    var queue = [];
+    var activeMode = "ocr_only";
+    var modeButtons = document.querySelectorAll("[data-mode]");
+    var draftFields = document.querySelectorAll("[data-show]");
+    var draftOcr = document.getElementById("draft-ocr");
+    var draftLlm = document.getElementById("draft-llm");
+    var draftVlm = document.getElementById("draft-vlm");
+    var draftModel = document.getElementById("draft-model");
+    var draftPrompt = document.getElementById("draft-prompt");
+    var queueLabels = {
+      ocr: queueList.getAttribute("data-label-ocr") || "OCR",
+      ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
+      ocrVlm: queueList.getAttribute("data-label-ocr-vlm") || "OCR → VLM",
+      vlm: queueList.getAttribute("data-label-vlm") || "VLM",
+    };
+
     function currentCorpusId() {
       return corpusSelect && corpusSelect.value ? corpusSelect.value : null;
     }
 
-    // Pré-sélection depuis « Utiliser » (Bibliothèque) : ?corpus=<id>.
-    var preCorpus = new URLSearchParams(window.location.search).get("corpus");
-    if (preCorpus && corpusSelect) corpusSelect.value = preCorpus;
-
-    // « Segmenter » exige un corpus sélectionné.
-    function syncSeg() {
-      if (segBtn) segBtn.disabled = !currentCorpusId();
+    function applyQueryCorpus() {
+      var corpusId = new URLSearchParams(window.location.search).get("corpus");
+      if (corpusId && corpusSelect) corpusSelect.value = corpusId;
     }
-    if (corpusSelect) corpusSelect.addEventListener("change", syncSeg);
-    syncSeg();
 
-    // --- Composeur de concurrents -----------------------------------------
-    function addCompetitor() {
-      if (!tpl || !list) return;
-      var node = tpl.content.firstElementChild.cloneNode(true);
-      var mode = node.querySelector(".comp-mode");
-      function sync() {
-        var fields = node.querySelectorAll("[data-show]");
-        for (var i = 0; i < fields.length; i++) {
-          var shown = fields[i].getAttribute("data-show").split(" ");
-          fields[i].style.display = shown.indexOf(mode.value) >= 0 ? "" : "none";
-        }
+    // Le champ « Modèle » pointe vers la datalist du fournisseur sélectionné
+    // (ollama / mistral), qui n'existe que si le serveur a renvoyé des modèles.
+    // Sinon : saisie libre. Rien de hardcodé — les options viennent du serveur.
+    function updateModelList() {
+      if (!draftModel) return;
+      var provider =
+        activeMode === "text_only"
+          ? draftLlm && draftLlm.value
+          : activeMode === "text_and_image" || activeMode === "zero_shot"
+          ? draftVlm && draftVlm.value
+          : "";
+      var listId =
+        provider === "ollama"
+          ? "ollama-models"
+          : provider === "mistral"
+          ? "mistral-models"
+          : "";
+      var dl = listId ? document.getElementById(listId) : null;
+      if (dl) draftModel.setAttribute("list", listId);
+      else draftModel.removeAttribute("list");
+      var hint = document.getElementById("model-hint");
+      if (hint) {
+        hint.textContent = dl
+          ? dl.children.length + " modèle(s) — clique pour choisir"
+          : "";
       }
-      mode.addEventListener("change", sync);
-      var remove = node.querySelector(".comp-remove");
-      if (remove) {
-        remove.addEventListener("click", function () {
-          node.remove();
-        });
+    }
+
+    function setMode(mode) {
+      activeMode = mode;
+      for (var i = 0; i < modeButtons.length; i++) {
+        var isActive = modeButtons[i].getAttribute("data-mode") === mode;
+        modeButtons[i].classList.toggle("on", isActive);
+        modeButtons[i].setAttribute("aria-selected", isActive ? "true" : "false");
       }
-      list.appendChild(node);
-      sync();
-    }
-    if (addBtn) addBtn.addEventListener("click", addCompetitor);
-    addCompetitor(); // démarrer avec un concurrent
-
-    function val(row, selector) {
-      var el = row.querySelector(selector);
-      return el ? el.value : "";
-    }
-
-    // Concurrents → payload [{engine, mode?, llm?, model?}].
-    function buildCompetitors() {
-      var comps = [];
-      if (!list) return comps;
-      var rows = list.querySelectorAll(".competitor");
-      for (var i = 0; i < rows.length; i++) {
-        var r = rows[i];
-        var mode = val(r, ".comp-mode");
-        var ocr = val(r, ".comp-ocr");
-        var llm = val(r, ".comp-llm");
-        var vlm = val(r, ".comp-vlm");
-        var model = (val(r, ".comp-model") || "").trim();
-        var c;
-        if (mode === "ocr_only") {
-          c = { engine: ocr };
-        } else if (mode === "text_only") {
-          c = { engine: ocr, mode: "text_only", llm: llm };
-        } else if (mode === "text_and_image") {
-          c = { engine: ocr, mode: "text_and_image", llm: vlm };
-        } else {
-          c = { engine: vlm, mode: "zero_shot" };
-        }
-        if (model && mode !== "ocr_only") c.model = model;
-        comps.push(c);
+      for (var j = 0; j < draftFields.length; j++) {
+        var shown = draftFields[j].getAttribute("data-show").split(" ");
+        draftFields[j].hidden = shown.indexOf(mode) < 0;
       }
-      return comps;
+      updateModelList();
     }
 
-    // --- Lancement d'un run -----------------------------------------------
-    btn.addEventListener("click", function () {
-      btn.disabled = true;
-      logEl.textContent = "";
-      resultEl.textContent = "";
-      statusEl.textContent = btn.dataset.launching || "…";
+    function summarize(entry) {
+      if (entry.mode === "ocr_only") {
+        return {
+          label: queueLabels.ocr,
+          meta: entry.engine,
+        };
+      }
+      if (entry.mode === "text_only") {
+        return {
+          label: queueLabels.ocrLlm,
+          meta: entry.engine + " → " + entry.llm + (entry.model ? " · " + entry.model : ""),
+        };
+      }
+      if (entry.mode === "text_and_image") {
+        return {
+          label: queueLabels.ocrVlm,
+          meta: entry.engine + " → " + entry.llm + (entry.model ? " · " + entry.model : ""),
+        };
+      }
+      return {
+        label: queueLabels.vlm,
+        meta: entry.engine + (entry.model ? " · " + entry.model : ""),
+      };
+    }
 
-      var headers = { "Content-Type": "application/json" };
-      headers[CSRF] = "1";
-      var payload = { competitors: buildCompetitors() };
-      var corpusId = currentCorpusId();
-      if (corpusId) payload.corpus_id = corpusId;
-      var normEl = document.getElementById("normalization");
-      if (normEl && normEl.value) payload.normalization = normEl.value;
+    function renderQueue() {
+      queueList.textContent = "";
+      if (queueEmpty) queueEmpty.hidden = queue.length > 0;
+      for (var i = 0; i < queue.length; i++) {
+        var node = queueTpl.content.firstElementChild.cloneNode(true);
+        var summary = summarize(queue[i]);
+        node.querySelector(".queue-id").textContent = "C0" + (i + 1);
+        node.querySelector(".queue-label").textContent = summary.label;
+        node.querySelector(".queue-meta").textContent = summary.meta;
+        bindRemove(node.querySelector(".queue-remove"), i);
+        queueList.appendChild(node);
+      }
+    }
 
-      fetchJson("/api/runs", {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(payload),
-      })
-        .then(function (r) {
-          if (!r.ok) {
-            statusEl.textContent = "HTTP " + r.status;
-            resultEl.textContent = r.body.detail || "";
-            btn.disabled = false;
-            return;
-          }
-          subscribe(r.body.job_id, reportTerminal);
-        })
-        .catch(function () {
-          statusEl.textContent = resultEl.dataset.neterror || "error";
-          btn.disabled = false;
-        });
-    });
-
-    // --- Run de segmentation ----------------------------------------------
-    if (segBtn) {
-      segBtn.addEventListener("click", function () {
-        var corpusId = currentCorpusId();
-        if (!corpusId) return;
-        segBtn.disabled = true;
-        resultEl.textContent = "";
-        statusEl.textContent = segBtn.dataset.launching || "…";
-        var headers = { "Content-Type": "application/json" };
-        headers[CSRF] = "1";
-        fetchJson("/api/segmentation/run", {
-          method: "POST",
-          headers: headers,
-          body: JSON.stringify({ corpus_id: corpusId }),
-        })
-          .then(function (r) {
-            if (!r.ok) {
-              statusEl.textContent = "HTTP " + r.status;
-              if (segStatus) segStatus.textContent = r.body.detail || "";
-              segBtn.disabled = false;
-              return;
-            }
-            subscribe(r.body.job_id, segTerminal);
-          })
-          .catch(function () {
-            statusEl.textContent = resultEl.dataset.neterror || "error";
-            segBtn.disabled = false;
-          });
+    function bindRemove(button, index) {
+      if (!button) return;
+      button.addEventListener("click", function () {
+        queue.splice(index, 1);
+        renderQueue();
       });
     }
 
-    // Suit un job par SSE ; `onTerminal(state, job)` gère l'état final (lien).
+    function buildDraft() {
+      var model = draftModel && draftModel.value ? draftModel.value.trim() : "";
+      var prompt = draftPrompt && draftPrompt.value ? draftPrompt.value.trim() : "";
+      if (activeMode === "ocr_only") {
+        return { engine: draftOcr.value, mode: "ocr_only" };
+      }
+      if (activeMode === "text_only") {
+        return {
+          engine: draftOcr.value,
+          mode: "text_only",
+          llm: draftLlm.value,
+          model: model,
+          prompt: prompt,
+        };
+      }
+      if (activeMode === "text_and_image") {
+        return {
+          engine: draftOcr.value,
+          mode: "text_and_image",
+          llm: draftVlm.value,
+          model: model,
+          prompt: prompt,
+        };
+      }
+      return {
+        engine: draftVlm.value,
+        mode: "zero_shot",
+        model: model,
+        prompt: prompt,
+      };
+    }
+
+    function payloadCompetitors() {
+      var out = [];
+      for (var i = 0; i < queue.length; i++) {
+        var entry = {};
+        entry.engine = queue[i].engine;
+        if (queue[i].mode !== "ocr_only") entry.mode = queue[i].mode;
+        if (queue[i].llm) entry.llm = queue[i].llm;
+        if (queue[i].model) entry.model = queue[i].model;
+        if (queue[i].prompt) entry.prompt = queue[i].prompt;
+        out.push(entry);
+      }
+      return out;
+    }
+
+    function errorText(response) {
+      var detail = response && response.body && response.body.detail;
+      if (typeof detail === "string" && detail.trim()) return detail;
+      var specific = resultEl.getAttribute("data-error-" + response.status);
+      return specific || resultEl.dataset.errorFallback || ("HTTP " + response.status);
+    }
+
+    function resetRunFeedback(launchingText) {
+      statusEl.textContent = launchingText || "…";
+      resultEl.textContent = "";
+      if (logEl) logEl.textContent = "";
+      if (logShell) {
+        logShell.hidden = false;
+        logShell.open = true;
+      }
+    }
+
+    function appendLog(state, job) {
+      if (!logEl) return;
+      var line = document.createElement("div");
+      line.textContent = (job.updated_at || "—") + "  ·  " + state;
+      logEl.appendChild(line);
+    }
+
+    function updateProgress(job) {
+      if (!progressWrap || !progressBar) return;
+      var total = job.total || 0;
+      var doneN = job.done || 0;
+      if (total <= 0) return;
+      progressWrap.hidden = false;
+      var pct = Math.round((doneN / total) * 100);
+      progressBar.style.width = pct + "%";
+      if (progressText) progressText.textContent = doneN + " / " + total;
+    }
+
+    function resetProgress() {
+      if (progressBar) progressBar.style.width = "0%";
+      if (progressText) progressText.textContent = "";
+      if (progressWrap) progressWrap.hidden = true;
+    }
+
     function subscribe(jobId, onTerminal) {
       var es = new EventSource("/api/runs/" + encodeURIComponent(jobId) + "/events");
       var finished = false;
+
       function done(state, job) {
         if (finished) return;
         finished = true;
         es.close();
-        onTerminal(state, job);
+        onTerminal(state, job || {});
       }
+
       STATES.forEach(function (state) {
         es.addEventListener(state, function (ev) {
           var job = JSON.parse(ev.data);
           statusEl.textContent = state;
-          var line = document.createElement("div");
-          line.textContent = job.updated_at + "  ·  " + state;
-          logEl.appendChild(line);
+          appendLog(state, job);
+          updateProgress(job);
           if (TERMINAL[state]) done(state, job);
         });
       });
+
       es.onerror = function () {
         if (es.readyState === EventSource.CLOSED) done("failed", {});
       };
     }
 
     function reportTerminal(state, job) {
-      btn.disabled = false;
+      launchBtn.disabled = false;
       if (state === "done" && job.report_name) {
-        var a = document.createElement("a");
-        a.href = "/reports/" + encodeURIComponent(job.report_name);
-        a.className = "btn btn-primary";
-        a.textContent = resultEl.dataset.open || "report";
-        resultEl.appendChild(a);
-      } else if (job.error) {
-        resultEl.textContent = job.error;
+        var link = document.createElement("a");
+        link.href = "/reports/" + encodeURIComponent(job.report_name);
+        link.className = "btn btn-primary";
+        link.textContent = resultEl.dataset.open || "report";
+        resultEl.appendChild(link);
+        return;
       }
+      resultEl.textContent = job.error || (resultEl.dataset.errorFallback || "failed");
     }
 
-    function segTerminal(state, job) {
-      segBtn.disabled = false;
-      if (state === "done") {
-        var a = document.createElement("a");
-        a.href = "/segmentation";
-        a.className = "btn btn-primary";
-        a.textContent = segBtn.dataset.open || "segmentation";
-        resultEl.appendChild(a);
-      } else if (job && job.error) {
-        resultEl.textContent = job.error;
-      }
-    }
-
-    // Renvoie {ok, status, body} en parsant le JSON quel que soit le code.
-    function fetchJson(url, opts) {
-      return fetch(url, opts).then(function (res) {
-        return res.json().then(
-          function (body) {
-            return { ok: res.ok, status: res.status, body: body };
-          },
-          function () {
-            return { ok: res.ok, status: res.status, body: {} };
-          }
-        );
+    for (var i = 0; i < modeButtons.length; i++) {
+      modeButtons[i].addEventListener("click", function () {
+        setMode(this.getAttribute("data-mode"));
       });
     }
+    // Changer de fournisseur LLM/VLM met à jour la datalist du champ « Modèle ».
+    if (draftLlm) draftLlm.addEventListener("change", updateModelList);
+    if (draftVlm) draftVlm.addEventListener("change", updateModelList);
+    setMode(activeMode);
+
+    if (addBtn) {
+      addBtn.addEventListener("click", function () {
+        queue.push(buildDraft());
+        renderQueue();
+      });
+    }
+    renderQueue();
+
+    applyQueryCorpus();
+
+    launchBtn.addEventListener("click", function () {
+      launchBtn.disabled = true;
+      resetRunFeedback(launchBtn.dataset.launching);
+      resetProgress();
+      var headers = { "Content-Type": "application/json" };
+      headers[CSRF] = "1";
+      var payload = { competitors: payloadCompetitors() };
+      var corpusId = currentCorpusId();
+      if (corpusId) payload.corpus_id = corpusId;
+      if (normalization && normalization.value) payload.normalization = normalization.value;
+      fetchJson("/api/runs", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      })
+        .then(function (response) {
+          if (!response.ok) {
+            statusEl.textContent = "HTTP " + response.status;
+            resultEl.textContent = errorText(response);
+            launchBtn.disabled = false;
+            return;
+          }
+          subscribe(response.body.job_id, reportTerminal);
+        })
+        .catch(function () {
+          statusEl.textContent = resultEl.dataset.neterror || "HTTP 0";
+          resultEl.textContent = resultEl.dataset.errorFallback || "HTTP 0";
+          launchBtn.disabled = false;
+        });
+    });
+
   });
 })();

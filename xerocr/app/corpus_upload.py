@@ -35,7 +35,12 @@ from xerocr.app.security import validated_path
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.errors import CorpusSpecError, XerOCRError
+from xerocr.domain.errors import CorpusSpecError, FormatError, XerOCRError
+from xerocr.evaluation.projectors import layout_to_text
+from xerocr.formats.alto import parse_alto
+from xerocr.formats.alto.layout_map import alto_to_layout
+from xerocr.formats.pagexml import parse_pagexml
+from xerocr.formats.pagexml.layout_map import page_to_layout
 
 #: Quotas (généreux mais bornés) — un Space gratuit n'est pas un entrepôt.
 MAX_ZIP_BYTES = 25 * 1024 * 1024
@@ -45,6 +50,9 @@ MAX_ENTRIES = 1000
 
 _IMAGE_EXT = frozenset({".png", ".jpg", ".jpeg", ".tif", ".tiff"})
 _GT_EXT = frozenset({".txt"})
+#: Vérité-terrain au format mise-en-page : ALTO 4.x ou PAGE XML. Convertie en
+#: texte d'ordre de lecture à l'ingestion (cf. ``_xml_to_text``).
+_GT_XML_EXT = frozenset({".xml"})
 _IMAGE_MAGIC = (b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"II*\x00", b"MM\x00*")
 #: Basename sûr → garantit un ``DocumentRef.id`` valide (pas d'espace/accent/slash).
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
@@ -63,7 +71,11 @@ def extract_corpus_zip(data: bytes, dest: Path, *, name: str) -> CorpusSpec:
     except zipfile.BadZipFile as exc:
         raise CorpusUploadError("archive ZIP invalide.") from exc
 
-    entries = [info for info in archive.infolist() if not info.is_dir()]
+    entries = [
+        info
+        for info in archive.infolist()
+        if not info.is_dir() and not _is_macos_metadata(info.filename)
+    ]
     if not entries:
         raise CorpusUploadError("archive vide.")
     if len(entries) > MAX_ENTRIES:
@@ -75,7 +87,7 @@ def extract_corpus_zip(data: bytes, dest: Path, *, name: str) -> CorpusSpec:
     for info in entries:
         base = _safe_basename(info.filename)
         ext = Path(base).suffix.lower()
-        if ext not in _IMAGE_EXT and ext not in _GT_EXT:
+        if ext not in _IMAGE_EXT and ext not in _GT_EXT and ext not in _GT_XML_EXT:
             raise CorpusUploadError(f"extension non autorisée : {base!r}.")
         if base in written:
             raise CorpusUploadError(f"doublon de nom : {base!r}.")
@@ -103,6 +115,17 @@ def extract_corpus_zip(data: bytes, dest: Path, *, name: str) -> CorpusSpec:
         raise CorpusUploadError(f"corpus invalide : {exc}") from exc
 
 
+def _is_macos_metadata(name: str) -> bool:
+    """Entrées parasites des ZIP créés sous macOS, à ignorer silencieusement.
+
+    AppleDouble (``._fichier`` — fork de ressources, jamais une vraie image) et
+    le dossier ``__MACOSX/``. Les filtrer évite un rejet « image non reconnue »
+    sur des sidecars que l'utilisateur n'a jamais voulu déposer.
+    """
+    parts = name.split("/")
+    return "__MACOSX" in parts or parts[-1].startswith("._")
+
+
 def _safe_basename(raw_name: str) -> str:
     """Basename validé : pas de traversal, charset sûr (→ id de document valide)."""
     if raw_name.startswith("/") or "\\" in raw_name or ".." in Path(raw_name).parts:
@@ -123,24 +146,73 @@ def _read_capped(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytes:
 
 
 def _pair_documents(written: dict[str, Path]) -> tuple[DocumentRef, ...]:
-    """Apparie chaque image à sa vérité-terrain ``.txt`` (``<rad>`` ou ``<rad>.gt``)."""
+    """Apparie chaque image à sa vérité-terrain par radical (``_ground_truth_for``)."""
     documents: list[DocumentRef] = []
     for base, path in sorted(written.items()):
         if Path(base).suffix.lower() not in _IMAGE_EXT:
             continue
         stem = Path(base).stem
-        gt_name = next(
-            (c for c in (f"{stem}.gt.txt", f"{stem}.txt") if c in written), None
-        )
-        grounds: tuple[GroundTruthRef, ...] = ()
-        if gt_name is not None:
-            grounds = (
-                GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(written[gt_name])),
-            )
         documents.append(
-            DocumentRef(id=stem, image_uri=str(path), ground_truths=grounds)
+            DocumentRef(
+                id=stem,
+                image_uri=str(path),
+                ground_truths=_ground_truth_for(stem, written),
+            )
         )
     return tuple(documents)
+
+
+def _ground_truth_for(
+    stem: str, written: dict[str, Path]
+) -> tuple[GroundTruthRef, ...]:
+    """Vérité-terrain ``RAW_TEXT`` d'un radical, par priorité de format.
+
+    1. ``.txt`` manuel (``<rad>.gt.txt`` puis ``<rad>.txt``) — chemin direct.
+    2. À défaut, ALTO/PAGE (``<rad>.gt.xml`` puis ``<rad>.xml``) : texte d'ordre
+       de lecture extrait par ``layout_to_text`` (la **projection même** du
+       scoring), matérialisé en ``<rad>.gt.txt`` dérivé → le GT reste un
+       ``RAW_TEXT``, un seul chemin d'évaluation, déterministe.
+    3. Sinon ``()`` : le run reste exécutable, simplement non scoré.
+    """
+    txt = next((c for c in (f"{stem}.gt.txt", f"{stem}.txt") if c in written), None)
+    if txt is not None:
+        return (GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(written[txt])),)
+    xml = next((c for c in (f"{stem}.gt.xml", f"{stem}.xml") if c in written), None)
+    if xml is None:
+        return ()
+    derived = written[xml].with_name(f"{stem}.gt.txt")
+    derived.write_text(_xml_to_text(written[xml]), encoding="utf-8")
+    return (GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(derived)),)
+
+
+def _xml_to_text(path: Path) -> str:
+    """Texte d'ordre de lecture d'une vérité-terrain ALTO/PAGE.
+
+    ALTO ou PAGE selon le marqueur de racine (même heuristique que l'évaluation).
+    Le parse passe par la couche 2 (``safe_parse_xml`` durci : pas de XXE/DTD).
+    Parse en échec ou texte vide → rejet propre (``CorpusUploadError`` → 422),
+    jamais un 500.
+    """
+    data = path.read_bytes()
+    head = data[:4096].lower()
+    is_page = b"pcgts" in head or b"pagecontent" in head
+    try:
+        layout = (
+            page_to_layout(parse_pagexml(data))
+            if is_page
+            else alto_to_layout(parse_alto(data))
+        )
+    except (ValueError, FormatError) as exc:
+        kind = "PAGE" if is_page else "ALTO"
+        raise CorpusUploadError(
+            f"vérité-terrain {kind} illisible : {path.name!r} ({exc})."
+        ) from exc
+    text = layout_to_text(layout, {})
+    if not isinstance(text, str) or not text.strip():
+        raise CorpusUploadError(
+            f"vérité-terrain XML sans texte exploitable : {path.name!r}."
+        )
+    return text
 
 
 class CorpusStore:

@@ -11,8 +11,9 @@
 > opt-in via secrets `XEROCR_PUBLISH_REPO`/`_TOKEN`, best-effort, `published_url`
 > sur le Job) · **S4.a** ✅ (rapport autonome **restylé au design** : chrome gris
 > chaud + cartes, CSS inline → autonome + octet-stable, couche 7 `reports/html.py`)
-> · **S4.b.1a** ✅ (polices du design **incorporées en data-URI** : titres Fluxisch
-> Else + corps/données OCR-A, `reports/_assets`+`reports/_style`, octet-stable,
+> · **S4.b.1a** ✅ (polices du design **incorporées en data-URI** : titres Mona Sans
+> VF + corps IBM Plex Sans + données IBM Plex Mono + accents Fluxisch Else +
+> logo OCR-A, `reports/_assets`+`reports/_style`, octet-stable,
 > ~227 Ko) · **S4.b.1b** ✅ (overview enrichi : **readouts** de portée réelle +
 > tables **data-bars** relatives, sur les vraies métriques CER/WER/MER) · **S4.b.2** ✅
 > (section **par-document** : surface `RunResult.documents`, déjà calculé mais jamais
@@ -116,8 +117,8 @@ Suite : **379 verts**, archi + deploy gate verts, fumé via vrai uvicorn.
 
 ## TU1 — fait (coquille au design)
 Livré sur la branche de session : coquille rendue **serveur** (Jinja2 + CSS, JS
-zéro) au design, **polices auto-hébergées** (Fluxisch Else en woff2 ; OCR-A
-converti de `OCRA.pfa` → woff2), servies sous `/static` (aucun CDN). Nav avec
+zéro) au design, **polices auto-hébergées** (Mona Sans VF, IBM Plex Sans/Mono,
+Fluxisch Else, OCR-A), servies sous `/static` (aucun CDN). Nav avec
 **tous** les emplacements réservés — Bibliothèque · Banc d'essai · Rapports ·
 **Segmentation** · Historique · Moteurs (placeholders « à venir » honnêtes, seul
 Rapports actif). Bascule **FR/EN** via `?lang=`. CSP durcie (`style-src`/
@@ -146,8 +147,9 @@ fumé via uvicorn. Détails de fichiers : `xerocr/interfaces/web/` (`i18n.py`,
 - **Stack** : **rendu serveur** (Jinja2 + tokens du design + JS léger).
   **Pas de SPA React** — le design `.jsx` est une **spec visuelle** à
   reproduire, pas du code à livrer.
-- **Design** sauvegardé dans `design/`. **Typo** : titres **FluxischElse**
-  (incluse), corps **OCR-A** (⚠️ à sourcer en version LIBRE — cf. §4).
+- **Design** sauvegardé dans `design/`. **Typo** : titres **Mona Sans VF**,
+  corps **IBM Plex Sans**, données **IBM Plex Mono**, accents **Fluxisch Else**,
+  logo **OCR-A**.
 - **Migration moteur** : à **T1** (squelette), prochaine = **T2**. **TU1 en est
   indépendant** ; le calcul réel (TU2+) suppose T2+ livrés — cf.
   `PLAN_SPACE_INTERACTIF.md §10`.
@@ -161,8 +163,8 @@ déployé, visible).
 
 Périmètre :
 - Porter `design/tokens.css` en variables CSS de prod ; **self-host les
-  polices** en `@font-face` (FluxischElse + OCR-A) et **retirer l'`@import`
-  Google Fonts** de tokens.css (pas de CDN en prod).
+  polices** en `@font-face` (Mona Sans VF, IBM Plex Sans/Mono, Fluxisch Else,
+  OCR-A) et garder zéro CDN en prod.
 - Reproduire le **chrome** : rail/nav pilule, hero éditorial, panneau
   « système », d'après `design/` + `design/screenshots/`.
 - **Réserver tous les emplacements de nav**, même vides : **Bibliothèque ·
@@ -192,11 +194,9 @@ Périmètre :
 - **Ne pas casser le gate deploy** : `test_requirements_embark_no_engine`
   interdit les moteurs lourds dans la vitrine. TU1 **ne touche pas aux
   moteurs** → il doit rester vert. *(Son évolution = TU2.)*
-- **Polices = licence.** FluxischElse = OFL 1.1 (libre). **OCR-A = résolu** :
-  OCR-A de **John Sauter, domaine public** (`design/fonts/OCRA.pfa` +
-  `OCRA-LICENSE.txt`). En `.pfa` (Type 1) → **convertir en woff2/otf** pour le
-  `@font-face` (tâche TU1). **NE PAS** utiliser les OCR-A BT Bitstream
-  (propriétaires) testées avant.
+- **Polices = licence.** Toute la pile typo est auto-hébergée et packagée :
+  Mona Sans VF · IBM Plex Sans/Mono · Fluxisch Else · OCR-A. **NE PAS**
+  réintroduire de CDN ni de polices externes.
 - **HF = disque éphémère** : ne jamais compter sur l'écriture locale pour
   persister (ça, c'est TU3 = push au dépôt).
 - **Ne pas recopier** `web-app.js` de Picarones (3000+ lignes, fragile) :

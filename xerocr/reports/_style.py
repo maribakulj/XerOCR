@@ -3,7 +3,8 @@
 Décision **D-019** (option (a), préparée par D-018) : plutôt que des polices système
 (identité partielle) ou ``/static`` (perd l'autonomie du *standalone*), on
 **incorpore** les woff2 du design en ``data:`` URI. Le rapport garde son identité
-typographique — titres **Fluxisch Else**, corps + données **OCR-A** — **tout en
+typographique — titres **Mona Sans**, corps **IBM Plex Sans**, données
+**IBM Plex Mono**, accents **Fluxisch Else**, logo **OCR-A** — **tout en
 restant 100 % autonome** (aucun CDN, ``@import`` ni ``<link>``) et **octet-stable**
 (le base64 d'octets figés est déterministe).
 
@@ -18,8 +19,14 @@ from functools import lru_cache
 from importlib.resources import files
 
 #: (famille CSS, plage de poids, fichier woff2) — sous-ensemble réellement
-#: utilisé par le rapport : Fluxisch Else (titres) + OCR-A (corps/données).
+#: utilisé par le rapport autonome.
 _FONTS: tuple[tuple[str, str, str], ...] = (
+    ("Mona Sans VF", "200 900", "MonaSansVF-opsz-wght.woff2"),
+    ("IBM Plex Sans", "400", "IBMPlexSans-Regular.woff2"),
+    ("IBM Plex Sans", "500", "IBMPlexSans-Medium.woff2"),
+    ("IBM Plex Sans", "600", "IBMPlexSans-SemiBold.woff2"),
+    ("IBM Plex Mono", "400", "IBMPlexMono-Regular.woff2"),
+    ("IBM Plex Mono", "500", "IBMPlexMono-Medium.woff2"),
     ("Fluxisch Else", "400", "FluxischElse-Regular.woff2"),
     ("Fluxisch Else", "600 700", "FluxischElse-Bold.woff2"),
     ("OCRA", "400", "OCRA.woff2"),
