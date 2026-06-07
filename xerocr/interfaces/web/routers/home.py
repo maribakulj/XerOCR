@@ -24,6 +24,7 @@ from xerocr.adapters.storage.history_store import HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import StatusProvider
+from xerocr.app.run_planning import benchmark_engine_catalog
 from xerocr.app.segmentation import SegmentationStore
 from xerocr.interfaces.web._cache import TTLCache
 from xerocr.interfaces.web.catalog import available_reports
@@ -140,9 +141,9 @@ def build_home_router(
     def benchmark(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
         context = _base_context(lang, "benchmark", {})
-        # Le <select> des moteurs est rendu **serveur** (options dans le HTML,
-        # testables) ; le JS ne fait que l'upload + le lancement.
-        context["engines"] = statuses()
+        # Catalogue moteurs par rôle (ocr/llm/vlm) : options rendues **serveur**
+        # (testables) ; le composeur JS ne fait qu'assembler les concurrents.
+        context["catalog"] = benchmark_engine_catalog(statuses())
         # Le corpus est préparé dans la Bibliothèque ; ici on le sélectionne.
         context["corpora"] = _corpora_summaries(corpus_store)
         # Segmenteur (catégorie séparée) : son statut alimente le bouton

@@ -8,10 +8,12 @@ from pathlib import Path
 import pytest
 
 from xerocr.app import run
+from xerocr.app.engines import EngineStatus
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.app.run_planning import (
     Competitor,
     RunPlanningError,
+    benchmark_engine_catalog,
     plan_benchmark_run,
 )
 from xerocr.domain.artifacts import ArtifactType
@@ -114,3 +116,28 @@ def test_benchmark_runs_n_competitors_in_one_run(
     }
     assert cer["tesseract"] == 0.0
     assert (cer["tesseract→openai"] or 0.0) > 0.0
+
+
+def _status(kind: str, *, available: bool = True) -> EngineStatus:
+    return EngineStatus(kind=kind, label=kind.title(), available=available, detail="")
+
+
+def test_engine_catalog_groups_by_role() -> None:
+    statuses = (
+        _status("precomputed"),
+        _status("tesseract"),
+        _status("openai", available=False),
+        _status("ollama"),
+    )
+    catalog = benchmark_engine_catalog(statuses)
+    ocr = {e["kind"] for e in catalog["ocr"]}
+    llm = {e["kind"] for e in catalog["llm"]}
+    vlm = {e["kind"] for e in catalog["vlm"]}
+    assert ocr == {"tesseract"}
+    assert "openai" in llm and "ollama" in llm  # post-correction texte
+    assert "openai" in vlm and "ollama" not in vlm  # ollama : pas de vision
+    # precomputed est le moteur de démo, jamais proposé comme concurrent.
+    assert "precomputed" not in (ocr | llm | vlm)
+    # indisponibilité reflétée (grisé côté UI), pas masquée.
+    openai_entry = next(e for e in catalog["llm"] if e["kind"] == "openai")
+    assert openai_entry["available"] is False

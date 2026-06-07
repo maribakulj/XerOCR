@@ -604,3 +604,24 @@ table.data a { color: var(--fern-deep); font-weight: 500; }
   border-radius: var(--r-pill);
   cursor: pointer;
 }
+
+/* === Composeur (Banc d'essai : file de concurrents) === */
+.composer { display: flex; flex-direction: column; gap: 12px; }
+.composer-list { display: flex; flex-direction: column; gap: 10px; }
+.competitor {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+}
+.comp-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.comp-field { display: flex; flex-direction: column; gap: 4px; }
+.comp-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--g-400);
+}
+.comp-field .select,
+.comp-field .input { min-width: 150px; }
+.comp-remove { align-self: flex-end; margin-left: auto; }

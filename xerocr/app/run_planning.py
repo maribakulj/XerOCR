@@ -27,6 +27,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from xerocr.app.engines import EngineStatus
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.errors import XerOCRError
@@ -271,6 +272,39 @@ def plan_benchmark_run(
     return lambda _ws: spec
 
 
+def benchmark_engine_catalog(
+    statuses: tuple[EngineStatus, ...],
+) -> dict[str, list[dict[str, object]]]:
+    """Moteurs proposables au composeur, **par rôle** (``ocr``/``llm``/``vlm``).
+
+    Source unique des rôles : les mêmes ensembles que ``plan_benchmark_run``
+    accepte (anti-vide — on n'offre jamais une option sans branche serveur). Un
+    moteur indisponible **reste listé** (grisé côté UI) : son backend existe, il
+    manque seulement une clé/un binaire.
+    """
+    by_kind = {status.kind: status for status in statuses}
+
+    def role(kinds: frozenset[str]) -> list[dict[str, object]]:
+        entries: list[dict[str, object]] = []
+        for kind in sorted(kinds):
+            status = by_kind.get(kind)
+            if status is not None:
+                entries.append(
+                    {
+                        "kind": kind,
+                        "label": status.label,
+                        "available": status.available,
+                    }
+                )
+        return entries
+
+    return {
+        "ocr": role(_OCR_ENGINES),
+        "llm": role(_LLM_ENGINES),
+        "vlm": role(_VLM_ENGINES),
+    }
+
+
 def _segmentation_spec(corpus: CorpusSpec, run_id: str) -> RunSpec:
     """Pipeline de segmentation à 1 étape : ``pp_doclayout`` (IMAGE→LAYOUT).
 
@@ -310,6 +344,7 @@ __all__ = [
     "SEGMENTER_KIND",
     "Competitor",
     "RunPlanningError",
+    "benchmark_engine_catalog",
     "plan_benchmark_run",
     "plan_segmentation_run",
 ]

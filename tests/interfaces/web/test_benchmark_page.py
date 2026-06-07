@@ -34,15 +34,18 @@ def test_benchmark_page_renders_with_launcher(tmp_path: Path) -> None:
     body = resp.text
     assert 'id="launch"' in body  # le bouton de lancement
     assert 'src="/static/js/benchmark.js"' in body  # le JS est lié
-    assert "Lancer la démonstration" in body  # libellé du lanceur (FR par défaut)
+    assert "Lancer le benchmark" in body  # libellé du lanceur (FR par défaut)
 
 
-def test_benchmark_has_corpus_and_engine_controls(tmp_path: Path) -> None:
+def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     # Le corpus est SÉLECTIONNÉ ici (préparé dans la Bibliothèque), pas téléversé.
     body = _client(tmp_path).get("/benchmark").text
     assert 'id="corpus-select"' in body  # <select> de corpus existants
-    assert 'id="engine"' in body  # <select> moteur
-    for label in ("Pré-calculé", "Tesseract", "OpenAI", "Ollama"):
+    assert 'id="competitors"' in body  # file de concurrents (composeur)
+    assert 'id="competitor-tpl"' in body  # gabarit de concurrent
+    assert 'class="select comp-mode"' in body  # sélecteur de mode
+    # moteurs câblés présents dans le catalogue (par rôle) ; precomputed = démo, exclu.
+    for label in ("Tesseract", "OpenAI", "Ollama"):
         assert label in body
     # upload + imports ne sont plus ici : déplacés dans la Bibliothèque
     assert 'id="corpus-file"' not in body
@@ -68,7 +71,7 @@ def test_nav_links_benchmark_and_reports(tmp_path: Path) -> None:
 
 def test_benchmark_english(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/benchmark?lang=en").text
-    assert "Run the demonstration" in body
+    assert "Run the benchmark" in body
 
 
 def test_js_asset_is_served(tmp_path: Path) -> None:
