@@ -15,6 +15,27 @@
 
 ---
 
+## 0. Statut d'exécution
+
+Toutes les phases sont **livrées et poussées** (chacune `make ci` vert, couverture ≈ 95 %) :
+
+| Phase | Contenu | État |
+|---|---|---|
+| 0 | Design system — IBM Plex auto-hébergé, rôles typographiques | ✅ |
+| 1 | Moteur : 3 modes × tous fournisseurs (+anthropic, +VLM) | ✅ |
+| 2 | Run multi-concurrent + exposition web (gardes, retrait 422) | ✅ |
+| 3a | Bibliothèque : suppression corpus + cartes + composants stylés | ✅ |
+| 3b | Composeur multi-concurrent (modes × moteurs, anti-vide) | ✅ |
+| 3c | Sparklines historique + sélecteur de normalisation | ✅ |
+| 4 | Garde-fou `test_no_dead_ui` (anti-vide mécanique) + docs | ✅ |
+
+**Réconciliation `MIGRATION_PLAN.md`/`CLAUDE.md §0` : à faire au moment du merge**
+(le garde-fou `test_status_freshness` lie « Prochaine étape » au roll-up ; mettre
+le statut à jour sur la branche avant merge créerait une dérive — on réconcilie
+docs + code dans le commit de merge, conformément au rituel du projet).
+
+---
+
 ## 1. Constat technique vérifié
 
 ### 1.1 Le cœur est **nativement multi-concurrent** — NE PAS y toucher

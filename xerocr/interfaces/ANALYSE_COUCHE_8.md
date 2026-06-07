@@ -306,7 +306,7 @@ de page de la DoD ci-dessus sont donc **dépassés sur ces points** :
   « Mes corpus » (`CorpusStore.list_corpora`) ; le **Banc d'essai sélectionne**
   un corpus existant (`<select>`), il ne téléverse plus.
 - **Couche 8 = transport mince** : la construction de specs vit en
-  `app/run_planning.py` (`plan_ocr_run`/`plan_segmentation_run`), plus dans les
+  `app/run_planning.py` (`plan_benchmark_run`/`plan_segmentation_run`), plus dans les
   routeurs (garde-fou `tests/guardrails/test_interfaces_thin.py`).
 - **Stockage runtime** : historique + rapports de run via `app/data_dir`
   (inscriptible, ≠ dossier baké) ; pages dégradées (réseau/SQLite) — `tests/guardrails/`.
