@@ -291,30 +291,27 @@ select:focus-visible {
   padding: 14px 15px;
   box-shadow: var(--shadow-sm);
 }
-.pipeline-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.pipeline-value {
-  font-family: var(--display);
-  font-size: 27px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-}
-.pipeline-copy {
-  font-family: var(--mono);
-  font-size: 10px;
-  color: var(--g-400);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 .pipeline-tags {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 10px;
 }
+/* Bouton « Système · détails → » (pilule discrète, vers /engines) — Picarones. */
+.system-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--surface);
+  color: var(--g-500);
+  border-radius: var(--r-pill);
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.12s, color 0.12s;
+}
+.system-trigger:hover { background: var(--g-50); color: var(--ink); }
+.system-trigger-arrow { font-family: var(--mono); }
 .sys-card-title {
   font-size: 10.5px;
   font-weight: 500;

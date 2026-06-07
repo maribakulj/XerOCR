@@ -115,6 +115,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "sys_details": "Détails système",
         "sys_pipeline": "Pipeline",
         "sys_pipeline_ready": "moteurs prêts",
+        "sys_open": "Système · détails",
         # Page « Moteurs »
         "engines_eyebrow": "Vitrine · moteurs",
         "engines_title": "Moteurs",
@@ -291,6 +292,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "sys_details": "System details",
         "sys_pipeline": "Pipeline",
         "sys_pipeline_ready": "engines ready",
+        "sys_open": "System · details",
         "engines_eyebrow": "Showcase · engines",
         "engines_title": "Engines",
         "engines_desc": "Runtime availability of the built-in engines: binary, SDK, "

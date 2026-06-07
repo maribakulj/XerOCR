@@ -29,9 +29,13 @@ def test_engines_page_nav_active_and_no_script(tmp_path: Path) -> None:
     assert "<script" not in body  # 100 % rendu serveur, aucun JS
 
 
-def test_moteurs_is_not_listed_in_home_nav(tmp_path: Path) -> None:
+def test_engines_reachable_via_system_details_not_nav(tmp_path: Path) -> None:
     home = _client(tmp_path).get("/").text
-    assert 'href="/engines?lang=fr"' not in home
+    # Comme Picarones : « Moteurs » n'est pas une pastille de nav, mais est
+    # accessible via le bouton « Système · détails → » du rail.
+    assert 'class="system-trigger" href="/engines?lang=fr"' in home
+    assert 'nav-item" href="/engines' not in home
+    assert 'nav-item active" href="/engines' not in home
 
 
 def test_cloud_engine_unavailable_without_key(tmp_path: Path) -> None:
