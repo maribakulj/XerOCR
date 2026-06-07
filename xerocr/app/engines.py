@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pydantic import BaseModel, ConfigDict
 
 #: Kinds *cloud* (clé API) masqués en mode public.
-CLOUD_KINDS = frozenset({"openai", "mistral"})
+CLOUD_KINDS = frozenset({"openai", "anthropic", "mistral"})
 
 BinaryProbe = Callable[[str], str | None]
 ModuleProbe = Callable[[str], bool]
@@ -68,6 +68,7 @@ def engine_statuses(
         ),
         _tesseract_status(has_binary, has_module),
         _openai_status(public_mode, has_module, get_env),
+        _anthropic_status(public_mode, has_module, get_env),
         _mistral_status(public_mode, has_module, get_env),
         _ollama_status(has_module),
     )
@@ -97,6 +98,22 @@ def _openai_status(
     else:
         detail, ok = "prêt (SDK + clé)", True
     return EngineStatus(kind="openai", label="OpenAI", available=ok, detail=detail)
+
+
+def _anthropic_status(
+    public_mode: bool, has_module: ModuleProbe, get_env: EnvProbe
+) -> EngineStatus:
+    if public_mode:
+        detail, ok = "moteur cloud désactivé (mode public)", False
+    elif not has_module("anthropic"):
+        detail, ok = "SDK anthropic non installé (extra [anthropic])", False
+    elif not get_env("ANTHROPIC_API_KEY"):
+        detail, ok = "clé ANTHROPIC_API_KEY absente", False
+    else:
+        detail, ok = "prêt (SDK + clé)", True
+    return EngineStatus(
+        kind="anthropic", label="Anthropic", available=ok, detail=detail
+    )
 
 
 def _mistral_status(

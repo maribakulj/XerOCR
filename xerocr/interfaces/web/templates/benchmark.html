@@ -28,14 +28,21 @@
     </div>
 
     <div class="field">
-      <label class="label" for="engine">{{ t.bench_engine }}</label>
-      <select id="engine" class="select">
-        {% for e in engines %}
-        <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
-          {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
-        </option>
+      <label class="label" for="normalization">{{ t.bench_normalization }}</label>
+      <select id="normalization" class="select">
+        <option value="">{{ t.bench_norm_none }}</option>
+        {% for p in profiles %}
+        <option value="{{ p.name }}">{{ p.name }} — {{ p.description }}</option>
         {% endfor %}
       </select>
+    </div>
+
+    <div class="field-sep"></div>
+    <div class="field"><span class="label">{{ t.bench_competitors }}</span></div>
+    <div class="composer">
+      <div class="composer-list" id="competitors"></div>
+      <button id="add-competitor" class="btn btn-sm" type="button">
+        + {{ t.bench_add_competitor }}</button>
     </div>
 
     <button id="launch" class="btn btn-primary"
@@ -68,5 +75,55 @@
     <pre id="run-log" class="run-log" aria-live="polite"></pre>
   </div>
 </section>
+
+<template id="competitor-tpl">
+  <div class="competitor">
+    <div class="comp-row">
+      <label class="comp-field">
+        <span class="comp-label">{{ t.bench_mode }}</span>
+        <select class="select comp-mode">
+          <option value="ocr_only">{{ t.bench_mode_ocr }}</option>
+          <option value="text_only">{{ t.bench_mode_text }}</option>
+          <option value="text_and_image">{{ t.bench_mode_image }}</option>
+          <option value="zero_shot">{{ t.bench_mode_vlm }}</option>
+        </select>
+      </label>
+      <label class="comp-field" data-show="ocr_only text_only text_and_image">
+        <span class="comp-label">{{ t.bench_ocr_engine }}</span>
+        <select class="select comp-ocr">
+          {% for e in catalog.ocr %}
+          <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+            {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="comp-field" data-show="text_only">
+        <span class="comp-label">{{ t.bench_llm }}</span>
+        <select class="select comp-llm">
+          {% for e in catalog.llm %}
+          <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+            {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="comp-field" data-show="text_and_image zero_shot">
+        <span class="comp-label">{{ t.bench_vlm }}</span>
+        <select class="select comp-vlm">
+          {% for e in catalog.vlm %}
+          <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+            {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="comp-field" data-show="text_only text_and_image zero_shot">
+        <span class="comp-label">{{ t.bench_model }}</span>
+        <input class="input comp-model" type="text"
+               placeholder="{{ t.bench_model_ph }}">
+      </label>
+      <button class="c-del comp-remove" type="button"
+              title="{{ t.bench_remove }}">✕</button>
+    </div>
+  </div>
+</template>
 {% endblock %}
 {% block body_end %}<script src="/static/js/benchmark.js"></script>{% endblock %}

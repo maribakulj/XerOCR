@@ -199,6 +199,14 @@ class CorpusStore:
             items = list(self._corpora.items())
         return sorted(items, key=lambda kv: (kv[1].name, kv[0]))
 
+    def delete(self, corpus_id: str) -> bool:
+        """Supprime un corpus (registre **et** dossier). Vrai s'il existait."""
+        with self._lock:
+            existed = self._corpora.pop(corpus_id, None) is not None
+        if existed:
+            shutil.rmtree(self._base / corpus_id, ignore_errors=True)
+        return existed
+
 
 __all__ = [
     "MAX_ZIP_BYTES",

@@ -20,14 +20,17 @@ from fastapi.templating import Jinja2Templates
 
 from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, fetch_catalogue
 from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFaceDataset
-from xerocr.adapters.storage.history_store import HistoryStore
+from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
 from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import StatusProvider
+from xerocr.app.run_planning import benchmark_engine_catalog
 from xerocr.app.segmentation import SegmentationStore
+from xerocr.formats.text import NORMALIZATION_PROFILES
 from xerocr.interfaces.web._cache import TTLCache
 from xerocr.interfaces.web.catalog import available_reports
 from xerocr.interfaces.web.i18n import normalize_lang, strings_for
+from xerocr.interfaces.web.sparkline import sparkline_svg
 from xerocr.reports.layout_svg import layout_to_svg
 
 logger = logging.getLogger(__name__)
@@ -86,6 +89,37 @@ def _corpora_summaries(corpus_store: CorpusStore | None) -> list[dict[str, objec
     ]
 
 
+def _cer_trends(
+    history_store: HistoryStore, records: tuple[HistoryRecord, ...]
+) -> list[dict[str, object]]:
+    """Sparklines CER : une série chronologique par ``(pipeline, vue)``.
+
+    Données réelles du store (``history``) — aucune ré-agrégation. Ordre stable
+    (première apparition dans ``records``, plus récent d'abord).
+    """
+    seen: set[tuple[str, str]] = set()
+    trends: list[dict[str, object]] = []
+    for record in records:
+        if record.metric != "cer":
+            continue
+        key = (record.pipeline, record.view)
+        if key in seen:
+            continue
+        seen.add(key)
+        series = history_store.history(record.pipeline, record.view, "cer")
+        values = [s.value for s in series]
+        trends.append(
+            {
+                "pipeline": record.pipeline,
+                "view": record.view,
+                "latest": values[-1] if values else None,
+                "n": len(values),
+                "svg": sparkline_svg(values),
+            }
+        )
+    return trends
+
+
 def build_home_router(
     reports_dir: Path,
     templates: Jinja2Templates,
@@ -140,11 +174,17 @@ def build_home_router(
     def benchmark(request: Request, lang: str = "fr") -> HTMLResponse:
         lang = normalize_lang(lang)
         context = _base_context(lang, "benchmark", {})
-        # Le <select> des moteurs est rendu **serveur** (options dans le HTML,
-        # testables) ; le JS ne fait que l'upload + le lancement.
-        context["engines"] = statuses()
+        # Catalogue moteurs par rôle (ocr/llm/vlm) : options rendues **serveur**
+        # (testables) ; le composeur JS ne fait qu'assembler les concurrents.
+        context["catalog"] = benchmark_engine_catalog(statuses())
         # Le corpus est préparé dans la Bibliothèque ; ici on le sélectionne.
         context["corpora"] = _corpora_summaries(corpus_store)
+        # Profils de normalisation lus **dynamiquement** depuis formats/text
+        # (jamais figés en dur) ; le profil choisi alimente la vue d'évaluation.
+        context["profiles"] = [
+            {"name": p.name, "description": p.description}
+            for p in NORMALIZATION_PROFILES.values()
+        ]
         # Segmenteur (catégorie séparée) : son statut alimente le bouton
         # « Segmenter » — désactivé + motif si l'extra [segment] manque.
         context["segmenter"] = next(
@@ -201,14 +241,16 @@ def build_home_router(
                 for view, metric in pairs
                 for reg in history_store.regressions(view, metric)
             ]
+            trends = _cer_trends(history_store, records)
         except sqlite3.Error as exc:
             # Stockage indisponible (ex. dossier non inscriptible sur un Space) :
             # la page se dégrade au lieu de renvoyer une 500.
             logger.warning("[history] historique indisponible : %s", exc)
-            records, regressions = (), []
+            records, regressions, trends = (), [], []
         context = _base_context(lang, "history", {"history": str(len(records))})
         context["records"] = records
         context["regressions"] = regressions
+        context["trends"] = trends
         return templates.TemplateResponse(request, "history.html", context)
 
     @router.get("/engines", response_class=HTMLResponse)

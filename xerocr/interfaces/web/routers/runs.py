@@ -1,17 +1,16 @@
 """Routeur du **lanceur** : lancer un run, suivre son état, l'annuler (couche 8).
 
-TU2.d : ``POST /api/runs`` choisit un **moteur** et, le cas échéant, un **corpus
-uploadé** (``corpus_id``). Sans corps → le run de **démonstration** (`precomputed`).
+``POST /api/runs`` choisit des **concurrents** (chacun = un pipeline : OCR seul,
+OCR→LLM texte/image, ou VLM zero-shot) sur un **corpus** (``corpus_id``). N
+concurrents → **un seul run** comparé (cross-engine). Sans concurrent → le run de
+**démonstration** (``precomputed``, local).
 
-Ordre de garde (sécurité d'abord) :
+Ordre de garde (sécurité d'abord), par moteur référencé (``engine`` + ``llm``) :
 1. moteur inconnu → ``422`` ;
 2. moteur **cloud** en **mode public** → ``403`` (jamais de secret en public) ;
-3. moteur de **post-correction** (LLM) en autonome → ``422`` (chaîne OCR→LLM non
-   exposée ici ; cf. TU3+) ;
-4. ``corpus_id`` fourni mais introuvable → ``404`` ;
-5. moteur **indisponible** (binaire/SDK/clé absent) → ``409`` ;
-6. incohérence moteur⇄corpus (`precomputed` veut la démo, `tesseract` veut un
-   corpus) → ``422``.
+3. ``corpus_id`` fourni mais introuvable → ``404`` ;
+4. moteur **indisponible** (binaire/SDK/clé absent) → ``409`` ;
+5. concurrent incohérent (mode⇄moteur) → ``422`` (``plan_benchmark_run``).
 
 ``GET`` restitue l'état ; ``cancel`` déclenche l'annulation coopérative. Écritures
 protégées **CSRF**. Le ``RunResult`` produit atterrit dans le dossier vitrine.
@@ -32,24 +31,25 @@ from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import CLOUD_KINDS, StatusProvider
 from xerocr.app.jobs import JobRunner
-from xerocr.app.run_planning import RunPlanningError, plan_ocr_run
+from xerocr.app.run_planning import Competitor, RunPlanningError, plan_benchmark_run
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.interfaces.demo import demo_spec_builder
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
-#: Kinds de **post-correction** LLM : pas de run autonome (chaîne OCR→LLM = TU3+).
-#: (Les kinds *cloud* bloqués en mode public sont ``CLOUD_KINDS`` — source unique
-#: en couche 6, ``app.engines`` ; on ne les redéclare pas ici.)
-LLM_KINDS = frozenset({"openai", "ollama"})
-
 
 class LaunchRequest(BaseModel):
-    """Corps (optionnel) du lancement : un moteur, et un corpus uploadé ou rien."""
+    """Corps (optionnel) : des concurrents + un corpus, ou rien (démonstration)."""
 
     model_config = ConfigDict(extra="forbid")
 
-    engine: str = "precomputed"
+    competitors: tuple[Competitor, ...] = ()
     corpus_id: str | None = None
+    normalization: str | None = None
+
+
+def _referenced_kinds(comp: Competitor) -> tuple[str, ...]:
+    """Kinds qu'un concurrent met en jeu : moteur OCR/VLM + LLM éventuel."""
+    return (comp.engine,) if comp.llm is None else (comp.engine, comp.llm)
 
 
 def _parse_last_event_id(raw: str | None) -> int:
@@ -109,44 +109,52 @@ def build_runs_router(
     )
     def launch_run(payload: LaunchRequest | None = None) -> dict[str, str]:
         req = payload or LaunchRequest()
+        run_id = f"web-{uuid.uuid4().hex[:12]}"
+        # Démonstration : aucun concurrent → precomputed (local, jamais cloud).
+        if not req.competitors:
+            if req.corpus_id is not None:
+                raise HTTPException(
+                    status_code=422,
+                    detail="démonstration : ne s'exécute pas sur un corpus "
+                    "(sélectionne au moins un concurrent).",
+                )
+            return {"job_id": runner.launch(demo_spec_builder(run_id))}
+
         sts = statuses()
-        if req.engine not in {s.kind for s in sts}:
-            raise HTTPException(
-                status_code=422, detail=f"moteur inconnu : {req.engine!r}"
-            )
-        if public_mode and req.engine in CLOUD_KINDS:
-            raise HTTPException(
-                status_code=403,
-                detail=f"moteur cloud refusé (mode public) : {req.engine!r}",
-            )
-        if req.engine in LLM_KINDS:
-            raise HTTPException(
-                status_code=422,
-                detail="post-correction LLM : chaîne OCR→LLM non exposée ici (TU3+).",
-            )
+        known = {s.kind for s in sts}
+        available = {s.kind for s in sts if s.available}
+        # 1-2 : sécurité d'abord (moteur connu, pas de cloud en mode public).
+        for comp in req.competitors:
+            for kind in _referenced_kinds(comp):
+                if kind not in known:
+                    raise HTTPException(
+                        status_code=422, detail=f"moteur inconnu : {kind!r}"
+                    )
+                if public_mode and kind in CLOUD_KINDS:
+                    raise HTTPException(
+                        status_code=403,
+                        detail=f"moteur cloud refusé (mode public) : {kind!r}",
+                    )
+        # 3 : corpus.
         corpus: CorpusSpec | None = None
         if req.corpus_id is not None:
             corpus = corpus_store.get(req.corpus_id)
             if corpus is None:
                 raise HTTPException(status_code=404, detail="corpus introuvable")
-        if req.engine not in {s.kind for s in sts if s.available}:
-            raise HTTPException(
-                status_code=409, detail=f"moteur indisponible : {req.engine!r}"
+        # 4 : disponibilité runtime (binaire/SDK/clé).
+        for comp in req.competitors:
+            for kind in _referenced_kinds(comp):
+                if kind not in available:
+                    raise HTTPException(
+                        status_code=409, detail=f"moteur indisponible : {kind!r}"
+                    )
+        # 5 : cohérence mode⇄moteur (dispatch exhaustif).
+        try:
+            build = plan_benchmark_run(
+                req.competitors, corpus, run_id, normalization=req.normalization
             )
-        run_id = f"web-{uuid.uuid4().hex[:12]}"
-        if req.engine == "precomputed":
-            if corpus is not None:
-                raise HTTPException(
-                    status_code=422,
-                    detail="precomputed = démonstration "
-                    "(ne s'exécute pas sur un corpus).",
-                )
-            build = demo_spec_builder(run_id)
-        else:
-            try:
-                build = plan_ocr_run(req.engine, corpus, run_id)
-            except RunPlanningError as exc:
-                raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RunPlanningError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"job_id": runner.launch(build)}
 
     @router.get("/api/runs/{job_id}")
@@ -178,4 +186,4 @@ def build_runs_router(
     return router
 
 
-__all__ = ["LLM_KINDS", "LaunchRequest", "build_runs_router"]
+__all__ = ["Competitor", "LaunchRequest", "build_runs_router"]

@@ -1,36 +1,41 @@
-"""``OpenAIAdapter`` — post-correction LLM via l'API OpenAI (mode ``text_only``).
+"""``OpenAIAdapter`` — post-correction LLM **et** transcription VLM (API OpenAI).
 
-Implémente le ``Module`` Protocol : ``RAW_TEXT`` → ``CORRECTED_TEXT``. La clé API
-vient de ``OPENAI_API_KEY`` ; le SDK ``openai`` est un **extra** importé
-paresseusement dans ``_invoke_openai`` (isolé → **mockable**, CI sans clé ni
-réseau). La ``Deadline`` borne l'appel (timeout SDK) ; l'annulation fine via
-``register_cancel_handle`` est la référence ``ollama`` (tranche suivante).
+Implémente le ``Module`` Protocol. Trois modes (``PipelineMode``) selon le rôle
+passé à la construction : ``text_only`` (``RAW_TEXT`` → ``CORRECTED_TEXT``),
+``text_and_image`` (image + texte → corrigé), ``zero_shot`` (image → texte). La
+clé vient de ``OPENAI_API_KEY`` ; le SDK ``openai`` est un **extra** importé
+paresseusement dans ``_invoke_openai`` / ``_invoke_openai_vision`` (isolés →
+**mockables**, CI sans clé ni réseau). La ``Deadline`` borne l'appel.
 """
 
 from __future__ import annotations
 
 from xerocr.adapters.llm._base import (
-    DEFAULT_CORRECTION_PROMPT,
-    build_prompt,
-    load_ocr_text,
+    default_prompt_for_role,
+    llm_input_types,
+    llm_output_type,
     normalize_llm_content,
+    run_llm_step,
     validate_llm_label,
-    write_corrected,
+    validate_role,
 )
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.deadline import Deadline
 from xerocr.domain.errors import AdapterStepError
+from xerocr.domain.pipeline import PipelineMode
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
 from xerocr.pipeline.types import RunContext
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "gpt-4o-mini"
+_SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
 
 
-def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
-    *, model: str, prompt: str, deadline: Deadline
+def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
+    model: str, messages: list[dict[str, object]], deadline: Deadline
 ) -> str:
+    """Appel ``chat.completions`` partagé (texte ou multimodal)."""
     import os
 
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -44,7 +49,7 @@ def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
         ) from exc
     kwargs: dict[str, object] = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "temperature": 0.0,
     }
     timeout = deadline.as_sdk_timeout()
@@ -61,19 +66,42 @@ def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
     return normalize_llm_content(response.choices[0].message.content)
 
 
+def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
+    *, model: str, prompt: str, deadline: Deadline
+) -> str:
+    return _openai_client(model, [{"role": "user", "content": prompt}], deadline)
+
+
+def _invoke_openai_vision(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
+    *, model: str, prompt: str, media_type: str, image_b64: str, deadline: Deadline
+) -> str:
+    content = [
+        {"type": "text", "text": prompt},
+        {
+            "type": "image_url",
+            "image_url": {"url": f"data:{media_type};base64,{image_b64}"},
+        },
+    ]
+    return _openai_client(model, [{"role": "user", "content": content}], deadline)
+
+
 class OpenAIAdapter:
-    """Post-correction LLM OpenAI : ``RAW_TEXT`` → ``CORRECTED_TEXT``."""
+    """Adapter OpenAI multi-mode (post-correction texte/image, transcription VLM)."""
 
     def __init__(
         self,
         *,
         label: str,
         model: str = _DEFAULT_MODEL,
-        prompt: str = DEFAULT_CORRECTION_PROMPT,
+        role: str = "text_only",
+        prompt: str | None = None,
     ) -> None:
         self._label = validate_llm_label(label, "OpenAIAdapter")
         self._model = model
-        self._prompt = prompt
+        self._role: PipelineMode = validate_role(role, "OpenAIAdapter", _SUPPORTED)
+        self._prompt = (
+            prompt if prompt is not None else default_prompt_for_role(self._role)
+        )
 
     @property
     def name(self) -> str:
@@ -85,11 +113,11 @@ class OpenAIAdapter:
 
     @property
     def input_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.RAW_TEXT})
+        return llm_input_types(self._role)
 
     @property
     def output_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.CORRECTED_TEXT})
+        return frozenset({llm_output_type(self._role)})
 
     def execute(
         self,
@@ -98,22 +126,30 @@ class OpenAIAdapter:
         context: RunContext,
         control: RunControl,
     ) -> dict[ArtifactType, Artifact]:
-        control.raise_if_cancelled()
-        if context.workspace_uri is None:
-            raise AdapterStepError(
-                f"{self.name} : workspace requis (RunContext.workspace_uri)."
+        def text_invoke(prompt: str) -> str:
+            return _invoke_openai(
+                model=self._model, prompt=prompt, deadline=context.deadline
             )
-        ocr_text = load_ocr_text(inputs, self.name)
-        prompt = build_prompt(self._prompt, ocr_text)
-        corrected = _invoke_openai(
-            model=self._model, prompt=prompt, deadline=context.deadline
-        )
-        return write_corrected(
-            context.workspace_uri,
-            context.document_id,
-            self._label,
-            self.name,
-            corrected,
+
+        def vision_invoke(prompt: str, media_type: str, image_b64: str) -> str:
+            return _invoke_openai_vision(
+                model=self._model,
+                prompt=prompt,
+                media_type=media_type,
+                image_b64=image_b64,
+                deadline=context.deadline,
+            )
+
+        return run_llm_step(
+            role=self._role,
+            label=self._label,
+            name=self.name,
+            prompt=self._prompt,
+            inputs=inputs,
+            context=context,
+            control=control,
+            text_invoke=text_invoke,
+            vision_invoke=vision_invoke,
         )
 
 

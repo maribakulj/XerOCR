@@ -88,7 +88,11 @@ def _build_openai(kwargs: Mapping[str, ParamValue]) -> Module:
         )
     from xerocr.adapters.llm.openai import OpenAIAdapter
 
-    return OpenAIAdapter(label=label, model=str(kwargs.get("model", "gpt-4o-mini")))
+    return OpenAIAdapter(
+        label=label,
+        model=str(kwargs.get("model", "gpt-4o-mini")),
+        role=str(kwargs.get("role", "text_only")),
+    )
 
 
 def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
@@ -115,7 +119,24 @@ def _build_mistral(kwargs: Mapping[str, ParamValue]) -> Module:
     from xerocr.adapters.llm.mistral import MistralAdapter
 
     return MistralAdapter(
-        label=label, model=str(kwargs.get("model", "mistral-small-latest"))
+        label=label,
+        model=str(kwargs.get("model", "mistral-small-latest")),
+        role=str(kwargs.get("role", "text_only")),
+    )
+
+
+def _build_anthropic(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "anthropic : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.llm.anthropic import AnthropicAdapter
+
+    return AnthropicAdapter(
+        label=label,
+        model=str(kwargs.get("model", "claude-haiku-4-5-20251001")),
+        role=str(kwargs.get("role", "text_only")),
     )
 
 
@@ -154,6 +175,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)
+    registry.register_builder("anthropic", _build_anthropic)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("pp_doclayout", _build_pp_doclayout)
     registry.register_builder("precomputed_region", _build_precomputed_region)

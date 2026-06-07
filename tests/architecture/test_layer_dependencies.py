@@ -107,8 +107,8 @@ ADAPTERS_ALLOWED_PKG = (
 #: ``paddlex`` : segmenteur de mise en page PP-DocLayout (extra ``[segment]``,
 #: import paresseux dans ``layout/pp_doclayout``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
-    "pytesseract", "openai", "mistralai", "httpx", "httpcore", "datasets",
-    "PIL", "yaml", "paddlex",
+    "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
+    "datasets", "PIL", "yaml", "paddlex",
 }
 
 

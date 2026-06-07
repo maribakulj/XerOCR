@@ -83,6 +83,25 @@ def test_mistral_cloud_gated_in_public_then_needs_sdk_and_key() -> None:
     assert st["mistral"][0] is True
 
 
+def test_anthropic_cloud_gated_then_needs_sdk_and_key() -> None:
+    # cloud → refusé en mode public
+    pub = _statuses(
+        public_mode=True, has_binary=lambda _n: None,
+        has_module=lambda _n: True, get_env=lambda _n: "key",
+    )
+    assert pub["anthropic"][0] is False and "public" in pub["anthropic"][1]
+    base = {"public_mode": False, "has_binary": lambda _n: None}
+    # SDK absent
+    st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
+    assert st["anthropic"][0] is False and "SDK" in st["anthropic"][1]
+    # SDK présent, clé absente
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: None, **base)
+    assert st["anthropic"][0] is False and "ANTHROPIC_API_KEY" in st["anthropic"][1]
+    # SDK + clé
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: "k", **base)
+    assert st["anthropic"][0] is True
+
+
 def test_ollama_needs_httpx() -> None:
     common = {
         "public_mode": False,
@@ -97,7 +116,9 @@ def test_default_probes_run_without_error() -> None:
     # sondes réelles (env de CI) : ne lève pas, precomputed reste dispo.
     statuses = engine_statuses(public_mode=False)
     kinds = {s.kind for s in statuses}
-    assert kinds == {"precomputed", "tesseract", "openai", "mistral", "ollama"}
+    assert kinds == {
+        "precomputed", "tesseract", "openai", "anthropic", "mistral", "ollama"
+    }
     assert next(s for s in statuses if s.kind == "precomputed").available
 
 

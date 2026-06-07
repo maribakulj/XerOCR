@@ -124,6 +124,31 @@
       });
     }
 
+    // --- Suppression d'un corpus ------------------------------------------
+    var delButtons = document.querySelectorAll(".c-del");
+    for (var d = 0; d < delButtons.length; d++) bindDelete(delButtons[d]);
+
+    function bindDelete(btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.getAttribute("data-corpus");
+        if (!id) return;
+        var headers = {};
+        headers[CSRF] = "1";
+        btn.disabled = true;
+        fetchJson("/api/corpus/" + encodeURIComponent(id), {
+          method: "DELETE",
+          headers: headers,
+        })
+          .then(function (r) {
+            if (r.ok) window.location.reload();
+            else btn.disabled = false;
+          })
+          .catch(function () {
+            btn.disabled = false;
+          });
+      });
+    }
+
     // Ajoute la valeur d'un champ au payload : case→bool, nombre coercé, texte
     // non vide tel quel ; un champ optionnel vide est ignoré.
     function collectField(payload, el) {
