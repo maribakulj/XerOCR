@@ -157,6 +157,31 @@ def test_unavailable_engine_is_409(
     assert resp.status_code == 409
 
 
+def test_unknown_normalization_is_422(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # moteurs forcés disponibles → on atteint le plan ; profil inconnu → 422.
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.app.engine_statuses",
+        lambda **kw: engine_statuses(
+            has_binary=lambda _n: "/usr/bin/tesseract",
+            has_module=lambda _n: True,
+            **kw,
+        ),
+    )
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {
+            "competitors": [{"engine": "tesseract"}],
+            "corpus_id": corpus_id,
+            "normalization": "bogus",
+        },
+    )
+    assert resp.status_code == 422
+
+
 def test_precomputed_as_competitor_is_422(tmp_path: Path) -> None:
     # precomputed est le moteur de DÉMO, pas un concurrent OCR câblé → 422.
     client = _client(tmp_path)

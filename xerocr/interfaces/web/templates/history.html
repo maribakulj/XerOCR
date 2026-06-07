@@ -13,6 +13,32 @@
   </div>
 </section>
 
+{% if trends %}
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-title">{{ t.history_trends_title }}</div>
+    <div class="sec-sub">{{ t.history_trends_desc }}</div>
+  </div>
+  <div class="trend-grid">
+    {% for tr in trends %}
+    <div class="trend-card">
+      <div class="trend-head">
+        <span class="t-pipe">{{ tr.pipeline }}</span>
+        <span class="badge">{{ tr.view }}</span>
+      </div>
+      <div class="trend-spark">{{ tr.svg|safe }}</div>
+      <div class="trend-meta">
+        {% if tr.latest is not none %}
+        <span class="mono">CER {{ "%.4f"|format(tr.latest) }}</span>
+        {% endif %}
+        <span class="mono">{{ tr.n }}×</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <section class="sec">
   <div class="sec-head">
     <div class="sec-title">{{ t.history_regressions_title }}</div>

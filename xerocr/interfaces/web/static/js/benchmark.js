@@ -117,6 +117,8 @@
       var payload = { competitors: buildCompetitors() };
       var corpusId = currentCorpusId();
       if (corpusId) payload.corpus_id = corpusId;
+      var normEl = document.getElementById("normalization");
+      if (normEl && normEl.value) payload.normalization = normEl.value;
 
       fetchJson("/api/runs", {
         method: "POST",

@@ -27,6 +27,16 @@
       <a class="btn btn-sm" href="/library?lang={{ lang }}">{{ t.bench_corpus_prepare }}</a>
     </div>
 
+    <div class="field">
+      <label class="label" for="normalization">{{ t.bench_normalization }}</label>
+      <select id="normalization" class="select">
+        <option value="">{{ t.bench_norm_none }}</option>
+        {% for p in profiles %}
+        <option value="{{ p.name }}">{{ p.name }} — {{ p.description }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
     <div class="field-sep"></div>
     <div class="field"><span class="label">{{ t.bench_competitors }}</span></div>
     <div class="composer">

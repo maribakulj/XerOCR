@@ -141,3 +141,24 @@ def test_engine_catalog_groups_by_role() -> None:
     # indisponibilité reflétée (grisé côté UI), pas masquée.
     openai_entry = next(e for e in catalog["llm"] if e["kind"] == "openai")
     assert openai_entry["available"] is False
+
+
+def test_normalization_profile_set_on_views(tmp_path: Path) -> None:
+    build = plan_benchmark_run(
+        (Competitor(engine="tesseract"),),
+        _corpus(tmp_path),
+        "r",
+        normalization="medieval_french",
+    )
+    spec = build(tmp_path)
+    assert spec.evaluation.views[0].normalization_profile == "medieval_french"
+
+
+def test_unknown_normalization_refused(tmp_path: Path) -> None:
+    with pytest.raises(RunPlanningError):
+        plan_benchmark_run(
+            (Competitor(engine="tesseract"),),
+            _corpus(tmp_path),
+            "r",
+            normalization="bogus_profile",
+        )

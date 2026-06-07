@@ -625,3 +625,28 @@ table.data a { color: var(--fern-deep); font-weight: 500; }
 .comp-field .select,
 .comp-field .input { min-width: 150px; }
 .comp-remove { align-self: flex-end; margin-left: auto; }
+
+/* === Sparklines / tendances (Historique) === */
+.trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.trend-card {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.trend-head .t-pipe { font-weight: 600; font-size: 13px; color: var(--ink); }
+.trend-spark { color: var(--fern-deep); }
+.trend-spark .spark { width: 100%; height: 30px; display: block; }
+.trend-meta { display: flex; gap: 12px; font-size: 10.5px; color: var(--g-400); }

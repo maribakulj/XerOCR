@@ -60,6 +60,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_vlm": "VLM",
         "bench_model": "Modèle",
         "bench_model_ph": "modèle (optionnel)",
+        "bench_normalization": "Normalisation",
+        "bench_norm_none": "(aucune)",
         # Import de corpus distant (S6)
         "imp_title": "…ou importer un corpus distant",
         "imp_source": "Source",
@@ -116,6 +118,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_desc": "Évolution des métriques par moteur au fil des runs ; "
         "régressions signalées entre les deux derniers runs.",
         "history_stat_runs": "mesures",
+        "history_trends_title": "Tendances",
+        "history_trends_desc": "Évolution du CER par moteur au fil des runs "
+        "(échelle locale).",
         "history_regressions_title": "Régressions",
         "history_regressions_desc": "Métriques dégradées entre les deux runs les "
         "plus récents (plus bas = meilleur).",
@@ -201,6 +206,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_vlm": "VLM",
         "bench_model": "Model",
         "bench_model_ph": "model (optional)",
+        "bench_normalization": "Normalization",
+        "bench_norm_none": "(none)",
         # Remote corpus import (S6)
         "imp_title": "…or import a remote corpus",
         "imp_source": "Source",
@@ -256,6 +263,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_desc": "Per-engine metric evolution across runs; regressions "
         "flagged between the two most recent runs.",
         "history_stat_runs": "records",
+        "history_trends_title": "Trends",
+        "history_trends_desc": "CER evolution per engine across runs "
+        "(local scale).",
         "history_regressions_title": "Regressions",
         "history_regressions_desc": "Metrics that worsened between the two most "
         "recent runs (lower is better).",

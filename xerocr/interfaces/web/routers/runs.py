@@ -44,6 +44,7 @@ class LaunchRequest(BaseModel):
 
     competitors: tuple[Competitor, ...] = ()
     corpus_id: str | None = None
+    normalization: str | None = None
 
 
 def _referenced_kinds(comp: Competitor) -> tuple[str, ...]:
@@ -149,7 +150,9 @@ def build_runs_router(
                     )
         # 5 : cohérence mode⇄moteur (dispatch exhaustif).
         try:
-            build = plan_benchmark_run(req.competitors, corpus, run_id)
+            build = plan_benchmark_run(
+                req.competitors, corpus, run_id, normalization=req.normalization
+            )
         except RunPlanningError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"job_id": runner.launch(build)}

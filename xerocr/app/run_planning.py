@@ -40,6 +40,7 @@ from xerocr.domain.pipeline import (
 )
 from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.run_spec import RunSpec
+from xerocr.formats.text import NORMALIZATION_PROFILES
 
 #: Segmenteur de mise en page du socle — **source unique** du *kind* (consommé
 #: par la planification du run de segmentation ET par le gate du routeur).
@@ -75,35 +76,46 @@ class Competitor(BaseModel):
     lang: str = Field(default="fra", max_length=64)
 
 
-_OCR_VIEW = EvaluationView(
-    name="text",
-    # RAW_TEXT (OCR/zero-shot) **et** CORRECTED_TEXT (OCR→LLM) : la précédence du
-    # runner évalue la sortie la plus aboutie de chaque pipeline (cf. evaluation).
-    candidate_types=frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT}),
-    metric_names=("cer", "wer", "mer"),
-)
-
-#: Vue **référence OCR** (opt-in) : compare le candidat à une référence
-#: ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le **nom de
-#: la vue porte l'avertissement** : ce n'est PAS une vérité-terrain manuelle, le
-#: score mesure l'accord avec un autre OCR.
-_REFERENCE_VIEW = EvaluationView(
-    name="référence OCR (pas une vérité-terrain manuelle)",
-    candidate_types=frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT}),
-    projections_by_source_type={
-        ArtifactType.REFERENCE_TEXT: ProjectionSpec(
-            source_type=ArtifactType.REFERENCE_TEXT,
-            target_type=ArtifactType.RAW_TEXT,
-            projector_name="identity_text",
-        )
-    },
-    metric_names=("cer", "wer", "mer"),
-    ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
-)
+#: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
+#: **et** ``CORRECTED_TEXT`` (OCR→LLM) — la précédence du runner évalue la sortie
+#: la plus aboutie de chaque pipeline (cf. evaluation).
+_CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
-def _views_for_corpus(corpus: CorpusSpec) -> tuple[EvaluationView, ...]:
-    """Vues à évaluer selon les **types de GT présents** dans le corpus.
+def _ocr_view(normalization: str | None) -> EvaluationView:
+    return EvaluationView(
+        name="text",
+        candidate_types=_CANDIDATES,
+        metric_names=("cer", "wer", "mer"),
+        normalization_profile=normalization,
+    )
+
+
+def _reference_view(normalization: str | None) -> EvaluationView:
+    """Vue **référence OCR** (opt-in) : compare le candidat à une référence
+    ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le **nom de
+    la vue porte l'avertissement** : ce n'est PAS une vérité-terrain manuelle, le
+    score mesure l'accord avec un autre OCR."""
+    return EvaluationView(
+        name="référence OCR (pas une vérité-terrain manuelle)",
+        candidate_types=_CANDIDATES,
+        projections_by_source_type={
+            ArtifactType.REFERENCE_TEXT: ProjectionSpec(
+                source_type=ArtifactType.REFERENCE_TEXT,
+                target_type=ArtifactType.RAW_TEXT,
+                projector_name="identity_text",
+            )
+        },
+        metric_names=("cer", "wer", "mer"),
+        ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
+        normalization_profile=normalization,
+    )
+
+
+def _views_for_corpus(
+    corpus: CorpusSpec, normalization: str | None = None
+) -> tuple[EvaluationView, ...]:
+    """Vues à évaluer selon les **types de GT présents**, sous ``normalization``.
 
     GT manuelle ``RAW_TEXT`` → vue ``text`` ; référence ``REFERENCE_TEXT`` (OCR
     Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
@@ -112,11 +124,11 @@ def _views_for_corpus(corpus: CorpusSpec) -> tuple[EvaluationView, ...]:
     gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
     views: list[EvaluationView] = []
     if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_OCR_VIEW)
+        views.append(_ocr_view(normalization))
     if ArtifactType.REFERENCE_TEXT in gt_types:
-        views.append(_REFERENCE_VIEW)
+        views.append(_reference_view(normalization))
     if not views:
-        views.append(_OCR_VIEW)
+        views.append(_ocr_view(normalization))
     return tuple(views)
 
 
@@ -236,7 +248,11 @@ def _pipeline_for_competitor(
 
 
 def plan_benchmark_run(
-    competitors: tuple[Competitor, ...], corpus: CorpusSpec | None, run_id: str
+    competitors: tuple[Competitor, ...],
+    corpus: CorpusSpec | None,
+    run_id: str,
+    *,
+    normalization: str | None = None,
 ) -> Callable[[Path], RunSpec]:
     """Builder de spec d'un **benchmark** : N concurrents → un ``RunSpec``.
 
@@ -248,6 +264,10 @@ def plan_benchmark_run(
         raise RunPlanningError("benchmark : au moins un concurrent requis.")
     if corpus is None:
         raise RunPlanningError("benchmark : corpus requis.")
+    if normalization is not None and normalization not in NORMALIZATION_PROFILES:
+        raise RunPlanningError(
+            f"profil de normalisation inconnu : {normalization!r}."
+        )
     pipelines: list[PipelineSpec] = []
     adapter_kwargs: dict[str, dict[str, str | int | float | bool]] = {}
     seen: dict[str, int] = {}
@@ -265,7 +285,7 @@ def plan_benchmark_run(
     spec = RunSpec(
         corpus=corpus,
         pipelines=tuple(pipelines),
-        evaluation=EvaluationSpec(views=_views_for_corpus(corpus)),
+        evaluation=EvaluationSpec(views=_views_for_corpus(corpus, normalization)),
         adapter_kwargs=adapter_kwargs,
         run_id=run_id,
     )
