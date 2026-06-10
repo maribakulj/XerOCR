@@ -13,11 +13,8 @@ import pytest
 
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.compare_widget import (
-    _compare_js,
-    compare_script_hash,
-    compare_widget,
-)
+from xerocr.reports.compare_widget import compare_script_hash, compare_widget
+from xerocr.reports.embedded import asset_text
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 _JS = Path(__file__).resolve().parents[2] / "xerocr/reports/_assets/compare.js"
@@ -74,7 +71,7 @@ def test_payload_escapes_angle_brackets() -> None:
 
 
 def test_hash_is_sha256_of_the_script() -> None:
-    digest = hashlib.sha256(_compare_js().encode("utf-8")).digest()
+    digest = hashlib.sha256(asset_text("compare.js").encode("utf-8")).digest()
     expected = "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
     assert compare_script_hash() == expected
     assert compare_script_hash().startswith("'sha256-")

@@ -18,31 +18,16 @@ réseau (cf. invariant d'autonomie du rapport).
 
 from __future__ import annotations
 
-import base64
-import hashlib
 import json
-from functools import lru_cache
-from importlib import resources
 
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.embedded import inline_script, script_hash
 from xerocr.reports.section import Html
 
 
-@lru_cache(maxsize=1)
-def _compare_js() -> str:
-    """Le script statique, lu **une fois** du paquet (data, package-data)."""
-    return (
-        resources.files("xerocr.reports")
-        .joinpath("_assets/compare.js")
-        .read_text(encoding="utf-8")
-    )
-
-
-@lru_cache(maxsize=1)
 def compare_script_hash() -> str:
-    """Empreinte CSP (``'sha256-…'``) du script statique — constante, calculée 1×."""
-    digest = hashlib.sha256(_compare_js().encode("utf-8")).digest()
-    return "'sha256-" + base64.b64encode(digest).decode("ascii") + "'"
+    """Empreinte CSP du script de comparaison (délègue à ``embedded``)."""
+    return script_hash("compare.js")
 
 
 def _cer_by_key(result: RunResult) -> dict[str, float]:
@@ -76,7 +61,7 @@ def compare_widget(result: RunResult) -> Html:
         'accept=".json,application/json" hidden>'
         "</div>"
         f'<script id="xerocr-compare-data" type="application/json">{payload}</script>'
-        f"<script>{_compare_js()}</script>"
+        f"{inline_script('compare.js')}"
     )
 
 

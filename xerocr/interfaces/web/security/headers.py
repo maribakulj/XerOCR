@@ -84,15 +84,16 @@ def get_csp_policy(path: str | None = None) -> str:
     """CSP à appliquer : base + ``frame-ancestors`` selon l'environnement.
 
     Pour les réponses **``/reports/``** seulement, ``script-src`` autorise en plus
-    l'**empreinte sha256** du script statique de comparaison (rapport autonome,
-    client-side) — l'``'unsafe-inline'`` reste **exclu** partout (la CSP reste un
-    contrat ; seul ce script connu, épinglé par hash, peut s'exécuter)."""
+    les **empreintes sha256** des scripts statiques inlinés du rapport autonome
+    (comparaison, navigation clavier, palette) — l'``'unsafe-inline'`` reste
+    **exclu** partout (la CSP reste un contrat ; seuls ces scripts connus, épinglés
+    par hash, peuvent s'exécuter)."""
     base = _CSP_BASE
     if path is not None and path.startswith("/reports/"):
-        from xerocr.reports.compare_widget import compare_script_hash
+        from xerocr.reports.embedded import script_csp_hashes
 
         base = base.replace(
-            "script-src 'self'", f"script-src 'self' {compare_script_hash()}"
+            "script-src 'self'", f"script-src 'self' {script_csp_hashes()}"
         )
     return f"{base}; {_frame_ancestors_directive()}"
 

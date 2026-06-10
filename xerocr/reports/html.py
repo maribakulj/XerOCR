@@ -130,6 +130,12 @@ _CSS = (
     ".compare-banner .cb-row .cb-delta{font-variant-numeric:tabular-nums;}"
     ".compare-banner .cb-row.worse .cb-delta{color:#E59A8A;}"
     ".compare-banner .cb-row.better .cb-delta{color:#9FC3A0;}"
+    # Palette daltonien (``?palette=cb`` via report.js → classe sur <html>) : le
+    # vert/rouge confusables → paire bleu/orange distinguable. Les badges moteur
+    # portent une lettre → restent identifiables sans couleur.
+    ".palette-cb{--fern:oklch(0.55 0.13 250);}"
+    ".palette-cb .compare-banner .cb-row.worse .cb-delta{color:#E0A23C;}"
+    ".palette-cb .compare-banner .cb-row.better .cb-delta{color:#7FB0D9;}"
 )
 
 

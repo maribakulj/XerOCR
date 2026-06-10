@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.compare_widget import compare_widget
+from xerocr.reports.embedded import inline_script
 from xerocr.reports.html import escape, render_document
 from xerocr.reports.section import Html, Section, SectionContext
 
@@ -71,10 +72,10 @@ class ReportRenderer:
             f'aria-label="{escape(_label(name))}">{html}</section>'
             for name, html in rendered
         )
-        # Widget « comparer un run » (client-side, déterministe) en pied de rapport.
-        return render_document(
-            title, Html(nav + blocks), footer=compare_widget(result)
-        )
+        # Pied : widget « comparer un run » + script d'interactivité (navigation
+        # clavier + palette). Tous deux client-side, déterministes, inlinés.
+        footer = Html(compare_widget(result) + inline_script("report.js"))
+        return render_document(title, Html(nav + blocks), footer=footer)
 
 
 def default_report_renderer() -> ReportRenderer:
