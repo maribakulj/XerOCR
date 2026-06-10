@@ -176,7 +176,12 @@ def run(
 
         completed_at = utcnow()
         manifest = _manifest(
-            spec, modules, code_version, started_at, completed_at
+            spec,
+            modules,
+            code_version,
+            started_at,
+            completed_at,
+            system_binaries=_collect_system_binaries(modules),
         )
         # Sink avant la sortie du ``with`` : les URI des artefacts (LAYOUT…)
         # pointent encore dans le workspace vivant. Best-effort côté appelant.
@@ -207,12 +212,31 @@ def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:
     }
 
 
+def _collect_system_binaries(modules: Mapping[str, Module]) -> dict[str, str]:
+    """Versions des **binaires externes** des modules exécutés (reproductibilité).
+
+    Un module qui enveloppe un binaire système (ex. tesseract) expose
+    ``system_binaries() -> dict[str, str]`` ; on le détecte par **duck-typing**
+    (hors ``Module`` Protocol — le contrat d'exécution reste unique) et on fusionne.
+    Le hook est best-effort côté module (binaire absent → ``{}``) → pas de garde
+    ici, pas de panne. Seuls les modules réellement construits sont sondés.
+    """
+    binaries: dict[str, str] = {}
+    for module in modules.values():
+        probe = getattr(module, "system_binaries", None)
+        if callable(probe):
+            binaries.update(probe())
+    return binaries
+
+
 def _manifest(
     spec: RunSpec,
     modules: Mapping[str, Module],
     code_version: str,
     started_at: datetime,
     completed_at: datetime,
+    *,
+    system_binaries: dict[str, str],
 ) -> RunManifest:
     names = sorted(modules)
     return RunManifest(
@@ -224,10 +248,11 @@ def _manifest(
             name: dict(spec.adapter_kwargs.get(name, {})) for name in names
         },
         # Reproductibilité (R-2) : la version de chaque module exécuté entre dans
-        # l'empreinte. La version *binaire* d'un moteur externe (ex. tesseract)
-        # reste à capturer dans `system_binaries_lock` à l'exécution (appel live,
-        # hors CI) — non couvert ici : `module.version` est la version d'adapter.
+        # l'empreinte. `module_versions` = version d'*adapter* ; la version du
+        # *binaire* externe (ex. tesseract) est captée à l'exécution dans
+        # `system_binaries_lock` via le hook `system_binaries()` (duck-typing).
         module_versions={name: modules[name].version for name in names},
+        system_binaries_lock=system_binaries,
         view_specs=spec.evaluation.views,
         code_version=code_version,
         started_at=started_at,

@@ -1,0 +1,90 @@
+# Image **moteur** XerOCR pour un Hugging Face Space (SDK: docker).
+#
+# ≠ la vitrine lecture seule (deploy/Dockerfile{,.space}) : celle-ci **bake un vrai
+# moteur OCR gratuit** (Tesseract 5 + langues fra/lat/eng) pour qu'un visiteur du
+# Space public lance un run Tesseract **sans clé ni installation**. Les moteurs
+# cloud et les plugins tiers restent *gated* (mode public, fail-closed côté appli).
+#
+# Contexte de build « racine plate » (Dockerfile / requirements.txt / pyproject.toml
+# / xerocr / reports TOUS à la racine) — assemblé par .github/workflows/deploy-space.yml,
+# comme Dockerfile.space.
+FROM python:3.11-slim
+
+# ── Dépendances système : Tesseract 5 + langues + libs image (Pillow) ──────────
+# Les langues sont baquées (pas téléchargées au runtime) : un Space free-tier n'a
+# pas d'accès réseau garanti au démarrage, et le déterminisme exige une version de
+# binaire figée. ``fra`` est le besoin patrimonial central ; ``lat`` (latin) et
+# ``eng`` complètent. Pas de pin de version exacte (Debian point-release rebump
+# fréquemment ``5.3.0-2`` → ``+deb12u1`` → casse le build) : la repro repose sur la
+# capture de ``tesseract --version`` dans ``RunManifest.system_binaries_lock``.
+RUN apt-get update -o Acquire::Retries=3 \
+    && apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+        tesseract-ocr \
+        tesseract-ocr-fra \
+        tesseract-ocr-lat \
+        tesseract-ocr-eng \
+        libtiff6 \
+        libjpeg62-turbo \
+        libpng16-16 \
+        libwebp7 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Variables d'exécution ──────────────────────────────────────────────────────
+# TESSDATA_PREFIX : emplacement Debian bookworm des modèles Tesseract 5.
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+# OMP_THREAD_LIMIT=1 : OBLIGATOIRE sur free-tier 2 vCPU. Tesseract LSTM (oem 3)
+# parallélise via OpenMP ; non borné sur un CPU partagé il **deadlock** (incident
+# documenté côté Picarones, 2026-05-16) — l'OCR gèle et chaque document timeoute.
+# Mono-thread par appel = plus rapide ET déterministe ici.
+ENV OMP_THREAD_LIMIT=1
+# Mode public **verrouillé** : seul le socle gratuit (tesseract) s'exécute ; cloud
+# et plugins sont refusés (403, fail-closed). L'opérateur d'un Space privé peut
+# ouvrir via XEROCR_PUBLIC_MODE=false + ses propres clés.
+ENV XEROCR_PUBLIC_MODE=true
+ENV PYTHONUNBUFFERED=1
+
+# ── Smoke-test du binaire au BUILD (fail-fast) ─────────────────────────────────
+# Un Tesseract cassé OU figé doit casser le BUILD (le Space garde l'image
+# précédente fonctionnelle), pas déployer une image qui gèle en silence :
+#   (a) le binaire charge ses libs et expose la langue ``fra`` (sinon build refusé) ;
+#   (b) une reconnaissance réelle sur une image générée se TERMINE sous 30 s — un
+#       timeout (rc 124) = deadlock OpenMP / libs incohérentes → build refusé.
+RUN set -eu; \
+    timeout 30 tesseract --version; \
+    timeout 30 tesseract --list-langs 2>&1 | grep -qx fra; \
+    printf 'P1\n16 16\n' > /tmp/smoke.pbm; \
+    i=0; while [ "$i" -lt 16 ]; do \
+        printf '1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0\n' >> /tmp/smoke.pbm; \
+        i=$((i + 1)); \
+    done; \
+    rc=0; \
+    timeout 30 tesseract /tmp/smoke.pbm - -l fra --psm 6 >/dev/null 2>&1 || rc=$?; \
+    rm -f /tmp/smoke.pbm; \
+    if [ "$rc" = 124 ]; then \
+        echo "FATAL: tesseract a gelé (timeout) — build refusé, libs incohérentes." >&2; \
+        exit 1; \
+    fi
+
+# ── Utilisateur non-root (sécurité d'un service exposé) ────────────────────────
+RUN useradd --create-home --uid 1000 xerocr
+WORKDIR /home/xerocr/app
+
+# ── Dépendances Python d'abord (cache de couche) ───────────────────────────────
+# requirements.txt fige le cœur + l'extra [serve] + pytesseract (wrapper du binaire).
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Code + paquet (sans deps : tout est déjà figé ci-dessus) ───────────────────
+COPY pyproject.toml README.md ./
+COPY xerocr ./xerocr
+RUN pip install --no-cache-dir --no-deps .
+
+# ── Rapports bakés (lecture seule) — dossier toujours présent ──────────────────
+COPY reports ./reports
+ENV XEROCR_REPORTS_DIR=/home/xerocr/app/reports
+
+USER xerocr
+EXPOSE 7860
+# 0.0.0.0 attendu en conteneur (le réseau est géré par la plateforme).
+CMD ["xerocr", "serve", "--host", "0.0.0.0", "--port", "7860"]

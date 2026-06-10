@@ -41,6 +41,16 @@ class EngineStatus(BaseModel):
 #: Source unique du contrat ; les routeurs (couche 8) l'importent — pas de copie.
 StatusProvider = Callable[[], tuple[EngineStatus, ...]]
 
+#: **Socle first-party gratuit** exécutable sur une instance **publique** (Space).
+#: Seuls ces kinds tournent en mode public : ils sont **gratuits, sans clé et
+#: locaux** (aucun secret exposé, aucun appel cloud facturé). Tout le reste —
+#: moteurs cloud (clé), HTR lourds, et a fortiori les **plugins tiers** — reste
+#: *gated* (``403``, fail-closed) : un kind ajouté plus tard est refusé par défaut
+#: tant qu'il n'est pas explicitement inscrit ici. ``precomputed`` est le moteur de
+#: **démonstration** (jamais un concurrent OCR câblé) ; ``tesseract`` est le seul
+#: moteur réel offert au visiteur du Space public.
+PUBLIC_ENGINE_KINDS: frozenset[str] = frozenset({"precomputed", "tesseract"})
+
 
 def _module_present(name: str) -> bool:
     try:
@@ -210,6 +220,7 @@ def normalization_profiles() -> tuple[str, ...]:
 __all__ = [
     "normalization_profiles",
     "EngineStatus",
+    "PUBLIC_ENGINE_KINDS",
     "StatusProvider",
     "engine_statuses",
     "segmenter_statuses",

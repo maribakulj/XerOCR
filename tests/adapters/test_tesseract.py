@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.tesseract import TesseractAdapter
+from xerocr.adapters.ocr.tesseract import TesseractAdapter, tesseract_binary_version
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.confidence import ConfidenceToken
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
@@ -174,3 +175,59 @@ def test_confidences_failure_degrades_to_empty_sidecar(
     sidecar = out.artifacts[ArtifactType.CONFIDENCES]
     assert sidecar.uri is not None
     assert json.loads(Path(sidecar.uri).read_text(encoding="utf-8")) == []
+
+
+# --- Version du binaire → RunManifest (reproductibilité, §12) ------------------
+
+
+def _completed(stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(
+        args=["tesseract", "--version"], returncode=0, stdout=stdout, stderr=stderr
+    )
+
+
+def test_binary_version_reads_first_nonempty_line() -> None:
+    # Bannière sur stdout : on garde la 1ʳᵉ ligne non vide (« tesseract 5.3.0 »).
+    banner = "tesseract 5.3.0\n leptonica-1.82.0\n"
+    assert tesseract_binary_version(run=lambda *a, **k: _completed(stdout=banner)) == (
+        "tesseract 5.3.0"
+    )
+
+
+def test_binary_version_reads_from_stderr() -> None:
+    # Certains builds émettent la bannière sur stderr : on la lit quand même.
+    banner = _completed(stderr="tesseract 5.4.1\n")
+    assert tesseract_binary_version(run=lambda *a, **k: banner) == "tesseract 5.4.1"
+
+
+def test_binary_version_none_when_absent() -> None:
+    # Binaire absent ou timeout → None (best-effort, jamais une panne).
+    def absent(*_a: object, **_k: object) -> subprocess.CompletedProcess[str]:
+        raise FileNotFoundError("tesseract")
+
+    assert tesseract_binary_version(run=absent) is None
+
+    def slow(*_a: object, **_k: object) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired(cmd="tesseract", timeout=10)
+
+    assert tesseract_binary_version(run=slow) is None
+
+
+def test_system_binaries_hook_reports_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Le hook de provenance expose la version baquée → alimente system_binaries_lock.
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract.tesseract_binary_version",
+        lambda: "tesseract 5.3.0",
+    )
+    assert TesseractAdapter(label="fra").system_binaries() == {
+        "tesseract": "tesseract 5.3.0"
+    }
+
+
+def test_system_binaries_hook_empty_when_binary_absent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract.tesseract_binary_version", lambda: None
+    )
+    assert TesseractAdapter(label="fra").system_binaries() == {}

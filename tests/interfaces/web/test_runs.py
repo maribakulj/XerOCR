@@ -122,11 +122,47 @@ def test_invalid_mode_is_422(tmp_path: Path) -> None:
     assert _post(_client(tmp_path), body).status_code == 422
 
 
-def test_cloud_engine_without_key_is_409(tmp_path: Path) -> None:
-    # Plus de masquage « mode public » : un moteur cloud sans clé tombe en 409
-    # (indisponible), pas en 403. Avec sa clé, il serait autorisé (Picarones).
+def test_cloud_engine_without_key_is_409_when_private(tmp_path: Path) -> None:
+    # Hors mode public : un moteur cloud sans clé tombe en 409 (indisponible),
+    # pas en 403. Avec sa clé, il serait autorisé (modèle « clé posée → marche »).
+    resp = _post(
+        _client(tmp_path, public_mode=False), {"competitors": [{"engine": "openai"}]}
+    )
+    assert resp.status_code == 409
+
+
+def test_public_mode_blocks_cloud_engine_403(tmp_path: Path) -> None:
+    # Mode public (Space exposé) : fail-closed. Un moteur cloud est refusé en 403
+    # AVANT toute vérif de clé/dispo — jamais d'appel facturé sur une instance
+    # publique, clé présente ou non. (≠ 409 « indisponible » du mode privé.)
     resp = _post(
         _client(tmp_path, public_mode=True), {"competitors": [{"engine": "openai"}]}
+    )
+    assert resp.status_code == 403
+
+
+def test_public_mode_blocks_cloud_llm_in_chain_403(tmp_path: Path) -> None:
+    # Le LLM d'une chaîne OCR→LLM est aussi un kind référencé : un LLM cloud y est
+    # gated en mode public, même derrière un moteur OCR gratuit (tesseract).
+    body = {
+        "competitors": [{"engine": "tesseract", "mode": "text_only", "llm": "openai"}]
+    }
+    resp = _post(_client(tmp_path, public_mode=True), body)
+    assert resp.status_code == 403
+
+
+def test_public_mode_allows_free_tesseract(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # tesseract est le socle gratuit offert publiquement : il PASSE le gate public
+    # (pas de 403). Binaire forcé absent → il tombe sur la dispo (409), prouvant
+    # qu'il a franchi le verrou public et atteint la vérification runtime.
+    monkeypatch.setattr(
+        "xerocr.interfaces.web.app.engine_statuses",
+        lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
+    )
+    resp = _post(
+        _client(tmp_path, public_mode=True), {"competitors": [{"engine": "tesseract"}]}
     )
     assert resp.status_code == 409
 

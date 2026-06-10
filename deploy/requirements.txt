@@ -19,3 +19,8 @@ httpcore>=1,<2
 # ``MISTRAL_API_KEY``). SDK léger (aucune dépendance lourde / GPU). En mode public
 # (le défaut), les moteurs cloud restent **masqués** : ce paquet est inutilisé.
 mistralai>=1.5,<2
+# Socle OCR gratuit (Tesseract) : wrapper Python pur du binaire ``tesseract``.
+# **Effectif uniquement dans l'image moteur** (deploy/Dockerfile.engine, qui bake
+# le binaire + les langues). Dans la vitrine lecture seule (sans binaire), il reste
+# **inerte** : importé paresseusement, jamais exécuté → tesseract y est indisponible.
+pytesseract>=0.3.10,<1

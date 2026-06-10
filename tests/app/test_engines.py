@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.app.engines import engine_statuses
+from xerocr.app.engines import PUBLIC_ENGINE_KINDS, engine_statuses
 
 
 def _statuses(**kw: object) -> dict[str, tuple[bool, str]]:
@@ -85,6 +85,17 @@ def test_cloud_available_with_sdk_and_key() -> None:
     assert st["mistral"][0] is True
     assert st["openai"][0] is True
     assert st["anthropic"][0] is True
+
+
+def test_public_engine_kinds_is_free_first_party_socle() -> None:
+    # Le socle gratuit exécutable publiquement = precomputed (démo) + tesseract.
+    # Fail-closed : aucun moteur cloud (clé) n'y figure → il est gated en 403.
+    assert PUBLIC_ENGINE_KINDS == frozenset({"precomputed", "tesseract"})
+    cloud = {"openai", "anthropic", "mistral", "mistral_ocr"}
+    assert PUBLIC_ENGINE_KINDS.isdisjoint(cloud)
+    # Tout kind du socle public est un moteur réellement connu (pas un typo).
+    known = {s.kind for s in engine_statuses()}
+    assert PUBLIC_ENGINE_KINDS <= known
 
 
 def test_ollama_needs_httpx() -> None:

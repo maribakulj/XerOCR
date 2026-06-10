@@ -224,6 +224,7 @@ def create_app(
             runner,
             corpus_store,
             statuses=engine_status_provider,
+            public_mode=is_public,
         )
     )
     app.include_router(build_engines_router(engine_status_provider))
