@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from xerocr.app.engines import engine_statuses
 from xerocr.interfaces.web.app import create_app
+from xerocr.interfaces.web.routers.runs import LaunchRequest
 from xerocr.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
@@ -36,6 +37,12 @@ def _poll_until_terminal(
 
 
 # --- Sécurité d'abord (CSRF) -------------------------------------------------
+
+
+def test_launch_request_accepts_char_exclude() -> None:
+    # 3c : le DTO accepte char_exclude (sinon le formulaire tomberait en 422).
+    req = LaunchRequest(char_exclude=",.;")
+    assert req.char_exclude == ",.;"
 
 
 def test_post_without_csrf_is_403(tmp_path: Path) -> None:

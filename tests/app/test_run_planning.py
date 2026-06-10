@@ -87,6 +87,27 @@ def test_zero_shot_pipeline_shape(tmp_path: Path) -> None:
     assert step.output_types == (ArtifactType.RAW_TEXT,)
 
 
+def test_char_exclude_threaded_to_evaluation_views(tmp_path: Path) -> None:
+    # Câblage : le champ ``char_exclude`` du formulaire atterrit sur la vue
+    # d'évaluation (le runner l'applique déjà des deux côtés, couche 3).
+    build = plan_benchmark_run(
+        (Competitor(engine="tesseract"),),
+        _corpus(tmp_path),
+        "r",
+        char_exclude=",.;",
+    )
+    spec = build(tmp_path)
+    assert spec.evaluation.views  # au moins la vue texte
+    assert all(v.char_exclude == ",.;" for v in spec.evaluation.views)
+
+
+def test_char_exclude_absent_by_default(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert all(v.char_exclude is None for v in spec.evaluation.views)
+
+
 def test_ocr_only_model_plumbed_to_engine(tmp_path: Path) -> None:
     # Referme le gap 2c : un moteur OCR à modèle (kraken) reçoit son ``model``
     # depuis le formulaire OCR-seul → il se construit (au lieu d'échouer).

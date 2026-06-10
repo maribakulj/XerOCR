@@ -68,6 +68,7 @@
     var progressText = document.getElementById("run-progress-text");
     var corpusSelect = document.getElementById("corpus-select");
     var normalization = document.getElementById("normalization");
+    var charExclude = document.getElementById("char-exclude");
     var addBtn = document.getElementById("add-competitor");
     var queueTpl = document.getElementById("queue-row-tpl");
     var queueList = document.getElementById("queue-list");
@@ -397,6 +398,7 @@
       var corpusId = currentCorpusId();
       if (corpusId) payload.corpus_id = corpusId;
       if (normalization && normalization.value) payload.normalization = normalization.value;
+      if (charExclude && charExclude.value) payload.char_exclude = charExclude.value;
       fetchJson("/api/runs", {
         method: "POST",
         headers: headers,

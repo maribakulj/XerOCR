@@ -28,7 +28,7 @@ from collections.abc import Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from xerocr.adapters.storage import JobStore
 from xerocr.app.corpus_upload import CorpusStore
@@ -48,6 +48,8 @@ class LaunchRequest(BaseModel):
     competitors: tuple[Competitor, ...] = ()
     corpus_id: str | None = None
     normalization: str | None = None
+    #: Caractères filtrés des deux côtés (GT/hyp) avant le calcul des métriques.
+    char_exclude: str | None = Field(default=None, max_length=512)
 
 
 def _referenced_kinds(comp: Competitor) -> tuple[str, ...]:
@@ -167,7 +169,11 @@ def build_runs_router(
         # 5 : cohérence mode⇄moteur (dispatch exhaustif).
         try:
             build = plan_benchmark_run(
-                req.competitors, corpus, run_id, normalization=req.normalization
+                req.competitors,
+                corpus,
+                run_id,
+                normalization=req.normalization,
+                char_exclude=req.char_exclude,
             )
         except RunPlanningError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

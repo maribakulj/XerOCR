@@ -94,16 +94,19 @@ class Competitor(BaseModel):
 _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
-def _ocr_view(normalization: str | None) -> EvaluationView:
+def _ocr_view(normalization: str | None, char_exclude: str | None) -> EvaluationView:
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
         metric_names=("cer", "wer", "mer", "searchability", "hallucination"),
         normalization_profile=normalization,
+        char_exclude=char_exclude,
     )
 
 
-def _reference_view(normalization: str | None) -> EvaluationView:
+def _reference_view(
+    normalization: str | None, char_exclude: str | None
+) -> EvaluationView:
     """Vue **référence OCR** (opt-in) : compare le candidat à une référence
     ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le **nom de
     la vue porte l'avertissement** : ce n'est PAS une vérité-terrain manuelle, le
@@ -121,26 +124,30 @@ def _reference_view(normalization: str | None) -> EvaluationView:
         metric_names=("cer", "wer", "mer"),
         ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
         normalization_profile=normalization,
+        char_exclude=char_exclude,
     )
 
 
 def _views_for_corpus(
-    corpus: CorpusSpec, normalization: str | None = None
+    corpus: CorpusSpec,
+    normalization: str | None = None,
+    char_exclude: str | None = None,
 ) -> tuple[EvaluationView, ...]:
     """Vues à évaluer selon les **types de GT présents**, sous ``normalization``.
 
     GT manuelle ``RAW_TEXT`` → vue ``text`` ; référence ``REFERENCE_TEXT`` (OCR
     Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
-    défaut (le run reste exécutable, simplement non scoré).
+    défaut (le run reste exécutable, simplement non scoré). ``char_exclude``
+    filtre des caractères des deux côtés (GT/hyp) avant le calcul (runner couche 3).
     """
     gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
     views: list[EvaluationView] = []
     if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_ocr_view(normalization))
+        views.append(_ocr_view(normalization, char_exclude))
     if ArtifactType.REFERENCE_TEXT in gt_types:
-        views.append(_reference_view(normalization))
+        views.append(_reference_view(normalization, char_exclude))
     if not views:
-        views.append(_ocr_view(normalization))
+        views.append(_ocr_view(normalization, char_exclude))
     return tuple(views)
 
 
@@ -295,6 +302,7 @@ def plan_benchmark_run(
     run_id: str,
     *,
     normalization: str | None = None,
+    char_exclude: str | None = None,
 ) -> Callable[[Path], RunSpec]:
     """Builder de spec d'un **benchmark** : N concurrents → un ``RunSpec``.
 
@@ -327,7 +335,9 @@ def plan_benchmark_run(
     spec = RunSpec(
         corpus=corpus,
         pipelines=tuple(pipelines),
-        evaluation=EvaluationSpec(views=_views_for_corpus(corpus, normalization)),
+        evaluation=EvaluationSpec(
+            views=_views_for_corpus(corpus, normalization, char_exclude)
+        ),
         adapter_kwargs=adapter_kwargs,
         run_id=run_id,
     )

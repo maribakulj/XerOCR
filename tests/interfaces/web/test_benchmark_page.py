@@ -52,6 +52,13 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_char_exclude_field_present_and_sent(tmp_path: Path) -> None:
+    # 3c : champ « caractères à exclure » + le JS le met dans le payload du run.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="char-exclude"' in body
+    assert "payload.char_exclude" in _JS.read_text(encoding="utf-8")
+
+
 def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
     # 3c : aperçu de normalisation (échantillon + config custom) + le JS poste à l'API.
     body = _client(tmp_path).get("/benchmark").text

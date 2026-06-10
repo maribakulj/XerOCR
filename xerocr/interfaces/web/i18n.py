@@ -76,6 +76,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_norm_custom": "Profil personnalisé (YAML) — prioritaire si rempli",
         "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
         "bench_norm_preview_btn": "Aperçu",
+        "bench_char_exclude": "Caractères à exclure",
+        "bench_char_exclude_ph": "ex : ,.;:!? — exclus des deux côtés",
+        "bench_char_exclude_hint": "Filtrés de la GT ET de l'hypothèse avant le "
+        "calcul (ne mesure plus ces caractères).",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
         "vue de segmentation.",
@@ -261,6 +265,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_norm_custom": "Custom profile (YAML) — takes precedence if filled",
         "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
         "bench_norm_preview_btn": "Preview",
+        "bench_char_exclude": "Characters to exclude",
+        "bench_char_exclude_ph": "e.g. ,.;:!? — excluded on both sides",
+        "bench_char_exclude_hint": "Filtered from GT AND hypothesis before scoring "
+        "(those characters are no longer measured).",
         "bench_options": "Options",
         "bench_execute_desc": "Launch the run, then open the final report or "
         "segmentation view.",
