@@ -93,6 +93,19 @@ def _build_mistral_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
     )
 
 
+def _build_google_vision(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "google_vision : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.google_vision import GoogleVisionAdapter
+
+    # `lang` (passé par le planificateur à tout moteur OCR) est ignoré : Vision
+    # détecte la langue en `DOCUMENT_TEXT_DETECTION` (pas de hint fragile à mapper).
+    return GoogleVisionAdapter(label=label)
+
+
 def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -212,6 +225,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("tesseract", _build_tesseract)
     registry.register_builder("kraken", _build_kraken)
     registry.register_builder("mistral_ocr", _build_mistral_ocr)
+    registry.register_builder("google_vision", _build_google_vision)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)

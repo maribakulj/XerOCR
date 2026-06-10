@@ -19,7 +19,7 @@ def test_lists_all_socle_engines(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/api/engines").json()
     kinds = {e["kind"] for e in body["engines"]}
     assert kinds == {
-        "precomputed", "tesseract", "kraken", "mistral_ocr",
+        "precomputed", "tesseract", "kraken", "mistral_ocr", "google_vision",
         "openai", "anthropic", "mistral", "ollama",
     }
     # forme du contrat : chaque entrée porte available + detail

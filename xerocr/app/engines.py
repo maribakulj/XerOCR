@@ -82,6 +82,7 @@ def engine_statuses(
         _tesseract_status(has_binary, has_module),
         _kraken_status(has_module),
         _mistral_ocr_status(has_module, get_env),
+        _google_vision_status(has_module, get_env),
         _openai_status(has_module, get_env),
         _anthropic_status(has_module, get_env),
         _mistral_status(has_module, get_env),
@@ -120,6 +121,18 @@ def _mistral_ocr_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineSta
         detail, ok = "prêt (SDK + clé)", True
     return EngineStatus(
         kind="mistral_ocr", label="Mistral OCR", available=ok, detail=detail
+    )
+
+
+def _google_vision_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("httpx"):
+        detail, ok = "httpx non installé (extra [google])", False
+    elif not get_env("GOOGLE_VISION_API_KEY"):
+        detail, ok = "clé GOOGLE_VISION_API_KEY absente", False
+    else:
+        detail, ok = "prêt (REST + clé)", True
+    return EngineStatus(
+        kind="google_vision", label="Google Vision", available=ok, detail=detail
     )
 
 

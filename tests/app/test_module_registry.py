@@ -29,6 +29,7 @@ def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
         "anthropic",
+        "google_vision",
         "kraken",
         "mistral",
         "mistral_ocr",
@@ -45,6 +46,15 @@ def test_kinds_listed() -> None:
 def test_builds_tesseract_module() -> None:
     module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
     assert module.name == "tesseract:fra"
+
+
+def test_builds_google_vision_module() -> None:
+    # Le planificateur passe un `lang` à tout moteur OCR : le builder le tolère
+    # (Vision détecte la langue, pas de hint) et résout le bon module.
+    module = _registry().build("google_vision:c0", {"label": "c0", "lang": "fra"})
+    assert module.name == "google_vision:c0"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
 
 
 def test_builds_anthropic_with_role() -> None:

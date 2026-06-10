@@ -53,6 +53,22 @@ def test_openai_needs_module_and_key() -> None:
     assert st["openai"][0] is True
 
 
+def test_google_vision_needs_httpx_and_key() -> None:
+    base = {"has_binary": lambda _n: None}
+    # httpx absent → extra [google] manquant
+    st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
+    assert st["google_vision"][0] is False and "[google]" in st["google_vision"][1]
+    # httpx présent, clé absente
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: None, **base)
+    assert (
+        st["google_vision"][0] is False
+        and "GOOGLE_VISION_API_KEY" in st["google_vision"][1]
+    )
+    # httpx + clé
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: "k", **base)
+    assert st["google_vision"][0] is True
+
+
 def test_mistral_needs_sdk_and_key() -> None:
     base = {"has_binary": lambda _n: None}
     st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
@@ -91,7 +107,7 @@ def test_public_engine_kinds_is_free_first_party_socle() -> None:
     # Le socle gratuit exécutable publiquement = precomputed (démo) + tesseract.
     # Fail-closed : aucun moteur cloud (clé) n'y figure → il est gated en 403.
     assert PUBLIC_ENGINE_KINDS == frozenset({"precomputed", "tesseract"})
-    cloud = {"openai", "anthropic", "mistral", "mistral_ocr"}
+    cloud = {"openai", "anthropic", "mistral", "mistral_ocr", "google_vision"}
     assert PUBLIC_ENGINE_KINDS.isdisjoint(cloud)
     # Tout kind du socle public est un moteur réellement connu (pas un typo).
     known = {s.kind for s in engine_statuses()}
@@ -109,7 +125,7 @@ def test_default_probes_run_without_error() -> None:
     statuses = engine_statuses()
     kinds = {s.kind for s in statuses}
     assert kinds == {
-        "precomputed", "tesseract", "kraken", "mistral_ocr",
+        "precomputed", "tesseract", "kraken", "mistral_ocr", "google_vision",
         "openai", "anthropic", "mistral", "ollama",
     }
     assert next(s for s in statuses if s.kind == "precomputed").available
