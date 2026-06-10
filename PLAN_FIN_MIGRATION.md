@@ -93,7 +93,7 @@ indisponible, jamais de crash). C'est la couche adapters dans son rôle légitim
 
 ---
 
-## Étape 3 — Parité de l'interface et du rapport
+## Étape 3 — Parité de l'interface et du rapport ✅ (3a→3e livrés)
 
 Le web et le rapport portent déjà beaucoup (benchmark, SSE `Last-Event-ID`,
 library, history, segmentation, CSRF, rate-limit, i18n FR/EN). Cette étape comble
@@ -106,7 +106,7 @@ anti-hallucination) ; le JS client est en lecture seule, zéro appel réseau.
 | **3b — Galerie & drill-in** ✅ | **drill-in diff caractère surligné GT↔hypothèse ✅ (D-085)** · **galerie de documents synthétique ✅ (D-086)** (cartes : aperçu CSS sur la charte + CER par moteur/badges A→E, comme le défaut Picarones — zéro image, autonome) ; **fac-similés réels = opt-in séparé** (canal images base64, décision ultérieure) | `xerocr/reports/text_diff.py` + `sections/gallery.py` + section `diagnostics` |
 | **3c — Champs de formulaire** | parité CLI/web : **champ `model` des moteurs OCR ✅ (D-087)** · **`/api/models/{provider}` + suggestions vision ✅ (D-088)** · **preview de normalisation (config YAML custom sans persistance) ✅ (D-089)** · **`char_exclude` ✅ (D-090)** ; *reste* : config save/load JSON ; sélecteur profil métrique ; toggle expose-ALTO | `xerocr/interfaces/web/routers/` + `app/{models,normalization_preview,run_planning}.py` + templates ; la construction de spec reste en `app/run_planning` (garde-fou `interfaces` mince) |
 | **3d — Observabilité & a11y ✅** | **`/metrics` Prometheus opt-in ✅ (D-091)** · **polish a11y ✅ (D-092)** : lien d'évitement clavier + `progressbar` ARIA ; sélecteur de langue, feedback dropzone (`.is-dragover`), désactivation bouton + barre de progression + `aria-live` **déjà présents** (audit) | `xerocr/interfaces/web/metrics.py` + `create_app` ; `base.html`/`benchmark.html`/`benchmark.js`/`shell.css`/`i18n.py` |
-| **3e — Glossaire FR/EN** | porter le glossaire pédagogique du rapport (définitions CER/WER/ECE/… pour le lecteur non-expert) | `xerocr/reports/glossary/{fr,en}.yaml` (**nouveau**) + intégration dans le rapport (tooltips/section), `package-data`, `tests/` |
+| **3e — Glossaire FR/EN ✅ (D-093)** | glossaire pédagogique porté : 15 entrées FR/EN (métriques **réellement calculées**), `GlossarySection` en disclosure natif `<details>` (zéro JS), lang via `SectionContext`/`/reports/{name}?lang=` | `xerocr/reports/glossary/{fr,en}.yaml` + `glossary/__init__` (loader) + `sections/glossary.py` ; `SectionContext.lang`, `render_document(lang=)`, router `?lang=` ; `package-data`, CSS au design, `tests/` |
 
 | | |
 |---|---|
@@ -152,7 +152,7 @@ défauts.
 
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
 - [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
-- [ ] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
+- [x] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
 - [ ] **Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
 - [ ] `README`/`CHANGELOG`/`pricing.json` à jour, roll-up réconcilié.

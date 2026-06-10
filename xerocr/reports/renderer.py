@@ -24,6 +24,7 @@ _SECTION_LABELS = {
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
     "calibration": "Calibration",
+    "glossary": "Glossaire",
 }
 
 
@@ -51,13 +52,19 @@ class ReportRenderer:
     def __init__(self, sections: tuple[Section, ...]) -> None:
         self._sections = sections
 
-    def render(self, result: RunResult, *, title: str = "XerOCR — rapport") -> str:
+    def render(
+        self,
+        result: RunResult,
+        *,
+        title: str = "XerOCR — rapport",
+        lang: str = "fr",
+    ) -> str:
         known = {
             score.metric
             for pipeline in result.pipelines
             for score in pipeline.aggregate
         }
-        ctx = SectionContext(title=title)
+        ctx = SectionContext(title=title, lang=lang)
         rendered: list[tuple[str, str]] = []
         for section in self._sections:
             if section.requires and not set(section.requires) <= known:
@@ -76,11 +83,12 @@ class ReportRenderer:
         # Pied : widget « comparer un run » + script d'interactivité (navigation
         # clavier + palette). Tous deux client-side, déterministes, inlinés.
         footer = Html(compare_widget(result) + inline_script("report.js"))
-        return render_document(title, Html(nav + blocks), footer=footer)
+        return render_document(title, Html(nav + blocks), footer=footer, lang=lang)
 
 
 def default_report_renderer() -> ReportRenderer:
-    """Socle : synthèse, overview, par-moteur/document, stats, économie, diagnostic."""
+    """Socle : synthèse, overview, par-moteur/document, stats, économie,
+    diagnostic, glossaire pédagogique."""
     from xerocr.reports.sections.by_document import DocumentSection
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
@@ -88,6 +96,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.gallery import DocumentGallerySection
+    from xerocr.reports.sections.glossary import GlossarySection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -104,6 +113,7 @@ def default_report_renderer() -> ReportRenderer:
             DiagnosticsSection(),
             TaxonomySection(),
             CalibrationSection(),
+            GlossarySection(),
         )
     )
 

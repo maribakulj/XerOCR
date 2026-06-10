@@ -26,6 +26,7 @@ class SectionContext:
     """Contexte de rendu (extensible : langue, options…)."""
 
     title: str = "XerOCR"
+    lang: str = "fr"
 
 
 @runtime_checkable

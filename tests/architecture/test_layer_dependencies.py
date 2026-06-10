@@ -211,6 +211,10 @@ def test_app_imports_are_allowed():
     assert not offenders, f"imports interdits dans app : {offenders}"
 
 
+#: reports lit aussi une donnée YAML (glossaire pédagogique FR/EN).
+REPORTS_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
+
+
 def test_reports_imports_are_allowed():
     """reports lit le RunResult : domain + evaluation seulement (jamais app/
     pipeline/adapters). Pas de data-layer, pas de moteur."""
@@ -222,7 +226,7 @@ def test_reports_imports_are_allowed():
             top = mod.split(".")[0]
             if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
                 continue
-            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+            if mod == "__future__" or top in REPORTS_ALLOWED_EXT or top in STDLIB:
                 continue
             bad.append(mod)
         if bad:

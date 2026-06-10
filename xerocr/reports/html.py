@@ -129,6 +129,23 @@ _CSS = (
     ".dc-row.best .dc-cer{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
+    ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
+    ".gl-item{background:var(--surface);border-radius:var(--r-md);"
+    "padding:4px 16px;}"
+    ".gl-term{font-family:var(--display);font-weight:800;font-size:14px;"
+    "font-optical-sizing:auto;color:var(--ink);cursor:pointer;"
+    "padding:10px 0;list-style:none;}"
+    ".gl-term::-webkit-details-marker{display:none;}"
+    ".gl-term::before{content:'+';display:inline-block;width:16px;"
+    "font-family:var(--mono);color:var(--g-400);}"
+    ".gl-item[open] .gl-term::before{content:'\\2212';}"
+    ".gl-body{margin:0 0 12px 16px;display:grid;grid-template-columns:auto 1fr;"
+    "gap:4px 14px;}"
+    ".gl-k{font-size:10px;font-weight:500;letter-spacing:0.05em;"
+    "text-transform:uppercase;color:var(--g-400);padding-top:2px;"
+    "white-space:nowrap;}"
+    ".gl-v{font-size:12.5px;color:var(--g-700);line-height:1.45;}"
     # Sommaire deeplinkable (ancres natives) + régions de section ancrées.
     ".report-toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;}"
     ".report-toc a{font-family:var(--mono);font-size:11px;text-decoration:none;"
@@ -173,18 +190,22 @@ def escape(text: str) -> str:
     return _html.escape(text, quote=True)
 
 
-def render_document(title: str, body: Html, *, footer: Html | None = None) -> str:
+def render_document(
+    title: str, body: Html, *, footer: Html | None = None, lang: str = "fr"
+) -> str:
     """Assemble un document HTML autonome, au design, et déterministe.
 
     ``footer`` (optionnel) : HTML inséré en fin de ``<body>``, après le contenu
     principal — p. ex. le widget « comparer un run » (client-side). Absent → rien
     n'est ajouté (le rapport reste identique au squelette, ex. la voie
-    ``compare`` server-side qui n'embarque pas le widget)."""
+    ``compare`` server-side qui n'embarque pas le widget). ``lang`` pilote
+    l'attribut ``<html lang>`` (a11y / lecteurs d'écran)."""
     safe_title = escape(title)
+    safe_lang = escape(lang)
     tail = f"{footer}" if footer is not None else ""
     return (
         "<!DOCTYPE html>\n"
-        '<html lang="fr">\n'
+        f'<html lang="{safe_lang}">\n'
         "<head>\n"
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
