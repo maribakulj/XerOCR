@@ -18,6 +18,7 @@ _SECTION_LABELS = {
     "overview": "Vue d'ensemble",
     "by_engine": "Par moteur",
     "by_document": "Par document",
+    "documents_gallery": "Galerie",
     "cross_engine": "Inter-moteurs",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
@@ -86,6 +87,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.economics import EconomicsSection
+    from xerocr.reports.sections.gallery import DocumentGallerySection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -96,6 +98,7 @@ def default_report_renderer() -> ReportRenderer:
             OverviewSection(),
             EngineSection(),
             DocumentSection(),
+            DocumentGallerySection(),
             CrossEngineSection(),
             EconomicsSection(),
             DiagnosticsSection(),
