@@ -168,6 +168,18 @@
         {% endfor %}
       </select>
     </div>
+    <div class="panel stack-panel">
+      <label class="label" for="norm-sample">{{ t.bench_norm_preview }}</label>
+      <textarea id="norm-sample" class="input" rows="2"
+                placeholder="{{ t.bench_norm_sample_ph }}"></textarea>
+      <details class="norm-custom">
+        <summary class="dropzone-meta">{{ t.bench_norm_custom }}</summary>
+        <textarea id="norm-config" class="input" rows="3"
+                  placeholder="{{ t.bench_norm_config_ph }}"></textarea>
+      </details>
+      <button id="norm-preview-btn" class="btn" type="button">{{ t.bench_norm_preview_btn }}</button>
+      <pre id="norm-result" class="norm-result" aria-live="polite"></pre>
+    </div>
   </div>
 </section>
 

@@ -802,6 +802,23 @@ table.data a { color: var(--fern-deep); font-weight: 500; }
   color: var(--g-300);
 }
 
+/* Aperçu de normalisation : résultat monospace, espaces visibles, sur la charte. */
+.norm-result {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--surface);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  margin: 0;
+  min-height: 1.4em;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.norm-custom summary {
+  cursor: pointer;
+}
+
 /* === Bibliothèque : organisation produit === */
 .tabs {
   display: inline-flex;

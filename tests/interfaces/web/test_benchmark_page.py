@@ -52,6 +52,15 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
+    # 3c : aperçu de normalisation (échantillon + config custom) + le JS poste à l'API.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="norm-sample"' in body  # échantillon
+    assert 'id="norm-config"' in body  # config YAML custom (sans persistance)
+    assert 'id="norm-preview-btn"' in body and 'id="norm-result"' in body
+    assert "/api/normalization/preview" in _JS.read_text(encoding="utf-8")
+
+
 def test_model_suggestions_datalist_and_api_wired(tmp_path: Path) -> None:
     # 3c : datalist canonique (peuplée via /api/models) + le JS interroge l'API.
     body = _client(tmp_path).get("/benchmark").text

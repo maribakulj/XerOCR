@@ -71,6 +71,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt_hint": "Choisis un prompt curé OU écris le tien ci-dessous "
         "(le texte libre est prioritaire).",
         "bench_normalization": "Normalisation",
+        "bench_norm_preview": "Aperçu de normalisation",
+        "bench_norm_sample_ph": "Colle un échantillon de texte pour voir l'effet…",
+        "bench_norm_custom": "Profil personnalisé (YAML) — prioritaire si rempli",
+        "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
+        "bench_norm_preview_btn": "Aperçu",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
         "vue de segmentation.",
@@ -251,6 +256,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt_hint": "Pick a curated prompt OR write your own below "
         "(free text takes precedence).",
         "bench_normalization": "Normalization",
+        "bench_norm_preview": "Normalization preview",
+        "bench_norm_sample_ph": "Paste a text sample to see the effect…",
+        "bench_norm_custom": "Custom profile (YAML) — takes precedence if filled",
+        "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
+        "bench_norm_preview_btn": "Preview",
         "bench_options": "Options",
         "bench_execute_desc": "Launch the run, then open the final report or "
         "segmentation view.",

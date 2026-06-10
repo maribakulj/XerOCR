@@ -29,7 +29,35 @@
     });
   }
 
+  function wireNormalizationPreview() {
+    var btn = document.getElementById("norm-preview-btn");
+    var sample = document.getElementById("norm-sample");
+    var config = document.getElementById("norm-config");
+    var select = document.getElementById("normalization");
+    var out = document.getElementById("norm-result");
+    if (!btn || !sample || !out) return;
+    btn.addEventListener("click", function () {
+      var payload = { sample: sample.value };
+      var custom = config && config.value ? config.value.trim() : "";
+      if (custom) payload.config = custom;
+      else if (select && select.value) payload.profile = select.value;
+      var headers = { "Content-Type": "application/json" };
+      headers[CSRF] = "1";
+      out.textContent = "…";
+      fetchJson("/api/normalization/preview", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      }).then(function (r) {
+        out.textContent = r.ok
+          ? r.body.normalized || ""
+          : "Erreur : " + (r.body.detail || r.status);
+      });
+    });
+  }
+
   ready(function () {
+    wireNormalizationPreview();
     var launchBtn = document.getElementById("launch");
     var statusEl = document.getElementById("run-status");
     var resultEl = document.getElementById("run-result");
