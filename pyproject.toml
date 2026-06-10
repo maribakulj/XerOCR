@@ -53,6 +53,8 @@ include = ["xerocr*"]
 "xerocr.reports" = ["_assets/*.woff2"]
 # Table de tarifs (donnée datée) du calcul économique (couche 3).
 "xerocr.evaluation" = ["pricing.json"]
+# Prompts curés par période (donnée LLM/VLM) — doivent voyager dans le wheel.
+"xerocr.prompts" = ["*.txt"]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"

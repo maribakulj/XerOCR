@@ -67,6 +67,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt": "Prompt",
         "bench_prompt_ph": "Vide = prompt par défaut. Pour la correction, inclus "
         "{ocr_text} là où le texte OCR doit être inséré (sinon il est ignoré).",
+        "bench_prompt_curated_none": "— Prompt curé (par période) —",
+        "bench_prompt_hint": "Choisis un prompt curé OU écris le tien ci-dessous "
+        "(le texte libre est prioritaire).",
         "bench_normalization": "Normalisation",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
@@ -244,6 +247,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt": "Prompt",
         "bench_prompt_ph": "Empty = default prompt. For correction, include "
         "{ocr_text} where the OCR text should be inserted (else it is ignored).",
+        "bench_prompt_curated_none": "— Curated prompt (by period) —",
+        "bench_prompt_hint": "Pick a curated prompt OR write your own below "
+        "(free text takes precedence).",
         "bench_normalization": "Normalization",
         "bench_options": "Options",
         "bench_execute_desc": "Launch the run, then open the final report or "

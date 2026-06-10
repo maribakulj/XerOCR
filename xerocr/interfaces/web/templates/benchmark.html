@@ -104,8 +104,17 @@
         <label class="comp-field comp-field-prompt"
                data-show="text_only text_and_image zero_shot">
           <span class="comp-label">{{ t.bench_prompt }}</span>
+          {% if curated_prompts %}
+          <select id="draft-prompt-curated" class="select">
+            <option value="">{{ t.bench_prompt_curated_none }}</option>
+            {% for name in curated_prompts %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
           <textarea id="draft-prompt" class="input comp-prompt" rows="3"
                     placeholder="{{ t.bench_prompt_ph }}"></textarea>
+          <span class="dropzone-meta">{{ t.bench_prompt_hint }}</span>
         </label>
 
         {% if ollama_models %}

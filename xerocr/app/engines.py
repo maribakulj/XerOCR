@@ -266,8 +266,19 @@ def normalization_profiles() -> tuple[str, ...]:
     return tuple(sorted(NORMALIZATION_PROFILES))
 
 
+def curated_prompts() -> tuple[str, ...]:
+    """Noms des **prompts curés** (``xerocr.prompts``), lus **dynamiquement**.
+
+    Comme les profils de normalisation : un prompt ``.txt`` ajouté au paquet
+    apparaît ici (et au formulaire) sans câblage. Import local (zéro effet de bord)."""
+    from xerocr.prompts import available_prompts
+
+    return available_prompts()
+
+
 __all__ = [
     "normalization_profiles",
+    "curated_prompts",
     "EngineStatus",
     "PUBLIC_ENGINE_KINDS",
     "StatusProvider",

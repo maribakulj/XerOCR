@@ -52,6 +52,15 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_benchmark_exposes_prompt_inputs(tmp_path: Path) -> None:
+    # Prompt libre (textarea) ET prompts curés (select) — l'utilisateur choisit.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="draft-prompt"' in body  # textarea : écrire son propre prompt
+    assert 'id="draft-prompt-curated"' in body  # select : prompts curés par période
+    assert "correction_medieval_french" in body  # noms rendus serveur (dynamiques)
+    assert "zero_shot_medieval_french" in body
+
+
 def test_benchmark_engine_select_disables_unavailable(tmp_path: Path) -> None:
     # tesseract indisponible ici (ni binaire ni pytesseract) → option disabled.
     body = _client(tmp_path).get("/benchmark").text

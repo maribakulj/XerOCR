@@ -55,6 +55,7 @@
     var draftVlm = document.getElementById("draft-vlm");
     var draftModel = document.getElementById("draft-model");
     var draftPrompt = document.getElementById("draft-prompt");
+    var draftPromptCurated = document.getElementById("draft-prompt-curated");
     var queueLabels = {
       ocr: queueList.getAttribute("data-label-ocr") || "OCR",
       ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
@@ -163,6 +164,10 @@
     function buildDraft() {
       var model = draftModel && draftModel.value ? draftModel.value.trim() : "";
       var prompt = draftPrompt && draftPrompt.value ? draftPrompt.value.trim() : "";
+      // Texte libre prioritaire : s'il est saisi, on ignore le prompt curé (le
+      // serveur refuse d'ailleurs les deux à la fois).
+      var promptName =
+        !prompt && draftPromptCurated ? draftPromptCurated.value : "";
       if (activeMode === "ocr_only") {
         return { engine: draftOcr.value, mode: "ocr_only" };
       }
@@ -173,6 +178,7 @@
           llm: draftLlm.value,
           model: model,
           prompt: prompt,
+          promptName: promptName,
         };
       }
       if (activeMode === "text_and_image") {
@@ -182,6 +188,7 @@
           llm: draftVlm.value,
           model: model,
           prompt: prompt,
+          promptName: promptName,
         };
       }
       return {
@@ -189,6 +196,7 @@
         mode: "zero_shot",
         model: model,
         prompt: prompt,
+        promptName: promptName,
       };
     }
 
@@ -201,6 +209,7 @@
         if (queue[i].llm) entry.llm = queue[i].llm;
         if (queue[i].model) entry.model = queue[i].model;
         if (queue[i].prompt) entry.prompt = queue[i].prompt;
+        else if (queue[i].promptName) entry.prompt_name = queue[i].promptName;
         out.push(entry);
       }
       return out;

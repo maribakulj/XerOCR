@@ -87,6 +87,37 @@ def test_zero_shot_pipeline_shape(tmp_path: Path) -> None:
     assert step.output_types == (ArtifactType.RAW_TEXT,)
 
 
+def test_curated_prompt_name_resolves_to_text(tmp_path: Path) -> None:
+    comp = Competitor(
+        engine="openai", mode="zero_shot", prompt_name="zero_shot_medieval_french"
+    )
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    resolved = spec.adapter_kwargs["openai:c0"]["prompt"]
+    assert isinstance(resolved, str) and len(resolved) > 20  # vrai texte curé
+    assert "{ocr_text}" not in resolved  # prompt zero-shot : pas de placeholder
+
+
+def test_free_prompt_takes_precedence(tmp_path: Path) -> None:
+    comp = Competitor(engine="openai", mode="zero_shot", prompt="MON PROMPT")
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    assert spec.adapter_kwargs["openai:c0"]["prompt"] == "MON PROMPT"
+
+
+def test_prompt_and_prompt_name_together_refused(tmp_path: Path) -> None:
+    comp = Competitor(
+        engine="openai", mode="zero_shot", prompt="x",
+        prompt_name="zero_shot_medieval_french",
+    )
+    with pytest.raises(RunPlanningError, match="OU"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")
+
+
+def test_unknown_prompt_name_refused(tmp_path: Path) -> None:
+    comp = Competitor(engine="openai", mode="zero_shot", prompt_name="bidon")
+    with pytest.raises(RunPlanningError, match="inconnu"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")
+
+
 def test_duplicate_competitors_get_unique_names(tmp_path: Path) -> None:
     comps = (Competitor(engine="tesseract"), Competitor(engine="tesseract"))
     build = plan_benchmark_run(comps, _corpus(tmp_path), "r")

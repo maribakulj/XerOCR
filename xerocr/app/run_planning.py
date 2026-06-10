@@ -41,6 +41,7 @@ from xerocr.domain.pipeline import (
 from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.run_spec import RunSpec
 from xerocr.formats.text import NORMALIZATION_PROFILES
+from xerocr.prompts import PromptError, load_prompt
 
 #: Segmenteur de mise en page du socle — **source unique** du *kind* (consommé
 #: par la planification du run de segmentation ET par le gate du routeur).
@@ -80,8 +81,11 @@ class Competitor(BaseModel):
     model: str | None = Field(default=None, max_length=128)
     lang: str = Field(default="fra", max_length=64)
     #: Prompt de post-correction/transcription (modes LLM/VLM). ``None`` → prompt
-    #: par défaut du rôle (``default_prompt_for_role``). Exposé à l'UI.
+    #: par défaut du rôle (``default_prompt_for_role``). Exposé à l'UI (texte libre).
     prompt: str | None = Field(default=None, max_length=8000)
+    #: Nom d'un **prompt curé** (``xerocr.prompts``) à utiliser à la place du défaut.
+    #: Mutuellement exclusif avec ``prompt`` (libre). Résolu au plan en son texte.
+    prompt_name: str | None = Field(default=None, max_length=128)
 
 
 #: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
@@ -140,14 +144,36 @@ def _views_for_corpus(
     return tuple(views)
 
 
+def _resolve_prompt(comp: Competitor) -> str | None:
+    """Texte du prompt : libre (prioritaire) > curé (par nom) > défaut du rôle.
+
+    ``prompt`` (texte libre saisi) et ``prompt_name`` (prompt curé) sont
+    **mutuellement exclusifs** : les fournir tous deux est une erreur de plan
+    (jamais un choix silencieux). Un nom curé inconnu → ``RunPlanningError`` (422).
+    """
+    if comp.prompt and comp.prompt_name:
+        raise RunPlanningError(
+            "prompt : choisir un prompt libre OU un prompt curé, pas les deux."
+        )
+    if comp.prompt:
+        return comp.prompt
+    if comp.prompt_name:
+        try:
+            return load_prompt(comp.prompt_name)
+        except PromptError as exc:
+            raise RunPlanningError(str(exc)) from exc
+    return None
+
+
 def _llm_kwargs(
     label: str, comp: Competitor, role: PipelineMode
 ) -> dict[str, str | int | float | bool]:
     kwargs: dict[str, str | int | float | bool] = {"label": label, "role": role}
     if comp.model:
         kwargs["model"] = comp.model
-    if comp.prompt:
-        kwargs["prompt"] = comp.prompt
+    prompt = _resolve_prompt(comp)
+    if prompt:
+        kwargs["prompt"] = prompt
     return kwargs
 
 

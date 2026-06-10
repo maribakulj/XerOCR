@@ -168,9 +168,29 @@ APP_ALLOWED_PKG = (
     "xerocr.pipeline",
     "xerocr.adapters",
     "xerocr.app",
+    # Paquet de **données** (prompts curés), loader pur (stdlib + domain) — leaf.
+    "xerocr.prompts",
 )
 #: app charge des specs YAML (loader) → ``yaml`` autorisé.
 APP_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
+
+
+def test_prompts_imports_are_pure():
+    """``prompts`` est un paquet de **données** : loader pur (stdlib + domain).
+    Jamais une couche externe (un prompt ne calcule rien, ne fait pas d'I/O métier)."""
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "prompts").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or mod.startswith("xerocr.domain"):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans prompts : {offenders}"
 
 
 def test_app_imports_are_allowed():
