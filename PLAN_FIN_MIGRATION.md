@@ -49,7 +49,7 @@ Le cadrage initial sous-estimait l'avancement. État réel vérifié sur le code
 | 4 | **Ordonnancement = « socle déployé d'abord »** | ✅ validé |
 | 5 | **Cible = `1.0.0` puis gel immédiat de Picarones** | ✅ validé |
 | 6 | **Fiabilité = références externes + cas calculés à la main** (jamais Picarones comme source de vérité) | ✅ principe maintenu |
-| 7 | **Parité moteurs** — tension archi à trancher | ⚠️ recommandation §4, nod attendu |
+| 7 | **Parité moteurs** : Google+Azure first-party (extras `[google]`/`[azure]`), Pero+Calamari plugins hors-dépôt | ✅ validé (§4) |
 
 ---
 
@@ -96,19 +96,18 @@ image_quality, fidélité textuelle, longitudinal, économie (déjà mesurée).
 
 ---
 
-## 4. ⚠️ Tension à arbitrer — parité moteurs
+## 4. Parité moteurs — arbitrage tranché ✅
 
-**Le conflit.** L'objectif « parité moteurs complète avec Picarones (Pero,
-Calamari, Google Vision, Azure) » **contredit** une décision mergée de XerOCR :
-`CLAUDE.md §8.8` (« 8+8+8 adapters → minimal ») et D-072 classent
-Pero/Google/Azure/Calamari en **plugins hors-dépôt**, précisément pour ne pas
-reproduire l'enflure de Picarones. Les deux ne peuvent être vrais simultanément —
-je le signale au lieu de le trancher en douce (rituel `CLAUDE.md §9`).
+**Le conflit (résolu).** L'objectif « parité moteurs complète avec Picarones
+(Pero, Calamari, Google Vision, Azure) » contredisait une décision mergée de
+XerOCR : `CLAUDE.md §8.8` (« 8+8+8 adapters → minimal ») et D-072 classaient
+Pero/Google/Azure/Calamari en **plugins hors-dépôt**. La tension a été signalée
+(rituel `CLAUDE.md §9`) puis **arbitrée** : on retient le partage de
+réconciliation ci-dessous (parité côté utilisateur sans rouvrir l'enflure).
 
-**Recommandation de réconciliation** (donne la parité côté utilisateur sans
-rouvrir l'enflure) :
+**Décision actée** :
 
-| Moteur | Verdict recommandé | Justification |
+| Moteur | Verdict | Justification |
 |---|---|---|
 | **Google Vision** | **First-party, extra `[google]`** | Client cloud léger (pas de dép lourde), valeur de parité réelle, enveloppé par le **contrat `Protocol` unique** (≠ double contrat Picarones). Un fichier adapter + une entrée factory + un test. |
 | **Azure Document Intelligence** | **First-party, extra `[azure]`** | Idem : client cloud léger, parité réelle, un adapter + factory + test. |
@@ -123,11 +122,8 @@ rouvrir l'enflure) :
 > sans clé** (listé mais indisponible, jamais de crash). C'est la couche 5 dans
 > son rôle légitime.
 
-**Ce qu'il te reste à confirmer (une phrase suffit)** : OK pour Google+Azure
-first-party / Pero+Calamari plugins ? Ou veux-tu Pero et/ou Calamari **aussi**
-in-tree (j'ajoute alors les extras `[pero]`/`[calamari]` et j'assume le poids des
-deps) ? **Tant que tu n'as pas tranché, la tranche T17 reste bloquée ; tout le
-reste du plan (Phase A surtout) avance sans elle.**
+**T17 est donc débloquée.** À reporter dans le journal de décisions du roll-up
+`MIGRATION_PLAN.md` (nouvelle entrée D-0xx) au moment du build de T17.
 
 ---
 
@@ -189,14 +185,14 @@ Dépendances · Risques · DoD**.
 | **Risques** | Un adapter qui ne remonte pas les jetons → coût `None` + motif `basis` (déjà géré, jamais de zéro silencieux) ; on veut juste éviter le `None` évitable. |
 | **DoD** | Chaque adapter cloud testé : `tokens_in/out` peuplés sur réponse réelle (cassette). |
 
-#### T17 — Parité moteurs (**bloquée sur §4**)
+#### T17 — Parité moteurs (débloquée ✅, cf. §4)
 
 | | |
 |---|---|
-| **Objectif** | Atteindre la parité moteurs côté utilisateur selon l'arbitrage §4. |
+| **Objectif** | Atteindre la parité moteurs côté utilisateur selon l'arbitrage §4 (acté). |
 | **Traverse** | 5 (adapters) · 6 (factory) · 8 (extras) |
-| **Fichiers touchés** (recommandation §4) | `xerocr/adapters/ocr/google_vision.py` (**nouveau**, extra `[google]`) · `xerocr/adapters/ocr/azure_di.py` (**nouveau**, extra `[azure]`) · `xerocr/app/engines.py` (entrées factory) · `pyproject.toml` (extras `google`, `azure`) · `tests/adapters/ocr/test_google_vision.py` + `test_azure_di.py` (cassettes, valeurs main) · **Pero/Calamari** : aucun fichier in-tree (dépôts plugins `xerocr-pero`/`xerocr-calamari`) + `docs/PLUGINS.md` |
-| **Dépendances** | contrat `Protocol` (✅) · découverte plugins T6 (✅) · **arbitrage §4 confirmé** |
+| **Fichiers touchés** | `xerocr/adapters/ocr/google_vision.py` (**nouveau**, extra `[google]`) · `xerocr/adapters/ocr/azure_di.py` (**nouveau**, extra `[azure]`) · `xerocr/app/engines.py` (entrées factory) · `pyproject.toml` (extras `google`, `azure`) · `tests/adapters/ocr/test_google_vision.py` + `test_azure_di.py` (cassettes, valeurs main) · **Pero/Calamari** : aucun fichier in-tree (dépôts plugins `xerocr-pero`/`xerocr-calamari`) + `docs/PLUGINS.md` |
+| **Dépendances** | contrat `Protocol` (✅) · découverte plugins T6 (✅) · arbitrage §4 ✅ |
 | **Risques** | **Croissance de surface** → mitigée : un `Protocol`, extra-gated, un test chacun, fail-closed sans clé. Ne **jamais** réintroduire de double contrat. |
 | **DoD** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. · Plugins Pero/Calamari : un `pip install xerocr-pero` les rend découvrables sans forker (preuve entry-points). · `make ci` vert. |
 
@@ -386,7 +382,7 @@ error_absorption, inter_engine (divergence + oracle gap), line_metrics
 - [ ] Segmenteur Space : tranché S9 (baké **ou** dégradé gracieux **ou** tier supérieur).
 - [ ] **NER** livrée en extra `[ner]`, message explicite sans l'extra (T16).
 - [ ] Économie : tous adapters cloud remontent les jetons (T16-bis).
-- [ ] **Parité moteurs** : arbitrage §4 confirmé et implémenté (T17) ; VLM zero_shot vérifié (T18).
+- [ ] **Parité moteurs** : Google+Azure first-party + Pero/Calamari plugins implémentés (T17, §4 acté) ; VLM zero_shot vérifié (T18).
 - [ ] **Parité UX** : compare client-side, galerie lazy, badges A→E, i18n nombres, config, preview normalisation (S10–S13).
 - [ ] `make ci` vert (3 OS × 3.11/3.12), couverture ≥ 85 %, tous garde-fous d'archi verts.
 - [ ] Roll-up `MIGRATION_PLAN.md` réconcilié au même commit que chaque livraison.
@@ -410,6 +406,7 @@ C : S10 (rapport interactif) → S11 (galerie) → S12 (champs formulaire) → S
 D : R1.0 (release 1.0.0) → GEL (gel Picarones)
 ```
 
-**Seule action requise de ta part pour débloquer la suite : l'arbitrage §4
-(parité moteurs).** La Phase A (le manque n°1 — OCR réel gratuit sur le Space) ne
-dépend d'aucun arbitrage et peut démarrer immédiatement.
+**Arbitrage §4 (parité moteurs) : tranché ✅** — Google+Azure first-party,
+Pero+Calamari plugins hors-dépôt. Aucune décision produit n'est plus en attente :
+toutes les tranches sont exécutables. **Point de départ : Phase A / `S8`** (le
+manque n°1 — OCR réel gratuit sur le Space).
