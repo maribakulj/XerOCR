@@ -102,6 +102,13 @@ _CSS = (
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Sommaire deeplinkable (ancres natives) + régions de section ancrées.
+    ".report-toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;}"
+    ".report-toc a{font-family:var(--mono);font-size:11px;text-decoration:none;"
+    "color:var(--g-500);background:var(--surface);border-radius:var(--r-pill);"
+    "padding:6px 13px;}"
+    ".report-toc a:hover{color:var(--ink);background:var(--g-50);}"
+    ".r-block{scroll-margin-top:18px;}"
     # Badge moteur (lettre + accent cyclique) — identité stable entre sections.
     ".eng-badge{display:inline-flex;align-items:center;justify-content:center;"
     "width:18px;height:18px;border-radius:5px;background:var(--badge,var(--ink));"

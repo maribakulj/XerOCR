@@ -8,8 +8,39 @@ from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.compare_widget import compare_widget
-from xerocr.reports.html import render_document
+from xerocr.reports.html import escape, render_document
 from xerocr.reports.section import Html, Section, SectionContext
+
+#: Libellés FR des sections pour le sommaire (deeplinks) ; repli = nom brut.
+_SECTION_LABELS = {
+    "synthesis": "Synthèse",
+    "overview": "Vue d'ensemble",
+    "by_engine": "Par moteur",
+    "by_document": "Par document",
+    "cross_engine": "Inter-moteurs",
+    "economics": "Économie",
+    "diagnostics": "Diagnostic",
+    "taxonomy": "Taxonomie",
+    "calibration": "Calibration",
+}
+
+
+def _label(name: str) -> str:
+    return _SECTION_LABELS.get(name, name)
+
+
+def _toc_nav(names: list[str]) -> str:
+    """Sommaire **deeplinkable** (ancres natives, zéro JS) + landmark ARIA.
+
+    Affiché dès qu'il y a ≥ 2 sections (un sommaire d'une entrée est inutile)."""
+    if len(names) < 2:
+        return ""
+    links = "".join(
+        f'<a href="#r-{escape(name)}">{escape(_label(name))}</a>' for name in names
+    )
+    return (
+        '<nav class="report-toc" aria-label="Sommaire du rapport">' f"{links}</nav>"
+    )
 
 
 class ReportRenderer:
@@ -25,16 +56,24 @@ class ReportRenderer:
             for score in pipeline.aggregate
         }
         ctx = SectionContext(title=title)
-        fragments: list[str] = []
+        rendered: list[tuple[str, str]] = []
         for section in self._sections:
             if section.requires and not set(section.requires) <= known:
                 continue  # no-orphan : métriques requises absentes
             html = section.render(result, ctx)
             if html is not None:
-                fragments.append(html)
+                rendered.append((section.name, html))
+        # Chaque section devient une **région** ancrée (deeplink #r-<name> + ARIA) ;
+        # un sommaire en tête relie les régions (navigation native, sans JS).
+        nav = _toc_nav([name for name, _ in rendered])
+        blocks = "".join(
+            f'<section id="r-{escape(name)}" class="r-block" '
+            f'aria-label="{escape(_label(name))}">{html}</section>'
+            for name, html in rendered
+        )
         # Widget « comparer un run » (client-side, déterministe) en pied de rapport.
         return render_document(
-            title, Html("".join(fragments)), footer=compare_widget(result)
+            title, Html(nav + blocks), footer=compare_widget(result)
         )
 
 
