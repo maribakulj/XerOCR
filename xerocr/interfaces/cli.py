@@ -25,6 +25,7 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
+from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
@@ -70,13 +71,22 @@ def _run_demo(output: str) -> int:
     return 0
 
 
-def _run_config(config_path: str, output: str, json_output: str | None) -> int:
+def _run_config(
+    config_path: str,
+    output: str,
+    json_output: str | None,
+    resume_dir: str | None = None,
+) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     spec = load_run_spec(config_path)
+    resume_store = ResumeStore(Path(resume_dir)) if resume_dir else None
     result = run_orchestrator(
-        spec, registry=registry, code_version=resolve_code_version()
+        spec,
+        registry=registry,
+        code_version=resolve_code_version(),
+        resume_store=resume_store,
     )
     Path(output).write_text(
         default_report_renderer().render(
@@ -179,6 +189,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     run_cmd.add_argument("config", help="Fichier YAML décrivant le run.")
     run_cmd.add_argument(
+        "--resume-dir",
+        default=None,
+        help="Cache de reprise : les (pipeline × document) déjà produits à "
+        "l'identique y sont rechargés au lieu d'être ré-exécutés.",
+    )
+    run_cmd.add_argument(
         "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
     )
     run_cmd.add_argument(
@@ -216,7 +232,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "demo":
             return _run_demo(args.output)
         if args.command == "run":
-            return _run_config(args.config, args.output, args.json_output)
+            return _run_config(
+                args.config, args.output, args.json_output, args.resume_dir
+            )
         if args.command == "compare":
             return _compare_command(args.run_a, args.run_b, args.output)
         if args.command == "serve":
