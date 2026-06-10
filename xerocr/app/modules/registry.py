@@ -106,6 +106,19 @@ def _build_google_vision(kwargs: Mapping[str, ParamValue]) -> Module:
     return GoogleVisionAdapter(label=label)
 
 
+def _build_azure_di(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "azure_di : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.azure_di import AzureDocIntelAdapter
+
+    # `lang` (passé par le planificateur à tout moteur OCR) ignoré : le modèle
+    # `prebuilt-read` détecte la langue (pas de paramètre de langue à mapper).
+    return AzureDocIntelAdapter(label=label)
+
+
 def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -226,6 +239,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("kraken", _build_kraken)
     registry.register_builder("mistral_ocr", _build_mistral_ocr)
     registry.register_builder("google_vision", _build_google_vision)
+    registry.register_builder("azure_di", _build_azure_di)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)

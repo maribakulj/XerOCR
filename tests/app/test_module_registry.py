@@ -29,6 +29,7 @@ def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
         "anthropic",
+        "azure_di",
         "google_vision",
         "kraken",
         "mistral",
@@ -46,6 +47,13 @@ def test_kinds_listed() -> None:
 def test_builds_tesseract_module() -> None:
     module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
     assert module.name == "tesseract:fra"
+
+
+def test_builds_azure_di_module() -> None:
+    module = _registry().build("azure_di:c0", {"label": "c0", "lang": "fra"})
+    assert module.name == "azure_di:c0"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
 
 
 def test_builds_google_vision_module() -> None:

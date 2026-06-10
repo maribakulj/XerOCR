@@ -28,6 +28,7 @@ openai = ["openai"]
 anthropic = ["anthropic"]
 mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistralai import Mistral`)
 google = ["httpx", "httpcore"]  # Vision via REST (≠ SDK gRPC lourd) — clé GOOGLE_VISION_API_KEY
+azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_INTEL_ENDPOINT + _KEY
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
 segment = ["paddlex"]

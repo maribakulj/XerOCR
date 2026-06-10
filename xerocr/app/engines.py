@@ -83,6 +83,7 @@ def engine_statuses(
         _kraken_status(has_module),
         _mistral_ocr_status(has_module, get_env),
         _google_vision_status(has_module, get_env),
+        _azure_di_status(has_module, get_env),
         _openai_status(has_module, get_env),
         _anthropic_status(has_module, get_env),
         _mistral_status(has_module, get_env),
@@ -133,6 +134,23 @@ def _google_vision_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineS
         detail, ok = "prêt (REST + clé)", True
     return EngineStatus(
         kind="google_vision", label="Google Vision", available=ok, detail=detail
+    )
+
+
+def _azure_di_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("httpx"):
+        detail, ok = "httpx non installé (extra [azure])", False
+    elif not get_env("AZURE_DOC_INTEL_ENDPOINT"):
+        detail, ok = "endpoint AZURE_DOC_INTEL_ENDPOINT absent", False
+    elif not get_env("AZURE_DOC_INTEL_KEY"):
+        detail, ok = "clé AZURE_DOC_INTEL_KEY absente", False
+    else:
+        detail, ok = "prêt (REST + endpoint + clé)", True
+    return EngineStatus(
+        kind="azure_di",
+        label="Azure Document Intelligence",
+        available=ok,
+        detail=detail,
     )
 
 

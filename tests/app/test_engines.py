@@ -69,6 +69,35 @@ def test_google_vision_needs_httpx_and_key() -> None:
     assert st["google_vision"][0] is True
 
 
+def test_azure_di_needs_httpx_endpoint_and_key() -> None:
+    base = {"has_binary": lambda _n: None}
+    # httpx absent
+    st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "v", **base)
+    assert st["azure_di"][0] is False and "[azure]" in st["azure_di"][1]
+    # httpx présent, endpoint absent
+    st = _statuses(
+        has_module=lambda _n: True,
+        get_env=lambda n: None if n == "AZURE_DOC_INTEL_ENDPOINT" else "v",
+        **base,
+    )
+    assert (
+        st["azure_di"][0] is False
+        and "AZURE_DOC_INTEL_ENDPOINT" in st["azure_di"][1]
+    )
+    # endpoint présent, clé absente
+    st = _statuses(
+        has_module=lambda _n: True,
+        get_env=lambda n: "https://x" if n == "AZURE_DOC_INTEL_ENDPOINT" else None,
+        **base,
+    )
+    assert (
+        st["azure_di"][0] is False and "AZURE_DOC_INTEL_KEY" in st["azure_di"][1]
+    )
+    # endpoint + clé
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: "v", **base)
+    assert st["azure_di"][0] is True
+
+
 def test_mistral_needs_sdk_and_key() -> None:
     base = {"has_binary": lambda _n: None}
     st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
@@ -107,7 +136,9 @@ def test_public_engine_kinds_is_free_first_party_socle() -> None:
     # Le socle gratuit exécutable publiquement = precomputed (démo) + tesseract.
     # Fail-closed : aucun moteur cloud (clé) n'y figure → il est gated en 403.
     assert PUBLIC_ENGINE_KINDS == frozenset({"precomputed", "tesseract"})
-    cloud = {"openai", "anthropic", "mistral", "mistral_ocr", "google_vision"}
+    cloud = {
+        "openai", "anthropic", "mistral", "mistral_ocr", "google_vision", "azure_di"
+    }
     assert PUBLIC_ENGINE_KINDS.isdisjoint(cloud)
     # Tout kind du socle public est un moteur réellement connu (pas un typo).
     known = {s.kind for s in engine_statuses()}
@@ -126,7 +157,7 @@ def test_default_probes_run_without_error() -> None:
     kinds = {s.kind for s in statuses}
     assert kinds == {
         "precomputed", "tesseract", "kraken", "mistral_ocr", "google_vision",
-        "openai", "anthropic", "mistral", "ollama",
+        "azure_di", "openai", "anthropic", "mistral", "ollama",
     }
     assert next(s for s in statuses if s.kind == "precomputed").available
 
