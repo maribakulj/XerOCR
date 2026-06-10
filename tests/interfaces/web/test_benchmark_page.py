@@ -114,6 +114,27 @@ def test_benchmark_english(tmp_path: Path) -> None:
     assert "Run the benchmark" in body
 
 
+def test_skip_link_and_landmark_present(tmp_path: Path) -> None:
+    # Lien d'évitement clavier + cible de saut (a11y).
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'class="skip-link"' in body
+    assert 'href="#main-content"' in body
+    assert 'id="main-content"' in body
+    assert "Aller au contenu" in body  # libellé FR
+    en = _client(tmp_path).get("/benchmark?lang=en").text
+    assert "Skip to content" in en
+
+
+def test_run_progress_has_progressbar_role(tmp_path: Path) -> None:
+    # La barre de progression annonce sa valeur aux lecteurs d'écran.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'role="progressbar"' in body
+    assert 'aria-valuemin="0"' in body
+    assert 'aria-valuemax="100"' in body
+    assert 'aria-valuenow="0"' in body
+    assert 'role="status"' in body  # la zone enveloppe est une live-region
+
+
 def test_js_asset_is_served(tmp_path: Path) -> None:
     resp = _client(tmp_path).get("/static/js/benchmark.js")
     assert resp.status_code == 200

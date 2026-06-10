@@ -802,6 +802,29 @@ table.data a { color: var(--fern-deep); font-weight: 500; }
   color: var(--g-300);
 }
 
+/* Lien d'évitement (a11y clavier) : masqué visuellement, visible au focus. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 100;
+  background: var(--ink);
+  color: var(--paper);
+  padding: 8px 14px;
+  border-radius: var(--r-md);
+  font-family: var(--mono);
+  font-size: 12px;
+  text-decoration: none;
+  transition: top 0.12s ease;
+}
+.skip-link:focus {
+  top: 8px;
+}
+/* La cible de saut ne doit pas afficher d'anneau de focus au saut clavier. */
+.main:focus {
+  outline: none;
+}
+
 /* Aperçu de normalisation : résultat monospace, espaces visibles, sur la charte. */
 .norm-result {
   font-family: var(--mono);

@@ -28,6 +28,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "stat_reports": "rapports",
         "reports_title": "Rapports générés",
         "reports_desc": "Historique des benchmarks, rendus HTML autonomes.",
+        "skip_to_content": "Aller au contenu",
+        "bench_progress_label": "Progression du run",
         # NB : la sous-chaîne « aucun rapport » est attendue par les tests.
         "reports_empty": "aucun rapport disponible pour l'instant.",
         "open_report": "Ouvrir",
@@ -219,6 +221,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "stat_reports": "reports",
         "reports_title": "Generated reports",
         "reports_desc": "Benchmark history, standalone HTML renders.",
+        "skip_to_content": "Skip to content",
+        "bench_progress_label": "Run progress",
         "reports_empty": "no report available yet.",
         "open_report": "Open",
         "bench_eyebrow": "Benchmark · compare",

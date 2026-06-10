@@ -205,8 +205,12 @@
         <span id="run-status" class="run-status">{{ t.bench_idle }}</span>
       </div>
 
-      <div id="run-progress" class="run-progress" hidden>
-        <div class="progress"><div id="run-progress-bar" class="progress-bar"></div></div>
+      <div id="run-progress" class="run-progress" hidden role="status" aria-live="polite">
+        <div id="run-progress-rail" class="progress" role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+             aria-label="{{ t.bench_progress_label }}">
+          <div id="run-progress-bar" class="progress-bar"></div>
+        </div>
         <span id="run-progress-text" class="run-progress-text mono"></span>
       </div>
 

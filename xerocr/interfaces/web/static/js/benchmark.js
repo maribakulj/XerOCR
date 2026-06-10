@@ -320,6 +320,8 @@
       progressWrap.hidden = false;
       var pct = Math.round((doneN / total) * 100);
       progressBar.style.width = pct + "%";
+      var rail = document.getElementById("run-progress-rail");
+      if (rail) rail.setAttribute("aria-valuenow", String(pct));
       if (progressText) progressText.textContent = doneN + " / " + total;
     }
 
