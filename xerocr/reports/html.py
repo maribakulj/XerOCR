@@ -100,6 +100,14 @@ _CSS = (
     "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
     "color:var(--g-400);border-bottom:1px solid var(--g-50);}"
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
+    # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
+    "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
+    "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
+    "word-break:break-word;vertical-align:top;}"
+    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:line-through;"
+    "color:var(--ink);}"
+    "ins.d-ins{background:rgba(159,195,160,0.38);text-decoration:none;"
+    "color:var(--ink);}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
     # Sommaire deeplinkable (ancres natives) + régions de section ancrées.
@@ -136,6 +144,8 @@ _CSS = (
     ".palette-cb{--fern:oklch(0.55 0.13 250);}"
     ".palette-cb .compare-banner .cb-row.worse .cb-delta{color:#E0A23C;}"
     ".palette-cb .compare-banner .cb-row.better .cb-delta{color:#7FB0D9;}"
+    ".palette-cb del.d-del{background:rgba(224,162,60,0.32);}"
+    ".palette-cb ins.d-ins{background:rgba(127,176,217,0.38);}"
 )
 
 
