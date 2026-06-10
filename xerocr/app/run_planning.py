@@ -89,7 +89,7 @@ def _ocr_view(normalization: str | None) -> EvaluationView:
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
-        metric_names=("cer", "wer", "mer"),
+        metric_names=("cer", "wer", "mer", "searchability", "hallucination"),
         normalization_profile=normalization,
     )
 

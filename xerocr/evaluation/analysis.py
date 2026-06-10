@@ -7,10 +7,9 @@ seulement **lu** par les rapports. Chaque famille ajoute son payload Pydantic
 figé ici, discriminé par ``kind``, dans le même commit que son calcul et son
 consommateur (garde-fou « pas de consommateur = supprimé »).
 
-Première famille : ``inference`` — le verdict statistique corrigé
-multi-comparaisons (rangs moyens, distance critique de Nemenyi, groupes
-d'ex-aequo, IC bootstrap par pipeline). Deuxième famille : ``economics`` —
-coûts estimés, débit effectif, fronts de Pareto qualité × coût/durée.
+Familles : ``inference`` (verdict statistique corrigé multi-comparaisons),
+``economics`` (coûts, débit effectif, Pareto), ``diagnostics`` (paires de
+confusion, pires lignes, documents les plus difficiles — « voir où ça casse »).
 """
 
 from __future__ import annotations
@@ -147,10 +146,69 @@ class EconomicsPayload(BaseModel):
     marginal: tuple[MarginalCost, ...] = ()
 
 
+class CharConfusion(BaseModel):
+    """Substitution récurrente : caractère attendu → caractère produit."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    expected: str = Field(min_length=1, max_length=8)
+    observed: str = Field(min_length=1, max_length=8)
+    count: int = Field(ge=1)
+
+
+class PipelineConfusions(BaseModel):
+    """Top des confusions d'un pipeline sur le corpus (tri : -count, paire)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    pairs: tuple[CharConfusion, ...] = ()
+
+
+class WorstLine(BaseModel):
+    """Une des pires lignes du corpus : où ça casse, texte à l'appui.
+
+    Les extraits sont **verbatim** (tronqués) des représentations normalisées
+    déjà chargées pour le scoring — aucun re-calcul au rendu.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    document_id: str = Field(min_length=1, max_length=256)
+    line_index: int = Field(ge=0)
+    cer: float = Field(ge=0)
+    reference: str = Field(max_length=160)
+    hypothesis: str = Field(max_length=160)
+
+
+class HardDocument(BaseModel):
+    """Document le plus difficile : CER moyen sur les pipelines scorés."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    mean_cer: float = Field(ge=0)
+    n_pipelines: int = Field(ge=1)
+
+
+class DiagnosticsPayload(BaseModel):
+    """Diagnostic d'erreurs d'une vue : confusions, pires lignes, difficulté."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["diagnostics"] = "diagnostics"
+    metric: str = Field(min_length=1, max_length=128)
+    confusions: tuple[PipelineConfusions, ...] = ()
+    worst_lines: tuple[WorstLine, ...] = ()
+    hardest_documents: tuple[HardDocument, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
-    InferencePayload | EconomicsPayload, Field(discriminator="kind")
+    InferencePayload | EconomicsPayload | DiagnosticsPayload,
+    Field(discriminator="kind"),
 ]
 
 
@@ -169,11 +227,16 @@ class Analysis(BaseModel):
 __all__ = [
     "Analysis",
     "AnalysisPayload",
+    "CharConfusion",
+    "DiagnosticsPayload",
     "EconomicsPayload",
+    "HardDocument",
     "InferencePayload",
     "MarginalCost",
     "PairwiseDifference",
+    "PipelineConfusions",
     "PipelineEconomics",
     "PipelineInterval",
     "PipelineRank",
+    "WorstLine",
 ]

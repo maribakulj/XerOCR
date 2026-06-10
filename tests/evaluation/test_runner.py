@@ -279,11 +279,17 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         registry=_registry(),
         manifest=manifest,
     )
-    assert len(result.analyses) == 1
-    analysis = result.analyses[0]
+    by_kind = {a.payload.kind: a for a in result.analyses}
+    assert set(by_kind) == {"inference", "diagnostics"}
+    analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"
     payload = analysis.payload
     assert payload.kind == "inference" and payload.metric == "cer"
+    # Le diagnostic voit les mêmes textes : beta (2 erreurs/doc) produit des
+    # confusions X→i/j/q/y..., et les documents sont classés par CER moyen.
+    diagnostics = by_kind["diagnostics"].payload
+    assert diagnostics.confusions and diagnostics.hardest_documents
+    assert diagnostics.worst_lines[0].cer > 0
     assert payload.n_documents == 6
     assert payload.critical_distance is not None  # 3 pipelines → post-hoc
     assert [r.pipeline for r in payload.mean_ranks] == ["alpha", "gamma", "beta"]

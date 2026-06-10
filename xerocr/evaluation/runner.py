@@ -21,6 +21,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.context import CrossEngineContext, DocContext
+from xerocr.evaluation.diagnostics import DiagnosticsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
@@ -84,6 +85,7 @@ def evaluate_run(
 
     for view in evaluation.views:
         series: _Series = {name: {} for name in view.metric_names}
+        diagnostics = DiagnosticsCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -91,7 +93,16 @@ def evaluate_run(
                 candidate = _candidate_for(
                     pipeline_outputs, pipeline_name, document.id, view.candidate_types
                 )
-                scores = _score_document(view, document, candidate, registry)
+                scores, text_context = _score_document(
+                    view, document, candidate, registry
+                )
+                if text_context is not None:
+                    diagnostics.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
                 for score in scores:
                     series[score.metric][pipeline_name].append(score)
                 documents.append(
@@ -114,6 +125,14 @@ def evaluate_run(
             )
         cross_engine.extend(_cross_engine_scores(view, series, registry))
         analyses.extend(_inference_analyses(view, series))
+        diagnostic = diagnostics.build(
+            view.name,
+            "cer",
+            [document.id for document in corpus.documents],
+            series.get("cer", {}),
+        )
+        if diagnostic is not None:
+            analyses.append(diagnostic)
         if "cer" in view.metric_names:
             economics = economics_analysis(
                 view.name, "cer", series["cer"], usage, manifest
@@ -229,9 +248,11 @@ def _score_document(
     document: DocumentRef,
     candidate: Artifact | None,
     registry: MetricRegistry,
-) -> tuple[MetricScore, ...]:
+) -> tuple[tuple[MetricScore, ...], DocContext | None]:
     # Représentation chargée + normalisée une seule fois par signature, partagée
-    # par toutes les métriques qui la consomment (CER/WER/MER).
+    # par toutes les métriques qui la consomment (CER/WER/MER). Le contexte
+    # **texte** est aussi renvoyé : le diagnostic d'erreurs (confusions, pires
+    # lignes) le consomme sans recharger ni renormaliser quoi que ce soit.
     contexts: dict[_Signature, DocContext | None] = {}
     scores: list[MetricScore] = []
     for name in view.metric_names:
@@ -250,7 +271,8 @@ def _score_document(
                 support=observation.weight if observation is not None else None,
             )
         )
-    return tuple(scores)
+    text_context = contexts.get((ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT))
+    return tuple(scores), text_context
 
 
 def _context_for(

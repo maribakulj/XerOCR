@@ -35,10 +35,11 @@ class ReportRenderer:
 
 
 def default_report_renderer() -> ReportRenderer:
-    """Socle : synthèse + overview + par-moteur + par-document + stats + économie."""
+    """Socle : synthèse, overview, par-moteur/document, stats, économie, diagnostic."""
     from xerocr.reports.sections.by_document import DocumentSection
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
+    from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
@@ -51,6 +52,7 @@ def default_report_renderer() -> ReportRenderer:
             DocumentSection(),
             CrossEngineSection(),
             EconomicsSection(),
+            DiagnosticsSection(),
         )
     )
 
