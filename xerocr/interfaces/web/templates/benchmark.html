@@ -118,6 +118,9 @@
           <span class="dropzone-meta">{{ t.bench_prompt_hint }}</span>
         </label>
 
+        {# Suggestions canoniques openai/anthropic — peuplée par benchmark.js
+           depuis /api/models/{provider} (avec capacité vision). #}
+        <datalist id="api-model-list"></datalist>
         {% if ollama_models %}
         <datalist id="ollama-models">
           {% for m in ollama_models %}<option value="{{ m }}"></option>{% endfor %}

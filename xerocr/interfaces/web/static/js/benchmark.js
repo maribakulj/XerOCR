@@ -75,29 +75,71 @@
     // Le champ « Modèle » pointe vers la datalist du fournisseur sélectionné
     // (ollama / mistral), qui n'existe que si le serveur a renvoyé des modèles.
     // Sinon : saisie libre. Rien de hardcodé — les options viennent du serveur.
-    function updateModelList() {
-      if (!draftModel) return;
-      var provider =
-        activeMode === "text_only"
-          ? draftLlm && draftLlm.value
-          : activeMode === "text_and_image" || activeMode === "zero_shot"
-          ? draftVlm && draftVlm.value
-          : "";
-      var listId =
-        provider === "ollama"
-          ? "ollama-models"
-          : provider === "mistral"
-          ? "mistral-models"
-          : "";
-      var dl = listId ? document.getElementById(listId) : null;
-      if (dl) draftModel.setAttribute("list", listId);
+    var modelCache = {};
+
+    function applyDatalist(listId, count) {
+      if (listId && count) draftModel.setAttribute("list", listId);
       else draftModel.removeAttribute("list");
       var hint = document.getElementById("model-hint");
       if (hint) {
-        hint.textContent = dl
-          ? dl.children.length + " modèle(s) — clique pour choisir"
+        hint.textContent = count
+          ? count + " modèle(s) suggéré(s) — clique pour choisir"
           : "";
       }
+    }
+
+    function fillApiList(models) {
+      var dl = document.getElementById("api-model-list");
+      if (!dl) return 0;
+      dl.textContent = "";
+      for (var i = 0; i < models.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = models[i].name;
+        if (models[i].vision) opt.label = "vision";
+        dl.appendChild(opt);
+      }
+      return models.length;
+    }
+
+    function currentProvider() {
+      if (activeMode === "text_only") return draftLlm && draftLlm.value;
+      if (activeMode === "text_and_image" || activeMode === "zero_shot") {
+        return draftVlm && draftVlm.value;
+      }
+      return "";
+    }
+
+    function updateModelList() {
+      if (!draftModel) return;
+      var provider = currentProvider();
+      // Modèles réellement installés (live) : datalists rendues côté serveur.
+      if (provider === "ollama" || provider === "mistral") {
+        var dl = document.getElementById(provider + "-models");
+        applyDatalist(provider + "-models", dl ? dl.children.length : 0);
+        return;
+      }
+      // openai/anthropic : pas de source live → liste canonique + capacité vision
+      // via /api/models/{provider} (même origine ; mise en cache).
+      if (provider === "openai" || provider === "anthropic") {
+        if (modelCache[provider]) {
+          applyDatalist("api-model-list", fillApiList(modelCache[provider]));
+          return;
+        }
+        var asked = provider;
+        fetch("/api/models/" + encodeURIComponent(provider))
+          .then(function (r) {
+            return r.ok ? r.json() : { models: [] };
+          })
+          .then(function (data) {
+            modelCache[asked] = data.models || [];
+            if (currentProvider() === asked) {
+              applyDatalist("api-model-list", fillApiList(modelCache[asked]));
+            }
+          })
+          .catch(function () {});
+        return;
+      }
+      applyDatalist("", 0);
     }
 
     function setMode(mode) {

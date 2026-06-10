@@ -50,3 +50,15 @@ def test_normalization_profiles_are_read_dynamically(tmp_path: Path) -> None:
     # Jamais une liste statique : l'endpoint reflète la couche 2 telle quelle.
     assert body["profiles"] == sorted(NORMALIZATION_PROFILES)
     assert "nfc" in body["profiles"]
+
+
+def test_models_endpoint_lists_provider_models_with_vision(tmp_path: Path) -> None:
+    body = _client(tmp_path).get("/api/models/openai").json()
+    assert body["provider"] == "openai"
+    names = {m["name"]: m["vision"] for m in body["models"]}
+    assert "gpt-4o" in names and names["gpt-4o"] is True
+
+
+def test_models_endpoint_unknown_provider_is_empty(tmp_path: Path) -> None:
+    body = _client(tmp_path).get("/api/models/bogus").json()
+    assert body == {"provider": "bogus", "models": []}  # champ libre, pas d'erreur

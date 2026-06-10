@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from xerocr.app.engines import StatusProvider, normalization_profiles
+from xerocr.app.models import provider_models
 
 
 def build_engines_router(provider: StatusProvider) -> APIRouter:
@@ -21,6 +22,15 @@ def build_engines_router(provider: StatusProvider) -> APIRouter:
         """Profils de comparaison disponibles — lus dynamiquement (couche 2)."""
         return {"profiles": list(normalization_profiles())}
 
+    @router.get("/api/models/{model_provider}")
+    def list_models(model_provider: str) -> dict[str, object]:
+        """Modèles canoniques d'un fournisseur + capacité vision (suggestions UI).
+
+        Fournisseur inconnu → liste vide (200) : le champ ``model`` reste libre."""
+        return {
+            "provider": model_provider,
+            "models": [m.model_dump() for m in provider_models(model_provider)],
+        }
 
     @router.get("/api/engines")
     def list_engines() -> dict[str, list[dict[str, object]]]:

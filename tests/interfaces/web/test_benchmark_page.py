@@ -52,6 +52,13 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_model_suggestions_datalist_and_api_wired(tmp_path: Path) -> None:
+    # 3c : datalist canonique (peuplée via /api/models) + le JS interroge l'API.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="api-model-list"' in body  # cible des suggestions openai/anthropic
+    assert "/api/models/" in _JS.read_text(encoding="utf-8")  # le JS la consomme
+
+
 def test_model_field_shown_in_ocr_only_mode(tmp_path: Path) -> None:
     # 3c : le champ « Modèle » est désormais visible aussi en OCR seul (pour
     # kraken/pero/calamari/mistral_ocr qui exigent un modèle) — gap 2c refermé.
