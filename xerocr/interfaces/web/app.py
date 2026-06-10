@@ -20,6 +20,7 @@ import tempfile
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -38,6 +39,7 @@ from xerocr.app.modules import (
 )
 from xerocr.app.segmentation import SegmentationStore, demo_layout, demo_page_image
 from xerocr.interfaces.web.catalog import seed_reports
+from xerocr.interfaces.web.metrics import MetricsMiddleware, RequestMetrics
 from xerocr.interfaces.web.routers.corpus import build_corpus_router
 from xerocr.interfaces.web.routers.engines import build_engines_router
 from xerocr.interfaces.web.routers.history import build_history_router
@@ -69,6 +71,10 @@ REPORTS_DIR_ENV = "XEROCR_REPORTS_DIR"
 #: Mode public (exposition sans secrets) : refuse les moteurs cloud porteurs de
 #: clé. Activé par cet env (truthy) si ``create_app(public_mode=...)`` ne tranche pas.
 PUBLIC_MODE_ENV = "XEROCR_PUBLIC_MODE"
+
+#: Observabilité Prometheus **opt-in** : expose ``/metrics`` si truthy (un Space
+#: exposé ne publie pas ses stats par défaut). Surchargé par ``create_app(metrics=)``.
+METRICS_ENV = "XEROCR_METRICS"
 
 
 def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
@@ -112,6 +118,13 @@ def _resolve_public_mode(public_mode: bool | None) -> bool:
     return is_huggingface_space()
 
 
+def _resolve_metrics(metrics: bool | None) -> bool:
+    """``/metrics`` : arg explicite > env ``XEROCR_METRICS`` > ``False`` (off)."""
+    if metrics is not None:
+        return metrics
+    return os.environ.get(METRICS_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
 def create_app(
     *,
     reports_dir: Path | str | None = None,
@@ -119,6 +132,7 @@ def create_app(
     data_dir: Path | str | None = None,
     rate_limit: int = 60,
     public_mode: bool | None = None,
+    metrics: bool | None = None,
 ) -> FastAPI:
     """Construit une **nouvelle** application web XerOCR.
 
@@ -144,6 +158,19 @@ def create_app(
     # avant tout traitement ; les en-têtes habillent la réponse qui remonte.
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RateLimitMiddleware, max_requests=rate_limit)
+
+    # Observabilité opt-in : compte toutes les requêtes (middleware le plus
+    # externe → voit même les 429) et expose `/metrics`. État par application.
+    if _resolve_metrics(metrics):
+        request_metrics = RequestMetrics()
+        app.add_middleware(MetricsMiddleware, metrics=request_metrics)
+
+        @app.get("/metrics")
+        def metrics_endpoint() -> PlainTextResponse:
+            """Exposition Prometheus (texte). Montée **seulement** si opt-in."""
+            return PlainTextResponse(
+                request_metrics.render(), media_type=request_metrics.content_type
+            )
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -233,4 +260,10 @@ def create_app(
     return app
 
 
-__all__ = ["API_VERSION", "PUBLIC_MODE_ENV", "REPORTS_DIR_ENV", "create_app"]
+__all__ = [
+    "API_VERSION",
+    "METRICS_ENV",
+    "PUBLIC_MODE_ENV",
+    "REPORTS_DIR_ENV",
+    "create_app",
+]
