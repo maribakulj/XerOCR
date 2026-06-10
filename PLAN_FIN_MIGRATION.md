@@ -84,11 +84,12 @@ indisponible, jamais de crash). C'est la couche adapters dans son rôle légitim
 | **2b — Azure Document Intelligence** | adapter cloud first-party | `xerocr/adapters/ocr/azure_di.py` (**nouveau**), extra `[azure]`, entrée factory, `tests/adapters/ocr/test_azure_di.py` |
 | **2c — Pero + Calamari** | plugins de référence hors-dépôt | aucun fichier in-tree → dépôts `xerocr-pero` / `xerocr-calamari` + `docs/PLUGINS.md` (prouve le chemin entry-points `xerocr.modules`) |
 | **2d — Vérifs** | zero-shot déjà livré → test bout-en-bout + doc ; tous les adapters cloud remontent bien `tokens_in/out` (alimente l'économie) | `tests/pipeline/` (spec zero_shot 1 étage IMAGE→texte), `tests/adapters/llm/` (jetons non-`None` sur cassette) |
+| **2e — Prompts curés par période** | porter les **16 prompts** Picarones (correction + zero-shot) calibrés par type : médiéval FR/EN, imprimé ancien, presse XIXe FR/EN/DE/européenne. **Donnée curée**, pas de la surface exécutable (comme les profils de normalisation) | `xerocr/prompts/*.txt` (**nouveau dossier**), sélection exposée au pipeline LLM/VLM (`app/run_planning`) + au formulaire web (étape 3c), `package-data` dans `pyproject.toml`, `tests/` (chargement + sélection) |
 
 | | |
 |---|---|
-| **Risques** | Croissance de surface → mitigée : un `Protocol`, un test par moteur, extra-gated, fail-closed. Ne **jamais** réintroduire de double contrat interne. |
-| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. `pip install xerocr-pero` rend Pero découvrable sans forker. Zero-shot testé. `make ci` vert. |
+| **Risques** | Croissance de surface → mitigée : un `Protocol`, un test par moteur, extra-gated, fail-closed. Ne **jamais** réintroduire de double contrat interne. Prompts = données versionnées (déterminisme : fichier tracé dans `RunManifest`). |
+| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. `pip install xerocr-pero` rend Pero découvrable sans forker. Zero-shot testé. Les 16 prompts sélectionnables. `make ci` vert. |
 
 ---
 
@@ -105,11 +106,12 @@ anti-hallucination) ; le JS client est en lecture seule, zéro appel réseau.
 | **3b — Galerie & drill-in** | galerie de documents avec **miniatures lazy-load** (IntersectionObserver) ; drill-in image + **diff caractère/mot surligné** GT vs hypothèse | `xerocr/reports/` (section galerie + template drill-in + JS lazy + util diff) |
 | **3c — Champs de formulaire** | parité CLI/web : preview de profil de normalisation (validation YAML custom sans persistance) ; config save/load JSON ; `/api/models/{provider}` (capacités texte/vision, fallback liste canonique) ; sélecteurs `char_exclude`, profil métrique, toggle expose-ALTO | `xerocr/interfaces/web/routers/` + templates ; la construction de spec reste en `app/run_planning` (garde-fou `interfaces` mince) |
 | **3d — Observabilité & a11y** | `/metrics` Prometheus **opt-in** ; sélecteur de langue ; tooltips/ARIA ; feedback dropzone ; spinner/progress | `xerocr/interfaces/web/routers/` (system) + templates |
+| **3e — Glossaire FR/EN** | porter le glossaire pédagogique du rapport (définitions CER/WER/ECE/… pour le lecteur non-expert) | `xerocr/reports/glossary/{fr,en}.yaml` (**nouveau**) + intégration dans le rapport (tooltips/section), `package-data`, `tests/` |
 
 | | |
 |---|---|
-| **Risques** | Garder `interfaces` mince. `/metrics` strictement opt-in. Validation chemins/SSRF maintenue. Golden du rapport reste octet-stable. |
-| **Fait quand** | Compare hors-ligne, galerie lazy, drill-in diff, deeplinks clavier, nombres localisés, config round-trip, preview normalisation, `/metrics` opt-in — tous testés. `make ci` vert. |
+| **Risques** | Garder `interfaces` mince. `/metrics` strictement opt-in. Validation chemins/SSRF maintenue. Golden du rapport reste octet-stable. Glossaire = données i18n (pas de prose LLM). |
+| **Fait quand** | Compare hors-ligne, galerie lazy, drill-in diff, deeplinks clavier, nombres localisés, config round-trip, preview normalisation, `/metrics` opt-in, glossaire FR/EN affiché — tous testés. `make ci` vert. |
 
 ---
 
@@ -149,8 +151,8 @@ défauts.
 ### Checklist « 1.0 prête »
 
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
-- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari en plugins, zero-shot vérifié, jetons remontés par tous les adapters cloud.
-- [ ] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y.
+- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari en plugins, zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
+- [ ] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
 - [ ] **Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
 - [ ] `README`/`CHANGELOG`/`pricing.json` à jour, roll-up réconcilié.
