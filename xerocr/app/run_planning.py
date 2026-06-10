@@ -47,7 +47,7 @@ from xerocr.formats.text import NORMALIZATION_PROFILES
 SEGMENTER_KIND = "pp_doclayout"
 
 #: Moteurs OCR câblés pour un run réel (amont d'une chaîne ou OCR seul).
-_OCR_ENGINES = frozenset({"tesseract"})
+_OCR_ENGINES = frozenset({"tesseract", "kraken", "mistral_ocr"})
 #: Fournisseurs de post-correction LLM (mode ``text_only``).
 _LLM_ENGINES = frozenset({"openai", "anthropic", "mistral", "ollama"})
 #: Fournisseurs **vision** (modes ``text_and_image`` et ``zero_shot``).
@@ -89,7 +89,7 @@ def _ocr_view(normalization: str | None) -> EvaluationView:
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
-        metric_names=("cer", "wer", "mer"),
+        metric_names=("cer", "wer", "mer", "searchability", "hallucination"),
         normalization_profile=normalization,
     )
 

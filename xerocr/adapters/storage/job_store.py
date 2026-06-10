@@ -60,7 +60,7 @@ class Job(BaseModel):
     report_name: str | None = None
     #: Message d'erreur quand ``state == FAILED`` (sinon ``None``).
     error: str | None = None
-    #: URL distante du rapport publié (S3) si la persistance est active, sinon ``None``.
+    #: URL distante du rapport publié si la persistance est active, sinon ``None``.
     published_url: str | None = None
     #: Progression : unités (document × concurrent) traitées / total. ``0/0`` =
     #: inconnu (job pas encore démarré). Alimente la barre de progression (SSE).

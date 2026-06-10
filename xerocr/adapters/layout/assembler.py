@@ -21,7 +21,7 @@ from xerocr.formats.alto import write_alto
 from xerocr.formats.alto.layout_map import layout_to_alto
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 
@@ -51,7 +51,7 @@ class AltoAssembler:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         layout_art = inputs.get(ArtifactType.LAYOUT)
         if layout_art is None or layout_art.uri is None:
@@ -73,15 +73,17 @@ class AltoAssembler:
         )
         out_path = out_dir / f"{context.document_id.replace('/', '_')}.alto.xml"
         out_path.write_bytes(payload)
-        return {
-            ArtifactType.ALTO_XML: Artifact(
-                id=f"{context.document_id}:{self.name}:alto_xml",
-                document_id=context.document_id,
-                type=ArtifactType.ALTO_XML,
-                uri=str(out_path),
-                content_hash=compute_content_hash(payload),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.ALTO_XML: Artifact(
+                    id=f"{context.document_id}:{self.name}:alto_xml",
+                    document_id=context.document_id,
+                    type=ArtifactType.ALTO_XML,
+                    uri=str(out_path),
+                    content_hash=compute_content_hash(payload),
+                )
+            }
+        )
 
 
 __all__ = ["AltoAssembler"]

@@ -3,9 +3,9 @@ vue, pipelines × métriques, avec **data-bars** proportionnelles. Couche 7.
 
 Le contenu reste piloté par les **vraies** métriques de ``RunResult`` (ce que le
 moteur calcule : CER/WER/MER aujourd'hui) — **jamais** par les métriques que le
-design *dessine* mais que le moteur ne produit pas encore (note d'archi S4.b :
+design *dessine* mais que le moteur ne produit pas encore (note d'archi :
 pas de rapport en avance sur sa donnée). Les sections plus riches arrivent au fil
-des métriques (T7).
+des métriques.
 """
 
 from __future__ import annotations

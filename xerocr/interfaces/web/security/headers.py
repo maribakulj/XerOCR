@@ -5,7 +5,7 @@ n'ouvre que le strict nécessaire, **toujours en `self`** (aucun CDN). Le
 **rapport** reste autonome (``<style>`` inline + images self/data — cf.
 ``reports/html.py``). La **coquille** sert sa feuille de style et ses polices
 auto-hébergées (``style-src``/``font-src 'self'``) ; depuis le lanceur
-interactif (TU2.f), elle sert aussi un **JS auto-hébergé** (``script-src
+interactif, elle sert aussi un **JS auto-hébergé** (``script-src
 'self'`` — jamais ``'unsafe-inline'``, jamais d'externe) qui parle aux API et
 s'abonne au SSE (``connect-src 'self'``). ``form-action 'none'`` (on pilote en
 ``fetch``, pas en soumission de formulaire). Tout le reste tombe sur

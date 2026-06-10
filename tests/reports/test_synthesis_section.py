@@ -9,6 +9,11 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.analysis import (
+    Analysis,
+    InferencePayload,
+    PipelineRank,
+)
 from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
 from xerocr.reports.section import Section, SectionContext
 from xerocr.reports.sections.synthesis import SynthesisSection
@@ -109,3 +114,80 @@ def test_view_without_cer_is_skipped() -> None:
         aggregate=(MetricScore(metric="region_detection", value=0.5, support=2),),
     )
     assert SynthesisSection().render(_result((pipe,)), SectionContext()) is None
+
+
+def _inference(
+    tied: bool, view: str = "text"
+) -> tuple[Analysis, ...]:
+    """Analyse Nemenyi à 3 pipelines : tête {ollama, tess} liée ou séparée."""
+    groups = (
+        (("ollama", "tess"), ("worst",))
+        if tied
+        else (("ollama",), ("tess",), ("worst",))
+    )
+    payload = InferencePayload(
+        metric="cer",
+        alpha=0.05,
+        n_documents=8,
+        critical_distance=1.1715,
+        q_alpha=2.343,
+        mean_ranks=(
+            PipelineRank(pipeline="ollama", mean_rank=1.4),
+            PipelineRank(pipeline="tess", mean_rank=1.6),
+            PipelineRank(pipeline="worst", mean_rank=3.0),
+        ),
+        tied_groups=groups,
+    )
+    return (Analysis(scope="corpus", view=view, payload=payload),)
+
+
+def test_nemenyi_tie_overrides_raw_significance() -> None:
+    # Anti-contradiction : Wilcoxon/Friedman brut dit p=0.03 (« significatif »),
+    # mais Nemenyi corrigé place les deux pipelines de tête dans le même groupe
+    # → le verdict rendu est l'égalité statistique, pas l'écart.
+    result = RunResult(
+        manifest=_manifest(),
+        pipelines=(
+            _pipeline("tess", "text", 0.25),
+            _pipeline("ollama", "text", 0.10),
+            _pipeline("worst", "text", 0.40),
+        ),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.03, support=8),
+        ),
+        analyses=_inference(tied=True),
+    )
+    html = SynthesisSection().render(result, SectionContext())
+    assert html is not None
+    assert "égalité statistique (Nemenyi)" in html
+    assert "significatif (p=" not in html
+
+
+def test_nemenyi_separation_confirms_gap() -> None:
+    result = RunResult(
+        manifest=_manifest(),
+        pipelines=(
+            _pipeline("tess", "text", 0.25),
+            _pipeline("ollama", "text", 0.10),
+            _pipeline("worst", "text", 0.40),
+        ),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.03, support=8),
+        ),
+        analyses=_inference(tied=False),
+    )
+    html = SynthesisSection().render(result, SectionContext())
+    assert html is not None
+    assert "écart confirmé (Nemenyi, CD=1.171)" in html
+
+
+def test_without_inference_falls_back_to_p_value() -> None:
+    result = _result(
+        (_pipeline("tess", "text", 0.25), _pipeline("ollama", "text", 0.10)),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.03, support=8),
+        ),
+    )
+    html = SynthesisSection().render(result, SectionContext())
+    assert html is not None
+    assert "significatif (p=0.0300)" in html

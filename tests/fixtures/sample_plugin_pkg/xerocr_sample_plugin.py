@@ -13,6 +13,7 @@ from pathlib import Path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
+from xerocr.pipeline.types import StepOutput
 
 
 class PkgSegmenter:
@@ -29,7 +30,7 @@ class PkgSegmenter:
         params: dict[str, str | int | float | bool],
         context: object,
         control: object,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         workspace = getattr(context, "workspace_uri", None)
         document_id = getattr(context, "document_id", "doc")
         if workspace is None:
@@ -46,15 +47,17 @@ class PkgSegmenter:
         payload = layout.model_dump_json().encode("utf-8")
         out = Path(workspace) / f"{document_id}.sample_pkg_seg.json"
         out.write_bytes(payload)
-        return {
-            ArtifactType.LAYOUT: Artifact(
-                id=f"{document_id}:sample_pkg_seg:layout",
-                document_id=document_id,
-                type=ArtifactType.LAYOUT,
-                uri=str(out),
-                content_hash=compute_content_hash(payload),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.LAYOUT: Artifact(
+                    id=f"{document_id}:sample_pkg_seg:layout",
+                    document_id=document_id,
+                    type=ArtifactType.LAYOUT,
+                    uri=str(out),
+                    content_hash=compute_content_hash(payload),
+                )
+            }
+        )
 
 
 def build_sample_pkg_segmenter(kwargs: Mapping[str, object]) -> PkgSegmenter:

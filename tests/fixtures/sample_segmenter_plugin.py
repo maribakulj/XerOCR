@@ -16,7 +16,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 
 def _band(region_id: str, y: int) -> Region:
@@ -42,7 +42,7 @@ class SampleSegmenter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         if inputs.get(ArtifactType.IMAGE) is None:
             raise AdapterStepError("sample_seg : artefact IMAGE requis.")
@@ -61,15 +61,17 @@ class SampleSegmenter:
         payload = layout.model_dump_json().encode("utf-8")
         out = Path(context.workspace_uri) / f"{context.document_id}.sample_seg.json"
         out.write_bytes(payload)
-        return {
-            ArtifactType.LAYOUT: Artifact(
-                id=f"{context.document_id}:sample_seg:layout",
-                document_id=context.document_id,
-                type=ArtifactType.LAYOUT,
-                uri=str(out),
-                content_hash=compute_content_hash(payload),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.LAYOUT: Artifact(
+                    id=f"{context.document_id}:sample_seg:layout",
+                    document_id=context.document_id,
+                    type=ArtifactType.LAYOUT,
+                    uri=str(out),
+                    content_hash=compute_content_hash(payload),
+                )
+            }
+        )
 
 
 def build_sample_segmenter(kwargs: Mapping[str, ParamValue]) -> SampleSegmenter:

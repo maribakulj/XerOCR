@@ -30,7 +30,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MIN_SCORE = 0.5
@@ -173,7 +173,7 @@ class PPDocLayoutSegmenter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         image = inputs.get(ArtifactType.IMAGE)
         if image is None or image.uri is None:
@@ -192,15 +192,17 @@ class PPDocLayoutSegmenter:
             context.workspace_uri, context.document_id, self.name, "layout.json"
         )
         output_path.write_bytes(payload)
-        return {
-            ArtifactType.LAYOUT: Artifact(
-                id=f"{context.document_id}:{self.name}:layout",
-                document_id=context.document_id,
-                type=ArtifactType.LAYOUT,
-                uri=str(output_path),
-                content_hash=compute_content_hash(payload),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.LAYOUT: Artifact(
+                    id=f"{context.document_id}:{self.name}:layout",
+                    document_id=context.document_id,
+                    type=ArtifactType.LAYOUT,
+                    uri=str(output_path),
+                    content_hash=compute_content_hash(payload),
+                )
+            }
+        )
 
 
 __all__ = ["DetectedRegion", "LayoutDetection", "PPDocLayoutSegmenter"]

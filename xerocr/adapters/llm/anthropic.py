@@ -11,11 +11,13 @@ sans clé ni réseau). La ``Deadline`` borne l'appel.
 from __future__ import annotations
 
 from xerocr.adapters.llm._base import (
+    LLMCompletion,
     default_prompt_for_role,
     llm_input_types,
     llm_output_type,
     normalize_llm_content,
     run_llm_step,
+    usage_tokens,
     validate_llm_label,
     validate_role,
 )
@@ -25,7 +27,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.pipeline import PipelineMode
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "claude-haiku-4-5-20251001"
@@ -35,7 +37,7 @@ _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_sho
 
 def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
     model: str, content: object, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     """Appel ``messages.create`` partagé (texte ou multimodal)."""
     import os
 
@@ -67,18 +69,23 @@ def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
         raise AdapterStepError(
             f"anthropic a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
-    return normalize_llm_content(response.content)
+    usage = getattr(response, "usage", None)
+    return LLMCompletion(
+        normalize_llm_content(response.content),
+        usage_tokens(getattr(usage, "input_tokens", None)),
+        usage_tokens(getattr(usage, "output_tokens", None)),
+    )
 
 
 def _invoke_anthropic(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     *, model: str, prompt: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     return _anthropic_client(model, prompt, deadline)
 
 
 def _invoke_anthropic_vision(  # pragma: no cover -- réseau + clé API (cf. 'live')
     *, model: str, prompt: str, media_type: str, image_b64: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     content = [
         {"type": "text", "text": prompt},
         {
@@ -133,13 +140,15 @@ class AnthropicAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
-        def text_invoke(prompt: str) -> str:
+    ) -> StepOutput:
+        def text_invoke(prompt: str) -> LLMCompletion:
             return _invoke_anthropic(
                 model=self._model, prompt=prompt, deadline=context.deadline
             )
 
-        def vision_invoke(prompt: str, media_type: str, image_b64: str) -> str:
+        def vision_invoke(
+            prompt: str, media_type: str, image_b64: str
+        ) -> LLMCompletion:
             return _invoke_anthropic_vision(
                 model=self._model,
                 prompt=prompt,

@@ -19,15 +19,16 @@ from __future__ import annotations
 from base64 import b64encode
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 from xerocr.adapters._workspace import workspace_artifact_path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.pipeline import PipelineMode
+from xerocr.domain.usage import ResourceUsage
 from xerocr.formats.text import read_plaintext
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 #: Prompt de post-correction (modes ``text_only`` / ``text_and_image``) ;
 #: ``{ocr_text}`` est substitué par le texte OCR amont.
@@ -56,10 +57,25 @@ _MEDIA_TYPES = {
     ".tiff": "image/tiff",
 }
 
-#: Appel d'un LLM texte : ``prompt → texte`` (fournisseur + modèle capturés).
-TextInvoke = Callable[[str], str]
-#: Appel d'un VLM : ``prompt, media_type, image_b64 → texte``.
-VisionInvoke = Callable[[str, str, str], str]
+class LLMCompletion(NamedTuple):
+    """Réponse d'un fournisseur : texte + jetons consommés (si exposés)."""
+
+    text: str
+    tokens_in: int | None = None
+    tokens_out: int | None = None
+
+
+#: Appel d'un LLM texte : ``prompt → réponse`` (fournisseur + modèle capturés).
+TextInvoke = Callable[[str], LLMCompletion]
+#: Appel d'un VLM : ``prompt, media_type, image_b64 → réponse``.
+VisionInvoke = Callable[[str, str, str], LLMCompletion]
+
+
+def usage_tokens(value: Any) -> int | None:
+    """Coercition prudente d'un compteur de jetons SDK (``None`` si absent)."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
 
 
 def normalize_llm_content(raw: Any) -> str:
@@ -198,13 +214,14 @@ def run_llm_step(
     control: RunControl,
     text_invoke: TextInvoke,
     vision_invoke: VisionInvoke | None,
-) -> dict[ArtifactType, Artifact]:
+) -> StepOutput:
     """Exécute une étape LLM/VLM selon le ``role`` — logique de mode unique.
 
     Aiguille sur le mode : charge les bonnes entrées (texte et/ou image), appelle
     l'invocation fournisseur idoine, écrit l'artefact du bon type. ``zero_shot``
     et ``text_and_image`` exigent ``vision_invoke`` (un fournisseur texte-seul,
-    ex. ollama, passe ``None`` → ces modes sont refusés proprement).
+    ex. ollama, passe ``None`` → ces modes sont refusés proprement). Les jetons
+    exposés par le fournisseur remontent dans ``StepOutput.usage``.
     """
     control.raise_if_cancelled()
     if context.workspace_uri is None:
@@ -215,7 +232,7 @@ def run_llm_step(
         if vision_invoke is None:
             raise AdapterStepError(f"{name} : mode zero_shot requiert un VLM (vision).")
         media_type, image_b64 = load_image_b64(inputs, name)
-        text = vision_invoke(prompt, media_type, image_b64)
+        completion = vision_invoke(prompt, media_type, image_b64)
     elif role == "text_and_image":
         if vision_invoke is None:
             raise AdapterStepError(
@@ -223,23 +240,34 @@ def run_llm_step(
             )
         ocr_text = load_ocr_text(inputs, name)
         media_type, image_b64 = load_image_b64(inputs, name)
-        text = vision_invoke(build_prompt(prompt, ocr_text), media_type, image_b64)
+        completion = vision_invoke(
+            build_prompt(prompt, ocr_text), media_type, image_b64
+        )
     else:  # text_only
         ocr_text = load_ocr_text(inputs, name)
-        text = text_invoke(build_prompt(prompt, ocr_text))
-    return write_text_artifact(
+        completion = text_invoke(build_prompt(prompt, ocr_text))
+    artifacts = write_text_artifact(
         context.workspace_uri,
         context.document_id,
         label,
         name,
-        text,
+        completion.text,
         output_type=llm_output_type(role),
     )
+    usage = (
+        ResourceUsage(
+            tokens_in=completion.tokens_in, tokens_out=completion.tokens_out
+        )
+        if completion.tokens_in is not None or completion.tokens_out is not None
+        else None
+    )
+    return StepOutput(artifacts=artifacts, usage=usage)
 
 
 __all__ = [
     "DEFAULT_CORRECTION_PROMPT",
     "DEFAULT_TRANSCRIPTION_PROMPT",
+    "LLMCompletion",
     "TextInvoke",
     "VisionInvoke",
     "build_prompt",
@@ -250,6 +278,7 @@ __all__ = [
     "load_ocr_text",
     "normalize_llm_content",
     "run_llm_step",
+    "usage_tokens",
     "validate_llm_label",
     "validate_role",
     "write_text_artifact",

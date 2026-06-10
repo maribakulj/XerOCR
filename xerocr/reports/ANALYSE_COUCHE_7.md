@@ -260,6 +260,18 @@ xerocr/reports/
 
 ## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
+> **T9 (D-067)** : `cross_engine` rend les payloads `inference` (rangs moyens, CD Nemenyi, groupes indiscernables, IC bootstrap) en **lecture seule** (aucun recalcul — anti data-layer) ; `synthesis` applique la règle anti-contradiction (groupe Nemenyi sur la paire de tête → « égalité statistique » ; sinon « écart confirmé » ; sans post-hoc → p-value brute). Preuves : `tests/reports/test_cross_engine_section.py` · `test_synthesis_section.py`.
+>
+> **T10 (D-068)** : `+ sections/economics.py` (6ᵉ section du socle) — coûts/débits/Pareto/marginal en lecture seule du payload, avertissement de péremption explicite ; la **démo** filtre `usage` + `economics` avant rendu (canaux environnementaux) pour rester octet-stable. Preuves : `tests/reports/test_economics_section.py` · `tests/interfaces/test_cli_demo.py`.
+>
+> **T11 (D-069)** : `+ sections/diagnostics.py` (7ᵉ section du socle) — confusions, pires lignes (extraits verbatim **échappés**), documents difficiles ; lecture seule, déterministe (rendu dans la démo sans filtrage). Preuves : `tests/reports/test_diagnostics_section.py`.
+>
+> **T12 (D-070)** : `+ sections/calibration.py` (8ᵉ section) — ECE/MCE + table de fiabilité par bin, lecture seule. Preuves : `tests/reports/test_calibration_section.py`.
+>
+> **T13 (D-071)** : `+ sections/taxonomy.py` (9ᵉ section) — occurrences + parts par classe, lecture seule. Preuves : `tests/reports/test_taxonomy_section.py`.
+>
+> **S7.a (D-074)** : `+ csv_export.py` — export tableur en lecture pure du `RunResult`. Preuves : `tests/reports/test_csv_export.py`.
+
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
 > Maj dans le **même commit** que le code. **Statut : ✅ T2** — cadre `Section` + assembleur autonome + sections **overview** & **cross_engine** + rapport de **comparaison** (deltas 2 runs) verts. **+ T7 `synthesis`** : section verdict factuel par vue (meilleur pipeline CER · Δ au suivant · significativité `cross_engine`), gatée `requires=("cer",)`, déterministe — **toutes les vues S4 au design désormais livrées**. Différé : importeurs cœur · longitudinal (T7), interactivité client-side.
 

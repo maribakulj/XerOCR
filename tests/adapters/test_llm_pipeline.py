@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from xerocr.adapters.llm._base import LLMCompletion
 from xerocr.adapters.llm.openai import OpenAIAdapter
 from xerocr.adapters.ocr.precomputed import PrecomputedTextAdapter
 from xerocr.domain.artifacts import Artifact, ArtifactType
@@ -29,7 +30,8 @@ def test_ocr_then_llm_produces_corrected_text(
 ) -> None:
     (tmp_path / "doc1.eng.txt").write_text("Hello wrld", encoding="utf-8")
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: "Hello world"
+        "xerocr.adapters.llm.openai._invoke_openai",
+        lambda **_: LLMCompletion("Hello world"),
     )
     ocr = PipelineStep(
         id="ocr",
@@ -62,8 +64,8 @@ def test_ocr_then_llm_produces_corrected_text(
         workspace_uri=str(tmp_path),
     )
 
-    assert ArtifactType.CORRECTED_TEXT in pool
-    corrected = pool[ArtifactType.CORRECTED_TEXT]
+    assert ArtifactType.CORRECTED_TEXT in pool.artifacts
+    corrected = pool.artifacts[ArtifactType.CORRECTED_TEXT]
     assert corrected.uri is not None
     assert Path(corrected.uri).read_text(encoding="utf-8") == "Hello world"
 
@@ -74,7 +76,8 @@ def test_ocr_then_vlm_correction_receives_image_and_text(
     """``text_and_image`` : le step LLM reçoit IMAGE (initial) ET RAW_TEXT (OCR)."""
     (tmp_path / "doc1.eng.txt").write_text("Helo", encoding="utf-8")
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision", lambda **_: "Hello"
+        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        lambda **_: LLMCompletion("Hello"),
     )
     ocr = PipelineStep(
         id="ocr",
@@ -110,7 +113,7 @@ def test_ocr_then_vlm_correction_receives_image_and_text(
         workspace_uri=str(tmp_path),
     )
 
-    corrected = pool[ArtifactType.CORRECTED_TEXT]
+    corrected = pool.artifacts[ArtifactType.CORRECTED_TEXT]
     assert corrected.uri is not None
     assert Path(corrected.uri).read_text(encoding="utf-8") == "Hello"
 
@@ -120,7 +123,8 @@ def test_zero_shot_vlm_transcribes_image(
 ) -> None:
     """``zero_shot`` : un seul step VLM (IMAGE → RAW_TEXT), sans OCR amont."""
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision", lambda **_: "Transcribed"
+        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        lambda **_: LLMCompletion("Transcribed"),
     )
     vlm = PipelineStep(
         id="vlm",
@@ -142,6 +146,6 @@ def test_zero_shot_vlm_transcribes_image(
         workspace_uri=str(tmp_path),
     )
 
-    raw = pool[ArtifactType.RAW_TEXT]
+    raw = pool.artifacts[ArtifactType.RAW_TEXT]
     assert raw.uri is not None
     assert Path(raw.uri).read_text(encoding="utf-8") == "Transcribed"

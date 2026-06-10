@@ -22,7 +22,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import CanonicalLayout
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 
@@ -59,7 +59,7 @@ class PrecomputedLayoutSource:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         image_path = _require_image(inputs, self.name)
         layout_path = image_path.parent / f"{image_path.stem}.layout.json"
@@ -76,15 +76,17 @@ class PrecomputedLayoutSource:
                 f"{self.name} : {layout_path.name!r} n'est pas un "
                 f"CanonicalLayout valide : {exc}"
             ) from exc
-        return {
-            ArtifactType.LAYOUT: Artifact(
-                id=f"{context.document_id}:{self.name}:layout",
-                document_id=context.document_id,
-                type=ArtifactType.LAYOUT,
-                uri=str(layout_path),
-                content_hash=compute_content_hash(data),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.LAYOUT: Artifact(
+                    id=f"{context.document_id}:{self.name}:layout",
+                    document_id=context.document_id,
+                    type=ArtifactType.LAYOUT,
+                    uri=str(layout_path),
+                    content_hash=compute_content_hash(data),
+                )
+            }
+        )
 
 
 class PrecomputedRegionRecognizer:
@@ -122,7 +124,7 @@ class PrecomputedRegionRecognizer:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         image = inputs[ArtifactType.IMAGE]
         if image.region_id is None:
@@ -159,16 +161,18 @@ class PrecomputedRegionRecognizer:
         out_path = out_dir / f"{image_path.stem}.{self._label}.{image.region_id}.txt"
         payload = text.encode("utf-8")
         out_path.write_bytes(payload)
-        return {
-            ArtifactType.RAW_TEXT: Artifact(
-                id=f"{context.document_id}:{self.name}:{image.region_id}:raw_text",
-                document_id=context.document_id,
-                type=ArtifactType.RAW_TEXT,
-                uri=str(out_path),
-                content_hash=compute_content_hash(payload),
-                region_id=image.region_id,
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:{image.region_id}:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri=str(out_path),
+                    content_hash=compute_content_hash(payload),
+                    region_id=image.region_id,
+                )
+            }
+        )
 
 
 __all__ = ["PrecomputedLayoutSource", "PrecomputedRegionRecognizer"]

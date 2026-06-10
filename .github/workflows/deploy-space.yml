@@ -98,5 +98,18 @@ jobs:
           git commit -q -m "Déploiement de la vitrine XerOCR"
           set +x
           remote="https://${owner}:${HF_TOKEN}@huggingface.co/spaces/${space}"
-          git push -f "$remote" main 2>&1 | sed "s/${HF_TOKEN}/***/g"
+          # HF renvoie parfois 429 (rate-limit) : retry avec backoff exponentiel
+          # (15/30/60/120 s) plutôt qu'un échec au premier essai. pipefail actif :
+          # le statut testé est bien celui du push, pas du sed de masquage.
+          attempt=0
+          until git push -f "$remote" main 2>&1 | sed "s/${HF_TOKEN}/***/g"; do
+            attempt=$((attempt + 1))
+            if [ "$attempt" -ge 5 ]; then
+              echo "::error::push vers le Space refusé après 5 tentatives (HF 429 persistant ?)."
+              exit 1
+            fi
+            wait=$((15 * 2 ** (attempt - 1)))
+            echo "push refusé (tentative ${attempt}/5) — nouvel essai dans ${wait}s"
+            sleep "$wait"
+          done
           echo "Poussé vers https://huggingface.co/spaces/${space}"

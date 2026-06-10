@@ -2,11 +2,21 @@
 
 Un seul format (pas de double représentation héritée). Dimensionné pour porter
 toute métrique **scalaire** (texte/structure/NER/taxonomy…) et le détail
-**par-document** dès sa conception, même si T1 n'écrit qu'un CER : ajouter une
-métrique ou une vue est **additif**, jamais un changement d'enveloppe.
+**par-document** dès sa conception, même quand seul un CER est écrit : ajouter
+une métrique ou une vue est **additif**, jamais un changement d'enveloppe.
 ``schema_version`` couvre les évolutions structurelles ; les **clés** (``metric``,
 ``value``, ``support``, ``pipeline``, ``view``) sont un **contrat dur** avec le
 rapport — renommer une clé est interdit (CLAUDE.md §12, déterminisme).
+
+Contrat « analyses » (enveloppe, cf. ``PLAN_PARITE.md`` §1/E2) : les résultats
+**non scalaires** (inférentiel, fronts de Pareto, paires de confusion, bins de
+calibration…) passent par le canal unique ``RunResult.analyses`` — payloads
+Pydantic figés (``evaluation.analysis``), **union discriminée par ``kind``**.
+Règles dures : (1) les scalaires ``MetricScore`` restent la seule monnaie de
+classement/historique ; (2) tout est calculé en ``evaluation/`` et écrit ici,
+les rapports lisent sans recalculer ; (3) chaque payload naît **avec** son
+calcul et son consommateur (même commit) — garde-fou « pas de consommateur =
+supprimé ».
 """
 
 from __future__ import annotations
@@ -14,6 +24,8 @@ from __future__ import annotations
 from pydantic import BaseModel, ConfigDict, Field
 
 from xerocr.domain.run import RunManifest
+from xerocr.domain.usage import ResourceUsage
+from xerocr.evaluation.analysis import Analysis
 
 
 class MetricScore(BaseModel):
@@ -50,17 +62,47 @@ class PipelineResult(BaseModel):
     aggregate: tuple[MetricScore, ...] = Field(default_factory=tuple)
 
 
+class DocumentUsage(BaseModel):
+    """Ressources consommées par un pipeline sur un document (hors vues).
+
+    L'exécution a lieu une fois par (pipeline × document) — les vues sont des
+    lentilles d'évaluation, sans coût d'exécution propre. Les durées sont du
+    wall-clock (mesure d'environnement, comme les horodatages du manifeste).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    pipeline: str = Field(min_length=1, max_length=128)
+    usage: ResourceUsage
+
+
 class RunResult(BaseModel):
     """Sortie complète d'un run : manifeste + agrégats + détail par-document."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    schema_version: int = 1
+    schema_version: int = 2
     manifest: RunManifest
     pipelines: tuple[PipelineResult, ...] = Field(default_factory=tuple)
     documents: tuple[RunDocumentResult, ...] = Field(default_factory=tuple)
-    #: Écrit par la passe inter-moteurs (tranche T2) ; vide en T1.
+    #: Écrit par la passe inter-moteurs ; vide tant qu'un seul pipeline court.
     cross_engine: tuple[MetricScore, ...] = Field(default_factory=tuple)
+    #: Ressources mesurées par (pipeline × document), triées (pipeline,
+    #: document_id) — ordre déterministe. Vide pour un résultat reconstruit
+    #: sans exécution (ex. chargement d'un JSON v1).
+    usage: tuple[DocumentUsage, ...] = Field(default_factory=tuple)
+    #: Canal des résultats **non scalaires** (contrat E2 ci-dessus) : payloads
+    #: typés par famille, calculés par le runner, triés (view, kind, métrique)
+    #: — ordre déterministe. Les rapports lisent, ne recalculent pas.
+    analyses: tuple[Analysis, ...] = Field(default_factory=tuple)
 
 
-__all__ = ["MetricScore", "PipelineResult", "RunDocumentResult", "RunResult"]
+__all__ = [
+    "Analysis",
+    "DocumentUsage",
+    "MetricScore",
+    "PipelineResult",
+    "RunDocumentResult",
+    "RunResult",
+]

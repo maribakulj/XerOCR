@@ -1,9 +1,9 @@
-"""Publication d'un ``RunResult`` vers un dépôt distant (persistance — S3).
+"""Publication d'un ``RunResult`` vers un dépôt distant (persistance).
 
 Le disque d'un HF Space est **éphémère** : un run calculé est perdu au
 redémarrage. Ce module **pousse** le ``RunResult`` JSON vers un dépôt GitHub
 (API *contents*) après chaque run réussi, ce qui le rend **durable** et alimente
-la vitrine publique (Phase B).
+la vitrine publique.
 
 Sécurité & opt-in :
 

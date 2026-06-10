@@ -19,7 +19,8 @@ def test_lists_all_socle_engines(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/api/engines").json()
     kinds = {e["kind"] for e in body["engines"]}
     assert kinds == {
-        "precomputed", "tesseract", "openai", "anthropic", "mistral", "ollama"
+        "precomputed", "tesseract", "kraken", "mistral_ocr",
+        "openai", "anthropic", "mistral", "ollama",
     }
     # forme du contrat : chaque entrée porte available + detail
     for entry in body["engines"]:
@@ -40,3 +41,12 @@ def test_cloud_unavailable_reason_is_key_not_mode(tmp_path: Path) -> None:
     openai = next(e for e in engines if e["kind"] == "openai")
     assert openai["available"] is False
     assert "public" not in openai["detail"]
+
+
+def test_normalization_profiles_are_read_dynamically(tmp_path: Path) -> None:
+    from xerocr.formats.text.normalization import NORMALIZATION_PROFILES
+
+    body = _client(tmp_path).get("/api/normalization/profiles").json()
+    # Jamais une liste statique : l'endpoint reflète la couche 2 telle quelle.
+    assert body["profiles"] == sorted(NORMALIZATION_PROFILES)
+    assert "nfc" in body["profiles"]

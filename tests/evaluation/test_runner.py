@@ -15,6 +15,7 @@ from xerocr.domain.pipeline import PipelineSpec
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from xerocr.evaluation.result import RunResult
 from xerocr.evaluation.runner import evaluate_run
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
@@ -235,3 +236,68 @@ def test_cross_engine_significance_written(tmp_path: Path) -> None:
     )
     keys = {score.metric for score in result.cross_engine}
     assert "text:cer:significance_p" in keys
+
+
+def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
+    """≥6 docs × 3 pipelines → le runner produit le payload ``inference``."""
+    gt_texts = ["abcdefgh", "ijklmnop", "qrstuvwx", "yzabcdef", "ghijklmn", "opqrstuv"]
+    # alpha = parfait ; beta = 2 erreurs/doc ; gamma = 1 erreur/doc.
+    documents = []
+    outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {
+        "alpha": {}, "beta": {}, "gamma": {},
+    }
+    for i, text in enumerate(gt_texts):
+        doc_id = f"d{i}"
+        gt = _write(tmp_path / f"{doc_id}.gt.txt", text)
+        documents.append(_doc(doc_id, gt))
+        for name, hyp in (
+            ("alpha", text),
+            ("beta", "XY" + text[2:]),
+            ("gamma", "X" + text[1:]),
+        ):
+            path = _write(tmp_path / f"{doc_id}.{name}.txt", hyp)
+            outputs[name][doc_id] = {
+                ArtifactType.RAW_TEXT: _candidate(doc_id, path)
+            }
+    corpus = CorpusSpec(name="c", documents=tuple(documents))
+    manifest = RunManifest(
+        run_id="r",
+        corpus_name="c",
+        n_documents=6,
+        pipeline_specs=tuple(
+            PipelineSpec(name=n, initial_inputs=(ArtifactType.IMAGE,))
+            for n in ("alpha", "beta", "gamma")
+        ),
+        code_version="1.0",
+        started_at=FIXED,
+        completed_at=FIXED,
+    )
+    result = evaluate_run(
+        corpus=corpus,
+        evaluation=EvaluationSpec(views=(TEXT_VIEW,)),
+        pipeline_outputs=outputs,
+        registry=_registry(),
+        manifest=manifest,
+    )
+    by_kind = {a.payload.kind: a for a in result.analyses}
+    assert set(by_kind) == {"inference", "diagnostics", "taxonomy"}
+    analysis = by_kind["inference"]
+    assert analysis.view == "text" and analysis.scope == "corpus"
+    payload = analysis.payload
+    assert payload.kind == "inference" and payload.metric == "cer"
+    # Le diagnostic voit les mêmes textes : beta (2 erreurs/doc) produit des
+    # confusions X→i/j/q/y..., et les documents sont classés par CER moyen.
+    diagnostics = by_kind["diagnostics"].payload
+    assert diagnostics.confusions and diagnostics.hardest_documents
+    assert diagnostics.worst_lines[0].cer > 0
+    # Taxonomie : beta remplace les 2 premiers chars (« XY... » : substitution
+    # résiduelle), gamma 1 char — classes comptées par règles pures.
+    taxonomy = by_kind["taxonomy"].payload
+    assert {row.pipeline for row in taxonomy.pipelines} == {"beta", "gamma"}
+    assert all(row.total_errors > 0 for row in taxonomy.pipelines)
+    assert payload.n_documents == 6
+    assert payload.critical_distance is not None  # 3 pipelines → post-hoc
+    assert [r.pipeline for r in payload.mean_ranks] == ["alpha", "gamma", "beta"]
+    # Round-trip JSON : le payload structuré survit tel quel.
+    reloaded = RunResult.model_validate_json(result.model_dump_json())
+    assert reloaded.analyses == result.analyses

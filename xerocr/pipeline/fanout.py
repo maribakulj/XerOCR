@@ -28,9 +28,10 @@ from xerocr.domain.artifacts import (
 )
 from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from xerocr.domain.usage import ResourceUsage
 from xerocr.pipeline.protocols import Module, ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 logger = logging.getLogger(__name__)
 
@@ -70,20 +71,26 @@ def run_region_fanout(
     control: RunControl,
     params: Mapping[str, ParamValue] | None = None,
     cropper: RegionCropper | None = None,
-) -> CanonicalLayout:
+) -> tuple[CanonicalLayout, ResourceUsage]:
     """Remplit ``layout`` (régions seules) par reconnaissance région par région.
 
-    Renvoie un nouveau ``CanonicalLayout`` où chaque région porte sa ligne de
-    texte reconnu. Une région dont la reconnaissance échoue reste **vide** (texte
-    non produit, avertissement journalisé) — la page n'est pas abattue. Avec un
-    ``cropper``, chaque bloc est **découpé** de l'image avant OCR (pipeline réel).
+    Renvoie ``(CanonicalLayout rempli, usage)`` : chaque région porte sa ligne
+    de texte reconnu ; ``usage`` somme les jetons remontés par le recognizer
+    (un appel par région). Une région dont la reconnaissance échoue reste
+    **vide** (texte non produit, avertissement journalisé) — la page n'est pas
+    abattue. Avec un ``cropper``, chaque bloc est **découpé** de l'image avant
+    OCR (pipeline réel).
     """
     step_params = dict(params) if params is not None else {}
-    pages = tuple(
-        _fill_page(page, page_image, recognizer, context, control, step_params, cropper)
-        for page in layout.pages
-    )
-    return CanonicalLayout(pages=pages)
+    usage = ResourceUsage()
+    pages: list[LayoutPage] = []
+    for page in layout.pages:
+        filled_page, page_usage = _fill_page(
+            page, page_image, recognizer, context, control, step_params, cropper
+        )
+        pages.append(filled_page)
+        usage = usage.merged_with(page_usage)
+    return CanonicalLayout(pages=tuple(pages)), usage
 
 
 def _fill_page(
@@ -94,14 +101,16 @@ def _fill_page(
     control: RunControl,
     params: dict[str, ParamValue],
     cropper: RegionCropper | None,
-) -> LayoutPage:
-    filled = tuple(
-        _fill_region(
+) -> tuple[LayoutPage, ResourceUsage]:
+    usage = ResourceUsage()
+    filled: list[Region] = []
+    for region in page.regions:
+        filled_region, region_usage = _fill_region(
             region, page, page_image, recognizer, context, control, params, cropper
         )
-        for region in page.regions
-    )
-    return page.model_copy(update={"regions": filled})
+        filled.append(filled_region)
+        usage = usage.merged_with(region_usage)
+    return page.model_copy(update={"regions": tuple(filled)}), usage
 
 
 def _region_image(
@@ -139,26 +148,26 @@ def _fill_region(
     control: RunControl,
     params: dict[str, ParamValue],
     cropper: RegionCropper | None,
-) -> Region:
+) -> tuple[Region, ResourceUsage | None]:
     control.raise_if_cancelled()
     region_image = _region_image(region, page, page_image, context, cropper)
     if region_image is None:
-        return region
+        return region, None
     try:
-        outputs = recognizer.execute(
+        output = recognizer.execute(
             {ArtifactType.IMAGE: region_image}, dict(params), context, control
         )
-        text = _read_text(outputs)
+        text = _read_text(output.artifacts)
     except AdapterStepError as exc:
         logger.warning(
             "[fanout] région %r non reconnue (ignorée) : %s", region.id, exc
         )
-        return region
+        return region, None
     line = Line(id=f"{region.id}:l1", text=text)
-    return region.model_copy(update={"lines": (line,)})
+    return region.model_copy(update={"lines": (line,)}), output.usage
 
 
-def _read_text(outputs: dict[ArtifactType, Artifact]) -> str:
+def _read_text(outputs: Mapping[ArtifactType, Artifact]) -> str:
     artifact = outputs.get(ArtifactType.RAW_TEXT)
     if artifact is None or artifact.uri is None:
         raise AdapterStepError("fanout : reconnaissance sans RAW_TEXT exploitable.")
@@ -177,13 +186,13 @@ def execute_region_fanout(
     control: RunControl,
     params: Mapping[str, ParamValue] | None = None,
     cropper: RegionCropper | None = None,
-) -> dict[ArtifactType, Artifact]:
+) -> StepOutput:
     """Étage *reconnaissance par région* prêt pour l'exécuteur déclaratif.
 
     Charge le ``LAYOUT`` (régions seules) depuis son artefact, remplit par
     fan-out, **persiste** le ``LAYOUT`` rempli (JSON) dans le workspace et
-    renvoie l'artefact correspondant — la forme ``dict`` attendue par
-    ``PipelineExecutor`` (qui estampille ensuite la provenance).
+    renvoie le ``StepOutput`` attendu par ``PipelineExecutor`` (qui estampille
+    ensuite la provenance) — ``usage`` somme les jetons des N reconnaissances.
     """
     if layout_artifact.uri is None:
         raise AdapterStepError("fanout : artefact LAYOUT d'entrée sans URI.")
@@ -193,7 +202,7 @@ def execute_region_fanout(
         )
     except (OSError, ValueError) as exc:
         raise AdapterStepError(f"fanout : LAYOUT d'entrée illisible : {exc}") from exc
-    filled = run_region_fanout(
+    filled, usage = run_region_fanout(
         layout=layout,
         page_image=page_image,
         recognizer=recognizer,
@@ -210,7 +219,7 @@ def execute_region_fanout(
     )
     out_path = out_dir / f"{context.document_id.replace('/', '_')}.filled.layout.json"
     out_path.write_bytes(payload)
-    return {
+    artifacts = {
         ArtifactType.LAYOUT: Artifact(
             id=f"{context.document_id}:fanout:layout",
             document_id=context.document_id,
@@ -219,6 +228,7 @@ def execute_region_fanout(
             content_hash=compute_content_hash(payload),
         )
     }
+    return StepOutput(artifacts=artifacts, usage=usage)
 
 
 __all__ = ["RegionCropper", "execute_region_fanout", "run_region_fanout"]

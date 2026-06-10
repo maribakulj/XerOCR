@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pytest
 
+from xerocr.adapters.llm._base import LLMCompletion
 from xerocr.adapters.llm.ollama import OllamaAdapter, _fail_or_cancel
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
@@ -40,7 +41,7 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.ollama._invoke_ollama", lambda **_: text
+        "xerocr.adapters.llm.ollama._invoke_ollama", lambda **_: LLMCompletion(text)
     )
 
 
@@ -69,7 +70,7 @@ def test_execute_produces_corrected_text(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.CORRECTED_TEXT]
+    artifact = out.artifacts[ArtifactType.CORRECTED_TEXT]
     assert artifact.type == ArtifactType.CORRECTED_TEXT
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello world"

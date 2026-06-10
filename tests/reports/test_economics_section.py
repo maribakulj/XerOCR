@@ -1,0 +1,114 @@
+"""Section économie : lecture seule du payload, avertissement de péremption."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from xerocr.domain.run import RunManifest
+from xerocr.evaluation.analysis import (
+    Analysis,
+    EconomicsPayload,
+    MarginalCost,
+    PipelineEconomics,
+)
+from xerocr.evaluation.result import RunResult
+from xerocr.reports.section import Section, SectionContext
+from xerocr.reports.sections.economics import EconomicsSection
+
+FIXED = datetime(2026, 6, 1, tzinfo=UTC)
+
+
+def _manifest() -> RunManifest:
+    return RunManifest(
+        run_id="r",
+        corpus_name="c",
+        n_documents=2,
+        code_version="1.0",
+        started_at=FIXED,
+        completed_at=FIXED,
+    )
+
+
+def _payload(stale: bool = False) -> EconomicsPayload:
+    return EconomicsPayload(
+        metric="cer",
+        currency="EUR",
+        hourly_rate_eur=0.10,
+        time_per_error_seconds=5.0,
+        pricing_valid_until="2026-12-01",
+        pricing_stale=stale,
+        pipelines=(
+            PipelineEconomics(
+                pipeline="ocr_seul",
+                n_documents=2,
+                duration_seconds=180.0,
+                cost_eur=0.005,
+                basis="machine",
+                cer=0.1333,
+                estimated_errors=200.0,
+                pages_per_hour=40.0,
+                pages_per_hour_effective=6.1,
+            ),
+            PipelineEconomics(
+                pipeline="ocr_llm",
+                n_documents=2,
+                duration_seconds=540.0,
+                tokens_in=500_000,
+                tokens_out=100_000,
+                cost_eur=0.175,
+                basis="machine+jetons",
+                cer=0.0667,
+                estimated_errors=100.0,
+                pages_per_hour=13.3,
+                pages_per_hour_effective=6.9,
+            ),
+        ),
+        pareto_cost=("ocr_llm", "ocr_seul"),
+        pareto_speed=("ocr_llm", "ocr_seul"),
+        marginal=(
+            MarginalCost(
+                pipeline="ocr_llm",
+                baseline="ocr_seul",
+                cost_delta_eur=0.17,
+                errors_avoided=100.0,
+                eur_per_avoided_error=0.0017,
+            ),
+        ),
+    )
+
+
+def _result(stale: bool = False) -> RunResult:
+    return RunResult(
+        manifest=_manifest(),
+        analyses=(Analysis(scope="corpus", view="text", payload=_payload(stale)),),
+    )
+
+
+def test_satisfies_section_protocol() -> None:
+    section = EconomicsSection()
+    assert isinstance(section, Section)
+    assert section.name == "economics"
+
+
+def test_renders_costs_pareto_and_marginal_read_only() -> None:
+    html = EconomicsSection().render(_result(), SectionContext())
+    assert html is not None
+    assert "0.0050" in html and "0.1750" in html  # coûts du payload, pas recalculés
+    assert "machine+jetons" in html
+    assert "Front de Pareto" in html and "ocr_llm" in html
+    assert "EUR/erreur évitée" in html and "0.0017" in html
+    # Déterminisme : même RunResult → même HTML, bit à bit.
+    assert html == EconomicsSection().render(_result(), SectionContext())
+
+
+def test_stale_pricing_renders_explicit_warning() -> None:
+    fresh = EconomicsSection().render(_result(stale=False), SectionContext())
+    stale = EconomicsSection().render(_result(stale=True), SectionContext())
+    assert fresh is not None and stale is not None
+    assert "périmée" not in fresh
+    assert "Table de tarifs périmée" in stale
+
+
+def test_without_economics_payload_renders_nothing() -> None:
+    result = RunResult(manifest=_manifest())
+    assert EconomicsSection().render(result, SectionContext()) is None

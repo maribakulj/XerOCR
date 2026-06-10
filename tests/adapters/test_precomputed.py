@@ -45,7 +45,7 @@ def test_reads_precomputed_text(tmp_path: Path) -> None:
     out = adapter.execute(
         {ArtifactType.IMAGE: _image(image)}, {}, _ctx(), RunControl()
     )
-    art = out[ArtifactType.RAW_TEXT]
+    art = out.artifacts[ArtifactType.RAW_TEXT]
     assert art.type == ArtifactType.RAW_TEXT
     assert art.uri is not None and art.uri.endswith("folio_001.tesseract.txt")
     assert art.content_hash is not None

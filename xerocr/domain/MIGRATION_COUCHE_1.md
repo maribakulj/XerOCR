@@ -169,6 +169,10 @@ backlog inexistant. **Aucune logique ne change.**
 
 ## 8. DoD vivante (couche 1) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
+> **T8 (D-066)** : `+ usage.py` — `ResourceUsage` (durée wall-clock + jetons, `merged_with` somme `None`-tolérante) ; vocabulaire transversal consommé par la couche 4 (`StepOutput`) et la couche 3 (`RunResult.usage`). Preuve : `tests/evaluation/test_result.py::test_usage_channel_round_trips`.
+
+> **T12 (D-070)** : `+ confidence.py` — `ConfidenceToken` (mot + confiance [0,1]), schéma du payload `CONFIDENCES`, créé avec son 1ᵉʳ consommateur (calibration couche 3). Backlog domain : dernière entrée cochée.
+
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
 > Mise à jour dans le **même commit** que le code (règle d'or anti-dérive).
 > **Statut couche 1 : ✅ vert** (vérifié 2026-05-31).

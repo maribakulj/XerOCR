@@ -7,8 +7,10 @@ import pytest
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.errors import RunCancelledError, XerOCRError
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
+from xerocr.domain.usage import ResourceUsage
 from xerocr.pipeline.executor import PipelineExecutor, PipelineStepError
 from xerocr.pipeline.run_control import RunControl
+from xerocr.pipeline.types import StepOutput
 
 CODE_VERSION = "test-1.0"
 
@@ -31,14 +33,16 @@ class _EchoModule:
     output_types = frozenset({ArtifactType.RAW_TEXT})
 
     def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
-        return {
-            ArtifactType.RAW_TEXT: Artifact(
-                id=f"{context.document_id}:{self.name}:raw_text",
-                document_id=context.document_id,
-                type=ArtifactType.RAW_TEXT,
-                uri="mem://raw",
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri="mem://raw",
+                )
+            }
+        )
 
 
 class _UpperModule:
@@ -50,14 +54,16 @@ class _UpperModule:
     output_types = frozenset({ArtifactType.CORRECTED_TEXT})
 
     def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
-        return {
-            ArtifactType.CORRECTED_TEXT: Artifact(
-                id=f"{context.document_id}:{self.name}:corrected",
-                document_id=context.document_id,
-                type=ArtifactType.CORRECTED_TEXT,
-                uri="mem://corrected",
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.CORRECTED_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:corrected",
+                    document_id=context.document_id,
+                    type=ArtifactType.CORRECTED_TEXT,
+                    uri="mem://corrected",
+                )
+            }
+        )
 
 
 class _EmptyModule:
@@ -69,7 +75,7 @@ class _EmptyModule:
     output_types = frozenset({ArtifactType.RAW_TEXT})
 
     def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
-        return {}
+        return StepOutput(artifacts={})
 
 
 def _ocr_step() -> PipelineStep:
@@ -91,7 +97,7 @@ def test_runs_single_step_and_stamps_provenance() -> None:
         spec, {"fake:echo": _EchoModule()}, {ArtifactType.IMAGE: _image()},
         document_id="doc1",
     )
-    art = pool[ArtifactType.RAW_TEXT]
+    art = pool.artifacts[ArtifactType.RAW_TEXT]
     assert art.produced_by_step == "ocr"
     assert art.provenance is not None
     assert art.provenance.code_version == CODE_VERSION
@@ -117,7 +123,7 @@ def test_two_steps_resolve_inputs_from() -> None:
         {ArtifactType.IMAGE: _image()},
         document_id="doc1",
     )
-    assert ArtifactType.CORRECTED_TEXT in pool
+    assert ArtifactType.CORRECTED_TEXT in pool.artifacts
 
 
 def test_missing_module_raises() -> None:
@@ -189,14 +195,16 @@ def test_threads_workspace_uri_to_context() -> None:
 
         def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
             captured["workspace"] = context.workspace_uri
-            return {
-                ArtifactType.RAW_TEXT: Artifact(
-                    id=f"{context.document_id}:cap:raw_text",
-                    document_id=context.document_id,
-                    type=ArtifactType.RAW_TEXT,
-                    uri="mem://x",
-                )
-            }
+            return StepOutput(
+                artifacts={
+                    ArtifactType.RAW_TEXT: Artifact(
+                        id=f"{context.document_id}:cap:raw_text",
+                        document_id=context.document_id,
+                        type=ArtifactType.RAW_TEXT,
+                        uri="mem://x",
+                    )
+                }
+            )
 
     spec = PipelineSpec(
         name="p", initial_inputs=(ArtifactType.IMAGE,), steps=(_ocr_step(),)
@@ -209,3 +217,78 @@ def test_threads_workspace_uri_to_context() -> None:
         workspace_uri="/work",
     )
     assert captured["workspace"] == "/work"
+
+
+class _TokenModule:
+    """Module de test : IMAGE → RAW_TEXT, remonte des jetons (façon LLM)."""
+
+    name = "fake:tokens"
+    version = "0.1"
+    input_types = frozenset({ArtifactType.IMAGE})
+    output_types = frozenset({ArtifactType.RAW_TEXT})
+
+    def execute(self, inputs, params, context, control):  # noqa: ANN001, ANN201
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri="mem://raw",
+                )
+            },
+            usage=ResourceUsage(tokens_in=120, tokens_out=30),
+        )
+
+
+def test_usage_records_duration_and_tokens() -> None:
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="fake:tokens",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    spec = PipelineSpec(name="p1", initial_inputs=(ArtifactType.IMAGE,), steps=(step,))
+    execution = PipelineExecutor(CODE_VERSION).execute_document(
+        spec, {"fake:tokens": _TokenModule()}, {ArtifactType.IMAGE: _image()},
+        document_id="doc1",
+    )
+    # La durée est mesurée par l'exécuteur (source unique), les jetons remontent
+    # du module ; les deux sont fusionnés dans le même ResourceUsage.
+    assert execution.usage.duration_seconds is not None
+    assert execution.usage.duration_seconds >= 0.0
+    assert execution.usage.tokens_in == 120
+    assert execution.usage.tokens_out == 30
+
+
+def test_usage_sums_across_steps() -> None:
+    step2 = PipelineStep(
+        id="llm",
+        kind="post_correction",
+        adapter_name="fake:upper",
+        input_types=(ArtifactType.RAW_TEXT,),
+        output_types=(ArtifactType.CORRECTED_TEXT,),
+        inputs_from={ArtifactType.RAW_TEXT: "ocr"},
+    )
+    step1 = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="fake:tokens",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    spec = PipelineSpec(
+        name="p1", initial_inputs=(ArtifactType.IMAGE,), steps=(step1, step2)
+    )
+    execution = PipelineExecutor(CODE_VERSION).execute_document(
+        spec,
+        {"fake:tokens": _TokenModule(), "fake:upper": _UpperModule()},
+        {ArtifactType.IMAGE: _image()},
+        document_id="doc1",
+    )
+    # Étape sans jetons (module non-LLM) : les compteurs restent ceux de l'étape
+    # LLM ; la durée cumule les deux étapes.
+    assert execution.usage.tokens_in == 120
+    assert execution.usage.tokens_out == 30
+    assert execution.usage.duration_seconds is not None

@@ -5,6 +5,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.analysis import (
+    Analysis,
+    InferencePayload,
+    PipelineInterval,
+    PipelineRank,
+)
 from xerocr.evaluation.result import MetricScore, RunResult
 from xerocr.reports.section import SectionContext
 from xerocr.reports.sections.cross_engine import CrossEngineSection
@@ -59,3 +65,61 @@ def test_none_value_rendered_as_dash() -> None:
 def test_empty_cross_engine_returns_none() -> None:
     section = CrossEngineSection()
     assert section.render(RunResult(manifest=_manifest()), SectionContext()) is None
+
+
+def test_inference_block_renders_ranks_cd_and_intervals() -> None:
+    payload = InferencePayload(
+        metric="cer",
+        alpha=0.05,
+        n_documents=8,
+        critical_distance=1.1715,
+        q_alpha=2.343,
+        mean_ranks=(
+            PipelineRank(pipeline="alpha", mean_rank=1.375),
+            PipelineRank(pipeline="beta", mean_rank=3.0),
+        ),
+        tied_groups=(("alpha",), ("beta",)),
+        intervals=(
+            PipelineInterval(
+                pipeline="alpha", mean=0.1062, lower=0.095, upper=0.1162,
+                n_documents=8,
+            ),
+        ),
+    )
+    result = RunResult(
+        manifest=_manifest(),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.01, support=8),
+        ),
+        analyses=(Analysis(scope="corpus", view="text", payload=payload),),
+    )
+    html = CrossEngineSection().render(result, SectionContext())
+    assert html is not None
+    assert "CD = 1.1715" in html
+    assert "rang moyen" in html
+    assert "[0.0950 ; 0.1162]" in html
+    assert "{alpha}" in html and "{beta}" in html
+    # Déterminisme bit-à-bit du rendu.
+    assert html == CrossEngineSection().render(result, SectionContext())
+
+
+def test_two_pipeline_inference_block_points_to_wilcoxon() -> None:
+    payload = InferencePayload(
+        metric="cer",
+        alpha=0.05,
+        n_documents=8,
+        mean_ranks=(
+            PipelineRank(pipeline="alpha", mean_rank=1.0),
+            PipelineRank(pipeline="beta", mean_rank=2.0),
+        ),
+    )
+    result = RunResult(
+        manifest=_manifest(),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.02, support=8),
+        ),
+        analyses=(Analysis(scope="corpus", view="text", payload=payload),),
+    )
+    html = CrossEngineSection().render(result, SectionContext())
+    assert html is not None
+    assert "pas de post-hoc" in html

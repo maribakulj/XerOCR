@@ -286,7 +286,7 @@ ne fige pas une forme qui dépend d'une couche non encore conçue.
 | `CanonicalLayout` (+ `Point`/`BBox`/`Geometry`/`Word`/`Line`/`Region`/`LayoutPage`) | neutre ALTO/PAGE (nouveau) | tranche segmentation (couche 4) |
 | `ProjectionReport` | `evaluation/projectors/base.py` | migration couche 3 |
 | `RunSpec` ✅ (créé T1, **sans `StepSpec`** — D-010 : `PipelineStep` suffit) | `app/schemas/run_spec.py` | couche 6 — fait ; loader YAML différé T2 |
-| `ConfidenceToken` (schéma payload `CONFIDENCES`) | `adapters/ocr/confidences.py` | quand les confidences sont consommées (différable) |
+| `ConfidenceToken` ✅ (créé T12, D-070 — sidecar tesseract + calibration ECE/MCE) | `adapters/ocr/confidences.py` | couche 3 — fait |
 
 **Non-candidats confirmés** (faux positifs analysés) : `RunContext` (→ couche 4,
 fait paire avec `RunControl`), `StoredArtifact` (reste en `adapters/storage`,

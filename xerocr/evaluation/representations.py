@@ -1,7 +1,7 @@
 """Chargement d'un artefact vers sa représentation comparable.
 
 Le runner compare des **représentations** (``str`` pour le texte), pas des
-artefacts bruts. T1 ne charge que le texte (``RAW_TEXT``/``CORRECTED_TEXT``) via
+artefacts bruts. Charge aujourd'hui le texte (``RAW_TEXT``/``CORRECTED_TEXT``) via
 la couche 2 ; les autres types (``LAYOUT``…) arrivent avec leur tranche.
 """
 

@@ -70,6 +70,8 @@ def engine_statuses(
             detail="intégré (aucune dépendance)",
         ),
         _tesseract_status(has_binary, has_module),
+        _kraken_status(has_module),
+        _mistral_ocr_status(has_module, get_env),
         _openai_status(has_module, get_env),
         _anthropic_status(has_module, get_env),
         _mistral_status(has_module, get_env),
@@ -86,6 +88,28 @@ def _tesseract_status(has_binary: BinaryProbe, has_module: ModuleProbe) -> Engin
         detail, ok = "prêt (binaire + pytesseract)", True
     return EngineStatus(
         kind="tesseract", label="Tesseract", available=ok, detail=detail
+    )
+
+
+def _kraken_status(has_module: ModuleProbe) -> EngineStatus:
+    if not has_module("kraken"):
+        detail, ok = "SDK kraken non installé (extra [kraken])", False
+    else:
+        detail, ok = "prêt (SDK ; fournir un modèle .mlmodel au lancement)", True
+    return EngineStatus(
+        kind="kraken", label="Kraken (HTR)", available=ok, detail=detail
+    )
+
+
+def _mistral_ocr_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("mistralai"):
+        detail, ok = "SDK mistralai non installé (extra [mistral])", False
+    elif not get_env("MISTRAL_API_KEY"):
+        detail, ok = "clé MISTRAL_API_KEY absente", False
+    else:
+        detail, ok = "prêt (SDK + clé)", True
+    return EngineStatus(
+        kind="mistral_ocr", label="Mistral OCR", available=ok, detail=detail
     )
 
 
@@ -175,7 +199,16 @@ def installed_mistral_models() -> tuple[str, ...]:
     return list_mistral_models()
 
 
+def normalization_profiles() -> tuple[str, ...]:
+    """Noms des profils de normalisation, lus **dynamiquement** (jamais une
+    liste statique — un profil ajouté en couche 2 apparaît ici sans câblage)."""
+    from xerocr.formats.text.normalization import NORMALIZATION_PROFILES
+
+    return tuple(sorted(NORMALIZATION_PROFILES))
+
+
 __all__ = [
+    "normalization_profiles",
     "EngineStatus",
     "StatusProvider",
     "engine_statuses",

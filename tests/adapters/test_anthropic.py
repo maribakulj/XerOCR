@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from xerocr.adapters.llm._base import LLMCompletion
 from xerocr.adapters.llm.anthropic import AnthropicAdapter
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
@@ -44,14 +45,15 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock_text(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.anthropic._invoke_anthropic", lambda **_: text
+        "xerocr.adapters.llm.anthropic._invoke_anthropic",
+        lambda **_: LLMCompletion(text),
     )
 
 
 def _mock_vision(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
         "xerocr.adapters.llm.anthropic._invoke_anthropic_vision",
-        lambda **_: text,
+        lambda **_: LLMCompletion(text),
     )
 
 
@@ -85,7 +87,7 @@ def test_text_only_corrects(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.CORRECTED_TEXT]
+    artifact = out.artifacts[ArtifactType.CORRECTED_TEXT]
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello"
 
@@ -105,7 +107,7 @@ def test_text_and_image_corrects(
         _ctx(tmp_path),
         RunControl(),
     )
-    assert out[ArtifactType.CORRECTED_TEXT].uri is not None
+    assert out.artifacts[ArtifactType.CORRECTED_TEXT].uri is not None
 
 
 def test_zero_shot_transcribes(
@@ -119,7 +121,7 @@ def test_zero_shot_transcribes(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.RAW_TEXT]
+    artifact = out.artifacts[ArtifactType.RAW_TEXT]
     assert artifact.type == ArtifactType.RAW_TEXT
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Transcribed"

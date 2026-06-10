@@ -3,8 +3,8 @@ tables au design — une par vue, documents groupés, data-bars. Couche 7.
 
 Surface une donnée **réelle déjà calculée** (``RunResult.documents``) jusqu'ici
 **sans consommateur** dans le rapport ; aucune métrique inventée (note d'archi
-S4.b). Génériques : affiche les métriques par-doc présentes, quelles qu'elles
-soient.
+du design). Génériques : affiche les métriques par-doc présentes, quelles
+qu'elles soient.
 """
 
 from __future__ import annotations

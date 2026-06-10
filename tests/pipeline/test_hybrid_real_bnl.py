@@ -63,7 +63,7 @@ def test_external_segmentation_then_per_block_ocr(tmp_path: Path) -> None:
         workspace_uri=str(tmp_path),
     )
     # segmentation externe = régions ABBYY ; OCR par bloc = Tesseract sur le crop.
-    filled = run_region_fanout(
+    filled, _usage = run_region_fanout(
         layout=reference,
         page_image=page_image,
         recognizer=TesseractAdapter(label="tess", lang="deu"),

@@ -15,11 +15,13 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "cer_diplo",
         "del_rate",
         "diacritic_err",
+        "hallucination",
         "ins_rate",
         "mer",
         "mufi_err",
         "region_cer",
         "region_detection",
+        "searchability",
         "wer",
     )
 
@@ -38,10 +40,12 @@ def test_get_and_select_by_input_types() -> None:
         "cer_diplo",
         "del_rate",
         "diacritic_err",
+        "hallucination",
         "ins_rate",
         "wer",
         "mer",
         "mufi_err",
+        "searchability",
     }
     layout_metrics = registry.for_input_types(
         ArtifactType.LAYOUT, ArtifactType.LAYOUT

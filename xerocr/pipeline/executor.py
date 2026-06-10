@@ -16,6 +16,7 @@ une tranche ultérieure — pas ici.
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Mapping
 
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
@@ -23,10 +24,11 @@ from xerocr.domain.deadline import Deadline
 from xerocr.domain.errors import XerOCRError
 from xerocr.domain.pipeline import INITIAL_STEP_ID, PipelineSpec, PipelineStep
 from xerocr.domain.provenance import ProvenanceRecord
+from xerocr.domain.usage import ResourceUsage
 from xerocr.pipeline.fanout import RegionCropper, execute_region_fanout
 from xerocr.pipeline.protocols import Module
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import DocumentExecution, RunContext, StepOutput
 
 
 class PipelineStepError(XerOCRError):
@@ -57,16 +59,19 @@ class PipelineExecutor:
         control: RunControl | None = None,
         workspace_uri: str | None = None,
         cropper: RegionCropper | None = None,
-    ) -> dict[ArtifactType, Artifact]:
-        """Exécute ``spec`` ; renvoie le pool d'artefacts (dernier par type).
+    ) -> DocumentExecution:
+        """Exécute ``spec`` ; renvoie artefacts (dernier par type) + ``usage``.
 
         ``cropper`` (couche 5, injecté par l'app) active le découpage réel des
         blocs dans les étapes ``fanout`` (pipeline hybride seg→OCR par bloc).
+        La **durée** de chaque étape est mesurée ici (horloge monotone, source
+        unique) puis fusionnée avec les jetons remontés par les modules.
         """
         ctrl = control if control is not None else RunControl()
         dl = deadline if deadline is not None else Deadline.infinite()
         pool: dict[ArtifactType, Artifact] = dict(initial_inputs)
         by_step: dict[str, dict[ArtifactType, Artifact]] = {}
+        usage = ResourceUsage()
 
         for step in spec.steps:
             ctrl.raise_if_cancelled()
@@ -84,15 +89,20 @@ class PipelineExecutor:
                 deadline=dl,
                 workspace_uri=workspace_uri,
             )
+            started = time.monotonic()
             if step.fanout:
-                outputs = self._run_fanout(step, module, inputs, context, ctrl, cropper)
+                output = self._run_fanout(step, module, inputs, context, ctrl, cropper)
             else:
-                outputs = module.execute(inputs, dict(step.params), context, ctrl)
-            stamped = self._stamp(outputs, step)
+                output = module.execute(inputs, dict(step.params), context, ctrl)
+            step_usage = ResourceUsage(
+                duration_seconds=time.monotonic() - started
+            ).merged_with(output.usage)
+            usage = usage.merged_with(step_usage)
+            stamped = self._stamp(output.artifacts, step)
             self._check_outputs(step, stamped)
             by_step[step.id] = stamped
             pool.update(stamped)
-        return pool
+        return DocumentExecution(artifacts=pool, usage=usage)
 
     def _run_fanout(
         self,
@@ -102,7 +112,7 @@ class PipelineExecutor:
         context: RunContext,
         control: RunControl,
         cropper: RegionCropper | None,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         layout = inputs.get(ArtifactType.LAYOUT)
         image = inputs.get(ArtifactType.IMAGE)
         if layout is None or image is None:
@@ -145,8 +155,8 @@ class PipelineExecutor:
         # Déterminisme : l'identité d'un artefact = content_hash + (code_version,
         # parameters_hash). Le timestamp wall-clock de ProvenanceRecord est de la
         # métadonnée, EXCLUE de l'identité (cf. ProvenanceRecord.is_compatible_with)
-        # et jamais rendue dans RunResult/HTML. Un cache (T2) compare donc via
-        # is_compatible_with, pas via model_dump_json. (Revue T1 — D-012.)
+        # et jamais rendue dans RunResult/HTML. Un cache futur comparerait donc via
+        # is_compatible_with, pas via model_dump_json. (Journal D-012.)
         provenance = ProvenanceRecord(
             code_version=self._code_version,
             parameters_hash=_parameters_hash(dict(step.params)),

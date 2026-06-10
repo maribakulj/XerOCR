@@ -23,7 +23,7 @@ from xerocr.domain.run_spec import RunSpec
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 
 def _runner(tmp_path: Path) -> JobRunner:
@@ -164,7 +164,7 @@ class _BlockingModule:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         self.started.set()
         while not control.is_cancelled():
             time.sleep(0.005)

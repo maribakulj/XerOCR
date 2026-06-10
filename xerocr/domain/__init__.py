@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from xerocr.domain.artifact_key import ArtifactKey
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
+from xerocr.domain.confidence import ConfidenceToken
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.deadline import Deadline
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
@@ -39,6 +40,7 @@ from xerocr.domain.pipeline import (
 from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.provenance import ProvenanceRecord
 from xerocr.domain.run import RunManifest, utcnow
+from xerocr.domain.usage import ResourceUsage
 
 __all__ = [
     # Artifacts
@@ -75,4 +77,8 @@ __all__ = [
     # Run manifest
     "RunManifest",
     "utcnow",
+    # Ressources mesurées
+    "ResourceUsage",
+    # Confidences moteur
+    "ConfidenceToken",
 ]

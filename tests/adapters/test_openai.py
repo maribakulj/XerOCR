@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import normalize_llm_content
+from xerocr.adapters.llm._base import LLMCompletion, normalize_llm_content
 from xerocr.adapters.llm.openai import OpenAIAdapter
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
@@ -45,13 +45,14 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock_text(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: text
+        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion(text)
     )
 
 
 def _mock_vision(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision", lambda **_: text
+        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        lambda **_: LLMCompletion(text),
     )
 
 
@@ -96,7 +97,7 @@ def test_execute_produces_corrected_text(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.CORRECTED_TEXT]
+    artifact = out.artifacts[ArtifactType.CORRECTED_TEXT]
     assert artifact.type == ArtifactType.CORRECTED_TEXT
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello world"
@@ -118,7 +119,7 @@ def test_text_and_image_produces_corrected_text(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.CORRECTED_TEXT]
+    artifact = out.artifacts[ArtifactType.CORRECTED_TEXT]
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Hello"
 
@@ -134,7 +135,7 @@ def test_zero_shot_produces_raw_text(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.RAW_TEXT]
+    artifact = out.artifacts[ArtifactType.RAW_TEXT]
     assert artifact.type == ArtifactType.RAW_TEXT
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Transcribed text"

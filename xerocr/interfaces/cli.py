@@ -1,9 +1,8 @@
-"""CLI XerOCR (couche 8). T1 : la commande ``demo``.
+"""CLI XerOCR (couche 8) : ``demo``, ``run``, ``compare``, ``serve``.
 
 ``argparse`` (stdlib, aucune dépendance — journal D-007). ``demo`` génère un
 rapport de démonstration **déterministe** sans moteur réel : un mini-corpus
 pré-calculé en mémoire → ``precomputed`` → CER → ``RunResult`` → HTML autonome.
-Les verbes ``run``/``compare``/``serve`` arrivent à leurs tranches (T2/T4).
 """
 
 from __future__ import annotations
@@ -26,13 +25,23 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
+from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
+from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
+from xerocr.reports.csv_export import run_result_csv
 
 
 def demo_to_html() -> str:
-    """Exécute la démo et renvoie le rapport HTML (déterministe)."""
+    """Exécute la démo et renvoie le rapport HTML (déterministe).
+
+    La démo est la **vitrine du déterminisme** (golden octet-stable entre deux
+    exécutions) : on retire du ``RunResult`` les canaux **environnementaux**
+    avant rendu — ``usage`` (durées wall-clock) et l'analyse ``economics`` qui
+    en dérive varient d'un run à l'autre par nature (arbitrage D-068 ; un run
+    réel, lui, les rend : le rapport reste une fonction pure du ``RunResult``).
+    """
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
@@ -43,7 +52,48 @@ def demo_to_html() -> str:
             registry=registry,
             code_version=resolve_code_version(),
         )
-    return default_report_renderer().render(result, title="XerOCR — démonstration")
+    stable = result.model_copy(
+        update={
+            "usage": (),
+            "analyses": tuple(
+                analysis
+                for analysis in result.analyses
+                if not isinstance(analysis.payload, EconomicsPayload)
+            ),
+        }
+    )
+    return default_report_renderer().render(stable, title="XerOCR — démonstration")
+
+
+def _run_history(
+    db: str, view: str, metric: str, pipeline: str | None, threshold: float
+) -> int:
+    """Lit le ``HistoryStore`` : série d'un pipeline, ou régressions de la vue."""
+    from xerocr.adapters.storage.history_store import HistoryStore
+
+    store = HistoryStore(Path(db))
+    if pipeline is not None:
+        records = store.history(pipeline, view, metric)
+        if not records:
+            print(f"Aucune mesure pour {pipeline!r} ({view}:{metric}).")
+            return 0
+        for record in records:
+            print(
+                f"{record.completed_at}  {record.run_id}  "
+                f"{record.metric}={record.value:.6f}  ({record.corpus_name}, "
+                f"code {record.code_version})"
+            )
+        return 0
+    regressions = store.regressions(view, metric, threshold=threshold)
+    if not regressions:
+        print(f"Aucune régression ({view}:{metric}, seuil {threshold:g}).")
+        return 0
+    for reg in regressions:
+        print(
+            f"{reg.pipeline}: {reg.previous:.6f} → {reg.latest:.6f} "
+            f"(Δ {reg.delta:+.6f}, run {reg.latest_run_id})"
+        )
+    return 0
 
 
 def _run_demo(output: str) -> int:
@@ -53,13 +103,23 @@ def _run_demo(output: str) -> int:
     return 0
 
 
-def _run_config(config_path: str, output: str, json_output: str | None) -> int:
+def _run_config(
+    config_path: str,
+    output: str,
+    json_output: str | None,
+    resume_dir: str | None = None,
+    csv_output: str | None = None,
+) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     spec = load_run_spec(config_path)
+    resume_store = ResumeStore(Path(resume_dir)) if resume_dir else None
     result = run_orchestrator(
-        spec, registry=registry, code_version=resolve_code_version()
+        spec,
+        registry=registry,
+        code_version=resolve_code_version(),
+        resume_store=resume_store,
     )
     Path(output).write_text(
         default_report_renderer().render(
@@ -69,6 +129,8 @@ def _run_config(config_path: str, output: str, json_output: str | None) -> int:
     )
     if json_output is not None:
         dump_run_result(result, json_output)
+    if csv_output is not None:
+        Path(csv_output).write_text(run_result_csv(result), encoding="utf-8")
     print(f"Rapport écrit : {output}")
     return 0
 
@@ -162,6 +224,18 @@ def main(argv: list[str] | None = None) -> int:
     )
     run_cmd.add_argument("config", help="Fichier YAML décrivant le run.")
     run_cmd.add_argument(
+        "--resume-dir",
+        default=None,
+        help="Cache de reprise : les (pipeline × document) déjà produits à "
+        "l'identique y sont rechargés au lieu d'être ré-exécutés.",
+    )
+    run_cmd.add_argument(
+        "--csv",
+        default=None,
+        dest="csv_output",
+        help="Export CSV tableur (agrégats + détail par-document).",
+    )
+    run_cmd.add_argument(
         "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
     )
     run_cmd.add_argument(
@@ -170,6 +244,20 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Écrit aussi le RunResult en JSON (pour comparer plus tard).",
     )
+    history_cmd = subparsers.add_parser(
+        "history",
+        help="Historique longitudinal : série d'un pipeline ou régressions.",
+    )
+    history_cmd.add_argument("db", help="Base SQLite de l'historique.")
+    history_cmd.add_argument("--view", default="text")
+    history_cmd.add_argument("--metric", default="cer")
+    history_cmd.add_argument(
+        "--pipeline",
+        default=None,
+        help="Série chronologique de ce pipeline (sinon : régressions).",
+    )
+    history_cmd.add_argument("--threshold", type=float, default=0.0)
+
     compare_cmd = subparsers.add_parser(
         "compare", help="Compare deux RunResult JSON → rapport de deltas."
     )
@@ -199,7 +287,17 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "demo":
             return _run_demo(args.output)
         if args.command == "run":
-            return _run_config(args.config, args.output, args.json_output)
+            return _run_config(
+                args.config,
+                args.output,
+                args.json_output,
+                args.resume_dir,
+                args.csv_output,
+            )
+        if args.command == "history":
+            return _run_history(
+                args.db, args.view, args.metric, args.pipeline, args.threshold
+            )
         if args.command == "compare":
             return _compare_command(args.run_a, args.run_b, args.output)
         if args.command == "serve":

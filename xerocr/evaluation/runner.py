@@ -20,17 +20,24 @@ from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.calibration import calibration_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
+from xerocr.evaluation.diagnostics import DiagnosticsCollector
+from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation
 from xerocr.evaluation.result import (
+    Analysis,
+    DocumentUsage,
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
+from xerocr.evaluation.taxonomy import TaxonomyCollector
 from xerocr.formats.text import get_builtin_profile
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
@@ -53,7 +60,7 @@ _Series = dict[str, dict[str, list[MetricScore]]]
 
 #: Types **inter-changeables au niveau représentation** : tous chargés en ``str``.
 #: Un candidat ``CORRECTED_TEXT`` est donc noté par une métrique ``RAW_TEXT`` sans
-#: projection (les post-corrections LLM, comportement T3 préservé).
+#: projection (les post-corrections LLM passent telles quelles).
 _TEXT_LIKE = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
@@ -64,15 +71,24 @@ def evaluate_run(
     pipeline_outputs: PipelineOutputs,
     registry: MetricRegistry,
     manifest: RunManifest,
+    usage: tuple[DocumentUsage, ...] = (),
 ) -> RunResult:
-    """Calcule le ``RunResult`` depuis les sorties de pipelines et la GT."""
+    """Calcule le ``RunResult`` depuis les sorties de pipelines et la GT.
+
+    ``usage`` (ressources mesurées par l'orchestrateur, une entrée par
+    pipeline × document exécuté) est embarqué tel quel, **trié** (pipeline,
+    document_id) pour un ordre déterministe.
+    """
     pipeline_order = [spec.name for spec in manifest.pipeline_specs]
     pipelines: list[PipelineResult] = []
     documents: list[RunDocumentResult] = []
     cross_engine: list[MetricScore] = []
+    analyses: list[Analysis] = []
 
     for view in evaluation.views:
         series: _Series = {name: {} for name in view.metric_names}
+        diagnostics = DiagnosticsCollector()
+        taxonomy = TaxonomyCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -80,7 +96,21 @@ def evaluate_run(
                 candidate = _candidate_for(
                     pipeline_outputs, pipeline_name, document.id, view.candidate_types
                 )
-                scores = _score_document(view, document, candidate, registry)
+                scores, text_context = _score_document(
+                    view, document, candidate, registry
+                )
+                if text_context is not None:
+                    diagnostics.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    taxonomy.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
                 for score in scores:
                     series[score.metric][pipeline_name].append(score)
                 documents.append(
@@ -102,13 +132,64 @@ def evaluate_run(
                 )
             )
         cross_engine.extend(_cross_engine_scores(view, series, registry))
+        analyses.extend(_inference_analyses(view, series))
+        diagnostic = diagnostics.build(
+            view.name,
+            "cer",
+            [document.id for document in corpus.documents],
+            series.get("cer", {}),
+        )
+        if diagnostic is not None:
+            analyses.append(diagnostic)
+        calibration = calibration_analysis(view.name, corpus, pipeline_outputs)
+        if calibration is not None:
+            analyses.append(calibration)
+        taxonomy_analysis = taxonomy.build(view.name)
+        if taxonomy_analysis is not None:
+            analyses.append(taxonomy_analysis)
+        if "cer" in view.metric_names:
+            economics = economics_analysis(
+                view.name, "cer", series["cer"], usage, manifest
+            )
+            if economics is not None:
+                analyses.append(economics)
 
     return RunResult(
         manifest=manifest,
         pipelines=tuple(pipelines),
         documents=tuple(documents),
         cross_engine=tuple(cross_engine),
+        usage=tuple(sorted(usage, key=lambda u: (u.pipeline, u.document_id))),
+        analyses=tuple(
+            sorted(
+                analyses,
+                key=lambda a: (
+                    a.view,
+                    a.payload.kind,
+                    getattr(a.payload, "metric", ""),
+                ),
+            )
+        ),
     )
+
+
+def _inference_analyses(view: EvaluationView, series: _Series) -> list[Analysis]:
+    """Inférentiel corrigé par métrique de la vue (cf. ``evaluation.inference``).
+
+    Consomme les **mêmes séries alignées** que la passe inter-moteurs : même
+    index = même document, ``None`` = non applicable — un seul calcul des
+    scores, deux lectures (scalaire ``significance_p`` + payload structuré).
+    """
+    out: list[Analysis] = []
+    for metric_name in view.metric_names:
+        per_pipeline = {
+            pipeline: [score.value for score in scores]
+            for pipeline, scores in series[metric_name].items()
+        }
+        analysis = inference_analysis(view.name, metric_name, per_pipeline)
+        if analysis is not None:
+            out.append(analysis)
+    return out
 
 
 def _aggregate(name: str, scores: list[MetricScore]) -> MetricScore:
@@ -188,9 +269,11 @@ def _score_document(
     document: DocumentRef,
     candidate: Artifact | None,
     registry: MetricRegistry,
-) -> tuple[MetricScore, ...]:
+) -> tuple[tuple[MetricScore, ...], DocContext | None]:
     # Représentation chargée + normalisée une seule fois par signature, partagée
-    # par toutes les métriques qui la consomment (CER/WER/MER).
+    # par toutes les métriques qui la consomment (CER/WER/MER). Le contexte
+    # **texte** est aussi renvoyé : le diagnostic d'erreurs (confusions, pires
+    # lignes) le consomme sans recharger ni renormaliser quoi que ce soit.
     contexts: dict[_Signature, DocContext | None] = {}
     scores: list[MetricScore] = []
     for name in view.metric_names:
@@ -209,7 +292,8 @@ def _score_document(
                 support=observation.weight if observation is not None else None,
             )
         )
-    return tuple(scores)
+    text_context = contexts.get((ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT))
+    return tuple(scores), text_context
 
 
 def _context_for(

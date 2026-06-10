@@ -2,9 +2,9 @@
 
 Résout un ``adapter_name`` (convention ``<kind>:<label>``) vers une instance de
 ``Module`` (couche 4) en appelant un **builder** enregistré pour le ``kind``.
-C'est le **seul** point d'extension du produit : en T1 le socle est enregistré
+C'est le **seul** point d'extension du produit : le socle est enregistré
 **en dur** (``register_default_modules``) ; la **découverte de plugins tiers**
-(entry-points ``xerocr.modules``) s'y branchera en T6 — même résolution
+(entry-points ``xerocr.modules``, cf. ``app.modules.discovery``) — même résolution
 ``name → Module``, source différente.
 """
 
@@ -62,6 +62,35 @@ def _build_precomputed(kwargs: Mapping[str, ParamValue]) -> Module:
     from xerocr.adapters.ocr.precomputed import PrecomputedTextAdapter
 
     return PrecomputedTextAdapter(source_label=label)
+
+
+def _build_kraken(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "kraken : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "kraken : 'model' (chemin .mlmodel) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.kraken import KrakenAdapter
+
+    return KrakenAdapter(label=label, model=model)
+
+
+def _build_mistral_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "mistral_ocr : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.mistral_ocr import MistralOCRAdapter
+
+    return MistralOCRAdapter(
+        label=label, model=str(kwargs.get("model", "mistral-ocr-latest"))
+    )
 
 
 def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
@@ -181,6 +210,8 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
+    registry.register_builder("kraken", _build_kraken)
+    registry.register_builder("mistral_ocr", _build_mistral_ocr)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)

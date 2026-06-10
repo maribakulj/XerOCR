@@ -11,9 +11,11 @@ Garanties (contrat runner ↔ module) :
 - le runner garantit que ``inputs`` contient tous les types de ``input_types``,
   que ``params`` est une copie mutable, que ``context`` porte la ``Deadline`` et
   que ``control`` permet l'annulation coopérative ;
-- le module garantit que le dict retourné contient tous ses ``output_types``,
-  qu'aucune exception n'est avalée, et qu'il lève ``DeadlineExceeded`` à
-  expiration de la deadline.
+- le module garantit que ``StepOutput.artifacts`` contient tous ses
+  ``output_types``, qu'aucune exception n'est avalée, et qu'il lève
+  ``DeadlineExceeded`` à expiration de la deadline. ``StepOutput.usage`` est
+  optionnel : seuls les modules qui consomment des jetons (LLM/VLM) le
+  renseignent — la **durée** est mesurée par l'exécuteur, pas par le module.
 
 ``version`` (absent du contrat runtime hérité) alimente le ``RunManifest`` :
 deux exécutions ne sont comparables qu'à version de module égale
@@ -26,7 +28,7 @@ from typing import Protocol, runtime_checkable
 
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 #: Valeur de paramètre admissible dans une spec (sérialisable YAML/JSON).
 ParamValue = str | int | float | bool
@@ -54,7 +56,7 @@ class Module(Protocol):
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]: ...
+    ) -> StepOutput: ...
 
 
 __all__ = ["Module", "ParamValue"]

@@ -129,12 +129,12 @@ def test_spec_round_trips_with_fanout_flag() -> None:
 def test_declarative_pipeline_runs_three_stages(tmp_path: Path) -> None:
     pool = _run(tmp_path, {"r1": "hello world", "r2": "second blocX"})
     # L'étage fan-out a produit un LAYOUT rempli, estampillé par l'exécuteur.
-    filled = pool[ArtifactType.LAYOUT]
+    filled = pool.artifacts[ArtifactType.LAYOUT]
     assert filled.produced_by_step == "recognize"
     assert filled.provenance is not None
     assert filled.provenance.code_version == CODE_VERSION
     # L'assemblage a produit l'ALTO_XML.
-    alto = pool[ArtifactType.ALTO_XML]
+    alto = pool.artifacts[ArtifactType.ALTO_XML]
     assert alto.produced_by_step == "assemble"
     assert alto.uri is not None
     assert Path(alto.uri).read_bytes().lstrip().startswith(b"<")
@@ -142,7 +142,7 @@ def test_declarative_pipeline_runs_three_stages(tmp_path: Path) -> None:
 
 def test_pipeline_output_reloads_and_scores(tmp_path: Path) -> None:
     pool = _run(tmp_path, {"r1": "hello world", "r2": "second blocX"})
-    alto_uri = pool[ArtifactType.ALTO_XML].uri
+    alto_uri = pool.artifacts[ArtifactType.ALTO_XML].uri
     assert alto_uri is not None
     hyp = load_representation(alto_uri, ArtifactType.LAYOUT)
     score = region_cer.fn(
@@ -156,7 +156,7 @@ def test_partial_failure_survives_declarative_run(tmp_path: Path) -> None:
     # r2 absente des textes → région non reconnue, page non abattue.
     pool = _run(tmp_path, {"r1": "hello world"})
     filled = CanonicalLayout.model_validate_json(
-        Path(pool[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
+        Path(pool.artifacts[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
     )
     page = filled.pages[0]
     assert page.regions[0].lines[0].text == "hello world"

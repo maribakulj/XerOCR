@@ -6,8 +6,8 @@ l'exécuteur (couche 4) par document, passe les artefacts au runner d'évaluatio
 lui-même** (l'assemblage métrique vit en ``evaluation``) et **n'exécute aucun
 moteur** (les modules le font).
 
-Minimal pour T1 : mono-thread, séquentiel. Le ``JobRunner`` (annulation/SSE), le
-loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
+Mono-thread, séquentiel par choix : le parallélisme viendrait avec un
+consommateur réel (gros corpus), pas avant.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from xerocr.app.modules.registry import ModuleRegistry
+from xerocr.app.resume import ResumeStore, unit_key
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.deadline import Deadline
 from xerocr.domain.documents import DocumentRef
@@ -26,7 +27,7 @@ from xerocr.domain.errors import AdapterStepError, XerOCRError
 from xerocr.domain.run import RunManifest, utcnow
 from xerocr.domain.run_spec import RunSpec
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.result import RunResult
+from xerocr.evaluation.result import DocumentUsage, RunResult
 from xerocr.evaluation.runner import evaluate_run
 from xerocr.pipeline.executor import PipelineExecutor, PipelineStepError
 from xerocr.pipeline.protocols import Module
@@ -59,6 +60,7 @@ def run(
     control: RunControl | None = None,
     artifact_sink: ArtifactSink | None = None,
     on_progress: ProgressCallback | None = None,
+    resume_store: ResumeStore | None = None,
 ) -> RunResult:
     """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques).
 
@@ -70,6 +72,11 @@ def run(
     nettoyage du workspace (URI encore lisibles) : c'est par lui qu'un LAYOUT
     produit est persisté (ex. ``SegmentationStore``) sans que l'orchestrateur
     connaisse la destination, et sans second chemin d'exécution.
+
+    ``resume_store`` (optionnel) : cache d'**exécution** adressé par empreinte
+    (``app.resume``) — une unité (pipeline × document) déjà produite à
+    l'identique est rechargée au lieu d'être ré-exécutée ; l'évaluation, elle,
+    est toujours recalculée.
     """
     started_at = utcnow()
     needed = sorted(
@@ -94,14 +101,40 @@ def run(
     done_units = 0
     with TemporaryDirectory(prefix="xerocr-run-") as workspace:
         pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
+        usage_records: list[DocumentUsage] = []
         for index, pipeline in enumerate(spec.pipelines):
             pipeline_workspace = Path(workspace) / f"pipeline{index}"
             pipeline_workspace.mkdir()
             per_document: dict[str, dict[ArtifactType, Artifact]] = {}
             for document in spec.corpus.documents:
                 inputs = _initial_inputs(document)
+                key = (
+                    unit_key(
+                        code_version=code_version,
+                        pipeline=pipeline,
+                        adapter_kwargs=spec.adapter_kwargs,
+                        document=document,
+                    )
+                    if resume_store is not None
+                    else None
+                )
+                cached = resume_store.load(key) if resume_store and key else None
+                if cached is not None:
+                    artifacts, cached_usage = cached
+                    per_document[document.id] = dict(artifacts)
+                    usage_records.append(
+                        DocumentUsage(
+                            document_id=document.id,
+                            pipeline=pipeline.name,
+                            usage=cached_usage,
+                        )
+                    )
+                    done_units += 1
+                    if on_progress is not None:
+                        on_progress(done_units, total_units)
+                    continue
                 try:
-                    per_document[document.id] = executor.execute_document(
+                    execution = executor.execute_document(
                         pipeline,
                         modules,
                         inputs,
@@ -110,6 +143,16 @@ def run(
                         control=control,
                         workspace_uri=str(pipeline_workspace),
                     )
+                    per_document[document.id] = dict(execution.artifacts)
+                    usage_records.append(
+                        DocumentUsage(
+                            document_id=document.id,
+                            pipeline=pipeline.name,
+                            usage=execution.usage,
+                        )
+                    )
+                    if resume_store is not None and key is not None:
+                        resume_store.save(key, execution.artifacts, execution.usage)
                 except (AdapterStepError, PipelineStepError) as exc:
                     # Un concurrent qui échoue (clé d'API absente, moteur
                     # indisponible, sortie invalide) ne doit PAS abattre tout le
@@ -145,13 +188,14 @@ def run(
             pipeline_outputs=pipeline_outputs,
             registry=metric_registry,
             manifest=manifest,
+            usage=tuple(usage_records),
         )
 
 
 def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:
     if document.image_uri is None:
         raise OrchestrationError(
-            f"document {document.id!r} : image_uri requis (T1, axe image→texte)."
+            f"document {document.id!r} : image_uri requis (axe image→texte)."
         )
     return {
         ArtifactType.IMAGE: Artifact(

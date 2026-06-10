@@ -55,7 +55,7 @@ def test_converts_detections_to_layout_regions(tmp_path: Path) -> None:
     art, ctx = _scene(tmp_path)
     out = seg.execute({ArtifactType.IMAGE: art}, {}, ctx, RunControl())
     layout = CanonicalLayout.model_validate_json(
-        Path(out[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
+        Path(out.artifacts[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
     )
     page = layout.pages[0]
     assert page.width == 600 and page.height == 800
@@ -75,7 +75,7 @@ def test_min_score_filters_low_confidence(tmp_path: Path) -> None:
     art, ctx = _scene(tmp_path)
     out = seg.execute({ArtifactType.IMAGE: art}, {}, ctx, RunControl())
     layout = CanonicalLayout.model_validate_json(
-        Path(out[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
+        Path(out.artifacts[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
     )
     assert tuple(r.region_type for r in layout.pages[0].regions) == ("title",)
 
@@ -91,7 +91,7 @@ def test_reading_order_is_sorted_top_to_bottom(tmp_path: Path) -> None:
     art, ctx = _scene(tmp_path)
     out = seg.execute({ArtifactType.IMAGE: art}, {}, ctx, RunControl())
     layout = CanonicalLayout.model_validate_json(
-        Path(out[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
+        Path(out.artifacts[ArtifactType.LAYOUT].uri).read_bytes()  # type: ignore[arg-type]
     )
     page = layout.pages[0]
     assert tuple(r.region_type for r in page.regions) == ("a", "b", "c")
@@ -104,7 +104,7 @@ def test_execute_produces_hashed_layout_artifact(tmp_path: Path) -> None:
     )
     art, ctx = _scene(tmp_path)
     out = seg.execute({ArtifactType.IMAGE: art}, {}, ctx, RunControl())
-    layout_art = out[ArtifactType.LAYOUT]
+    layout_art = out.artifacts[ArtifactType.LAYOUT]
     assert layout_art.type is ArtifactType.LAYOUT
     assert layout_art.uri is not None and Path(layout_art.uri).is_file()
     assert layout_art.content_hash is not None and len(layout_art.content_hash) == 64
@@ -121,8 +121,8 @@ def test_render_is_deterministic(tmp_path: Path) -> None:
     second = PPDocLayoutSegmenter(detector=_fixed(detection)).execute(
         {ArtifactType.IMAGE: art}, {}, ctx, RunControl()
     )
-    assert first[ArtifactType.LAYOUT].content_hash == (
-        second[ArtifactType.LAYOUT].content_hash
+    assert first.artifacts[ArtifactType.LAYOUT].content_hash == (
+        second.artifacts[ArtifactType.LAYOUT].content_hash
     )
 
 

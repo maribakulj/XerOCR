@@ -84,7 +84,7 @@ def _line_text_and_conf(line: etree._Element) -> tuple[str, float | None]:
 
     On retient le ``TextEquiv`` de niveau ligne d'``index`` le plus bas. À défaut
     (lignes uniquement segmentées en mots, ex. certains exports Transkribus), on
-    reconstruit le texte depuis les ``<Word>`` (T2).
+    reconstruit le texte depuis les ``<Word>``.
     """
     best: tuple[int, str, float | None] | None = None
     for te in line:
