@@ -63,6 +63,9 @@ def test_engines_ranked_by_cer_ascending() -> None:
     assert html.index("fast") < html.index("slow")
     # dispersion de fast : min 0.05 · médiane 0.10 · max 0.15
     assert "0.050" in html and "0.150" in html
+    # badge moteur présent, et la lettre suit l'ordre canonique (pas le rang) :
+    # `fast` apparaît avant `slow` dans le run → A puis B, même si `fast` gagne.
+    assert 'class="eng-badge"' in html
 
 
 def test_returns_none_without_pipelines() -> None:

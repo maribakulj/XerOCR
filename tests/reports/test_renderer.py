@@ -49,6 +49,8 @@ def test_document_structure_and_determinism() -> None:
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
     # 3a : widget « comparer un run » (client-side) en pied de rapport.
     assert 'id="xerocr-compare-btn"' in html1
+    # 3a : badge moteur (lettre + accent) devant le nom du moteur.
+    assert 'class="eng-badge"' in html1
     # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
     assert "@import" not in html1
     assert "https://" not in html1

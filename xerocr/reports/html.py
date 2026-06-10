@@ -102,6 +102,11 @@ _CSS = (
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Badge moteur (lettre + accent cyclique) — identité stable entre sections.
+    ".eng-badge{display:inline-flex;align-items:center;justify-content:center;"
+    "width:18px;height:18px;border-radius:5px;background:var(--badge,var(--ink));"
+    "color:var(--paper);font-family:var(--mono);font-size:10px;font-weight:600;"
+    "margin-right:8px;vertical-align:middle;}"
     # Widget « comparer un run » (client-side) — bouton + bandeau sticky des deltas.
     ".compare-bar{display:flex;justify-content:flex-end;margin-top:2px;}"
     ".compare-btn{font-family:var(--mono);font-size:12px;background:var(--ink);"
