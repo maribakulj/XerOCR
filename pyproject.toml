@@ -48,9 +48,9 @@ include = ["xerocr*"]
 "xerocr.interfaces.web" = [
     "templates/*.html", "static/css/*.css", "static/js/*.js", "static/fonts/*",
 ]
-# Le rapport autonome (couche 7) incorpore ses polices en data-URI : les woff2
-# doivent voyager dans le wheel pour exister après ``pip install``.
-"xerocr.reports" = ["_assets/*.woff2"]
+# Le rapport autonome (couche 7) incorpore ses polices (data-URI) et son script
+# de comparaison (inliné) : woff2 + compare.js doivent voyager dans le wheel.
+"xerocr.reports" = ["_assets/*.woff2", "_assets/*.js"]
 # Table de tarifs (donnée datée) du calcul économique (couche 3).
 "xerocr.evaluation" = ["pricing.json"]
 # Prompts curés par période (donnée LLM/VLM) — doivent voyager dans le wheel.

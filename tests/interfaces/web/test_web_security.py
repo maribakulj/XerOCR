@@ -101,9 +101,19 @@ def test_headers_on_html_report(tmp_path: Path) -> None:
         completed_at=utcnow(),
     )
     dump_run_result(RunResult(manifest=manifest), tmp_path / "r.json")
-    resp = _client(tmp_path).get("/reports/r")
+    client = _client(tmp_path)
+    resp = client.get("/reports/r")
     assert resp.status_code == 200
-    assert "content-security-policy" in resp.headers  # durci aussi sur le rapport
+    csp = resp.headers["content-security-policy"]
+    # Réponse /reports/ : script-src autorise le hash du script de comparaison
+    # (client-side) — l'inline non hashé reste interdit (pas d'unsafe-inline).
+    from xerocr.reports.compare_widget import compare_script_hash
+
+    assert compare_script_hash() in csp
+    assert "'unsafe-inline'" not in csp.split("script-src")[1].split(";")[0]
+    # Une autre route (accueil) n'a PAS ce hash : la relaxe est ciblée /reports/.
+    home_csp = client.get("/").headers["content-security-policy"]
+    assert compare_script_hash() not in home_csp
 
 
 def test_rate_limit_returns_429(tmp_path: Path) -> None:

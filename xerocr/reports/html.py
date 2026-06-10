@@ -102,6 +102,22 @@ _CSS = (
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Widget « comparer un run » (client-side) — bouton + bandeau sticky des deltas.
+    ".compare-bar{display:flex;justify-content:flex-end;margin-top:2px;}"
+    ".compare-btn{font-family:var(--mono);font-size:12px;background:var(--ink);"
+    "color:var(--paper);border:none;border-radius:var(--r-pill);"
+    "padding:8px 16px;cursor:pointer;}"
+    ".compare-banner{position:fixed;left:22px;right:22px;bottom:14px;"
+    "background:var(--ink);color:var(--paper);border-radius:var(--r-md);"
+    "padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;"
+    "font-family:var(--mono);font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.25);"
+    "z-index:50;}"
+    ".compare-banner.empty{justify-content:center;color:var(--g-100);}"
+    ".compare-banner .cb-title{font-weight:600;letter-spacing:0.02em;}"
+    ".compare-banner .cb-row{display:inline-flex;gap:6px;align-items:baseline;}"
+    ".compare-banner .cb-row .cb-delta{font-variant-numeric:tabular-nums;}"
+    ".compare-banner .cb-row.worse .cb-delta{color:#E59A8A;}"
+    ".compare-banner .cb-row.better .cb-delta{color:#9FC3A0;}"
 )
 
 
@@ -110,9 +126,15 @@ def escape(text: str) -> str:
     return _html.escape(text, quote=True)
 
 
-def render_document(title: str, body: Html) -> str:
-    """Assemble un document HTML autonome, au design, et déterministe."""
+def render_document(title: str, body: Html, *, footer: Html | None = None) -> str:
+    """Assemble un document HTML autonome, au design, et déterministe.
+
+    ``footer`` (optionnel) : HTML inséré en fin de ``<body>``, après le contenu
+    principal — p. ex. le widget « comparer un run » (client-side). Absent → rien
+    n'est ajouté (le rapport reste identique au squelette, ex. la voie
+    ``compare`` server-side qui n'embarque pas le widget)."""
     safe_title = escape(title)
+    tail = f"{footer}" if footer is not None else ""
     return (
         "<!DOCTYPE html>\n"
         '<html lang="fr">\n'
@@ -130,6 +152,7 @@ def render_document(title: str, body: Html) -> str:
         '<main class="report-main"><section class="sec">\n'
         f"{body}"
         "</section></main>\n"
+        f"{tail}"
         "</body>\n"
         "</html>\n"
     )

@@ -7,6 +7,7 @@ sections. ``default_report_renderer`` fournit le socle (overview) du squelette.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.compare_widget import compare_widget
 from xerocr.reports.html import render_document
 from xerocr.reports.section import Html, Section, SectionContext
 
@@ -31,7 +32,10 @@ class ReportRenderer:
             html = section.render(result, ctx)
             if html is not None:
                 fragments.append(html)
-        return render_document(title, Html("".join(fragments)))
+        # Widget « comparer un run » (client-side, déterministe) en pied de rapport.
+        return render_document(
+            title, Html("".join(fragments)), footer=compare_widget(result)
+        )
 
 
 def default_report_renderer() -> ReportRenderer:
