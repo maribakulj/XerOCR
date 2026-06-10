@@ -86,13 +86,65 @@ readability, abbreviations/MUFI, confusion/char_scores, taxonomy cœur,
 error_absorption, inter_engine, line_metrics, robustness, hallucination,
 image_quality, fidélité textuelle, longitudinal, économie (déjà mesurée).
 
-> **Note de portage.** Plusieurs de ces familles « gardées » (searchability,
-> numerical_sequences, readability, abbreviations, robustness, inter_engine,
-> line_metrics, error_absorption) ne sont **pas encore** dans XerOCR — elles sont
-> **additives** sur l'enveloppe `RunResult` et s'ajoutent **à la demande d'un
-> consommateur** (garde-fou « pas de consommateur = supprimé »). Elles ne sont
-> donc pas des tranches obligatoires de la route 1.0 ; ce plan les laisse en
-> backlog additif explicite (§6 bis), priorisables une par une après 1.0.
+> **Note de portage — toutes les familles gardées sont OBLIGATOIRES avant 1.0.**
+> Plusieurs familles « gardées » (numerical_sequences, readability, abbreviations,
+> early_modern/roman, fidélité textuelle, robustness, image_quality,
+> error_absorption, inter_engine, line_metrics) ne sont **pas encore** dans
+> XerOCR. **Décision (cette session) : elles deviennent des tranches obligatoires
+> de la route 1.0** (T19→T23), pas un backlog post-1.0. Raison : le gel de
+> Picarones (§9) **ferme la fenêtre de portage** — ce qui n'est pas dans la 1.0
+> est perdu. Ce n'est **pas** une dérive « surface au cas où » car (a) chaque
+> famille est jugée utile/réparable sur pièces (§3 bis), (b) chacune reçoit un
+> **consommateur réel** (sa section de rapport) → garde-fou « pas de consommateur »
+> respecté, (c) chaque famille est construite **entièrement** (métrique + payload
+> + section + tests), jamais en stub → garde-fou #5 respecté. Les familles 🔶
+> sont **réparées** au portage (unification, recâblage), jamais copiées telles
+> quelles.
+
+---
+
+## 3 bis. Verdict métrique-par-métrique (analyse sur pièces)
+
+Synthèse des deux audits de qualité d'exécution de Picarones (lecture du code,
+tests, renderers, câblage). Légende : ✅ ABOUTIE-UTILE · 🔶 BONNE-IDÉE-MAL-FAITE
+(réparée au portage) · 🟡 GADGET (abandonnée). **Toute famille non 🟡 est une
+tranche obligatoire** (déjà livrée en XerOCR, ou T16/T19→T23).
+
+| Famille | Verdict | Sur pièces | Statut XerOCR / tranche |
+|---|---|---|---|
+| CER / WER / MER | ✅ | parité jiwer | **livré** (T2) |
+| diacritic_err, del_rate, ins_rate, mufi_err | ✅ | NFD align, MUFI PUA | **livré** (T7) |
+| confusion + char_scores | ✅ | Levenshtein minimal (fix F4) | **livré** (T11) |
+| taxonomy cœur (7-9 classes) | ✅ | classes à sens analytique | **livré** (T13) |
+| searchability | ✅ | Levenshtein≤2 (Elastic), 21 tests | **livré** (T11) |
+| hallucination | 🔶 | trigrammes ; faux positifs diacritiques/multilingue | **livré** (T11), **à durcir** |
+| economics | ✅ | jetons mesurés + temps réel | **livré** (T10), CO₂ exclu |
+| calibration (ECE/MCE) | ✅ | Guo et al., bins | **livré** (T12, `ConfidenceToken`) |
+| longitudinal | 🔶 | OLS OK ; « CUSUM » = max-diff naïf | **livré** (T7), **change-point à raffiner** (T23) |
+| **numerical_sequences** | ✅ | 5 catégories, regex conservatrices, recto/verso | **T19** |
+| **readability (Flesch delta)** | ✅ | formules publiées, révèle sur-normalisation LLM | **T19** |
+| **abbreviations** | ✅ | 2 scores diplo/modernisant, pas de GT spéciale | **T20** |
+| **early_modern + roman + modern_archives** | 🔶 | fragmenté, roman couplé à 2 entrées | **T20** (unifié) |
+| **rare_tokens + lexical_mod + over_norm + equivalence** | 🔶 | câblage fragmenté | **T21** (unifié « fidélité textuelle ») |
+| **robustness** | ✅ | vraies dégradations PIL + re-OCR | **T22** |
+| **image_quality** | 🔶 | mesure réelle OK, constantes crues | **T22** (mesure ; `image_predictive` abandonné) |
+| **error_absorption** | ✅ | multiset correct, méthodo honnête | **T23** |
+| **inter_engine** | ✅ | Jensen-Shannon + oracle gap | **T23** |
+| **line_metrics** | ✅ | percentiles/Gini ; alignement `\n` à fiabiliser | **T23** |
+| **ner** | ⚠️→✅ | IoU solide mais découplée (silence si spaCy absent) | **T16** (extra `[ner]`, recâblée, anti-silence) |
+| taxonomy intra_doc / cooccurrence / comparison | 🟡 | re-projections sans info nouvelle | **ABANDON #5** |
+| pricing CO₂ | 🟡 | table statique + intensité fictive | **ABANDON #1** |
+| image_predictive | 🟡 | stub, pas d'implémentation | **ABANDON #2** |
+| calibration au-delà existant | 🟡 | un seul moteur fournit des confiances | **ABANDON #3** |
+| levers (registre 561 LOC) | 🔶→🟡 | dépendances silencieuses | **ABANDON #4** (registre ; obs. saines → `synthesis`) |
+| reliability (κ/α) | 🔶→🟡 | plafonné 2 annotateurs, jamais branché | **ABANDON #6** |
+| module_policy | 🟡 | zéro module tiers, inerte | **ABANDON #7** |
+| WIL | 🟡 | quasi-monotone du WER | **ABANDON #8** |
+
+> Chaque tranche T19→T23 livre la famille **entièrement** : métrique +
+> payload additif `RunResult` + **section de rapport** (le consommateur) +
+> tests à **valeurs calculées main / référence externe** (jamais Picarones comme
+> oracle) + câblage profil. Les 🔶 sont **réparées**, pas copiées.
 
 ---
 
@@ -203,6 +255,56 @@ Dépendances · Risques · DoD**.
 | **Objectif** | Confirmer et **documenter** que `zero_shot` (image → VLM direct, sans OCR amont) est fonctionnel de bout en bout sur les 3 VLM. |
 | **Fichiers touchés** | aucun code attendu (déjà livré) · `tests/pipeline/` (assert spec zero_shot 1 étage IMAGE→RAW_TEXT) · `README`/docs (mode documenté) |
 | **DoD** | Test bout-en-bout zero_shot sur fixture image + un VLM (cassette). |
+
+#### T19 — Données structurées & lisibilité
+
+| | |
+|---|---|
+| **Objectif** | `numerical_sequences` (fidélité dates/foliation/devises/romains/régnal) + `readability` (Flesch delta GT↔hyp, révèle la sur-normalisation LLM). |
+| **Traverse** | 3 (2 métriques + payload additif) · 7 (section) |
+| **Fichiers touchés** | `xerocr/evaluation/metrics/numerical_sequences.py` (**nouveau**) · `xerocr/evaluation/metrics/readability.py` (**nouveau**) · `xerocr/evaluation/analysis.py` (+payloads additifs) · `xerocr/evaluation/runner.py` (câblage profil) · `xerocr/reports/sections/structured_data.py` (**nouveau**, section commune) · `tests/evaluation/test_numerical_sequences.py` + `test_readability.py` (valeurs main : années 1000-2099, foliation r/v, Flesch publié) |
+| **Risques** | Flesch : syllabation heuristique → **borner l'usage au delta relatif** (documenté), jamais publier un absolu. Langue : coefficients FR/EN explicites. |
+| **DoD** | 5 catégories numériques testées ; delta Flesch=0 sur GT=hyp, positif sur LLM lissé ; section rendue ; `make ci` vert. |
+
+#### T20 — Philologie étendue (abréviations + typographie ancienne)
+
+| | |
+|---|---|
+| **Objectif** | `abbreviations` (scores diplomatique/modernisant) + **unification** `early_modern_typography` + `roman_numerals` + `modern_archives` sous un namespace propre (corrige la fragmentation Picarones : roman comptée deux fois). |
+| **Traverse** | 3 (métriques + payload) · 7 (section, étend la vue philologie de `mufi_err`) |
+| **Fichiers touchés** | `xerocr/evaluation/metrics/abbreviations.py` (**nouveau**) · `xerocr/evaluation/metrics/early_modern.py` (**nouveau** — roman + typo ancienne + archives, **un seul point d'entrée**) · `xerocr/evaluation/metrics/philology.py` (étendre la section) · `analysis.py` (payload) · `runner.py` (câblage) · `xerocr/reports/sections/` (philologie étendue) · `tests/evaluation/test_abbreviations.py` + `test_early_modern.py` (Capelli, romains IV/IX, edge cases) |
+| **Risques** | **Réparation 🔶** : ne pas re-coupler roman à `numerical_sequences` ; un seul détecteur roman partagé. |
+| **DoD** | 2 scores abréviation distinguent diplo/modernisant/cassé ; roman compté **une fois** ; namespace unifié ; `make ci` vert. |
+
+#### T21 — Fidélité textuelle (modernisation / normalisation)
+
+| | |
+|---|---|
+| **Objectif** | Unifier `rare_tokens` + `lexical_modernization` + `over_normalization` + `equivalence_profile` en **une famille « fidélité textuelle »** au câblage cohérent (corrige la fragmentation : rare_tokens hors hook, autres implicites). |
+| **Traverse** | 3 (famille de métriques + payload) · 7 (section) |
+| **Fichiers touchés** | `xerocr/evaluation/metrics/textual_fidelity.py` (**nouveau** — les 4 sous-mesures, câblage homogène) · `analysis.py` (payload) · `runner.py` (un seul point de câblage) · `xerocr/reports/sections/textual_fidelity.py` (**nouveau**) · `tests/evaluation/test_textual_fidelity.py` (hapax/dis-legomena, ſ→s, u↔v, over-norm Levenshtein minimal) |
+| **Risques** | **Réparation 🔶** : décider le seuil rare (≤2) explicitement ; over_normalization sur Levenshtein minimal (pas positionnel) ; pas de silence si profil d'équivalence absent. |
+| **DoD** | 4 sous-mesures sous un câblage unique ; tests valeurs main ; section rendue ; `make ci` vert. |
+
+#### T22 — Robustesse & qualité image
+
+| | |
+|---|---|
+| **Objectif** | `robustness` (dégradations PIL réelles bruit/flou/rotation/résolution/binarisation + **re-OCR réel**) + `image_quality` (netteté/bruit/contraste **mesurés**). **`image_predictive` reste abandonné** (§3 #2). |
+| **Traverse** | 3 (métriques + payload) · 5 (utilise les adapters OCR pour re-run) · 7 (section) |
+| **Fichiers touchés** | `xerocr/evaluation/robustness.py` (**nouveau** — dégradations PIL + projection) · `xerocr/evaluation/metrics/image_quality.py` (**nouveau** — variance laplacienne, MAD, Michelson) · `analysis.py` (payload) · `runner.py` ou CLI `robustness` (câblage du re-run) · `xerocr/reports/sections/robustness.py` (**nouveau**) · `tests/evaluation/test_robustness.py` + `test_image_quality.py` (dégradation déterministe, scores bornés) |
+| **Risques** | Re-OCR = coûteux → `max_docs` borné + opt-in (comme Picarones). Constantes qualité empiriques → **validées sur fixtures patrimoniales**, documentées. Déterminisme : seed PIL fixe. |
+| **DoD** | Dégradation PIL déterministe + re-OCR produit une courbe ; scores qualité bornés [0,1] ; section rendue ; `make ci` vert. |
+
+#### T23 — Analyse inter-moteurs étendue & lignes
+
+| | |
+|---|---|
+| **Objectif** | `inter_engine` (divergence Jensen-Shannon + oracle gap de complémentarité) + `error_absorption` (gain net OCR→LLM, multiset aligné) + `line_metrics` (percentiles/Gini par ligne) + **raffinement change-point** du longitudinal (remplacer le max-diff naïf par un vrai détecteur, ex. Pettitt/CUSUM). |
+| **Traverse** | 3 (métriques + payload + raffinement longitudinal) · 7 (sections) |
+| **Fichiers touchés** | `xerocr/evaluation/metrics/inter_engine.py` (**nouveau**) · `xerocr/evaluation/metrics/error_absorption.py` (**nouveau**) · `xerocr/evaluation/metrics/line_metrics.py` (**nouveau**) · `xerocr/evaluation/longitudinal.py` ou équivalent T7 (change-point raffiné) · `analysis.py` (payloads) · `runner.py` (câblage) · `xerocr/reports/sections/{crosses,lines}.py` (étendre/nouveau) · `tests/evaluation/` (JS divergence bornée [0,1], absorption multiset, percentiles, change-point sur série synthétique) |
+| **Risques** | **Réparation 🔶** : alignement ligne-à-ligne `\n` fragile → fiabiliser (apparier par index + garde sur décalage) ; oracle gap = borne optimiste **documentée**. Change-point : tester sur série à rupture connue. |
+| **DoD** | JS divergence ∈ [0,1] ; oracle gap calculé ; absorption multiset correcte ; change-point détecté sur fixture à rupture ; sections rendues ; `make ci` vert. |
 
 ---
 
@@ -352,13 +454,25 @@ silencieux) · token API jamais loggé.
 
 ---
 
-## 6 bis. Backlog additif (post-1.0, à la demande d'un consommateur)
+## 6 bis. Familles métriques restantes = tranches OBLIGATOIRES
 
-Familles « gardées » non bloquantes pour 1.0, ajoutables une par une **quand un
-consommateur réel les réclame** (jamais « au cas où ») : searchability,
-numerical_sequences, readability, abbreviations/MUFI (au-delà de `mufi_err`),
-error_absorption, inter_engine (divergence + oracle gap), line_metrics
-(percentiles/Gini), robustness (dégradations PIL + re-run), image_quality.
+**Aucun backlog post-1.0.** Le gel de Picarones (§9) ferme la fenêtre de portage :
+toute famille « gardée » non livrée dans la 1.0 est **perdue**. Les familles
+gardées encore absentes de XerOCR sont donc des **tranches obligatoires** T19→T23
+(plan détaillé en Phase B), chacune livrée entièrement (métrique + payload +
+section + tests) :
+
+| Tranche | Familles | Note |
+|---|---|---|
+| **T16** | NER | extra `[ner]`, recâblée anti-silence |
+| **T19** | numerical_sequences, readability (Flesch) | ✅ copie fidèle |
+| **T20** | abbreviations, early_modern + roman + modern_archives | 🔶 unifié au portage |
+| **T21** | rare_tokens + lexical_mod + over_norm + equivalence | 🔶 famille « fidélité textuelle » unifiée |
+| **T22** | robustness, image_quality | ✅/🔶 ; `image_predictive` abandonné |
+| **T23** | inter_engine, error_absorption, line_metrics, change-point longitudinal | ✅/🔶 ; alignement ligne fiabilisé |
+
+Seuls restent abandonnés les **8 (§3)** — jugés sans valeur même réparés, donc
+aucune perte au gel.
 
 ---
 
@@ -368,7 +482,7 @@ error_absorption, inter_engine (divergence + oracle gap), line_metrics
 |---|---|
 | **1. Rupture nette, zéro shim** | Aucun pont vers un format Picarones ; `RunResult` unique. |
 | **2. Budgets fichier** | Chaque nouveau fichier (ner, google_vision, azure_di, sections) sous 600 LOC ou entrée justifiée `test_file_budgets`. |
-| **3. Pas de consommateur = supprimé** | Les 8 abandons (§3) ; familles « gardées » mises en **backlog additif** (§6 bis), pas implémentées d'avance. Pero/Calamari hors-dépôt tant que pas réclamés in-tree. |
+| **3. Pas de consommateur = supprimé** | Les 8 abandons (§3) sont retirés ; les familles **gardées** ne sont **pas** spéculatives — chacune reçoit son consommateur (sa section de rapport) et est livrée entièrement (T19→T23). Le gel de Picarones rend le portage-avant-1.0 nécessaire, pas « au cas où ». Pero/Calamari hors-dépôt (plugins de référence, §4). |
 | **4. Tests d'archi jour 1** | Inchangés et bloquants ; toute tranche passe `layer_dependencies`, `no_broad_except`, `file_budgets`, `status_freshness`, etc. |
 | **5. Une feature entière, dans un budget, en élaguant** | Google/Azure = 1 adapter + 1 factory + 1 test chacun ; NER = métrique + extracteur + section + extra, rien de plus. |
 | **Anti-silence** | NER et coûts : message explicite si dépendance/tarif manquant, jamais de `[]`/`0` muet. |
@@ -383,6 +497,7 @@ error_absorption, inter_engine (divergence + oracle gap), line_metrics
 - [ ] **NER** livrée en extra `[ner]`, message explicite sans l'extra (T16).
 - [ ] Économie : tous adapters cloud remontent les jetons (T16-bis).
 - [ ] **Parité moteurs** : Google+Azure first-party + Pero/Calamari plugins implémentés (T17, §4 acté) ; VLM zero_shot vérifié (T18).
+- [ ] **Toutes les familles métriques gardées portées** (T19→T23) : numerical_sequences, readability, abbreviations, early_modern unifié, fidélité textuelle, robustness, image_quality, error_absorption, inter_engine, line_metrics, change-point longitudinal — chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
 - [ ] **Parité UX** : compare client-side, galerie lazy, badges A→E, i18n nombres, config, preview normalisation (S10–S13).
 - [ ] `make ci` vert (3 OS × 3.11/3.12), couverture ≥ 85 %, tous garde-fous d'archi verts.
 - [ ] Roll-up `MIGRATION_PLAN.md` réconcilié au même commit que chaque livraison.
@@ -401,12 +516,15 @@ error_absorption, inter_engine (divergence + oracle gap), line_metrics
 
 ```
 A : S8 (Space Tesseract) → S9 (Space segmenteur, conditionnel)
-B : T16 (NER) + T16-bis (jetons) → [arbitrage §4] → T17 (parité moteurs) → T18 (zero_shot)
+B : T16 (NER) + T16-bis (jetons) → T17 (parité moteurs, §4 acté) → T18 (zero_shot)
+    → T19 (num/lisibilité) → T20 (philologie) → T21 (fidélité textuelle)
+    → T22 (robustesse/qualité image) → T23 (inter-moteurs/lignes)
 C : S10 (rapport interactif) → S11 (galerie) → S12 (champs formulaire) → S13 (obs/a11y)
 D : R1.0 (release 1.0.0) → GEL (gel Picarones)
 ```
 
-**Arbitrage §4 (parité moteurs) : tranché ✅** — Google+Azure first-party,
-Pero+Calamari plugins hors-dépôt. Aucune décision produit n'est plus en attente :
-toutes les tranches sont exécutables. **Point de départ : Phase A / `S8`** (le
-manque n°1 — OCR réel gratuit sur le Space).
+**Tout est tranché, rien en attente.** Arbitrage §4 acté (Google+Azure
+first-party, Pero+Calamari plugins). **Toutes les familles métriques gardées sont
+des tranches obligatoires** (T19→T23) : la 1.0 est feature-complète vis-à-vis du
+périmètre gardé, le gel de Picarones ne perd rien. **Point de départ : Phase A /
+`S8`** (le manque n°1 — OCR réel gratuit sur le Space).
