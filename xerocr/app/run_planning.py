@@ -205,6 +205,12 @@ def _pipeline_for_competitor(
         ocr_kwargs: dict[str, dict[str, str | int | float | bool]] = {
             name: {"label": suffix, "lang": comp.lang}
         }
+        # En OCR seul, ``model`` est le **modèle du moteur** (chemin .mlmodel
+        # kraken, config PERO, checkpoint Calamari, nom Mistral OCR) — requis par
+        # ces moteurs. Tesseract/Google/Azure ignorent ce kwarg. (En chaîne,
+        # ``model`` désigne le LLM aval, cf. ``_llm_kwargs``.)
+        if comp.model:
+            ocr_kwargs[name]["model"] = comp.model
         return pipeline, ocr_kwargs
 
     if comp.mode == "zero_shot":

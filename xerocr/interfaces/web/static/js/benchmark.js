@@ -169,7 +169,9 @@
       var promptName =
         !prompt && draftPromptCurated ? draftPromptCurated.value : "";
       if (activeMode === "ocr_only") {
-        return { engine: draftOcr.value, mode: "ocr_only" };
+        // En OCR seul, `model` = le modèle du moteur (kraken/pero/calamari : path ;
+        // mistral_ocr : nom). Tesseract/Google/Azure l'ignorent.
+        return { engine: draftOcr.value, mode: "ocr_only", model: model };
       }
       if (activeMode === "text_only") {
         return {

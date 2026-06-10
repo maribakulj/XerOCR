@@ -52,6 +52,14 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_model_field_shown_in_ocr_only_mode(tmp_path: Path) -> None:
+    # 3c : le champ « Modèle » est désormais visible aussi en OCR seul (pour
+    # kraken/pero/calamari/mistral_ocr qui exigent un modèle) — gap 2c refermé.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'data-show="ocr_only text_only text_and_image zero_shot"' in body
+    assert 'id="draft-model"' in body
+
+
 def test_benchmark_exposes_prompt_inputs(tmp_path: Path) -> None:
     # Prompt libre (textarea) ET prompts curés (select) — l'utilisateur choisit.
     body = _client(tmp_path).get("/benchmark").text

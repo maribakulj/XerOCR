@@ -87,6 +87,25 @@ def test_zero_shot_pipeline_shape(tmp_path: Path) -> None:
     assert step.output_types == (ArtifactType.RAW_TEXT,)
 
 
+def test_ocr_only_model_plumbed_to_engine(tmp_path: Path) -> None:
+    # Referme le gap 2c : un moteur OCR à modèle (kraken) reçoit son ``model``
+    # depuis le formulaire OCR-seul → il se construit (au lieu d'échouer).
+    comp = Competitor(engine="kraken", model="med.mlmodel")
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    kwargs = spec.adapter_kwargs["kraken:c0"]
+    assert kwargs["model"] == "med.mlmodel"
+    module = _registry().build("kraken:c0", kwargs)
+    assert module.name == "kraken:c0"
+
+
+def test_ocr_only_without_model_omits_it(tmp_path: Path) -> None:
+    # Sans modèle saisi, le kwarg n'est pas posé (tesseract n'en veut pas).
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert "model" not in spec.adapter_kwargs["tesseract:c0"]
+
+
 def test_curated_prompt_name_resolves_to_text(tmp_path: Path) -> None:
     comp = Competitor(
         engine="openai", mode="zero_shot", prompt_name="zero_shot_medieval_french"
