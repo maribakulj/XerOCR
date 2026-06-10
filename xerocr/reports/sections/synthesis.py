@@ -8,10 +8,18 @@ de ``RunResult.cross_engine``). Aucun LLM, aucune prose générée : les noms so
 valeurs (minimum, soustraction, p-value) — invariant anti-hallucination (§12),
 moteur narratif supprimé (§6). Gatée sur ``cer`` (``requires``) : ``None`` si
 aucune vue ne porte de CER.
+
+**Règle anti-contradiction** (correction multi-comparaisons) : si le payload
+``inference`` (Nemenyi, ``RunResult.analyses``) place le meilleur pipeline et
+son suivant dans le **même groupe d'indiscernables**, le verdict devient
+« égalité statistique » — le post-hoc **corrigé** l'emporte sur la p-value
+brute Wilcoxon/Friedman, qui sur-affirme à comparaisons multiples. À l'inverse,
+deux groupes distincts confirment l'écart.
 """
 
 from __future__ import annotations
 
+from xerocr.evaluation.analysis import InferencePayload
 from xerocr.evaluation.result import MetricScore, RunResult
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
@@ -61,6 +69,48 @@ def _verdict(p_value: float | None) -> tuple[str, str]:
     return f"non sig. (p={p_value:.4f})", ""
 
 
+def _inference_for(result: RunResult, view: str) -> InferencePayload | None:
+    """Payload ``inference`` (vue × CER), si le runner l'a produit."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if (
+            analysis.view == view
+            and isinstance(payload, InferencePayload)
+            and payload.metric == _PRIMARY_METRIC
+        ):
+            return payload
+    return None
+
+
+def _same_tied_group(payload: InferencePayload, a: str, b: str) -> bool | None:
+    """``True``/``False`` selon Nemenyi ; ``None`` si pas de post-hoc (k=2)."""
+    if payload.critical_distance is None:
+        return None
+    for group in payload.tied_groups:
+        if a in group and b in group:
+            return True
+    return False
+
+
+def _corrected_verdict(
+    result: RunResult, view: str, best: str, runner: str
+) -> tuple[str, str]:
+    """Verdict : Nemenyi corrigé s'il existe, sinon p-value brute.
+
+    Anti-contradiction : un « significatif » Wilcoxon/Friedman non corrigé ne
+    survit pas à un groupe d'ex-aequo Nemenyi sur la paire de tête.
+    """
+    payload = _inference_for(result, view)
+    if payload is not None and payload.critical_distance is not None:
+        if _same_tied_group(payload, best, runner):
+            return "égalité statistique (Nemenyi)", ""
+        return (
+            f"écart confirmé (Nemenyi, CD={payload.critical_distance:.3f})",
+            " sig",
+        )
+    return _verdict(_significance_p(result, view))
+
+
 class SynthesisSection:
     """Verdict factuel : meilleur pipeline par vue (CER), écart, significativité."""
 
@@ -78,7 +128,7 @@ class SynthesisSection:
                 runner_cer, runner = ranked[1]
                 delta = f"{runner_cer - best_cer:.4f}"
                 runner_label = escape(runner)
-                label, css = _verdict(_significance_p(result, view))
+                label, css = _corrected_verdict(result, view, best, runner)
             else:
                 delta, runner_label, label, css = "—", "—", "—", ""
             rows.append(

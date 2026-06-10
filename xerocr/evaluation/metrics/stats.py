@@ -11,13 +11,15 @@ from __future__ import annotations
 from scipy import stats  # type: ignore[import-untyped]
 
 from xerocr.evaluation.context import CrossEngineContext
+from xerocr.evaluation.inference import MIN_SUPPORT
 from xerocr.evaluation.metric import CrossEngineMetric, cross_engine_metric
 
 #: Plancher de **puissance** (pas seulement de calcul) : sous ~6 paires, un
 #: Wilcoxon bilatéral ne peut **pas** atteindre p < 0,05 (n=6 → p_min exact ≈
 #: 0,031), et un Friedman à 2-3 blocs est dégénéré. Renvoyer une p-value sous ce
 #: seuil serait un artefact de petit n présenté comme un verdict → on rend ``None``.
-_MIN_SUPPORT = 6
+#: Source unique partagée avec l'inférentiel corrigé (``evaluation.inference``).
+_MIN_SUPPORT = MIN_SUPPORT
 
 
 @cross_engine_metric(

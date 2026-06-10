@@ -260,6 +260,8 @@ xerocr/reports/
 
 ## DoD vivante (couche 7) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
+> **T9 (D-067)** : `cross_engine` rend les payloads `inference` (rangs moyens, CD Nemenyi, groupes indiscernables, IC bootstrap) en **lecture seule** (aucun recalcul — anti data-layer) ; `synthesis` applique la règle anti-contradiction (groupe Nemenyi sur la paire de tête → « égalité statistique » ; sinon « écart confirmé » ; sans post-hoc → p-value brute). Preuves : `tests/reports/test_cross_engine_section.py` · `test_synthesis_section.py`.
+
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
 > Maj dans le **même commit** que le code. **Statut : ✅ T2** — cadre `Section` + assembleur autonome + sections **overview** & **cross_engine** + rapport de **comparaison** (deltas 2 runs) verts. **+ T7 `synthesis`** : section verdict factuel par vue (meilleur pipeline CER · Δ au suivant · significativité `cross_engine`), gatée `requires=("cer",)`, déterministe — **toutes les vues S4 au design désormais livrées**. Différé : importeurs cœur · longitudinal (T7), interactivité client-side.
 

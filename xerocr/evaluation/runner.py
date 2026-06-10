@@ -22,10 +22,12 @@ from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation
 from xerocr.evaluation.result import (
+    Analysis,
     DocumentUsage,
     MetricScore,
     PipelineResult,
@@ -77,6 +79,7 @@ def evaluate_run(
     pipelines: list[PipelineResult] = []
     documents: list[RunDocumentResult] = []
     cross_engine: list[MetricScore] = []
+    analyses: list[Analysis] = []
 
     for view in evaluation.views:
         series: _Series = {name: {} for name in view.metric_names}
@@ -109,6 +112,7 @@ def evaluate_run(
                 )
             )
         cross_engine.extend(_cross_engine_scores(view, series, registry))
+        analyses.extend(_inference_analyses(view, series))
 
     return RunResult(
         manifest=manifest,
@@ -116,7 +120,29 @@ def evaluate_run(
         documents=tuple(documents),
         cross_engine=tuple(cross_engine),
         usage=tuple(sorted(usage, key=lambda u: (u.pipeline, u.document_id))),
+        analyses=tuple(
+            sorted(analyses, key=lambda a: (a.view, a.payload.kind, a.payload.metric))
+        ),
     )
+
+
+def _inference_analyses(view: EvaluationView, series: _Series) -> list[Analysis]:
+    """Inférentiel corrigé par métrique de la vue (cf. ``evaluation.inference``).
+
+    Consomme les **mêmes séries alignées** que la passe inter-moteurs : même
+    index = même document, ``None`` = non applicable — un seul calcul des
+    scores, deux lectures (scalaire ``significance_p`` + payload structuré).
+    """
+    out: list[Analysis] = []
+    for metric_name in view.metric_names:
+        per_pipeline = {
+            pipeline: [score.value for score in scores]
+            for pipeline, scores in series[metric_name].items()
+        }
+        analysis = inference_analysis(view.name, metric_name, per_pipeline)
+        if analysis is not None:
+            out.append(analysis)
+    return out
 
 
 def _aggregate(name: str, scores: list[MetricScore]) -> MetricScore:
