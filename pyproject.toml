@@ -46,6 +46,8 @@ include = ["xerocr*"]
 # Le rapport autonome (couche 7) incorpore ses polices en data-URI : les woff2
 # doivent voyager dans le wheel pour exister après ``pip install``.
 "xerocr.reports" = ["_assets/*.woff2"]
+# Table de tarifs (donnée datée) du calcul économique (couche 3).
+"xerocr.evaluation" = ["pricing.json"]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"

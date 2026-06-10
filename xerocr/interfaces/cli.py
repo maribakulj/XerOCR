@@ -26,12 +26,20 @@ from xerocr.app.modules import (
     register_default_modules,
 )
 from xerocr.domain.errors import XerOCRError
+from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
 
 
 def demo_to_html() -> str:
-    """Exécute la démo et renvoie le rapport HTML (déterministe)."""
+    """Exécute la démo et renvoie le rapport HTML (déterministe).
+
+    La démo est la **vitrine du déterminisme** (golden octet-stable entre deux
+    exécutions) : on retire du ``RunResult`` les canaux **environnementaux**
+    avant rendu — ``usage`` (durées wall-clock) et l'analyse ``economics`` qui
+    en dérive varient d'un run à l'autre par nature (arbitrage D-068 ; un run
+    réel, lui, les rend : le rapport reste une fonction pure du ``RunResult``).
+    """
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
@@ -42,7 +50,17 @@ def demo_to_html() -> str:
             registry=registry,
             code_version=resolve_code_version(),
         )
-    return default_report_renderer().render(result, title="XerOCR — démonstration")
+    stable = result.model_copy(
+        update={
+            "usage": (),
+            "analyses": tuple(
+                analysis
+                for analysis in result.analyses
+                if not isinstance(analysis.payload, EconomicsPayload)
+            ),
+        }
+    )
+    return default_report_renderer().render(stable, title="XerOCR — démonstration")
 
 
 def _run_demo(output: str) -> int:

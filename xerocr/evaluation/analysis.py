@@ -9,12 +9,13 @@ consommateur (garde-fou « pas de consommateur = supprimé »).
 
 Première famille : ``inference`` — le verdict statistique corrigé
 multi-comparaisons (rangs moyens, distance critique de Nemenyi, groupes
-d'ex-aequo, IC bootstrap par pipeline).
+d'ex-aequo, IC bootstrap par pipeline). Deuxième famille : ``economics`` —
+coûts estimés, débit effectif, fronts de Pareto qualité × coût/durée.
 """
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -82,10 +83,75 @@ class InferencePayload(BaseModel):
     intervals: tuple[PipelineInterval, ...] = ()
 
 
+class PipelineEconomics(BaseModel):
+    """Ressources et coût estimé d'un pipeline sur le run (par vue : CER joint).
+
+    ``cost_eur`` est **indicatif** : temps machine (durée mesurée × taux
+    horaire) + jetons cloud au tarif de la table ; ``None`` si un étage cloud
+    a un modèle absent de la table (jamais un zéro silencieux — ``basis`` le
+    dit). Tous les nombres sont des fonctions auditables des mesures E1.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_documents: int = Field(ge=0)
+    duration_seconds: float | None = Field(default=None, ge=0)
+    tokens_in: int | None = Field(default=None, ge=0)
+    tokens_out: int | None = Field(default=None, ge=0)
+    cost_eur: float | None = Field(default=None, ge=0)
+    #: « machine » · « machine+jetons » · « tarif inconnu : <kind:model> ».
+    basis: str = Field(min_length=1, max_length=256)
+    cer: float | None = None
+    #: Erreurs estimées sur la vue : Σ (cer_doc × poids_doc) — auditable.
+    estimated_errors: float | None = Field(default=None, ge=0)
+    pages_per_hour: float | None = Field(default=None, ge=0)
+    #: Débit corrigé du temps de correction des erreurs résiduelles.
+    pages_per_hour_effective: float | None = Field(default=None, ge=0)
+
+
+class MarginalCost(BaseModel):
+    """Coût marginal d'un pipeline vs le moins cher : € par erreur évitée."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    baseline: str = Field(min_length=1, max_length=128)
+    cost_delta_eur: float
+    errors_avoided: float
+    #: ``None`` si le surcoût n'évite aucune erreur (dominé).
+    eur_per_avoided_error: float | None = Field(default=None, ge=0)
+
+
+class EconomicsPayload(BaseModel):
+    """Économie d'un run sous une vue : coûts, débits, fronts de Pareto.
+
+    La péremption de la table de tarifs est évaluée contre ``completed_at``
+    du manifeste (déterministe — pas d'horloge au rendu).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["economics"] = "economics"
+    #: Axe qualité des fronts de Pareto (la métrique phare de la vue).
+    metric: str = Field(min_length=1, max_length=128)
+    currency: str = Field(min_length=1, max_length=8)
+    hourly_rate_eur: float = Field(ge=0)
+    time_per_error_seconds: float = Field(ge=0)
+    pricing_valid_until: str = Field(min_length=1, max_length=32)
+    pricing_stale: bool
+    pipelines: tuple[PipelineEconomics, ...] = ()
+    #: Non-dominés sur (métrique, coût) puis (métrique, durée) — tri stable.
+    pareto_cost: tuple[str, ...] = ()
+    pareto_speed: tuple[str, ...] = ()
+    marginal: tuple[MarginalCost, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
-#: famille (``Union[InferencePayload, …]`` + ``Field(discriminator="kind")``
-#: dès le 2ᵉ membre).
-AnalysisPayload = InferencePayload
+#: famille, dans le même commit que le calcul et le consommateur.
+AnalysisPayload = Annotated[
+    InferencePayload | EconomicsPayload, Field(discriminator="kind")
+]
 
 
 class Analysis(BaseModel):
@@ -103,8 +169,11 @@ class Analysis(BaseModel):
 __all__ = [
     "Analysis",
     "AnalysisPayload",
+    "EconomicsPayload",
     "InferencePayload",
+    "MarginalCost",
     "PairwiseDifference",
+    "PipelineEconomics",
     "PipelineInterval",
     "PipelineRank",
 ]

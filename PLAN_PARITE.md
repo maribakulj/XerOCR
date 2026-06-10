@@ -183,9 +183,12 @@ déterminisme bit-à-bit du rapport ; cas dégénérés (<6 docs, 2 moteurs).
 
 ### T10 — Économie *(dép. : T8/E1, T9 pour Pareto-affichage)*
 
-- `data/pricing.yaml` (élagué aux moteurs existants + LLM/VLM ; `valid_until`
-  obligatoire → **warning automatique de péremption** dans le rapport — jamais
-  un chiffre silencieusement périmé).
+- table de tarifs **`pricing.json`** (JSON stdlib : `yaml` n'est pas dans la
+  whitelist archi de `evaluation/` — on n'élargit pas un garde-fou pour un
+  format ; élaguée aux moteurs existants + LLM ; `valid_until` obligatoire →
+  **warning automatique de péremption** dans le rapport, comparé à
+  `completed_at` du manifeste — déterministe, jamais un chiffre
+  silencieusement périmé).
 - Métriques : coût estimé/1000 pages (local : durée mesurée × taux horaire ;
   cloud : table + tokens mesurés), débit effectif (pages/h corrigé erreurs),
   coût marginal par erreur évitée. Scalaires → `MetricScore` ; front de
@@ -321,3 +324,14 @@ cette phase de parité :
 7. **Un abandon est écrit** : tout élément de la liste §2 « abandonnés »
    est inscrit au journal de décisions au merge de T8 — plus jamais de
    « statut ambigu ».
+8. **Ancrage des tests de port — Picarones n'est pas un oracle de justesse**
+   (D-068). Le test de parité prouve la *fidélité* du port, jamais la
+   *justesse* de l'algorithme. Deux régimes :
+   (a) **algorithme à référence externe** (Nemenyi/Demšar, bootstrap, ECE/MCE,
+   F1 NER) → parité avec la source *corrigée* (audits F6/F8/F14) **+**
+   assertions indépendantes contre la référence publiée ;
+   (b) **heuristique maison de Picarones** (hallucination, taxonomie,
+   difficulté, économie…) → la source est une *spécification de départ*,
+   relue critiquement avant port (droit de corriger/élaguer), et les valeurs
+   attendues des tests sont **dérivées à la main** sur micro-fixtures —
+   jamais générées en exécutant Picarones (sinon on grave ses bugs).

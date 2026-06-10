@@ -21,6 +21,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.context import CrossEngineContext, DocContext
+from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.projectors import get_projector
@@ -113,6 +114,12 @@ def evaluate_run(
             )
         cross_engine.extend(_cross_engine_scores(view, series, registry))
         analyses.extend(_inference_analyses(view, series))
+        if "cer" in view.metric_names:
+            economics = economics_analysis(
+                view.name, "cer", series["cer"], usage, manifest
+            )
+            if economics is not None:
+                analyses.append(economics)
 
     return RunResult(
         manifest=manifest,

@@ -288,6 +288,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 > **T8 (D-066)** : `RunResult` **v2** — `+ usage: tuple[DocumentUsage, ...]` (ressources par pipeline × document, triées, hors vues) ; `schema_version=2`, un JSON v1 sans `usage` se recharge. Le **contrat « analyses »** (canal unique typé pour le non-scalaire, 3 règles dures) est gravé dans la docstring de `result.py` ; le champ est **né en T9** avec `inference` (D-067). Preuves : `tests/evaluation/test_result.py::{test_usage_channel_round_trips,test_v1_payload_without_usage_still_loads}`.
 >
 > **T9 (D-067)** : `+ inference.py` (Nemenyi post-hoc + bootstrap percentile, stdlib pur, plancher partagé `MIN_SUPPORT`) `+ analysis.py` (canal E2 : `Analysis` + `InferencePayload`) ; le runner produit une analyse par (vue × métrique) applicable, sur les mêmes séries que `significance_p`. Parité numérique prouvée contre la source Picarones. Preuves : `tests/evaluation/test_inference.py` · `test_runner.py::test_inference_analyses_through_evaluate_run`.
+>
+> **T10 (D-068)** : `+ economics.py` + `pricing.json` (donnée datée packagée) — coût machine+jetons depuis les mesures E1, débit effectif, coût marginal, `pareto_front` ; payload `economics` = 2ᵉ membre de l'union `analyses` (discriminateur `kind` activé). Tests **dérivés à la main** (règle PLAN_PARITE §5.8b). Preuves : `tests/evaluation/test_economics.py`.
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*
