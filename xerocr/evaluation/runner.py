@@ -26,6 +26,7 @@ from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation
 from xerocr.evaluation.result import (
+    DocumentUsage,
     MetricScore,
     PipelineResult,
     RunDocumentResult,
@@ -53,7 +54,7 @@ _Series = dict[str, dict[str, list[MetricScore]]]
 
 #: Types **inter-changeables au niveau représentation** : tous chargés en ``str``.
 #: Un candidat ``CORRECTED_TEXT`` est donc noté par une métrique ``RAW_TEXT`` sans
-#: projection (les post-corrections LLM, comportement T3 préservé).
+#: projection (les post-corrections LLM passent telles quelles).
 _TEXT_LIKE = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
@@ -64,8 +65,14 @@ def evaluate_run(
     pipeline_outputs: PipelineOutputs,
     registry: MetricRegistry,
     manifest: RunManifest,
+    usage: tuple[DocumentUsage, ...] = (),
 ) -> RunResult:
-    """Calcule le ``RunResult`` depuis les sorties de pipelines et la GT."""
+    """Calcule le ``RunResult`` depuis les sorties de pipelines et la GT.
+
+    ``usage`` (ressources mesurées par l'orchestrateur, une entrée par
+    pipeline × document exécuté) est embarqué tel quel, **trié** (pipeline,
+    document_id) pour un ordre déterministe.
+    """
     pipeline_order = [spec.name for spec in manifest.pipeline_specs]
     pipelines: list[PipelineResult] = []
     documents: list[RunDocumentResult] = []
@@ -108,6 +115,7 @@ def evaluate_run(
         pipelines=tuple(pipelines),
         documents=tuple(documents),
         cross_engine=tuple(cross_engine),
+        usage=tuple(sorted(usage, key=lambda u: (u.pipeline, u.document_id))),
     )
 
 

@@ -2,7 +2,7 @@
 
 Couche 7 (reports) : transforme la géométrie neutre (domain) en SVG **autonome et
 déterministe** — boîtes de régions + labels, sur un fond de page (ou l'image
-source). Sert la visualisation de segmentation de la vitrine (S6) et reste
+source). Sert la visualisation de segmentation de la vitrine et reste
 réutilisable par le rapport. **Aucun JS, aucun état** : même layout → mêmes octets
 (invariant §12). On rend la **première page** (le squelette segmentation est
 mono-page) ; les régions imbriquées sont aplaties (boîtes dessinées à plat).

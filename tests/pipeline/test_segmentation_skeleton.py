@@ -107,18 +107,19 @@ def _run_skeleton(
     layout_out = PrecomputedLayoutSource().execute(
         {ArtifactType.IMAGE: image_art}, {}, context, control
     )
-    layout_art = layout_out[ArtifactType.LAYOUT]
+    layout_art = layout_out.artifacts[ArtifactType.LAYOUT]
     assert layout_art.uri is not None
     seg_layout = CanonicalLayout.model_validate_json(
         Path(layout_art.uri).read_bytes()
     )
-    return run_region_fanout(
+    filled, _usage = run_region_fanout(
         layout=seg_layout,
         page_image=image_art,
         recognizer=PrecomputedRegionRecognizer(source_label="eng"),
         context=context,
         control=control,
     )
+    return filled
 
 
 def _registry() -> MetricRegistry:

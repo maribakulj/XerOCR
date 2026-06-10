@@ -64,7 +64,7 @@ def test_assembles_alto_xml_artifact(tmp_path: Path) -> None:
         _context(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.ALTO_XML]
+    artifact = out.artifacts[ArtifactType.ALTO_XML]
     assert artifact.type is ArtifactType.ALTO_XML
     assert artifact.uri is not None and artifact.content_hash is not None
     assert Path(artifact.uri).read_bytes().lstrip().startswith(b"<")
@@ -79,7 +79,7 @@ def test_assembled_alto_reloads_as_layout_and_scores(tmp_path: Path) -> None:
         _context(tmp_path),
         RunControl(),
     )
-    alto_uri = out[ArtifactType.ALTO_XML].uri
+    alto_uri = out.artifacts[ArtifactType.ALTO_XML].uri
     assert alto_uri is not None
     # L'ALTO assemblé est rechargé COMME layout (sniff ALTO) et comparé à la GT.
     hyp_layout = load_representation(alto_uri, ArtifactType.LAYOUT)

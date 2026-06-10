@@ -77,7 +77,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_error_409": "Un moteur requis est indisponible.",
         "bench_error_403": "Action refusée dans ce mode.",
         "bench_error_fallback": "Erreur de lancement.",
-        # Import de corpus distant (S6)
+        # Import de corpus distant
         "imp_btn": "Importer",
         "imp_manifest": "URL du manifeste IIIF",
         "imp_ark": "ARK Gallica (ark:/12148/…)",
@@ -88,13 +88,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Couche de transcription",
         "imp_limit": "Limite (pages)",
         "imp_name": "Nom (optionnel)",
-        # Run de segmentation (S6/T2) — bouton sur le lanceur
+        # Run de segmentation — bouton sur le lanceur
         "seg_run_title": "Segmentation de la mise en page",
         "seg_run_btn": "Segmenter (PP-DocLayout)",
         "seg_run_hint": "détecte les régions du corpus sélectionné.",
         "seg_run_unavailable": "segmenteur indisponible",
         "seg_run_open": "Voir la segmentation",
-        # Segmentation (S6, squelette de visualisation)
+        # Segmentation (squelette de visualisation)
         "seg_eyebrow": "Vitrine · mise en page",
         "seg_desc": "Visualisation des régions d'une page segmentée "
         "(boîtes + étiquettes), rendue côté serveur.",
@@ -254,7 +254,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_error_409": "A required engine is unavailable.",
         "bench_error_403": "Action denied in this mode.",
         "bench_error_fallback": "Launch failed.",
-        # Remote corpus import (S6)
+        # Remote corpus import
         "imp_btn": "Import",
         "imp_manifest": "IIIF manifest URL",
         "imp_ark": "Gallica ARK (ark:/12148/…)",
@@ -265,13 +265,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Transcription layer",
         "imp_limit": "Limit (pages)",
         "imp_name": "Name (optional)",
-        # Segmentation run (S6/T2) — button on the launcher
+        # Segmentation run — button on the launcher
         "seg_run_title": "Page layout segmentation",
         "seg_run_btn": "Segment (PP-DocLayout)",
         "seg_run_hint": "detects regions of the selected corpus.",
         "seg_run_unavailable": "segmenter unavailable",
         "seg_run_open": "View the segmentation",
-        # Segmentation (S6, visualization skeleton)
+        # Segmentation (visualization skeleton)
         "seg_eyebrow": "Showcase · layout",
         "seg_desc": "Region visualization of a segmented page "
         "(boxes + labels), server-rendered.",

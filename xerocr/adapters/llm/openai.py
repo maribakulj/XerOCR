@@ -11,11 +11,13 @@ paresseusement dans ``_invoke_openai`` / ``_invoke_openai_vision`` (isolés →
 from __future__ import annotations
 
 from xerocr.adapters.llm._base import (
+    LLMCompletion,
     default_prompt_for_role,
     llm_input_types,
     llm_output_type,
     normalize_llm_content,
     run_llm_step,
+    usage_tokens,
     validate_llm_label,
     validate_role,
 )
@@ -25,7 +27,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.pipeline import PipelineMode
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "gpt-4o-mini"
@@ -34,7 +36,7 @@ _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_sho
 
 def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     model: str, messages: list[dict[str, object]], deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     """Appel ``chat.completions`` partagé (texte ou multimodal)."""
     import os
 
@@ -62,20 +64,27 @@ def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
         raise AdapterStepError(
             f"openai a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
+    usage = getattr(response, "usage", None)
+    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
+    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
     if not response.choices:
-        return ""
-    return normalize_llm_content(response.choices[0].message.content)
+        return LLMCompletion("", tokens_in, tokens_out)
+    return LLMCompletion(
+        normalize_llm_content(response.choices[0].message.content),
+        tokens_in,
+        tokens_out,
+    )
 
 
 def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     *, model: str, prompt: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     return _openai_client(model, [{"role": "user", "content": prompt}], deadline)
 
 
 def _invoke_openai_vision(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     *, model: str, prompt: str, media_type: str, image_b64: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     content = [
         {"type": "text", "text": prompt},
         {
@@ -126,13 +135,15 @@ class OpenAIAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
-        def text_invoke(prompt: str) -> str:
+    ) -> StepOutput:
+        def text_invoke(prompt: str) -> LLMCompletion:
             return _invoke_openai(
                 model=self._model, prompt=prompt, deadline=context.deadline
             )
 
-        def vision_invoke(prompt: str, media_type: str, image_b64: str) -> str:
+        def vision_invoke(
+            prompt: str, media_type: str, image_b64: str
+        ) -> LLMCompletion:
             return _invoke_openai_vision(
                 model=self._model,
                 prompt=prompt,

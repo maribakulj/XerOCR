@@ -19,8 +19,10 @@ from typing import NoReturn
 
 from xerocr.adapters.llm._base import (
     DEFAULT_CORRECTION_PROMPT,
+    LLMCompletion,
     normalize_llm_content,
     run_llm_step,
+    usage_tokens,
     validate_llm_label,
 )
 from xerocr.domain.artifacts import Artifact, ArtifactType
@@ -28,7 +30,7 @@ from xerocr.domain.deadline import Deadline
 from xerocr.domain.errors import AdapterStepError
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "llama3"
@@ -55,7 +57,7 @@ def _invoke_ollama(  # pragma: no cover -- réseau (serveur ollama ; cf. marqueu
     host: str,
     deadline: Deadline,
     control: RunControl,
-) -> str:
+) -> LLMCompletion:
     try:
         import httpx  # type: ignore[import-not-found]
     except ImportError as exc:
@@ -89,7 +91,13 @@ def _invoke_ollama(  # pragma: no cover -- réseau (serveur ollama ; cf. marqueu
         raise AdapterStepError(f"ollama a échoué ({model}) : {data['error']}")
     message = data.get("message") if isinstance(data, dict) else None
     content = message.get("content") if isinstance(message, dict) else None
-    return normalize_llm_content(content)
+    # /api/chat expose la consommation : prompt_eval_count / eval_count.
+    counts = data if isinstance(data, dict) else {}
+    return LLMCompletion(
+        normalize_llm_content(content),
+        usage_tokens(counts.get("prompt_eval_count")),
+        usage_tokens(counts.get("eval_count")),
+    )
 
 
 def list_installed_models(
@@ -161,8 +169,8 @@ class OllamaAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
-        def text_invoke(prompt: str) -> str:
+    ) -> StepOutput:
+        def text_invoke(prompt: str) -> LLMCompletion:
             return _invoke_ollama(
                 model=self._model,
                 prompt=prompt,

@@ -147,16 +147,18 @@ DoD couche) **dans le même commit**. Ordre = dépendances réelles.
 *Ne livre aucune feature visible ; livre la stabilité.*
 
 1. **Hygiène (issue de l'audit juin 2026)** :
-   - rate-limit sur `/api/engines` + `/api/corpus/import/*` (asymétrie connue, constat H couche 8) ;
-   - purge TTL des IP inactives du rate-limiter ;
-   - rafraîchir `NEXT_SESSION.md` (périmé à l'ère T1/TU2) + réserves DoD obsolètes
-     (`ProjectionSpec` « sans consommateur », `CanonicalLayout` « à matérialiser ») ;
+   - ~~rate-limit `/api/engines` + imports~~ et ~~purge des IP inactives~~ :
+     **faux positifs au build** (D-066) — le middleware est global et `_prune`
+     existe ; les constats venaient de l'analyse de *Picarones* (couche 8) ;
+   - rafraîchir `NEXT_SESSION.md` (périmé à l'ère T1/TU2) ;
      étendre `test_status_freshness` à `NEXT_SESSION.md` ;
    - purger les annotations de tranche des docstrings livrées (`Phase B`, `T2`…) — la règle existe, l'appliquer.
 2. **E1 ressources** : `ResourceUsage` + `StepOutput`, exécuteur chronomètre,
    adapters LLM/VLM remontent les tokens. Changement atomique, tous builders.
-3. **E2 analyses** : canal `RunResult.analyses` (tuple vide par défaut),
-   union discriminée vide à la naissance (le 1ᵉʳ payload arrive en T9).
+3. **E2 analyses** : **contrat gravé** (docstring `result.py` + règles §1/E2) ;
+   le **champ** `analyses` naît en T9 avec son 1ᵉʳ payload (`inference`) — une
+   union discriminée vide n'est pas implémentable, et un champ sans payload
+   serait une API sans consommateur (arbitrage D-066, rituel §4).
 4. `schema_version=2`, goldens refaits, journal de décisions mis à jour
    (abandons §2).
 

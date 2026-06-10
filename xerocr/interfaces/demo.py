@@ -1,7 +1,7 @@
 """Mini-corpus de démonstration **déterministe** (couche 8, partagé).
 
 Le même corpus pré-calculé sert la commande CLI ``demo`` **et** le lanceur web
-(walking skeleton de TU2) : un run réel, sans moteur externe (``precomputed``),
+(walking skeleton) : un run réel, sans moteur externe (``precomputed``),
 qui produit un ``RunResult`` reproductible. Extrait de ``cli.py`` pour éviter la
 duplication (DRY) quand le web a eu besoin du même corpus.
 """

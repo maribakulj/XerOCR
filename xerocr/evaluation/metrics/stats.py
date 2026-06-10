@@ -1,4 +1,4 @@
-"""Métriques inter-moteurs **statistiques** (scipy). T2 : significativité.
+"""Métriques inter-moteurs **statistiques** (scipy) : significativité.
 
 Significativité d'une différence entre pipelines sur une métrique par-document :
 **Wilcoxon** apparié (2 moteurs) ou **Friedman** (≥3), sur les **cas complets**

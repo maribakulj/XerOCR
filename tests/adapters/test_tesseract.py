@@ -73,7 +73,7 @@ def test_execute_writes_output(
         _ctx(tmp_path),
         RunControl(),
     )
-    artifact = out[ArtifactType.RAW_TEXT]
+    artifact = out.artifacts[ArtifactType.RAW_TEXT]
     assert artifact.type == ArtifactType.RAW_TEXT
     assert artifact.uri is not None
     assert Path(artifact.uri).read_text(encoding="utf-8") == "Texte reconnu"
@@ -129,4 +129,4 @@ def test_live_real_tesseract(tmp_path: Path) -> None:
     out = adapter.execute(
         {ArtifactType.IMAGE: _image(image_path)}, {}, _ctx(tmp_path), RunControl()
     )
-    assert out[ArtifactType.RAW_TEXT].uri is not None
+    assert out.artifacts[ArtifactType.RAW_TEXT].uri is not None

@@ -67,7 +67,7 @@ _CSS = (
     "tr:last-child td{border-bottom:none;}"
     "td.num{text-align:right;font-family:var(--mono);"
     "font-variant-numeric:tabular-nums;color:var(--ink);}"
-    # S4.b.1b — readouts (portée du corpus) + tables data-bars
+    # Readouts (portée du corpus) + tables data-bars
     ".readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));"
     "gap:10px;margin:14px 0 6px;}"
     ".readout{background:var(--surface);border-radius:var(--r-md);padding:14px 16px;"

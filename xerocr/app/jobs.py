@@ -1,6 +1,6 @@
 """``JobRunner`` — exécute un run **en arrière-plan**, annulable (couche 6).
 
-Le walking skeleton du lanceur (TU2.a) : on lance ``orchestrator.run`` dans un
+Le lanceur de fond : on lance ``orchestrator.run`` dans un
 thread *daemon*, on suit son état dans le ``JobStore`` (couche 5), et on câble
 l'**annulation coopérative** via ``RunControl`` (couche 4) — un ``cancel`` HTTP
 déclenche le signal que l'exécuteur sonde entre deux étapes.
@@ -10,7 +10,7 @@ au job**, vivant le temps du run puis nettoyé : le run lit ses fichiers avant l
 fin. Le ``RunResult`` est écrit en JSON dans ``reports_dir`` → il apparaît
 aussitôt dans la vitrine read-only existante (preuve de bout en bout).
 
-SSE/progression fine et upload de corpus = sous-tranches suivantes (TU2.b/c).
+La progression fine est diffusée via le journal du ``JobStore`` (SSE côté web).
 """
 
 from __future__ import annotations
@@ -63,13 +63,13 @@ class JobRunner:
         self._registry = registry
         self._reports_dir = reports_dir
         self._code_version = code_version
-        #: Persistance (S3) : pousse le RunResult vers un dépôt distant. Inactif
+        #: Persistance : pousse le RunResult vers un dépôt distant. Inactif
         #: par défaut (``NoopPublisher``) → aucun effet réseau sans secret.
         self._publisher = publisher if publisher is not None else NoopPublisher()
-        #: Historique longitudinal (S6) : enregistre les agrégats de chaque run
+        #: Historique longitudinal : enregistre les agrégats de chaque run
         #: terminé. ``None`` → pas de suivi (rétro-compatible).
         self._history = history_store
-        #: Segmentation (S6) : persiste les ``LAYOUT`` produits pour /segmentation.
+        #: Segmentation : persiste les ``LAYOUT`` produits pour /segmentation.
         #: ``None`` → pas de persistance de mise en page (rétro-compatible).
         self._segmentation = segmentation_store
         self._controls: dict[str, RunControl] = {}

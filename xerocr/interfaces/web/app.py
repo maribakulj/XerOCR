@@ -82,7 +82,7 @@ def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
 def _resolve_uploads_dir(uploads_dir: Path | str | None) -> Path:
     """Dossier des corpus uploadés : argument explicite > dossier temporaire neuf.
 
-    Éphémère par défaut (entrées de travail ; la persistance des résultats = TU3).
+    Éphémère par défaut (entrées de travail ; les résultats sont publiés à part).
     """
     if uploads_dir is not None:
         return Path(uploads_dir)
@@ -162,10 +162,10 @@ def create_app(
     # Découverte de modules tiers : DÉSACTIVÉE en mode public (fail-closed —
     # pas de chargement de code arbitraire in-process sur un serveur exposé).
     discover_plugins(registry, enabled=not is_public)
-    # Historique longitudinal (S6) : un store SQLite par application ; le runner
+    # Historique longitudinal : un store SQLite par application ; le runner
     # y enregistre chaque run terminé, le routeur Historique le lit.
     history_store = HistoryStore(runtime_dir / "history.db")
-    # Segmentation (S6) : un store disque par application + une graine de **démo**
+    # Segmentation : un store disque par application + une graine de **démo**
     # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
     # runs réels ; ``/segmentation`` affiche le plus récent (run réel > démo). Créé
     # **avant** le runner pour le lui passer (même instance lue par /segmentation).
@@ -178,7 +178,7 @@ def create_app(
         registry=registry,
         reports_dir=runtime_dir,
         code_version=resolve_code_version(),
-        # Persistance (S3) : actif uniquement si dépôt + jeton sont en secrets ;
+        # Persistance : actif uniquement si dépôt + jeton sont en secrets ;
         # sinon NoopPublisher → la vitrine read-only ne fait aucune sortie réseau.
         publisher=resolve_publisher(),
         history_store=history_store,

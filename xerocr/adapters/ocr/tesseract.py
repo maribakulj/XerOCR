@@ -8,7 +8,7 @@ la lib ni le binaire — seule l'exécution les exige.
 
 Sécurité : ``lang`` est validé (anti-injection ligne de commande) ; ``timeout``
 est borné par la ``Deadline`` (un sous-processus figé ne doit pas geler le run).
-Confidences et ALTO natif sont **différés** (pas de consommateur en T2).
+Confidences et ALTO natif sont **différés** (pas encore de consommateur).
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_TIMEOUT = 120.0
@@ -105,7 +105,7 @@ class TesseractAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         image = inputs.get(ArtifactType.IMAGE)
         if image is None or image.uri is None:
@@ -128,15 +128,17 @@ class TesseractAdapter:
             context.workspace_uri, context.document_id, self._label, "txt"
         )
         output_path.write_text(text, encoding="utf-8")
-        return {
-            ArtifactType.RAW_TEXT: Artifact(
-                id=f"{context.document_id}:{self.name}:raw_text",
-                document_id=context.document_id,
-                type=ArtifactType.RAW_TEXT,
-                uri=str(output_path),
-                content_hash=compute_content_hash(text.encode("utf-8")),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri=str(output_path),
+                    content_hash=compute_content_hash(text.encode("utf-8")),
+                )
+            }
+        )
 
 
 __all__ = ["TesseractAdapter"]

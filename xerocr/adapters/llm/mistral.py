@@ -10,11 +10,13 @@ corrigé), ``zero_shot`` (Pixtral : image → texte). Clé ``MISTRAL_API_KEY`` ;
 from __future__ import annotations
 
 from xerocr.adapters.llm._base import (
+    LLMCompletion,
     default_prompt_for_role,
     llm_input_types,
     llm_output_type,
     normalize_llm_content,
     run_llm_step,
+    usage_tokens,
     validate_llm_label,
     validate_role,
 )
@@ -24,7 +26,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.pipeline import PipelineMode
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "mistral-small-latest"
@@ -33,7 +35,7 @@ _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_sho
 
 def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     model: str, content: object, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     """Appel ``chat.complete`` partagé (texte ou multimodal)."""
     import os
 
@@ -63,20 +65,27 @@ def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'li
         raise AdapterStepError(
             f"mistral a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
+    usage = getattr(response, "usage", None)
+    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
+    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
     if not response.choices:
-        return ""
-    return normalize_llm_content(response.choices[0].message.content)
+        return LLMCompletion("", tokens_in, tokens_out)
+    return LLMCompletion(
+        normalize_llm_content(response.choices[0].message.content),
+        tokens_in,
+        tokens_out,
+    )
 
 
 def _invoke_mistral(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
     *, model: str, prompt: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     return _mistral_client(model, prompt, deadline)
 
 
 def _invoke_mistral_vision(  # pragma: no cover -- réseau + clé API (cf. 'live')
     *, model: str, prompt: str, media_type: str, image_b64: str, deadline: Deadline
-) -> str:
+) -> LLMCompletion:
     content = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": f"data:{media_type};base64,{image_b64}"},
@@ -124,13 +133,15 @@ class MistralAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
-        def text_invoke(prompt: str) -> str:
+    ) -> StepOutput:
+        def text_invoke(prompt: str) -> LLMCompletion:
             return _invoke_mistral(
                 model=self._model, prompt=prompt, deadline=context.deadline
             )
 
-        def vision_invoke(prompt: str, media_type: str, image_b64: str) -> str:
+        def vision_invoke(
+            prompt: str, media_type: str, image_b64: str
+        ) -> LLMCompletion:
             return _invoke_mistral_vision(
                 model=self._model,
                 prompt=prompt,

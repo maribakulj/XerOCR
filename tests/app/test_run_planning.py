@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from xerocr.adapters.llm._base import LLMCompletion
 from xerocr.app import run
 from xerocr.app.engines import EngineStatus
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
@@ -102,7 +103,7 @@ def test_benchmark_runs_n_competitors_in_one_run(
         "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
     )
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: "beta"
+        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
     )
     comps = (
         Competitor(engine="tesseract"),

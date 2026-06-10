@@ -6,8 +6,8 @@ l'exécuteur (couche 4) par document, passe les artefacts au runner d'évaluatio
 lui-même** (l'assemblage métrique vit en ``evaluation``) et **n'exécute aucun
 moteur** (les modules le font).
 
-Minimal pour T1 : mono-thread, séquentiel. Le ``JobRunner`` (annulation/SSE), le
-loader YAML et la sécurité des chemins arrivent à leurs tranches (T2/T4).
+Mono-thread, séquentiel par choix : le parallélisme viendrait avec un
+consommateur réel (gros corpus), pas avant.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from xerocr.domain.errors import AdapterStepError, XerOCRError
 from xerocr.domain.run import RunManifest, utcnow
 from xerocr.domain.run_spec import RunSpec
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.result import RunResult
+from xerocr.evaluation.result import DocumentUsage, RunResult
 from xerocr.evaluation.runner import evaluate_run
 from xerocr.pipeline.executor import PipelineExecutor, PipelineStepError
 from xerocr.pipeline.protocols import Module
@@ -94,6 +94,7 @@ def run(
     done_units = 0
     with TemporaryDirectory(prefix="xerocr-run-") as workspace:
         pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
+        usage_records: list[DocumentUsage] = []
         for index, pipeline in enumerate(spec.pipelines):
             pipeline_workspace = Path(workspace) / f"pipeline{index}"
             pipeline_workspace.mkdir()
@@ -101,7 +102,7 @@ def run(
             for document in spec.corpus.documents:
                 inputs = _initial_inputs(document)
                 try:
-                    per_document[document.id] = executor.execute_document(
+                    execution = executor.execute_document(
                         pipeline,
                         modules,
                         inputs,
@@ -109,6 +110,14 @@ def run(
                         deadline=deadline,
                         control=control,
                         workspace_uri=str(pipeline_workspace),
+                    )
+                    per_document[document.id] = dict(execution.artifacts)
+                    usage_records.append(
+                        DocumentUsage(
+                            document_id=document.id,
+                            pipeline=pipeline.name,
+                            usage=execution.usage,
+                        )
                     )
                 except (AdapterStepError, PipelineStepError) as exc:
                     # Un concurrent qui échoue (clé d'API absente, moteur
@@ -145,13 +154,14 @@ def run(
             pipeline_outputs=pipeline_outputs,
             registry=metric_registry,
             manifest=manifest,
+            usage=tuple(usage_records),
         )
 
 
 def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:
     if document.image_uri is None:
         raise OrchestrationError(
-            f"document {document.id!r} : image_uri requis (T1, axe image→texte)."
+            f"document {document.id!r} : image_uri requis (axe image→texte)."
         )
     return {
         ArtifactType.IMAGE: Artifact(

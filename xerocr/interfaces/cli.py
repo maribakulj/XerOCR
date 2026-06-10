@@ -1,9 +1,8 @@
-"""CLI XerOCR (couche 8). T1 : la commande ``demo``.
+"""CLI XerOCR (couche 8) : ``demo``, ``run``, ``compare``, ``serve``.
 
 ``argparse`` (stdlib, aucune dépendance — journal D-007). ``demo`` génère un
 rapport de démonstration **déterministe** sans moteur réel : un mini-corpus
 pré-calculé en mémoire → ``precomputed`` → CER → ``RunResult`` → HTML autonome.
-Les verbes ``run``/``compare``/``serve`` arrivent à leurs tranches (T2/T4).
 """
 
 from __future__ import annotations

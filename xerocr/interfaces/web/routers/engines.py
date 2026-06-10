@@ -1,7 +1,7 @@
 """Routeur « Moteurs » : disponibilité runtime des moteurs (couche 8).
 
 ``GET /api/engines`` — **lecture seule**, alimente l'onglet « Moteurs » réservé
-dès TU1. Restitue l'état calculé par ``app.engines`` (sondes bon marché, mode
+Restitue l'état calculé par ``app.engines`` (sondes bon marché, mode
 public reflété). Aucune écriture → pas de CSRF.
 """
 

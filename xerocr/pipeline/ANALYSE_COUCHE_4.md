@@ -278,6 +278,8 @@ XerOCR **doit** continuer d'offrir (sous une forme propre) :
 
 ## DoD vivante (couche 4) — **autorité de détail** ; le `MIGRATION_PLAN.md` indexe
 
+> **T8 (D-066)** : contrat `Module.execute` → **`StepOutput(artifacts, usage)`** (changement atomique, zéro double signature) ; l'exécuteur **mesure** la durée de chaque étape (monotonic, source unique), fusionne les jetons remontés, renvoie **`DocumentExecution(artifacts, usage)`** ; le fan-out somme les jetons des N régions. Preuves : `tests/pipeline/test_executor.py::test_usage_records_duration_and_tokens` · `::test_usage_sums_across_steps`.
+
 > Tri-état : `[x]` fait **+ preuve** · `[ ]` à faire · `[~]` différé/réserve + raison.
 > Maj dans le **même commit** que le code. **Statut : ✅ T3** — `Module` Protocol + exécuteur (résolution DAG + estampille de provenance) + `RunControl`/`Deadline` + **annulation câblée** (ollama, T3) verts. **+ T5 squelette** : `fanout.py` (`run_region_fanout` — reconnaissance par région, échec partiel toléré, ordre de lecture préservé) ; le `Module` reste **inchangé** (1 artefact/type, le fan-out boucle dans l'orchestration). *preuve : `tests/pipeline/test_segmentation_skeleton.py`*. **+ T5 wiring déclaratif** : `execute_region_fanout` (persiste le LAYOUT rempli) + branche `step.fanout` dans `PipelineExecutor` → une `PipelineSpec` unique orchestre segment→fanout→assemblage. *preuve : `tests/pipeline/test_segmentation_pipeline.py`*
 

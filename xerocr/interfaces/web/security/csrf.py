@@ -8,7 +8,7 @@ Donc exiger cet en-tête bloque le forçage cross-site sans cookie ni token de
 session — adapté à une API JSON same-origin (cf. OWASP CSRF, defense « custom
 request header »).
 
-Volontairement minimal pour TU2.a (lanceur same-origin). Un token signé par
+Volontairement minimal (lanceur same-origin). Un token signé par
 session arrivera si/quand des cookies d'auth existent.
 """
 

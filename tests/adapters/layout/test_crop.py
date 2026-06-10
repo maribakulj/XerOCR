@@ -98,7 +98,7 @@ def test_fanout_with_cropper_feeds_real_block_image(tmp_path: Path) -> None:
             ),
         )
     )
-    filled = run_region_fanout(
+    filled, _usage = run_region_fanout(
         layout=layout,
         page_image=page,
         recognizer=_SizeRecognizer(),
@@ -115,7 +115,7 @@ def test_fanout_skips_region_without_geometry(tmp_path: Path) -> None:
     layout = CanonicalLayout(
         pages=(LayoutPage(width=100, height=50, regions=(Region(id="r1"),)),)
     )
-    filled = run_region_fanout(
+    filled, _usage = run_region_fanout(
         layout=layout,
         page_image=page,
         recognizer=_SizeRecognizer(),

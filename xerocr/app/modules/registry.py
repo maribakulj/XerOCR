@@ -2,9 +2,9 @@
 
 Résout un ``adapter_name`` (convention ``<kind>:<label>``) vers une instance de
 ``Module`` (couche 4) en appelant un **builder** enregistré pour le ``kind``.
-C'est le **seul** point d'extension du produit : en T1 le socle est enregistré
+C'est le **seul** point d'extension du produit : le socle est enregistré
 **en dur** (``register_default_modules``) ; la **découverte de plugins tiers**
-(entry-points ``xerocr.modules``) s'y branchera en T6 — même résolution
+(entry-points ``xerocr.modules``, cf. ``app.modules.discovery``) — même résolution
 ``name → Module``, source différente.
 """
 

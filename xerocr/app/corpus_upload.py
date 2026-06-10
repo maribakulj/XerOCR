@@ -1,6 +1,6 @@
 """Ingestion **sûre** d'un corpus depuis une archive ZIP (couche 6).
 
-Le concept de cette tranche (TU2.c) est la **sécurité d'ingestion** : une archive
+Le concept central est la **sécurité d'ingestion** : une archive
 vient de l'extérieur, on la traite en supposant qu'elle est hostile.
 
 Défenses (toutes testées) :
@@ -15,7 +15,7 @@ Défenses (toutes testées) :
 - **noms** restreints à un charset sûr (→ ``DocumentRef.id`` valide).
 
 Sortie : une ``CorpusSpec`` (images appariées à leur vérité-terrain ``.txt`` par
-radical) matérialisée sous ``dest`` — prête pour un run (TU2.d).
+radical) matérialisée sous ``dest`` — prête pour un run.
 """
 
 from __future__ import annotations
@@ -219,7 +219,7 @@ class CorpusStore:
     """Registre **en mémoire** des corpus uploadés (id → ``CorpusSpec`` + dossier).
 
     Le contenu vit sous ``base_dir`` (éphémère sur HF — acceptable : ce sont des
-    **entrées** de travail ; la persistance des *résultats* est TU3).
+    **entrées** de travail ; les *résultats* sont, eux, publiés vers un dépôt distant).
     """
 
     def __init__(self, base_dir: Path) -> None:

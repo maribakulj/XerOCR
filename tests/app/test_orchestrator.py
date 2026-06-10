@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from xerocr.adapters.llm._base import LLMCompletion
 from xerocr.app import run
 from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
 from xerocr.app.orchestrator import OrchestrationError, PipelineOutputs
@@ -194,7 +195,7 @@ def test_pipelines_sharing_a_writer_do_not_contaminate(
     # sortie corrigée diffère par pipeline puisque l'OCR amont diffère.
     monkeypatch.setattr(
         "xerocr.adapters.llm.openai._invoke_openai",
-        lambda *, model, prompt, deadline: prompt.rsplit("\n\n", 1)[-1],
+        lambda *, model, prompt, deadline: LLMCompletion(prompt.rsplit("\n\n", 1)[-1]),
     )
     result = run(
         _shared_writer_spec(tmp_path), registry=_registry(), code_version="9.9"
@@ -210,7 +211,7 @@ def test_manifest_captures_module_versions(
 ) -> None:
     monkeypatch.setattr(
         "xerocr.adapters.llm.openai._invoke_openai",
-        lambda *, model, prompt, deadline: "x",
+        lambda *, model, prompt, deadline: LLMCompletion("x"),
     )
     result = run(
         _shared_writer_spec(tmp_path), registry=_registry(), code_version="9.9"
@@ -283,3 +284,28 @@ def test_run_without_sink_still_succeeds(tmp_path: Path) -> None:
         code_version="1.0",
     )
     assert result.manifest.corpus_name == "c"
+
+
+def test_run_result_carries_sorted_usage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "xerocr.adapters.llm.openai._invoke_openai",
+        lambda *, model, prompt, deadline: LLMCompletion("x", 11, 7),
+    )
+    result = run(
+        _shared_writer_spec(tmp_path), registry=_registry(), code_version="9.9"
+    )
+    # Une entrée par (pipeline x document), triée (pipeline, document_id).
+    keys = [(u.pipeline, u.document_id) for u in result.usage]
+    assert keys == sorted(keys)
+    assert len(result.usage) == len(
+        {(u.pipeline, u.document_id) for u in result.usage}
+    )
+    # Les jetons du LLM mocké remontent jusqu'au RunResult.
+    assert all(u.usage.tokens_in == 11 for u in result.usage)
+    assert all(u.usage.tokens_out == 7 for u in result.usage)
+    assert all(
+        u.usage.duration_seconds is not None and u.usage.duration_seconds >= 0.0
+        for u in result.usage
+    )

@@ -5,7 +5,7 @@ le ``RunResult`` (métriques scalaires) **ne porte pas** et que le workspace
 temporaire du run **détruit**. Ce store le **persiste** (layout JSON + image
 source optionnelle) pour qu'une vue web le relise et le visualise.
 
-Squelette (S6 Tranche 1) : un layout de **démo** déterministe alimente toute
+Squelette : un layout de **démo** déterministe alimente toute
 l'enveloppe de visualisation. La Tranche 2 (vrai segmenteur) écrira son
 ``CanonicalLayout`` produit **via le même** ``save`` — l'infra ne bouge pas.
 """

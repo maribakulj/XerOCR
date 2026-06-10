@@ -14,7 +14,7 @@ from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from xerocr.domain.errors import AdapterStepError
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 
@@ -54,7 +54,7 @@ class PrecomputedTextAdapter:
         params: dict[str, ParamValue],
         context: RunContext,
         control: RunControl,
-    ) -> dict[ArtifactType, Artifact]:
+    ) -> StepOutput:
         control.raise_if_cancelled()
         image = inputs.get(ArtifactType.IMAGE)
         if image is None or image.uri is None:
@@ -75,15 +75,17 @@ class PrecomputedTextAdapter:
             raise AdapterStepError(
                 f"{self.name} : {text_path.name!r} n'est pas en UTF-8 : {exc}"
             ) from exc
-        return {
-            ArtifactType.RAW_TEXT: Artifact(
-                id=f"{context.document_id}:{self.name}:raw_text",
-                document_id=context.document_id,
-                type=ArtifactType.RAW_TEXT,
-                uri=str(text_path),
-                content_hash=compute_content_hash(data),
-            )
-        }
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{self.name}:raw_text",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri=str(text_path),
+                    content_hash=compute_content_hash(data),
+                )
+            }
+        )
 
 
 __all__ = ["PrecomputedTextAdapter"]

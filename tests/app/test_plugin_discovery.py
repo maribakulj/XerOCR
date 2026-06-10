@@ -133,7 +133,7 @@ def test_discovered_segmenter_produces_layout(tmp_path: Path) -> None:
     )
     outputs = segmenter.execute({ArtifactType.IMAGE: image}, {}, context, RunControl())
     layout = CanonicalLayout.model_validate_json(
-        Path(outputs[ArtifactType.LAYOUT].uri).read_bytes()
+        Path(outputs.artifacts[ArtifactType.LAYOUT].uri).read_bytes()
     )
     # Le segmenteur tiers a produit une mise en page → consommable par le fan-out.
     assert len(layout.pages[0].regions) == 2
