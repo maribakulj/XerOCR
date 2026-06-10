@@ -9,12 +9,18 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from xerocr.app.engines import StatusProvider
+from xerocr.app.engines import StatusProvider, normalization_profiles
 
 
 def build_engines_router(provider: StatusProvider) -> APIRouter:
     """Construit le routeur « Moteurs » (monté par ``create_app``)."""
     router = APIRouter()
+
+    @router.get("/api/normalization/profiles")
+    def list_normalization_profiles() -> dict[str, list[str]]:
+        """Profils de comparaison disponibles — lus dynamiquement (couche 2)."""
+        return {"profiles": list(normalization_profiles())}
+
 
     @router.get("/api/engines")
     def list_engines() -> dict[str, list[dict[str, object]]]:

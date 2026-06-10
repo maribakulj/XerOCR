@@ -30,6 +30,7 @@ from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
+from xerocr.reports.csv_export import run_result_csv
 
 
 def demo_to_html() -> str:
@@ -64,6 +65,37 @@ def demo_to_html() -> str:
     return default_report_renderer().render(stable, title="XerOCR — démonstration")
 
 
+def _run_history(
+    db: str, view: str, metric: str, pipeline: str | None, threshold: float
+) -> int:
+    """Lit le ``HistoryStore`` : série d'un pipeline, ou régressions de la vue."""
+    from xerocr.adapters.storage.history_store import HistoryStore
+
+    store = HistoryStore(Path(db))
+    if pipeline is not None:
+        records = store.history(pipeline, view, metric)
+        if not records:
+            print(f"Aucune mesure pour {pipeline!r} ({view}:{metric}).")
+            return 0
+        for record in records:
+            print(
+                f"{record.completed_at}  {record.run_id}  "
+                f"{record.metric}={record.value:.6f}  ({record.corpus_name}, "
+                f"code {record.code_version})"
+            )
+        return 0
+    regressions = store.regressions(view, metric, threshold=threshold)
+    if not regressions:
+        print(f"Aucune régression ({view}:{metric}, seuil {threshold:g}).")
+        return 0
+    for reg in regressions:
+        print(
+            f"{reg.pipeline}: {reg.previous:.6f} → {reg.latest:.6f} "
+            f"(Δ {reg.delta:+.6f}, run {reg.latest_run_id})"
+        )
+    return 0
+
+
 def _run_demo(output: str) -> int:
     path = Path(output)
     path.write_text(demo_to_html(), encoding="utf-8")
@@ -76,6 +108,7 @@ def _run_config(
     output: str,
     json_output: str | None,
     resume_dir: str | None = None,
+    csv_output: str | None = None,
 ) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
@@ -96,6 +129,8 @@ def _run_config(
     )
     if json_output is not None:
         dump_run_result(result, json_output)
+    if csv_output is not None:
+        Path(csv_output).write_text(run_result_csv(result), encoding="utf-8")
     print(f"Rapport écrit : {output}")
     return 0
 
@@ -195,6 +230,12 @@ def main(argv: list[str] | None = None) -> int:
         "l'identique y sont rechargés au lieu d'être ré-exécutés.",
     )
     run_cmd.add_argument(
+        "--csv",
+        default=None,
+        dest="csv_output",
+        help="Export CSV tableur (agrégats + détail par-document).",
+    )
+    run_cmd.add_argument(
         "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
     )
     run_cmd.add_argument(
@@ -203,6 +244,20 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Écrit aussi le RunResult en JSON (pour comparer plus tard).",
     )
+    history_cmd = subparsers.add_parser(
+        "history",
+        help="Historique longitudinal : série d'un pipeline ou régressions.",
+    )
+    history_cmd.add_argument("db", help="Base SQLite de l'historique.")
+    history_cmd.add_argument("--view", default="text")
+    history_cmd.add_argument("--metric", default="cer")
+    history_cmd.add_argument(
+        "--pipeline",
+        default=None,
+        help="Série chronologique de ce pipeline (sinon : régressions).",
+    )
+    history_cmd.add_argument("--threshold", type=float, default=0.0)
+
     compare_cmd = subparsers.add_parser(
         "compare", help="Compare deux RunResult JSON → rapport de deltas."
     )
@@ -233,7 +288,15 @@ def main(argv: list[str] | None = None) -> int:
             return _run_demo(args.output)
         if args.command == "run":
             return _run_config(
-                args.config, args.output, args.json_output, args.resume_dir
+                args.config,
+                args.output,
+                args.json_output,
+                args.resume_dir,
+                args.csv_output,
+            )
+        if args.command == "history":
+            return _run_history(
+                args.db, args.view, args.metric, args.pipeline, args.threshold
             )
         if args.command == "compare":
             return _compare_command(args.run_a, args.run_b, args.output)

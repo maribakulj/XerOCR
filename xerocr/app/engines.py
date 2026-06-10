@@ -199,7 +199,16 @@ def installed_mistral_models() -> tuple[str, ...]:
     return list_mistral_models()
 
 
+def normalization_profiles() -> tuple[str, ...]:
+    """Noms des profils de normalisation, lus **dynamiquement** (jamais une
+    liste statique — un profil ajouté en couche 2 apparaît ici sans câblage)."""
+    from xerocr.formats.text.normalization import NORMALIZATION_PROFILES
+
+    return tuple(sorted(NORMALIZATION_PROFILES))
+
+
 __all__ = [
+    "normalization_profiles",
     "EngineStatus",
     "StatusProvider",
     "engine_statuses",
