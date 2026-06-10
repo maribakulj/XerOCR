@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 
 from xerocr.adapters.ocr.tesseract import TesseractAdapter
 from xerocr.domain.artifacts import Artifact, ArtifactType
+from xerocr.domain.confidence import ConfidenceToken
 from xerocr.domain.errors import AdapterStepError, RunCancelledError
 from xerocr.pipeline.protocols import Module
 from xerocr.pipeline.run_control import RunControl
@@ -37,6 +39,10 @@ def _mock_ocr(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
         "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: text
     )
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences",
+        lambda **_: [ConfidenceToken(text="mot", confidence=0.93)],
+    )
 
 
 def test_satisfies_module_protocol() -> None:
@@ -45,7 +51,9 @@ def test_satisfies_module_protocol() -> None:
     assert adapter.name == "tesseract:fra"
     assert adapter.version
     assert adapter.input_types == frozenset({ArtifactType.IMAGE})
-    assert adapter.output_types == frozenset({ArtifactType.RAW_TEXT})
+    assert adapter.output_types == frozenset(
+        {ArtifactType.RAW_TEXT, ArtifactType.CONFIDENCES}
+    )
 
 
 def test_rejects_injection_lang() -> None:
@@ -130,3 +138,39 @@ def test_live_real_tesseract(tmp_path: Path) -> None:
         {ArtifactType.IMAGE: _image(image_path)}, {}, _ctx(tmp_path), RunControl()
     )
     assert out.artifacts[ArtifactType.RAW_TEXT].uri is not None
+
+
+def test_execute_writes_confidences_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _mock_ocr(monkeypatch, "mot")
+    adapter = TesseractAdapter(label="fra", lang="fra")
+    out = adapter.execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    sidecar = out.artifacts[ArtifactType.CONFIDENCES]
+    assert sidecar.uri is not None
+    tokens = json.loads(Path(sidecar.uri).read_text(encoding="utf-8"))
+    assert tokens == [{"text": "mot", "confidence": 0.93}]
+
+
+def test_confidences_failure_degrades_to_empty_sidecar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Best-effort : l'extraction qui casse ne fait pas échouer l'OCR.
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "mot"
+    )
+
+    def boom(**_: object) -> list[ConfidenceToken]:
+        raise RuntimeError("tsv illisible")
+
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences", boom
+    )
+    out = TesseractAdapter(label="fra", lang="fra").execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    sidecar = out.artifacts[ArtifactType.CONFIDENCES]
+    assert sidecar.uri is not None
+    assert json.loads(Path(sidecar.uri).read_text(encoding="utf-8")) == []

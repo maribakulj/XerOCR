@@ -20,6 +20,7 @@ from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.calibration import calibration_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.diagnostics import DiagnosticsCollector
 from xerocr.evaluation.economics import economics_analysis
@@ -133,6 +134,9 @@ def evaluate_run(
         )
         if diagnostic is not None:
             analyses.append(diagnostic)
+        calibration = calibration_analysis(view.name, corpus, pipeline_outputs)
+        if calibration is not None:
+            analyses.append(calibration)
         if "cer" in view.metric_names:
             economics = economics_analysis(
                 view.name, "cer", series["cer"], usage, manifest

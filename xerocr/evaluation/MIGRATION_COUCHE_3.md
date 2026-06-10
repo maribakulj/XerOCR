@@ -292,6 +292,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 > **T10 (D-068)** : `+ economics.py` + `pricing.json` (donnée datée packagée) — coût machine+jetons depuis les mesures E1, débit effectif, coût marginal, `pareto_front` ; payload `economics` = 2ᵉ membre de l'union `analyses` (discriminateur `kind` activé). Tests **dérivés à la main** (règle PLAN_PARITE §5.8b). Preuves : `tests/evaluation/test_economics.py`.
 >
 > **T11 (D-069)** : `+ metrics/diagnostics.py` (`searchability`, `hallucination` — registre = 12 métriques, vue `text` par défaut enrichie) `+ diagnostics.py` (collecteur branché au scoring : confusions, pires lignes, documents difficiles → 3ᵉ payload `analyses`). Preuves : `tests/evaluation/test_diagnostics.py`.
+>
+> **T12 (D-070)** : `+ calibration.py` — ECE/MCE (Guo 2017) + bins depuis les sidecars `CONFIDENCES` ; payload `calibration` = 4ᵉ membre de l'union. ECE/MCE en payload, pas en scalaire (la calibration qualifie, ne classe pas). Preuves : `tests/evaluation/test_calibration.py` (dérivés à la main).
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*

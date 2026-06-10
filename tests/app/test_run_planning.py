@@ -103,6 +103,10 @@ def test_benchmark_runs_n_competitors_in_one_run(
         "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
     )
     monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences",
+        lambda **_: [],
+    )
+    monkeypatch.setattr(
         "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
     )
     comps = (

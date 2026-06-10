@@ -8,19 +8,27 @@ la lib ni le binaire — seule l'exécution les exige.
 
 Sécurité : ``lang`` est validé (anti-injection ligne de commande) ; ``timeout``
 est borné par la ``Deadline`` (un sous-processus figé ne doit pas geler le run).
-Confidences et ALTO natif sont **différés** (pas encore de consommateur).
+Les **confidences** par mot (TSV natif, 0-100 → [0,1]) sont écrites en
+sidecar JSON (``ConfidenceToken``) et publiées comme artefact ``CONFIDENCES``
+— best-effort : un échec d'extraction dégrade en sidecar vide, jamais en
+panne de l'OCR. ALTO natif reste différé (pas de consommateur).
 """
 
 from __future__ import annotations
 
+import json
+import logging
 import re
 
 from xerocr.adapters._workspace import workspace_artifact_path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
+from xerocr.domain.confidence import ConfidenceToken
 from xerocr.domain.errors import AdapterStepError
 from xerocr.pipeline.protocols import ParamValue
 from xerocr.pipeline.run_control import RunControl
 from xerocr.pipeline.types import RunContext, StepOutput
+
+logger = logging.getLogger(__name__)
 
 _VERSION = "1.0"
 _DEFAULT_TIMEOUT = 120.0
@@ -56,6 +64,32 @@ def _invoke_tesseract(  # pragma: no cover -- binaire requis (cf. marqueur 'live
             f"tesseract a échoué sur {image_path!r} : {type(exc).__name__}: {exc}"
         ) from exc
     return str(text).strip()
+
+
+def _invoke_tesseract_confidences(  # pragma: no cover -- binaire requis ('live')
+    *, image_path: str, lang: str, psm: int, oem: int, timeout: float
+) -> list[ConfidenceToken]:
+    """Confidences par mot via ``image_to_data`` (TSV natif, conf 0-100)."""
+    import pytesseract  # type: ignore[import-not-found]
+
+    data = pytesseract.image_to_data(
+        image_path,
+        lang=lang,
+        config=f"--psm {psm} --oem {oem}",
+        timeout=timeout,
+        output_type=pytesseract.Output.DICT,
+    )
+    tokens: list[ConfidenceToken] = []
+    for word, conf in zip(data["text"], data["conf"], strict=False):
+        if not isinstance(word, str) or not word.strip():
+            continue
+        value = float(conf)
+        if value < 0:  # -1 : entrée non textuelle du TSV
+            continue
+        tokens.append(
+            ConfidenceToken(text=word.strip(), confidence=min(value / 100.0, 1.0))
+        )
+    return tokens
 
 
 class TesseractAdapter:
@@ -97,7 +131,7 @@ class TesseractAdapter:
 
     @property
     def output_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.RAW_TEXT})
+        return frozenset({ArtifactType.RAW_TEXT, ArtifactType.CONFIDENCES})
 
     def execute(
         self,
@@ -128,6 +162,37 @@ class TesseractAdapter:
             context.workspace_uri, context.document_id, self._label, "txt"
         )
         output_path.write_text(text, encoding="utf-8")
+        # Confidences best-effort : un échec d'extraction ne doit pas faire
+        # échouer un OCR réussi — sidecar vide + avertissement.
+        try:
+            tokens = _invoke_tesseract_confidences(
+                image_path=image.uri,
+                lang=self._lang,
+                psm=self._psm,
+                oem=self._oem,
+                timeout=timeout,
+            )
+        except (
+            AdapterStepError,
+            ImportError,
+            RuntimeError,
+            ValueError,
+            OSError,
+        ) as exc:
+            logger.warning(
+                "[tesseract] confidences dégradées (sidecar vide) : %s", exc
+            )
+            tokens = []
+        sidecar = json.dumps(
+            [token.model_dump() for token in tokens], ensure_ascii=False
+        ).encode("utf-8")
+        sidecar_path = workspace_artifact_path(
+            context.workspace_uri,
+            context.document_id,
+            self._label,
+            "confidences.json",
+        )
+        sidecar_path.write_bytes(sidecar)
         return StepOutput(
             artifacts={
                 ArtifactType.RAW_TEXT: Artifact(
@@ -136,7 +201,14 @@ class TesseractAdapter:
                     type=ArtifactType.RAW_TEXT,
                     uri=str(output_path),
                     content_hash=compute_content_hash(text.encode("utf-8")),
-                )
+                ),
+                ArtifactType.CONFIDENCES: Artifact(
+                    id=f"{context.document_id}:{self.name}:confidences",
+                    document_id=context.document_id,
+                    type=ArtifactType.CONFIDENCES,
+                    uri=str(sidecar_path),
+                    content_hash=compute_content_hash(sidecar),
+                ),
             }
         )
 

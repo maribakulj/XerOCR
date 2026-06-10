@@ -8,8 +8,9 @@ figé ici, discriminé par ``kind``, dans le même commit que son calcul et son
 consommateur (garde-fou « pas de consommateur = supprimé »).
 
 Familles : ``inference`` (verdict statistique corrigé multi-comparaisons),
-``economics`` (coûts, débit effectif, Pareto), ``diagnostics`` (paires de
-confusion, pires lignes, documents les plus difficiles — « voir où ça casse »).
+``economics`` (coûts, débit effectif, Pareto), ``diagnostics`` (confusions,
+pires lignes, documents difficiles), ``calibration`` (fiabilité des confidences
+moteur : ECE/MCE + bins de fiabilité).
 """
 
 from __future__ import annotations
@@ -204,10 +205,49 @@ class DiagnosticsPayload(BaseModel):
     hardest_documents: tuple[HardDocument, ...] = ()
 
 
+class CalibrationBin(BaseModel):
+    """Bin de fiabilité : confiance moyenne vs exactitude observée."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    lower: float = Field(ge=0, le=1)
+    upper: float = Field(ge=0, le=1)
+    mean_confidence: float = Field(ge=0, le=1)
+    accuracy: float = Field(ge=0, le=1)
+    count: int = Field(ge=1)
+
+
+class PipelineCalibration(BaseModel):
+    """Calibration des confidences d'un pipeline sur le corpus.
+
+    ECE = Σ (n_b/N)·|acc_b − conf_b| ; MCE = max |acc_b − conf_b| sur les bins
+    non vides. « Correct » = le mot du jeton apparaît (multi-ensemble, exact)
+    dans la référence du document — proxy auditable, documenté.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_tokens: int = Field(ge=1)
+    ece: float = Field(ge=0, le=1)
+    mce: float = Field(ge=0, le=1)
+    bins: tuple[CalibrationBin, ...] = ()
+
+
+class CalibrationPayload(BaseModel):
+    """Fiabilité des auto-estimations moteur, par pipeline (vue texte)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["calibration"] = "calibration"
+    n_bins: int = Field(ge=2)
+    pipelines: tuple[PipelineCalibration, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
-    InferencePayload | EconomicsPayload | DiagnosticsPayload,
+    InferencePayload | EconomicsPayload | DiagnosticsPayload | CalibrationPayload,
     Field(discriminator="kind"),
 ]
 
@@ -227,6 +267,8 @@ class Analysis(BaseModel):
 __all__ = [
     "Analysis",
     "AnalysisPayload",
+    "CalibrationBin",
+    "CalibrationPayload",
     "CharConfusion",
     "DiagnosticsPayload",
     "EconomicsPayload",
@@ -234,6 +276,7 @@ __all__ = [
     "InferencePayload",
     "MarginalCost",
     "PairwiseDifference",
+    "PipelineCalibration",
     "PipelineConfusions",
     "PipelineEconomics",
     "PipelineInterval",
