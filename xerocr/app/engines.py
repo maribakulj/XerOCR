@@ -81,6 +81,8 @@ def engine_statuses(
         ),
         _tesseract_status(has_binary, has_module),
         _kraken_status(has_module),
+        _pero_status(has_module),
+        _calamari_status(has_module),
         _mistral_ocr_status(has_module, get_env),
         _google_vision_status(has_module, get_env),
         _azure_di_status(has_module, get_env),
@@ -111,6 +113,22 @@ def _kraken_status(has_module: ModuleProbe) -> EngineStatus:
     return EngineStatus(
         kind="kraken", label="Kraken (HTR)", available=ok, detail=detail
     )
+
+
+def _pero_status(has_module: ModuleProbe) -> EngineStatus:
+    if not has_module("pero_ocr"):
+        detail, ok = "lib pero_ocr non installée (extra [pero])", False
+    else:
+        detail, ok = "prêt (lib ; fournir un modèle PERO au lancement)", True
+    return EngineStatus(kind="pero", label="PERO", available=ok, detail=detail)
+
+
+def _calamari_status(has_module: ModuleProbe) -> EngineStatus:
+    if not has_module("calamari_ocr"):
+        detail, ok = "lib calamari_ocr non installée (extra [calamari])", False
+    else:
+        detail, ok = "prêt (lib ; fournir un checkpoint au lancement)", True
+    return EngineStatus(kind="calamari", label="Calamari", available=ok, detail=detail)
 
 
 def _mistral_ocr_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:

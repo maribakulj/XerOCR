@@ -24,6 +24,8 @@ dev = [
 ]
 tesseract = ["pytesseract"]
 kraken = ["kraken"]
+pero = ["pero-ocr"]  # OCR/HTR local (imprimé ancien + manuscrit) — non déployé au Space
+calamari = ["calamari-ocr"]  # OCR local par ligne — non déployé au Space
 openai = ["openai"]
 anthropic = ["anthropic"]
 mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistralai import Mistral`)

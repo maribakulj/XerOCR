@@ -48,7 +48,10 @@ SEGMENTER_KIND = "pp_doclayout"
 
 #: Moteurs OCR câblés pour un run réel (amont d'une chaîne ou OCR seul).
 _OCR_ENGINES = frozenset(
-    {"tesseract", "kraken", "mistral_ocr", "google_vision", "azure_di"}
+    {
+        "tesseract", "kraken", "pero", "calamari",
+        "mistral_ocr", "google_vision", "azure_di",
+    }
 )
 #: Fournisseurs de post-correction LLM (mode ``text_only``).
 _LLM_ENGINES = frozenset({"openai", "anthropic", "mistral", "ollama"})

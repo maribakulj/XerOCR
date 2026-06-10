@@ -43,7 +43,7 @@ calibration, statistiques (Nemenyi + bootstrap), synthèse factuelle.
 | **Abandons définitifs** | 8 familles jetées (liste §« Abandons »), validées |
 | **NER** | extra optionnel `[ner]`, jamais de silence si absent |
 | **Économie** | coûts mesurés réels (déjà l'état du code) — pas de CO₂ |
-| **Parité moteurs** | Google + Azure **first-party** (extras `[google]`/`[azure]`) ; Pero + Calamari **plugins hors-dépôt** |
+| **Parité moteurs** | Google + Azure **first-party** (extras `[google]`/`[azure]`) ; Pero + Calamari **first-party in-tree** (comme Kraken — décision révisée D-078 ; le seam plugin reste pour les vrais tiers) |
 | **Toutes les métriques gardées** | **obligatoires avant 1.0** (le gel ferme la fenêtre de portage — rien en backlog) |
 | **Fin** | release `1.0.0` puis gel immédiat de Picarones |
 
@@ -82,14 +82,14 @@ indisponible, jamais de crash). C'est la couche adapters dans son rôle légitim
 |---|---|---|
 | **2a — Google Vision** | adapter cloud first-party | `xerocr/adapters/ocr/google_vision.py` (**nouveau**), extra `[google]` dans `pyproject.toml`, entrée `xerocr/app/engines.py`, `tests/adapters/ocr/test_google_vision.py` (cassette + valeurs main) |
 | **2b — Azure Document Intelligence** | adapter cloud first-party | `xerocr/adapters/ocr/azure_di.py` (**nouveau**), extra `[azure]`, entrée factory, `tests/adapters/ocr/test_azure_di.py` |
-| **2c — Pero + Calamari** | plugins de référence hors-dépôt | aucun fichier in-tree → dépôts `xerocr-pero` / `xerocr-calamari` + `docs/PLUGINS.md` (prouve le chemin entry-points `xerocr.modules`) |
+| **2c — Pero + Calamari** | **first-party in-tree** (révisé D-078, comme Kraken) | `xerocr/adapters/ocr/{pero,calamari}.py` (**nouveaux**), extras `[pero]`/`[calamari]`, builders + sondes `xerocr/app/engines.py`, `_OCR_ENGINES`, tests mockés ; `docs/PLUGINS.md` documente le seam entry-points `xerocr.modules` pour les **vrais** tiers (déjà prouvé D-034) |
 | **2d — Vérifs** | zero-shot déjà livré → test bout-en-bout + doc ; tous les adapters cloud remontent bien `tokens_in/out` (alimente l'économie) | `tests/pipeline/` (spec zero_shot 1 étage IMAGE→texte), `tests/adapters/llm/` (jetons non-`None` sur cassette) |
 | **2e — Prompts curés par période** | porter les **16 prompts** Picarones (correction + zero-shot) calibrés par type : médiéval FR/EN, imprimé ancien, presse XIXe FR/EN/DE/européenne. **Donnée curée**, pas de la surface exécutable (comme les profils de normalisation) | `xerocr/prompts/*.txt` (**nouveau dossier**), sélection exposée au pipeline LLM/VLM (`app/run_planning`) + au formulaire web (étape 3c), `package-data` dans `pyproject.toml`, `tests/` (chargement + sélection) |
 
 | | |
 |---|---|
 | **Risques** | Croissance de surface → mitigée : un `Protocol`, un test par moteur, extra-gated, fail-closed. Ne **jamais** réintroduire de double contrat interne. Prompts = données versionnées (déterminisme : fichier tracé dans `RunManifest`). |
-| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. `pip install xerocr-pero` rend Pero découvrable sans forker. Zero-shot testé. Les 16 prompts sélectionnables. `make ci` vert. |
+| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. Pero/Calamari listés in-tree (extras), indisponibles sans leur lib, non déployés au Space. Zero-shot testé. Les 16 prompts sélectionnables. `make ci` vert. |
 
 ---
 
@@ -151,7 +151,7 @@ défauts.
 ### Checklist « 1.0 prête »
 
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
-- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari en plugins, zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
+- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
 - [ ] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
 - [ ] **Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.

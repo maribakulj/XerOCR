@@ -244,11 +244,12 @@ pas de confidences (pas de faux zéro).
   matrice CLI/web. Modèle par défaut documenté, version → `module_versions`.
 - **Mistral OCR** (extra, cloud) : gate public 403 existant ; alimente le
   Pareto coût réel.
-- **Calamari = plugin out-of-tree de démonstration** (dépôt séparé
-  `xerocr-calamari`) : valide T6 sur un vrai moteur, sans gonfler le socle.
+- **Calamari** : ~~plugin out-of-tree~~ → **first-party in-tree** (décision
+  révisée **D-078**, comme Kraken/Pero) ; extra `[calamari]`, non déployé au Space.
+  Le seam plugin reste prouvé (D-034) pour les vrais tiers.
 
 **Gates** : run `live` Kraken sur fixture manuscrite ; le socle reste
-importable sans les extras ; `test_requirements_embark_no_engine` vert.
+importable sans les extras ; `test_requirements_embark_no_heavy_engine` vert.
 
 ### S7 — Surfaces utilisateur *(dép. : faible ; peut s'intercaler dès T9)*
 

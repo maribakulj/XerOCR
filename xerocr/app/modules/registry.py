@@ -93,6 +93,36 @@ def _build_mistral_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
     )
 
 
+def _build_pero(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError("pero : 'label' (str) requis dans adapter_kwargs.")
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "pero : 'model' (chemin de config PERO) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.pero import PeroAdapter
+
+    return PeroAdapter(label=label, model=model)
+
+
+def _build_calamari(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "calamari : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "calamari : 'model' (checkpoint) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.calamari import CalamariAdapter
+
+    return CalamariAdapter(label=label, model=model)
+
+
 def _build_google_vision(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -237,6 +267,8 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
     registry.register_builder("kraken", _build_kraken)
+    registry.register_builder("pero", _build_pero)
+    registry.register_builder("calamari", _build_calamari)
     registry.register_builder("mistral_ocr", _build_mistral_ocr)
     registry.register_builder("google_vision", _build_google_vision)
     registry.register_builder("azure_di", _build_azure_di)

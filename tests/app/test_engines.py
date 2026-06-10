@@ -69,6 +69,17 @@ def test_google_vision_needs_httpx_and_key() -> None:
     assert st["google_vision"][0] is True
 
 
+def test_pero_and_calamari_need_their_lib() -> None:
+    # Moteurs locaux (pas de clé) : dispo dès que la lib est présente, comme Kraken.
+    common = {"has_binary": lambda _n: None, "get_env": lambda _n: None}
+    absent = _statuses(has_module=lambda _n: False, **common)
+    assert absent["pero"][0] is False and "[pero]" in absent["pero"][1]
+    assert absent["calamari"][0] is False and "[calamari]" in absent["calamari"][1]
+    present = _statuses(has_module=lambda _n: True, **common)
+    assert present["pero"][0] is True
+    assert present["calamari"][0] is True
+
+
 def test_azure_di_needs_httpx_endpoint_and_key() -> None:
     base = {"has_binary": lambda _n: None}
     # httpx absent
@@ -156,8 +167,8 @@ def test_default_probes_run_without_error() -> None:
     statuses = engine_statuses()
     kinds = {s.kind for s in statuses}
     assert kinds == {
-        "precomputed", "tesseract", "kraken", "mistral_ocr", "google_vision",
-        "azure_di", "openai", "anthropic", "mistral", "ollama",
+        "precomputed", "tesseract", "kraken", "pero", "calamari", "mistral_ocr",
+        "google_vision", "azure_di", "openai", "anthropic", "mistral", "ollama",
     }
     assert next(s for s in statuses if s.kind == "precomputed").available
 

@@ -109,6 +109,8 @@ ADAPTERS_ALLOWED_PKG = (
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
     "datasets", "PIL", "yaml", "paddlex", "kraken",
+    # Moteurs OCR/HTR locaux in-tree (extras `[pero]`/`[calamari]`, D-078).
+    "pero_ocr", "calamari_ocr", "cv2", "numpy",
 }
 
 
