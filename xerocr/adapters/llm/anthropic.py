@@ -10,6 +10,8 @@ sans clé ni réseau). La ``Deadline`` borne l'appel.
 
 from __future__ import annotations
 
+from typing import Any
+
 from xerocr.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -33,6 +35,22 @@ _VERSION = "1.0"
 _DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _MAX_TOKENS = 4096
 _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
+
+
+def _completion_from_message(response: Any) -> LLMCompletion:
+    """Réponse SDK ``messages.create`` → ``LLMCompletion`` (texte + jetons).
+
+    **Pur** (aucun réseau, aucun SDK) → la cartographie usage→jetons
+    (``input_tokens``/``output_tokens``, **noms propres à Claude**) est **testable
+    sur cassette** (étape 2d) ; le client live (``# pragma: no cover``) ne le
+    permettrait pas. Jetons → économie (coût cloud réel).
+    """
+    usage = getattr(response, "usage", None)
+    return LLMCompletion(
+        normalize_llm_content(getattr(response, "content", None)),
+        usage_tokens(getattr(usage, "input_tokens", None)),
+        usage_tokens(getattr(usage, "output_tokens", None)),
+    )
 
 
 def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
@@ -69,12 +87,7 @@ def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
         raise AdapterStepError(
             f"anthropic a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
-    usage = getattr(response, "usage", None)
-    return LLMCompletion(
-        normalize_llm_content(response.content),
-        usage_tokens(getattr(usage, "input_tokens", None)),
-        usage_tokens(getattr(usage, "output_tokens", None)),
-    )
+    return _completion_from_message(response)
 
 
 def _invoke_anthropic(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
