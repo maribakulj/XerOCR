@@ -52,5 +52,11 @@
     "openai": "gpt-4o-mini",
     "anthropic": "claude-haiku-4-5-20251001",
     "mistral": "mistral-small-latest"
+  },
+  "cloud_page_kinds": {
+    "mistral_ocr": {
+      "eur_per_1k_pages": 0.92,
+      "pricing_date": "2026-06-10"
+    }
   }
 }

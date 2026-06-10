@@ -248,3 +248,37 @@ def test_payload_round_trips_through_run_result_json() -> None:
     reloaded = RunResult.model_validate_json(result.model_dump_json())
     assert reloaded.analyses == result.analyses
     assert isinstance(reloaded.analyses[0].payload, EconomicsPayload)
+
+
+def test_per_page_cloud_kind_hand_computed() -> None:
+    # Pipeline mistral_ocr seul : 2 docs × 0.92 €/1000 pages = 0.00184 € de
+    # pages + 180 s machine (0.05 h × 0.10) = 0.005 € → 0.00684 €.
+    pricing = {
+        **_PRICING,
+        "cloud_page_kinds": {"mistral_ocr": {"eur_per_1k_pages": 0.92}},
+    }
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="mistral_ocr:c0",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    manifest = _manifest().model_copy(
+        update={
+            "pipeline_specs": (
+                PipelineSpec(
+                    name="ocr_seul",
+                    initial_inputs=(ArtifactType.IMAGE,),
+                    steps=(step,),
+                ),
+                _manifest().pipeline_specs[1],
+            )
+        }
+    )
+    analysis = economics_analysis(
+        "text", "cer", _series(), _usage(), manifest, pricing=pricing
+    )
+    assert analysis is not None
+    rows = {r.pipeline: r for r in analysis.payload.pipelines}  # type: ignore[union-attr]
+    assert rows["ocr_seul"].cost_eur == pytest.approx(0.005 + 0.00184)

@@ -37,7 +37,8 @@ from xerocr.evaluation.analysis import (
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.result import DocumentUsage, MetricScore
 
-#: Kinds des fournisseurs facturés au jeton (les autres : temps machine seul).
+#: Kinds facturés au jeton ; les kinds **à la page** sont dans la table
+#: (``cloud_page_kinds``) ; le reste : temps machine seul.
 _CLOUD_KINDS = frozenset({"openai", "anthropic", "mistral"})
 
 
@@ -69,6 +70,19 @@ def pareto_front(
         )
     ]
     return tuple(name for name, _, _ in sorted(front, key=lambda p: (p[1], p[2], p[0])))
+
+
+def _page_rate(
+    spec: PipelineSpec, pricing: Mapping[str, Any]
+) -> float | None:
+    """Tarif €/1000 pages cumulé des étages facturés à la page, sinon ``None``."""
+    table = pricing.get("cloud_page_kinds", {})
+    rates = [
+        float(table[kind]["eur_per_1k_pages"])
+        for kind in {step.adapter_name.split(":", 1)[0] for step in spec.steps}
+        if kind in table
+    ]
+    return sum(rates) if rates else None
 
 
 def _cloud_model_keys(
@@ -160,8 +174,14 @@ def economics_analysis(
         n_documents = len(entries)
         keys = _cloud_model_keys(specs[name], manifest.adapter_kwargs, table)
         token_cost, basis = _token_cost(keys, tokens_in, tokens_out, table)
+        page_rate = _page_rate(specs[name], table)
+        page_cost = (
+            n_documents / 1000.0 * page_rate if page_rate is not None else 0.0
+        )
+        if page_rate is not None:
+            basis = basis + "+pages" if token_cost is not None else basis
         cost = (
-            duration / 3600.0 * rate + token_cost
+            duration / 3600.0 * rate + token_cost + page_cost
             if token_cost is not None
             else None
         )

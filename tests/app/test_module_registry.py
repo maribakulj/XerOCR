@@ -29,7 +29,9 @@ def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
         "anthropic",
+        "kraken",
         "mistral",
+        "mistral_ocr",
         "ollama",
         "openai",
         "pp_doclayout",

@@ -64,6 +64,35 @@ def _build_precomputed(kwargs: Mapping[str, ParamValue]) -> Module:
     return PrecomputedTextAdapter(source_label=label)
 
 
+def _build_kraken(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "kraken : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "kraken : 'model' (chemin .mlmodel) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.kraken import KrakenAdapter
+
+    return KrakenAdapter(label=label, model=model)
+
+
+def _build_mistral_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "mistral_ocr : 'label' (str) requis dans adapter_kwargs."
+        )
+    from xerocr.adapters.ocr.mistral_ocr import MistralOCRAdapter
+
+    return MistralOCRAdapter(
+        label=label, model=str(kwargs.get("model", "mistral-ocr-latest"))
+    )
+
+
 def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -181,6 +210,8 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
     registry.register_builder("tesseract", _build_tesseract)
+    registry.register_builder("kraken", _build_kraken)
+    registry.register_builder("mistral_ocr", _build_mistral_ocr)
     registry.register_builder("openai", _build_openai)
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)

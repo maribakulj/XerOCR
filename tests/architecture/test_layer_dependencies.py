@@ -108,7 +108,7 @@ ADAPTERS_ALLOWED_PKG = (
 #: import paresseux dans ``layout/pp_doclayout``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
-    "datasets", "PIL", "yaml", "paddlex",
+    "datasets", "PIL", "yaml", "paddlex", "kraken",
 }
 
 

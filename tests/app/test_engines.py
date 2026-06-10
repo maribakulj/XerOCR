@@ -98,7 +98,8 @@ def test_default_probes_run_without_error() -> None:
     statuses = engine_statuses()
     kinds = {s.kind for s in statuses}
     assert kinds == {
-        "precomputed", "tesseract", "openai", "anthropic", "mistral", "ollama"
+        "precomputed", "tesseract", "kraken", "mistral_ocr",
+        "openai", "anthropic", "mistral", "ollama",
     }
     assert next(s for s in statuses if s.kind == "precomputed").available
 

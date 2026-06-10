@@ -23,6 +23,7 @@ dev = [
     "jiwer", "fastapi", "httpx", "httpcore", "jinja2", "python-multipart",
 ]
 tesseract = ["pytesseract"]
+kraken = ["kraken"]
 openai = ["openai"]
 anthropic = ["anthropic"]
 mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistralai import Mistral`)
