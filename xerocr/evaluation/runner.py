@@ -37,6 +37,7 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
+from xerocr.evaluation.taxonomy import TaxonomyCollector
 from xerocr.formats.text import get_builtin_profile
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
@@ -87,6 +88,7 @@ def evaluate_run(
     for view in evaluation.views:
         series: _Series = {name: {} for name in view.metric_names}
         diagnostics = DiagnosticsCollector()
+        taxonomy = TaxonomyCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -101,6 +103,11 @@ def evaluate_run(
                     diagnostics.observe(
                         pipeline_name,
                         document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    taxonomy.observe(
+                        pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
                     )
@@ -137,6 +144,9 @@ def evaluate_run(
         calibration = calibration_analysis(view.name, corpus, pipeline_outputs)
         if calibration is not None:
             analyses.append(calibration)
+        taxonomy_analysis = taxonomy.build(view.name)
+        if taxonomy_analysis is not None:
+            analyses.append(taxonomy_analysis)
         if "cer" in view.metric_names:
             economics = economics_analysis(
                 view.name, "cer", series["cer"], usage, manifest
@@ -151,7 +161,14 @@ def evaluate_run(
         cross_engine=tuple(cross_engine),
         usage=tuple(sorted(usage, key=lambda u: (u.pipeline, u.document_id))),
         analyses=tuple(
-            sorted(analyses, key=lambda a: (a.view, a.payload.kind, a.payload.metric))
+            sorted(
+                analyses,
+                key=lambda a: (
+                    a.view,
+                    a.payload.kind,
+                    getattr(a.payload, "metric", ""),
+                ),
+            )
         ),
     )
 

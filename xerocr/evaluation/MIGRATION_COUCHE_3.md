@@ -294,6 +294,8 @@ métriques structurelles PAGE-natives ; découpes des fichiers >400 LOC ; coutur
 > **T11 (D-069)** : `+ metrics/diagnostics.py` (`searchability`, `hallucination` — registre = 12 métriques, vue `text` par défaut enrichie) `+ diagnostics.py` (collecteur branché au scoring : confusions, pires lignes, documents difficiles → 3ᵉ payload `analyses`). Preuves : `tests/evaluation/test_diagnostics.py`.
 >
 > **T12 (D-070)** : `+ calibration.py` — ECE/MCE (Guo 2017) + bins depuis les sidecars `CONFIDENCES` ; payload `calibration` = 4ᵉ membre de l'union. ECE/MCE en payload, pas en scalaire (la calibration qualifie, ne classe pas). Preuves : `tests/evaluation/test_calibration.py` (dérivés à la main).
+>
+> **T13 (D-071)** : `+ taxonomy.py` — 8 classes par règles pures (priorité segmentation→case→diacritic→ligature→visual→résiduel), 5ᵉ payload `analyses` ; classes à données externes élaguées (hapax/oov/abréviations). Preuves : `tests/evaluation/test_taxonomy.py`.
 
 **Enveloppe (plein-scope dès T1) :**
 - [x] `RunResult` (`evaluation/result.py`) dimensionné plein-scope (scalaires texte/structure/NER/taxonomy + par-doc + `schema_version` ; clés stables ; `cross_engine` réservé). — *preuve : `test_result` (sérialisation déterministe) + `evaluate_run` le produit*

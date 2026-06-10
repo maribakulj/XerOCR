@@ -280,7 +280,7 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         manifest=manifest,
     )
     by_kind = {a.payload.kind: a for a in result.analyses}
-    assert set(by_kind) == {"inference", "diagnostics"}
+    assert set(by_kind) == {"inference", "diagnostics", "taxonomy"}
     analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"
     payload = analysis.payload
@@ -290,6 +290,11 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
     diagnostics = by_kind["diagnostics"].payload
     assert diagnostics.confusions and diagnostics.hardest_documents
     assert diagnostics.worst_lines[0].cer > 0
+    # Taxonomie : beta remplace les 2 premiers chars (« XY... » : substitution
+    # résiduelle), gamma 1 char — classes comptées par règles pures.
+    taxonomy = by_kind["taxonomy"].payload
+    assert {row.pipeline for row in taxonomy.pipelines} == {"beta", "gamma"}
+    assert all(row.total_errors > 0 for row in taxonomy.pipelines)
     assert payload.n_documents == 6
     assert payload.critical_distance is not None  # 3 pipelines → post-hoc
     assert [r.pipeline for r in payload.mean_ranks] == ["alpha", "gamma", "beta"]

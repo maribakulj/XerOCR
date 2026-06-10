@@ -44,6 +44,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
+    from xerocr.reports.sections.taxonomy import TaxonomySection
 
     return ReportRenderer(
         (
@@ -54,6 +55,7 @@ def default_report_renderer() -> ReportRenderer:
             CrossEngineSection(),
             EconomicsSection(),
             DiagnosticsSection(),
+            TaxonomySection(),
             CalibrationSection(),
         )
     )

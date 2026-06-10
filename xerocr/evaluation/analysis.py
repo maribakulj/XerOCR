@@ -8,9 +8,9 @@ figé ici, discriminé par ``kind``, dans le même commit que son calcul et son
 consommateur (garde-fou « pas de consommateur = supprimé »).
 
 Familles : ``inference`` (verdict statistique corrigé multi-comparaisons),
-``economics`` (coûts, débit effectif, Pareto), ``diagnostics`` (confusions,
-pires lignes, documents difficiles), ``calibration`` (fiabilité des confidences
-moteur : ECE/MCE + bins de fiabilité).
+``economics`` (coûts, débit, Pareto), ``diagnostics`` (confusions, pires
+lignes, documents difficiles), ``calibration`` (ECE/MCE), ``taxonomy``
+(classes d'erreurs par règles pures — quelles erreurs, pas seulement combien).
 """
 
 from __future__ import annotations
@@ -244,10 +244,45 @@ class CalibrationPayload(BaseModel):
     pipelines: tuple[PipelineCalibration, ...] = ()
 
 
+class TaxonomyCount(BaseModel):
+    """Occurrences d'une classe d'erreur."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    label: str = Field(min_length=1, max_length=64)
+    count: int = Field(ge=1)
+
+
+class PipelineTaxonomy(BaseModel):
+    """Répartition des classes d'erreurs d'un pipeline sur le corpus."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    total_errors: int = Field(ge=1)
+    #: Classes présentes seulement, dans l'ordre canonique de ``CLASSES``.
+    counts: tuple[TaxonomyCount, ...] = ()
+
+
+class TaxonomyPayload(BaseModel):
+    """Taxonomie d'erreurs d'une vue (classification par règles pures)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["taxonomy"] = "taxonomy"
+    #: Ordre canonique de rendu (vocabulaire fermé, cf. ``evaluation.taxonomy``).
+    classes: tuple[str, ...] = ()
+    pipelines: tuple[PipelineTaxonomy, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
-    InferencePayload | EconomicsPayload | DiagnosticsPayload | CalibrationPayload,
+    InferencePayload
+    | EconomicsPayload
+    | DiagnosticsPayload
+    | CalibrationPayload
+    | TaxonomyPayload,
     Field(discriminator="kind"),
 ]
 
@@ -281,5 +316,8 @@ __all__ = [
     "PipelineEconomics",
     "PipelineInterval",
     "PipelineRank",
+    "PipelineTaxonomy",
+    "TaxonomyCount",
+    "TaxonomyPayload",
     "WorstLine",
 ]
