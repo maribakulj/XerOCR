@@ -40,8 +40,9 @@ _CSS = (
     "font-family:var(--sans);font-size:14px;line-height:1.5;padding:22px;"
     "display:flex;flex-direction:column;gap:18px;"
     "-webkit-font-smoothing:antialiased;}"
-    ".report-chrome{display:flex;align-items:center;gap:12px;padding:12px 18px;"
-    "background:var(--ink);border-radius:var(--r-pill);color:var(--paper);}"
+    ".report-chrome{display:flex;align-items:center;gap:16px;padding:12px 18px;"
+    "background:var(--ink);border-radius:var(--r-pill);color:var(--paper);"
+    "flex-wrap:wrap;}"
     ".report-chrome .wm-mark{display:inline-flex;align-items:center;"
     "justify-content:center;width:24px;height:24px;border-radius:50%;"
     "background:var(--paper);color:var(--ink);font-weight:700;font-size:12px;}"
@@ -50,7 +51,17 @@ _CSS = (
     ".report-chrome .wm-sep{width:1px;height:16px;background:rgba(239,237,232,0.2);}"
     ".report-chrome .wm-sub{font-family:var(--mono);font-size:11px;"
     "letter-spacing:0.04em;color:rgba(239,237,232,0.6);}"
+    # Méta de run (docs/moteurs/date) + actions d'export, poussées à droite.
+    ".chrome-meta{margin-left:auto;display:flex;gap:14px;align-items:center;"
+    "font-family:var(--mono);font-size:10.5px;color:rgba(239,237,232,0.55);}"
+    ".chrome-meta .v{color:var(--paper);}"
+    ".chrome-actions{display:flex;gap:6px;margin-left:2px;}"
+    ".chrome-btn{background:rgba(239,237,232,0.10);color:var(--paper);"
+    "text-decoration:none;padding:6px 12px;border-radius:var(--r-pill);"
+    "font-family:var(--mono);font-size:10.5px;}"
+    ".chrome-btn:hover{background:rgba(239,237,232,0.18);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
+    ".tab-panel{display:flex;flex-direction:column;gap:14px;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
@@ -146,16 +157,17 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);padding-top:2px;"
     "white-space:nowrap;}"
     ".gl-v{font-size:12.5px;color:var(--g-700);line-height:1.45;}"
-    # Onglets du rapport (IA 4 vues) — barre pilule au design ; enrichissement
-    # progressif : sans JS tous les panneaux restent empilés, les onglets sont
-    # de simples ancres (#panel-<t>). report.js bascule l'affichage (un panneau).
-    ".report-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 18px;padding:5px;"
-    "background:var(--surface);border-radius:var(--r-pill);width:fit-content;}"
-    ".report-tab{font-family:var(--mono);font-size:12px;text-decoration:none;"
-    "color:var(--g-500);padding:7px 16px;border-radius:var(--r-pill);"
-    "white-space:nowrap;}"
-    ".report-tab:hover{color:var(--ink);}"
-    ".report-tab.on{background:var(--ink);color:var(--paper);}"
+    # Onglets du rapport (IA 4 vues) — **intégrés au chrome** (fond sombre) :
+    # bande translucide, onglet actif en pilule claire (cf. design/tokens.css).
+    # Enrichissement progressif : sans JS, panneaux empilés et visibles, les
+    # onglets sont de simples ancres (#panel-<t>) ; report.js bascule l'affichage.
+    ".report-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;"
+    "background:rgba(239,237,232,0.08);border-radius:var(--r-pill);}"
+    ".report-tab{font-family:var(--sans);font-weight:500;font-size:12px;"
+    "text-decoration:none;color:rgba(239,237,232,0.62);padding:6px 14px;"
+    "border-radius:var(--r-pill);white-space:nowrap;}"
+    ".report-tab:hover{color:var(--paper);}"
+    ".report-tab.on{background:var(--paper);color:var(--ink);}"
     ".tab-panel[hidden]{display:none;}"
     ".tab-panel:focus{outline:none;}"
     ".r-block{scroll-margin-top:18px;}"
@@ -197,7 +209,13 @@ def escape(text: str) -> str:
 
 
 def render_document(
-    title: str, body: Html, *, footer: Html | None = None, lang: str = "fr"
+    title: str,
+    body: Html,
+    *,
+    footer: Html | None = None,
+    lang: str = "fr",
+    tabs: str = "",
+    meta: str = "",
 ) -> str:
     """Assemble un document HTML autonome, au design, et déterministe.
 
@@ -205,9 +223,13 @@ def render_document(
     principal — p. ex. le widget « comparer un run » (client-side). Absent → rien
     n'est ajouté (le rapport reste identique au squelette, ex. la voie
     ``compare`` server-side qui n'embarque pas le widget). ``lang`` pilote
-    l'attribut ``<html lang>`` (a11y / lecteurs d'écran)."""
+    l'attribut ``<html lang>`` (a11y / lecteurs d'écran). ``tabs``/``meta`` :
+    HTML **de confiance** intégré au **chrome** (barre d'onglets et méta+exports) ;
+    vides → chrome minimal (wordmark seul). Le corps n'est **plus** enveloppé dans
+    une carte unique : chaque section rend **sa** carte ``.sec``."""
     safe_title = escape(title)
     safe_lang = escape(lang)
+    sub = "Report · benchmark" if lang == "en" else "Rapport · benchmark"
     tail = f"{footer}" if footer is not None else ""
     return (
         "<!DOCTYPE html>\n"
@@ -221,11 +243,9 @@ def render_document(
         '<body class="report-board">\n'
         '<header class="report-chrome">'
         '<span class="wm-mark">X</span><span class="wm-name">XerOCR</span>'
-        '<span class="wm-sep"></span>'
-        f'<span class="wm-sub">{safe_title}</span></header>\n'
-        '<main class="report-main"><section class="sec">\n'
-        f"{body}"
-        "</section></main>\n"
+        f'<span class="wm-sep"></span><span class="wm-sub">{sub}</span>'
+        f"{tabs}{meta}</header>\n"
+        f'<main class="report-main">{body}</main>\n'
         f"{tail}"
         "</body>\n"
         "</html>\n"

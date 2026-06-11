@@ -6,8 +6,11 @@ sections. ``default_report_renderer`` fournit le socle (overview) du squelette.
 
 from __future__ import annotations
 
+import base64
+
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.compare_widget import compare_widget
+from xerocr.reports.csv_export import run_result_csv
 from xerocr.reports.embedded import inline_script
 from xerocr.reports.html import escape, render_document
 from xerocr.reports.section import Html, Section, SectionContext
@@ -66,16 +69,17 @@ _SECTION_TAB = {
 
 
 def _block(name: str, html: str) -> str:
-    """Une section = une **région** ancrée (deeplink ``#r-<name>`` + ARIA)."""
+    """Une section = sa **propre carte** ``.sec``, région ancrée (``#r-<name>``)."""
     return (
-        f'<section id="r-{escape(name)}" class="r-block" '
+        f'<section id="r-{escape(name)}" class="r-block sec" '
         f'aria-label="{escape(_label(name))}">{html}</section>'
     )
 
 
-def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> str:
-    """Regroupe les sections en **4 onglets** (enrichissement progressif).
+def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> tuple[str, str]:
+    """Regroupe les sections en **4 onglets** → ``(barre_onglets, corps_panneaux)``.
 
+    La **barre** part dans le chrome ; le **corps** (panneaux) dans ``<main>``.
     Sans JS, tous les panneaux restent empilés et visibles (= le rapport plat) ;
     ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
     (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
@@ -89,7 +93,7 @@ def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> str:
     active = [t for t in _TAB_ORDER if by_tab[t]]
     if len(active) < 2:
         body = "".join("".join(by_tab[t]) for t in active) + "".join(trailer)
-        return body
+        return "", body
     labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
     tabs = "".join(
         f'<a id="tab-{t}" class="report-tab{" on" if i == 0 else ""}" role="tab" '
@@ -107,7 +111,39 @@ def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> str:
         f'aria-labelledby="tab-{t}">{"".join(by_tab[t])}</div>'
         for t in active
     )
-    return nav + panels + "".join(trailer)
+    return nav, panels + "".join(trailer)
+
+
+def _data_href(text: str, mime: str) -> str:
+    """``data:`` URI base64 d'un export — téléchargeable, hors-ligne, déterministe."""
+    payload = base64.b64encode(text.encode("utf-8")).decode("ascii")
+    return f"data:{mime};charset=utf-8;base64,{payload}"
+
+
+def _chrome_meta(result: RunResult, lang: str) -> str:
+    """Méta de run (docs/moteurs/date) + boutons d'export **CSV/JSON**.
+
+    Exports = ``<a download>`` vers des ``data:`` URI (zéro JS, autonome,
+    hors-ligne). Le JSON embarqué est le ``RunResult`` complet — la matière à
+    redonner à un outil tiers (cf. saveur « données » du cadre rapport)."""
+    n_docs = result.manifest.n_documents
+    n_engines = len({p.pipeline for p in result.pipelines})
+    date = result.manifest.completed_at.date().isoformat()
+    docs_lbl = "docs"
+    eng_lbl = "engines" if lang == "en" else "moteurs"
+    csv_href = _data_href(run_result_csv(result), "text/csv")
+    json_href = _data_href(result.model_dump_json(), "application/json")
+    stem = escape(result.manifest.run_id)
+    return (
+        '<div class="chrome-meta">'
+        f'<span><span class="v">{n_docs}</span> {docs_lbl}</span>'
+        f'<span><span class="v">{n_engines}</span> {eng_lbl}</span>'
+        f'<span class="v">{escape(date)}</span>'
+        '<div class="chrome-actions">'
+        f'<a class="chrome-btn" download="{stem}.csv" href="{csv_href}">⬇ CSV</a>'
+        f'<a class="chrome-btn" download="{stem}.json" href="{json_href}">⬇ JSON</a>'
+        "</div></div>"
+    )
 
 
 class ReportRenderer:
@@ -136,13 +172,16 @@ class ReportRenderer:
             html = section.render(result, ctx)
             if html is not None:
                 rendered.append((section.name, html))
-        # IA en 4 onglets (regroupement des sections), enrichissement progressif :
-        # sections rendues serveur, panneaux ancrés ; ``report.js`` bascule l'affichage.
-        body = _tab_layout(rendered, lang)
+        # IA en 4 onglets : barre (→ chrome) + panneaux (→ corps). Enrichissement
+        # progressif : sections rendues serveur ; ``report.js`` bascule l'affichage.
+        tabs, body = _tab_layout(rendered, lang)
+        meta = _chrome_meta(result, lang)
         # Pied : widget « comparer un run » + script d'interactivité (onglets +
         # navigation clavier + palette). Tous client-side, déterministes, inlinés.
         footer = Html(compare_widget(result) + inline_script("report.js"))
-        return render_document(title, Html(body), footer=footer, lang=lang)
+        return render_document(
+            title, Html(body), footer=footer, lang=lang, tabs=tabs, meta=meta
+        )
 
 
 def default_report_renderer() -> ReportRenderer:
