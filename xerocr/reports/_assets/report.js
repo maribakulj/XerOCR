@@ -221,4 +221,31 @@
       });
     },
   );
+
+  /* 8) Sélecteur de moteur du diff pleine page (détail document) : un bouton
+   *    montre le bloc .dd-fulldiff du moteur, cache les autres (scopé au wrap).
+   *    Sans JS, les blocs sont empilés et tous visibles. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".dd-engine-tabs"),
+    function (tabs) {
+      var wrap = tabs.parentNode;
+      var btns = tabs.querySelectorAll(".dd-eng-btn");
+      function show(engine) {
+        Array.prototype.forEach.call(btns, function (b) {
+          b.classList.toggle("on", b.getAttribute("data-engine") === engine);
+        });
+        Array.prototype.forEach.call(
+          wrap.querySelectorAll(".dd-fulldiff"),
+          function (d) {
+            d.hidden = d.getAttribute("data-engine") !== engine;
+          },
+        );
+      }
+      Array.prototype.forEach.call(btns, function (btn) {
+        btn.addEventListener("click", function () {
+          show(btn.getAttribute("data-engine"));
+        });
+      });
+    },
+  );
 })();

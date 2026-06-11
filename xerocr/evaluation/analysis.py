@@ -275,6 +275,35 @@ class TaxonomyPayload(BaseModel):
     pipelines: tuple[PipelineTaxonomy, ...] = ()
 
 
+#: Plafond de caractères des textes embarqués (borne le payload ; au-delà, tronqué).
+_MAX_TEXT_CHARS = 8000
+
+
+class DocumentTexts(BaseModel):
+    """Textes complets d'**un** document (vérité-terrain + sortie par moteur).
+
+    Bornés : seuls les **top-N pires documents** sont embarqués, chaque texte
+    tronqué à ``_MAX_TEXT_CHARS``. Normalisés (mêmes représentations que le
+    scoring) → le diff pleine page reflète ce qui est mesuré.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    reference: str = Field(max_length=_MAX_TEXT_CHARS)
+    #: ``(pipeline, hypothèse)`` ordonnés — pour le sélecteur de moteur du diff.
+    hypotheses: tuple[tuple[str, str], ...] = ()
+
+
+class DocumentTextsPayload(BaseModel):
+    """Textes complets des pires documents d'une vue (diff pleine page, borné)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["document_texts"] = "document_texts"
+    documents: tuple[DocumentTexts, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -282,7 +311,8 @@ AnalysisPayload = Annotated[
     | EconomicsPayload
     | DiagnosticsPayload
     | CalibrationPayload
-    | TaxonomyPayload,
+    | TaxonomyPayload
+    | DocumentTextsPayload,
     Field(discriminator="kind"),
 ]
 

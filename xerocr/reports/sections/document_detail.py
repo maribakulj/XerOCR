@@ -10,7 +10,12 @@ profil moteur (``.drill-panel`` + ``report.js``) ; sans JS, ``:target``.
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import DiagnosticsPayload, WorstLine
+from xerocr.evaluation.analysis import (
+    DiagnosticsPayload,
+    DocumentTexts,
+    DocumentTextsPayload,
+    WorstLine,
+)
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape
@@ -30,6 +35,17 @@ def _doc_cer(result: RunResult, doc_id: str, view: str) -> list[tuple[str, float
                 if s.metric == _METRIC and s.value is not None:
                     out.append((d.pipeline, s.value))
     return out
+
+
+def _doc_texts(result: RunResult, view: str, doc_id: str) -> DocumentTexts | None:
+    """Textes complets de ce document si le payload (top-N pires) les porte."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if analysis.view == view and isinstance(payload, DocumentTextsPayload):
+            for dt in payload.documents:
+                if dt.document_id == doc_id:
+                    return dt
+    return None
 
 
 def _worst_lines(result: RunResult, doc_id: str, view: str) -> list[WorstLine]:
@@ -88,14 +104,20 @@ class DocumentDetailSection:
             f'<span class="dd-cer">{c * 100:.1f} %</span></div>'
             for p, c in cers
         )
-        worst = _worst_lines(result, doc_id, view)
-        diffs = ""
-        if worst:
-            items = "".join(self._diff_line(w, order) for w in worst)
-            diffs = (
-                '<div class="dd-diffs"><div class="prof-chart-title">Pires lignes '
-                f"(diff vérité-terrain ↔ sortie)</div>{items}</div>"
-            )
+        # Diff **pleine page** (texte complet + sélecteur de moteur) si le payload
+        # textes porte ce doc (top-N pires) ; sinon **pires lignes** (toujours là).
+        full = _doc_texts(result, view, doc_id)
+        if full is not None and full.hypotheses:
+            diffs = self._full_diff(full, order)
+        else:
+            worst = _worst_lines(result, doc_id, view)
+            diffs = ""
+            if worst:
+                items = "".join(self._diff_line(w, order) for w in worst)
+                diffs = (
+                    '<div class="dd-diffs"><div class="prof-chart-title">Pires lignes '
+                    f"(diff vérité-terrain ↔ sortie)</div>{items}</div>"
+                )
         # Fac-similé medium à gauche (si résolu), CER + diff à droite ; sinon
         # CER + diff en pleine largeur (dégradé propre, pas d'image vide).
         inner = (
@@ -123,6 +145,38 @@ class DocumentDetailSection:
             f'<div class="prof-title"><span>{escape(doc_id)}</span>'
             f'<span class="muted prof-pos">document {idx + 1} sur {total}</span></div>'
             f"{body}</div>"
+        )
+
+    @staticmethod
+    def _full_diff(texts: DocumentTexts, order: dict[str, int]) -> str:
+        """Diff **pleine page** : vérité-terrain ↔ sortie, **sélecteur de moteur**.
+
+        Un bloc par moteur (révélé par ``report.js`` ; sans JS, empilés). Le diff
+        caractère est **échappé avant marquage** (anti-XSS, comme les pires lignes)."""
+        hyps = texts.hypotheses
+        tabs = "".join(
+            f'<button type="button" class="dd-eng-btn{" on" if i == 0 else ""}" '
+            f'data-engine="{escape(p)}"><span class="eng-badge" '
+            f'style="--badge:{engine_accent(order.get(p, 0))}">'
+            f"{engine_letter(order.get(p, 0))}</span>{escape(p)}</button>"
+            for i, (p, _) in enumerate(hyps)
+        )
+        blocks = ""
+        for i, (p, hyp) in enumerate(hyps):
+            ref_html, hyp_html = char_diff(texts.reference, hyp)
+            hidden = "" if i == 0 else " hidden"
+            blocks += (
+                f'<div class="dd-fulldiff" data-engine="{escape(p)}"{hidden}>'
+                '<div class="dd-diff-head mono">Vérité terrain</div>'
+                f'<div class="diff">{ref_html}</div>'
+                f'<div class="dd-diff-head mono">Sortie · {escape(p)}</div>'
+                f'<div class="diff">{hyp_html}</div></div>'
+            )
+        return (
+            '<div class="dd-fullwrap"><div class="prof-chart-title">Diff '
+            "vérité-terrain ↔ sortie (page complète)</div>"
+            f'<div class="dd-engine-tabs segmented" role="tablist">{tabs}</div>'
+            f"{blocks}</div>"
         )
 
     @staticmethod

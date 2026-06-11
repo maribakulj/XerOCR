@@ -5,7 +5,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import Analysis, DiagnosticsPayload, WorstLine
+from xerocr.evaluation.analysis import (
+    Analysis,
+    DiagnosticsPayload,
+    DocumentTexts,
+    DocumentTextsPayload,
+    WorstLine,
+)
 from xerocr.evaluation.result import (
     MetricScore,
     PipelineResult,
@@ -89,6 +95,30 @@ def test_facsimile_shown_when_provided() -> None:
     # un doc sans fac-similé reste en pleine largeur (pas d'image vide)
     plain = DocumentDetailSection().render(_result(), SectionContext())
     assert plain is not None and "dd-fac-img" not in plain
+
+
+def test_full_page_diff_with_engine_selector() -> None:
+    base = _result()
+    texts = DocumentTextsPayload(
+        documents=(
+            DocumentTexts(
+                document_id="folio_1",
+                reference="le chat noir",
+                hypotheses=(("pero", "le chat noir"), ("tesseract", "le chien noir")),
+            ),
+        )
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=texts),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert "page complète" in html  # diff pleine page (≠ pires lignes)
+    assert 'class="dd-engine-tabs' in html  # sélecteur de moteur
+    assert html.count('class="dd-fulldiff"') == 2  # un bloc par moteur
+    assert "Vérité terrain" in html and "Sortie ·" in html
+    # le diff caractère est marqué (insertion/suppression)
+    assert 'class="d-ins"' in html or 'class="d-del"' in html
 
 
 def test_none_without_documents() -> None:

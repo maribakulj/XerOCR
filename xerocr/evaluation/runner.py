@@ -23,6 +23,7 @@ from xerocr.domain.run import RunManifest
 from xerocr.evaluation.calibration import calibration_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.diagnostics import DiagnosticsCollector
+from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
@@ -89,6 +90,7 @@ def evaluate_run(
         series: _Series = {name: {} for name in view.metric_names}
         diagnostics = DiagnosticsCollector()
         taxonomy = TaxonomyCollector()
+        doc_texts = DocumentTextsCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -110,6 +112,15 @@ def evaluate_run(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
+                    )
+                    doc_texts.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                        next(
+                            (s.value for s in scores if s.metric == "cer"), None
+                        ),
                     )
                 for score in scores:
                     series[score.metric][pipeline_name].append(score)
@@ -149,6 +160,9 @@ def evaluate_run(
         taxonomy_analysis = taxonomy.build(view.name)
         if taxonomy_analysis is not None:
             analyses.append(taxonomy_analysis)
+        texts_analysis = doc_texts.build(view.name)
+        if texts_analysis is not None:
+            analyses.append(texts_analysis)
         if "cer" in view.metric_names:
             economics = economics_analysis(
                 view.name, "cer", series["cer"], usage, manifest
