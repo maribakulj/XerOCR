@@ -111,6 +111,15 @@ _CSS = (
     "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
     "color:var(--g-400);border-bottom:1px solid var(--g-50);}"
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
+    # Badge de significativité sur le verdict (synthèse) : le classement n'est
+    # jamais lu sans sa qualification statistique. yes=écart confirmé (fern),
+    # no=non séparable (gris), tie=égalité statistique (avertissement chaud).
+    ".sig-badge{display:inline-flex;align-items:center;font-family:var(--mono);"
+    "font-size:10.5px;padding:3px 9px;border-radius:var(--r-pill);"
+    "letter-spacing:0.02em;white-space:nowrap;}"
+    ".sig-yes{background:var(--fern);color:var(--paper);}"
+    ".sig-no{background:var(--g-50);color:var(--g-400);}"
+    ".sig-tie{background:rgba(214,176,90,0.32);color:var(--g-700);}"
     # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"

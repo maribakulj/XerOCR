@@ -70,7 +70,8 @@ def test_best_pipeline_delta_and_significance() -> None:
     assert ">ollama<" in html
     assert "0.1000" in html  # CER du meilleur
     assert "0.1500" in html  # Δ = 0.25 - 0.10 (fonction auditable)
-    assert "significatif (p=0.0300)" in html  # p < 0,05
+    assert "écart significatif (p=0.0300)" in html  # p < 0,05
+    assert 'class="sig-badge sig-yes"' in html  # qualification = badge prominent
 
 
 def test_non_significant_gap() -> None:
@@ -82,7 +83,8 @@ def test_non_significant_gap() -> None:
     )
     html = SynthesisSection().render(result, SectionContext())
     assert html is not None
-    assert "non sig. (p=0.4000)" in html
+    assert "non séparable (p=0.4000)" in html
+    assert 'class="sig-badge sig-no"' in html  # qualification = badge, pas texte nu
 
 
 def test_single_pipeline_has_no_comparison() -> None:
