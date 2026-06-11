@@ -140,6 +140,20 @@ _CSS = (
     ".dc-row.best .dc-cer{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Graphe de dispersion CER (SVG serveur, échelle commune) : badge+nom, bande,
+    # labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
+    ".disp-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"
+    ".disp-row{display:grid;grid-template-columns:170px 1fr;gap:6px 14px;"
+    "align-items:center;}"
+    ".disp-head{display:flex;align-items:center;gap:8px;}"
+    ".disp-name{font-family:var(--mono);font-size:12px;color:var(--ink);"
+    "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}"
+    ".disp-strip{width:100%;height:22px;display:block;}"
+    ".disp-axis{stroke:var(--g-100);stroke-width:1;}"
+    ".disp-range{stroke-width:4;stroke-linecap:round;opacity:0.45;}"
+    ".disp-mean{stroke:var(--ink);stroke-width:1.5;}"
+    ".disp-labels{grid-column:2;font-size:11px;color:var(--g-500);"
+    "font-variant-numeric:tabular-nums;}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"
