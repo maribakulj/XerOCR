@@ -158,10 +158,17 @@ chantiers.
 
 ### I. Micro-polish transversal
 
-Nombres FR (`1,4 %`, espace fine insécable) — la « i18n des nombres » différée de
-3a trouve sa tranche ici ; densités/espacements des cartes alignés sur
+Nombres FR (`1,4 %`, espace fine insécable) — formatage de la **langue par
+défaut**, indépendant de l'anglais ; densités/espacements des cartes alignés sur
 `tokens.css` ; états vides soignés par vue ; `prefers-reduced-motion` pour le
 scroll ; impression (CSS print : onglets → empilé).
+
+> **i18n complète du rapport (D-114)** : le **contenu des sections** est FR en
+> dur (le chrome est bilingue). La traduction FR/EN **complète** est une **passe
+> finale, APRÈS P2** (métriques) — on n'internationalise pas une cible mobile :
+> P2 ajoute ~6 sections, donc i18n d'office maintenant = surcoût par tranche ou
+> anglais « moitié traduit ». Une seule passe, surface stable. Cf.
+> `PLAN_FIN_MIGRATION.md` (séquencement i18n).
 
 ---
 

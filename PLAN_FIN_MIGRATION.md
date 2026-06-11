@@ -78,6 +78,16 @@ chantier de fond, **P4** une fois P1+P3 prêts, **P5** la fin.
 humaine, pas du code) — réduit à « choisir **un** corpus libre de droits et le
 faire à fond ».
 
+**Séquencement i18n du rapport (D-114)** : le **contenu des sections** est
+aujourd'hui en **FR en dur** (le chrome — onglets/héros/glossaire — est déjà
+bilingue). L'i18n **complète** du rapport (sections → bilingue FR/EN) est une
+**passe finale, APRÈS P2** : on n'internationalise pas une cible mobile — P2
+ajoute ~6 sections de métriques, donc i18n d'office maintenant = soit surcoût
+sur chaque tranche métrique, soit anglais « moitié traduit » qui régresse. Une
+**seule passe**, sur la surface **complète et stable**, un catalogue cohérent.
+Les **nombres FR** (`1,4 %`, espace fine — formatage de la *langue par défaut*,
+indépendant de l'anglais) restent une **micro de P1**, faisable quand on veut.
+
 ---
 
 
@@ -198,9 +208,10 @@ défauts.
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
 - [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
 - [x] **Étape 3 / Rapport interactif** : 4 onglets, chrome unifié + exports, héros+cartes, glossaire en dialog, graphes SVG, tables triables + survol-définitions, profil moteur drill-in, galerie-entrée + détail document drill-in (U1→U4 livrés, cf. `PLAN_UI_RAPPORT.md`).
-- [ ] **P0 — Enveloppe données** : `DocumentRef.metadata` optionnel + référence image dans `RunDocumentResult` (jamais les octets).
-- [ ] **P1 — Rapport données locales** : T3 vraies vignettes · T4 fac-similé medium + diff pleine page borné · U5′ strates (forme optionnelle) + démo multi-genre · nombres FR · saveur dossier.
+- [x] **P0 — Enveloppe données** : `DocumentRef.metadata` optionnel + référence image dans `RunDocumentResult` (jamais les octets). *(strates D-110 + image D-111)*
+- [ ] **P1 — Rapport données locales** : T3 vignettes ✅ · T4 fac-similé + diff pleine page ✅ · U5′ strates ✅ · *reste* : **nombres FR** (micro) · saveur **dossier** (P4).
 - [ ] **P2 / Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
+- [ ] **i18n finale du rapport** (passe unique **après P2**, D-114) : contenu des sections → **bilingue FR/EN** sur la surface complète et stable (le chrome est déjà bilingue).
 - [ ] **P3 — Dataset de référence curé** (**un seul**) : spec de standardisation + 1 corpus libre de droits (GT riche + strate + IIIF statique) + importeur (SHA → `RunManifest`). Chaîne prouvée extensible.
 - [ ] **P4 — Saveurs & échelle** : saveur réfs IIIF (dataset P3) · saveur servie (app web : galerie paginée, images à la demande, échelle 5000).
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
