@@ -21,6 +21,7 @@ _SECTION_LABELS = {
     "synthesis": "Synthèse",
     "overview": "Vue d'ensemble",
     "by_engine": "Par moteur",
+    "engine_profiles": "Profils moteur",
     "by_document": "Par document",
     "documents_gallery": "Galerie",
     "dispersion": "Dispersion",
@@ -90,6 +91,7 @@ _SECTION_TAB = {
     "synthesis": "overview",
     "overview": "overview",
     "by_engine": "engines",
+    "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
     "economics": "engines",
@@ -283,6 +285,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
     from xerocr.reports.sections.economics import EconomicsSection
+    from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.gallery import DocumentGallerySection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
@@ -293,6 +296,7 @@ def default_report_renderer() -> ReportRenderer:
             SynthesisSection(),
             OverviewSection(),
             EngineSection(),
+            EngineProfileSection(),
             DispersionSection(),
             DocumentSection(),
             DocumentGallerySection(),

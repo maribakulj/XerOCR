@@ -52,7 +52,48 @@ def dispersion_strip(
     )
 
 
-__all__ = ["calibration_curve", "composition_bar", "dispersion_strip", "num"]
+__all__ = [
+    "bar_series",
+    "calibration_curve",
+    "composition_bar",
+    "dispersion_strip",
+    "num",
+]
+
+
+def bar_series(
+    values: list[float],
+    *,
+    accent: str,
+    width: float = 320.0,
+    height: float = 120.0,
+    gap: float = 2.0,
+) -> str:
+    """Barres verticales (``values`` dans l'ordre fourni — l'appelant trie).
+
+    Hauteur ∝ valeur / max ; échelle propre à la série. Étiré par CSS
+    (``preserveAspectRatio="none"``). Déterministe (coords ``num``), zéro JS."""
+    n = len(values)
+    if n == 0:
+        return (
+            f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bars-svg" '
+            'aria-hidden="true"></svg>'
+        )
+    vmax = max(values) or 1.0
+    bw = (width - gap * (n - 1)) / n
+    bars: list[str] = []
+    x = 0.0
+    for v in values:
+        h = max(0.0, v) / vmax * height
+        bars.append(
+            f'<rect x="{num(x)}" y="{num(height - h)}" width="{num(bw)}" '
+            f'height="{num(h)}" style="fill:{accent}"/>'
+        )
+        x += bw + gap
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bars-svg" '
+        f'preserveAspectRatio="none" aria-hidden="true">{"".join(bars)}</svg>'
+    )
 
 
 def composition_bar(

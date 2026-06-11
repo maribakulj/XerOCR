@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 from xerocr.reports.svg import (
+    bar_series,
     calibration_curve,
     composition_bar,
     dispersion_strip,
     num,
 )
+
+
+def test_bar_series_one_rect_per_value_scaled_to_max() -> None:
+    svg = bar_series([0.1, 0.2, 0.4], accent="#abc", width=100.0, height=100.0, gap=0.0)
+    assert 'class="bars-svg"' in svg and "#abc" in svg
+    assert svg.count("<rect") == 3
+    # max (0.4) → barre pleine hauteur (y=0, height=100)
+    assert 'y="0.00"' in svg and 'height="100.00"' in svg
+
+
+def test_bar_series_empty_is_valid_svg() -> None:
+    assert "<svg" in bar_series([], accent="#000")  # série vide → SVG vide valide
 
 
 def test_composition_bar_segments_normalized_and_stacked() -> None:

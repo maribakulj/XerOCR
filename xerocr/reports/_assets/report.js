@@ -160,4 +160,37 @@
       });
     },
   );
+
+  /* 6) Profil moteur (drill-in) : un lien #engine-<idx> révèle son panneau et
+   *    masque les autres ; « ← retour » (href="#") les masque tous. Sans JS, le
+   *    panneau s'affiche via :target (cf. CSS). Précédent/suivant = mêmes liens. */
+  var profiles = Array.prototype.slice.call(
+    document.querySelectorAll(".eng-profile"),
+  );
+  if (profiles.length) {
+    function showProfile(id) {
+      profiles.forEach(function (p) {
+        p.hidden = p.id !== id;
+      });
+      var open = document.getElementById(id);
+      if (open) open.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    function hideProfiles() {
+      profiles.forEach(function (p) {
+        p.hidden = true;
+      });
+    }
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest && e.target.closest("a");
+      if (!link) return;
+      var href = link.getAttribute("href") || "";
+      if (link.classList.contains("eng-back")) {
+        e.preventDefault();
+        hideProfiles();
+      } else if (href.indexOf("#engine-") === 0) {
+        e.preventDefault();
+        showProfile(href.slice(1));
+      }
+    });
+  }
 })();

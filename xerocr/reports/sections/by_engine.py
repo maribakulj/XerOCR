@@ -75,11 +75,14 @@ class EngineSection:
                 if vals
                 else "—"
             )
-            badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
+            idx = order.get(pipeline.pipeline, 0)
+            badge = engine_cell(pipeline.pipeline, idx)
             body.append(
                 f'<tr><td class="rank">{position}</td>'
                 f'<td class="eng-cell">{badge}</td>{cells}'
-                f'<td class="disp">{disp}</td></tr>'
+                f'<td class="disp">{disp}</td>'
+                f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
+                'title="Profil">→</a></td></tr>'
             )
         header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
         return Html(
@@ -90,7 +93,7 @@ class EngineSection:
             "définition.</p>\n"
             f'<table class="data sortable">\n'
             f'<thead><tr><th>#</th><th>Moteur</th>{header}'
-            f'<th class="num-cell">dispersion</th></tr></thead>\n'
+            f'<th class="num-cell">dispersion</th><th></th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table>\n"
         )
 
