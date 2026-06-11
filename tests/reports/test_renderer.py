@@ -9,7 +9,7 @@ from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
 from xerocr.reports.renderer import (
     ReportRenderer,
     _label,
-    _toc_nav,
+    _tab_layout,
     default_report_renderer,
 )
 from xerocr.reports.section import Html, SectionContext
@@ -49,18 +49,20 @@ def test_document_structure_and_determinism() -> None:
     # S4.a : le rapport porte le chrome au design (carte gris chaud + en-tête pilule)
     assert 'class="report-board"' in html1
     assert 'class="report-chrome"' in html1
-    assert 'class="sec"' in html1
+    assert 'class="r-block sec"' in html1  # chaque section = sa propre carte .sec
     # trame de points (halftone Xerox) en fond, via data: URI inline
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
     # 3a : widget « comparer un run » (client-side) en pied de rapport.
     assert 'id="xerocr-compare-btn"' in html1
     # 3a : badge moteur (lettre + accent) devant le nom du moteur.
     assert 'class="eng-badge"' in html1
-    # 3a : sommaire deeplinkable (ancres natives) + régions ancrées + ARIA.
-    assert 'class="report-toc"' in html1
-    assert 'aria-label="Sommaire du rapport"' in html1
-    assert 'id="r-by_engine"' in html1  # région ancrée
-    assert 'href="#r-by_engine"' in html1  # deeplink vers la région
+    # IA 4 onglets : barre de tabs + panneaux ARIA ; régions de section ancrées.
+    assert 'class="report-tabs"' in html1
+    assert 'role="tablist"' in html1
+    assert 'role="tabpanel"' in html1
+    assert 'id="panel-engines"' in html1  # onglet « Par moteur »
+    assert 'id="r-by_engine"' in html1  # région ancrée (dans son panneau)
+    assert 'aria-selected="true"' in html1  # 1er onglet actif
     # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
     assert "@import" not in html1
     assert "https://" not in html1
@@ -92,15 +94,79 @@ def test_no_orphan_skips_section_with_unmet_requires() -> None:
     assert "<p>WER</p>" not in html  # requires=("wer",) sauté (seul cer présent)
 
 
-def test_toc_suppressed_below_two_sections() -> None:
-    # Un sommaire d'une seule entrée est inutile → masqué ; ≥ 2 → affiché.
-    assert _toc_nav([]) == ""
-    assert _toc_nav(["by_engine"]) == ""
-    nav = _toc_nav(["by_engine", "overview"])
-    assert 'class="report-toc"' in nav
-    assert 'href="#r-by_engine"' in nav and 'href="#r-overview"' in nav
+def test_tab_layout_groups_and_suppresses_bar_below_two() -> None:
+    # _tab_layout → (barre_onglets, corps_panneaux). La barre part dans le chrome.
+    # 0-1 onglet actif → pas de barre (sections empilées) ; ≥ 2 → barre + panneaux.
+    assert _tab_layout([], "fr") == ("", "")
+    tabs_one, body_one = _tab_layout([("overview", "<p>O</p>")], "fr")
+    assert tabs_one == ""  # un seul onglet : barre inutile
+    assert 'id="r-overview"' in body_one  # section quand même rendue (empilée)
+    rendered = [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>")]
+    tabs, body = _tab_layout(rendered, "fr")
+    assert 'class="report-tabs"' in tabs and 'role="tablist"' in tabs
+    assert 'id="panel-overview"' in body and 'id="panel-engines"' in body
+    assert 'role="tabpanel"' in body
+    assert tabs.count('aria-selected="true"') == 1  # exactement un onglet actif
+
+
+def test_tab_labels_are_localized() -> None:
+    rendered = [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>")]
+    tabs_fr, _ = _tab_layout(rendered, "fr")
+    assert "Par moteur" in tabs_fr  # libellé FR (sans apostrophe)
+    tabs_en, _ = _tab_layout(rendered, "en")
+    assert "Overview" in tabs_en and "Engines" in tabs_en
+
+
+def test_unmapped_section_renders_after_panels() -> None:
+    # Une section non mappée à un onglet → rendue hors onglets, après les panneaux.
+    _, body = _tab_layout(
+        [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>"), ("notes", "<p>N</p>")],
+        "fr",
+    )
+    assert 'id="r-notes"' in body
+    assert body.index('id="r-notes"') > body.index('id="panel-engines"')
+
+
+def test_glossary_is_a_chrome_dialog_not_a_section() -> None:
+    # Le glossaire est de la périphérie : dialog (footer) + lien-ancre du chrome,
+    # plus une section bas-de-page.
+    html = default_report_renderer().render(_result())
+    assert '<dialog id="glossary-dialog"' in html
+    assert 'href="#glossary-dialog"' in html  # entrée « Glossaire » dans le chrome
+    assert 'id="r-glossary"' not in html  # plus de section
 
 
 def test_label_falls_back_to_raw_name() -> None:
     assert _label("by_engine") == "Par moteur"  # libellé FR connu
     assert _label("inconnue") == "inconnue"  # repli : nom brut
+
+
+def test_chrome_meta_and_exports_present() -> None:
+    # Chrome : méta de run (docs/moteurs) + exports CSV/JSON en data: (offline).
+    html = default_report_renderer().render(_result())
+    assert 'class="chrome-meta"' in html
+    assert "docs" in html and "moteurs" in html  # libellés méta FR
+    assert 'download="r.csv"' in html  # run_id="r"
+    assert 'href="data:text/csv' in html
+    assert 'download="r.json"' in html
+    assert 'href="data:application/json' in html
+    # autonomie : les exports sont des data: URI, aucune ressource réseau
+    assert "https://" not in html
+
+
+def test_view_hero_present_with_eyebrow_and_stats() -> None:
+    # Chaque panneau s'ouvre sur un héros : eyebrow « VUE 0n · … » + titre + stats.
+    html = default_report_renderer().render(_result())
+    assert 'class="view-hero"' in html
+    assert 'class="view-hero-eyebrow"' in html
+    assert 'class="view-hero-name"' in html
+    assert "VUE 01" in html  # numérotation de vue (overview = 1ʳᵉ)
+    assert 'class="hero-stat"' in html  # readouts de portée dans le héros
+
+
+def test_each_section_is_its_own_card() -> None:
+    # Plus de méga-carte : chaque section porte sa propre carte .sec ancrée.
+    html = default_report_renderer().render(_result())
+    assert 'class="r-block sec"' in html
+    # le corps n'est plus enveloppé dans une <section class="sec"> unique
+    assert '<main class="report-main"><section class="sec">' not in html

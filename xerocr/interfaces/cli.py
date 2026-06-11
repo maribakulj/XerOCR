@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -25,12 +26,16 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
+from xerocr.app.report_images import build_facsimiles, build_thumbnails
 from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
 from xerocr.reports import default_report_renderer, render_comparison
 from xerocr.reports.csv_export import run_result_csv
+
+#: Horodatage figé du rapport de démo (golden octet-stable, cf. ``demo_to_html``).
+_DEMO_EPOCH = datetime(2026, 1, 1, tzinfo=UTC)
 
 
 def demo_to_html() -> str:
@@ -54,7 +59,21 @@ def demo_to_html() -> str:
         )
     stable = result.model_copy(
         update={
+            # Horodatages du manifeste = environnementaux (wall-clock) → figés pour
+            # le golden. Le run_id en dérive (``run-<timestamp>``) : figé aussi.
+            "manifest": result.manifest.model_copy(
+                update={
+                    "run_id": "demo",
+                    "started_at": _DEMO_EPOCH,
+                    "completed_at": _DEMO_EPOCH,
+                }
+            ),
             "usage": (),
+            # Réfs image = chemins du TemporaryDirectory (éphémères) → neutralisés
+            # comme les autres canaux environnementaux (golden octet-stable).
+            "documents": tuple(
+                d.model_copy(update={"image_ref": None}) for d in result.documents
+            ),
             "analyses": tuple(
                 analysis
                 for analysis in result.analyses
@@ -123,7 +142,10 @@ def _run_config(
     )
     Path(output).write_text(
         default_report_renderer().render(
-            result, title=f"XerOCR — {spec.corpus.name}"
+            result,
+            title=f"XerOCR — {spec.corpus.name}",
+            images=build_thumbnails(result),
+            facsimiles=build_facsimiles(result),
         ),
         encoding="utf-8",
     )

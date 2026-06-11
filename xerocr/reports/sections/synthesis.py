@@ -61,12 +61,12 @@ def _significance_p(result: RunResult, view: str) -> float | None:
 
 
 def _verdict(p_value: float | None) -> tuple[str, str]:
-    """(libellé, classe CSS) — significatif si p < 0,05 ; ``None`` → tiret."""
+    """(libellé, état) — ``yes`` si p < 0,05, ``no`` sinon, ``none`` si absent."""
     if p_value is None:
-        return "—", ""
+        return "—", "none"
     if p_value < 0.05:
-        return f"significatif (p={p_value:.4f})", " sig"
-    return f"non sig. (p={p_value:.4f})", ""
+        return f"écart significatif (p={p_value:.4f})", "yes"
+    return f"non séparable (p={p_value:.4f})", "no"
 
 
 def _inference_for(result: RunResult, view: str) -> InferencePayload | None:
@@ -103,10 +103,10 @@ def _corrected_verdict(
     payload = _inference_for(result, view)
     if payload is not None and payload.critical_distance is not None:
         if _same_tied_group(payload, best, runner):
-            return "égalité statistique (Nemenyi)", ""
+            return "égalité statistique (Nemenyi)", "tie"
         return (
             f"écart confirmé (Nemenyi, CD={payload.critical_distance:.3f})",
-            " sig",
+            "yes",
         )
     return _verdict(_significance_p(result, view))
 
@@ -128,16 +128,21 @@ class SynthesisSection:
                 runner_cer, runner = ranked[1]
                 delta = f"{runner_cer - best_cer:.4f}"
                 runner_label = escape(runner)
-                label, css = _corrected_verdict(result, view, best, runner)
+                label, state = _corrected_verdict(result, view, best, runner)
             else:
-                delta, runner_label, label, css = "—", "—", "—", ""
+                delta, runner_label, label, state = "—", "—", "—", "none"
+            badge = (
+                "—"
+                if state == "none"
+                else f'<span class="sig-badge sig-{state}">{escape(label)}</span>'
+            )
             rows.append(
                 f'<tr><td class="eng-cell">{escape(view)}</td>'
                 f'<td class="eng-cell">{escape(best)}</td>'
                 f'<td class="disp">{best_cer:.4f}</td>'
                 f'<td class="eng-cell">{runner_label}</td>'
                 f'<td class="disp">{delta}</td>'
-                f'<td class="verdict{css}">{label}</td></tr>'
+                f'<td class="verdict">{badge}</td></tr>'
             )
         if not rows:
             return None

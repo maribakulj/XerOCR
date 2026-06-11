@@ -48,7 +48,7 @@ def test_renders_per_document_rows_with_grouping() -> None:
         SectionContext(),
     )
     assert html is not None
-    assert "Par document" in html
+    assert "Vue :" in html  # tables par vue (le titre de vue est dans le héros)
     # les deux documents et les deux pipelines apparaissent
     for token in ("folio_1", "folio_2", "tesseract", "pero"):
         assert token in html

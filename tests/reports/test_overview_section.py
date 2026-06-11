@@ -83,13 +83,13 @@ def _two(cer_a: float, cer_b: float) -> RunResult:
     )
 
 
-def test_readouts_show_real_scope() -> None:
+def test_scope_moved_to_hero_not_readouts() -> None:
+    # La portée (docs/moteurs) vit désormais dans le héros (rendu par le renderer) ;
+    # la section overview porte les métriques par vue, plus de bande de readouts.
     html = OverviewSection().render(_two(0.1, 0.2), SectionContext())
     assert html is not None
-    assert 'class="readouts"' in html and 'class="readout"' in html
-    # portée **réelle** : 2 documents, 2 pipelines, 1 vue, 1 métrique
-    for label in ("Documents", "Pipelines", "Vues", "Métriques"):
-        assert label in html
+    assert "Métriques par vue" in html
+    assert 'class="readouts"' not in html
 
 
 def test_data_bars_are_relative_to_column_max() -> None:

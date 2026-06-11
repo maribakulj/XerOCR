@@ -58,7 +58,7 @@ def _result() -> RunResult:
 def test_engines_ranked_by_cer_ascending() -> None:
     html = EngineSection().render(_result(), SectionContext())
     assert html is not None
-    assert "Par moteur" in html
+    assert "Classement" in html  # titre de carte (le titre de vue est dans le héros)
     # le meilleur (fast, CER 0.10) précède le pire (slow, 0.30)
     assert html.index("fast") < html.index("slow")
     # dispersion de fast : min 0.05 · médiane 0.10 · max 0.15
@@ -66,6 +66,16 @@ def test_engines_ranked_by_cer_ascending() -> None:
     # badge moteur présent, et la lettre suit l'ordre canonique (pas le rang) :
     # `fast` apparaît avant `slow` dans le run → A puis B, même si `fast` gagne.
     assert 'class="eng-badge"' in html
+
+
+def test_table_is_sortable_with_def_headers() -> None:
+    # Tables vivantes : table triable, en-têtes de métrique avec def au survol,
+    # cellules porteuses de la clé de tri.
+    html = EngineSection().render(_result(), SectionContext())
+    assert html is not None
+    assert 'class="data sortable"' in html
+    assert "has-def" in html and "aria-sort" in html  # en-tête triable + def
+    assert "data-sort=" in html  # cellules métriques porteuses de la valeur
 
 
 def test_returns_none_without_pipelines() -> None:

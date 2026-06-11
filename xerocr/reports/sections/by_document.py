@@ -32,7 +32,8 @@ class DocumentSection:
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in result.documents
         )
-        parts: list[str] = ["<h2>Par document</h2>"]
+        # Titre de vue porté par le héros (renderer) ; ici, les tables par vue.
+        parts: list[str] = []
         for view_name in ordered_unique(d.view for d in result.documents):
             parts.append(_table_for_view(result.documents, view_name, order))
         return Html("\n".join(parts) + "\n")

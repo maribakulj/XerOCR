@@ -16,7 +16,12 @@ from xerocr.evaluation.result import PipelineResult, RunDocumentResult, RunResul
 from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    col_max,
+    metric_th,
+    ordered_unique,
+)
 
 
 def _per_doc_values(
@@ -61,7 +66,8 @@ class EngineSection:
         body: list[str] = []
         for position, pipeline in enumerate(ordered, start=1):
             cells = "".join(
-                bar_cell(s, maxes[i]) for i, s in enumerate(pipeline.aggregate)
+                bar_cell(s, maxes[i], sortable=True)
+                for i, s in enumerate(pipeline.aggregate)
             )
             vals = _per_doc_values(result.documents, pipeline.pipeline, view, rank)
             disp = (
@@ -69,20 +75,25 @@ class EngineSection:
                 if vals
                 else "—"
             )
-            badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
+            idx = order.get(pipeline.pipeline, 0)
+            badge = engine_cell(pipeline.pipeline, idx)
             body.append(
                 f'<tr><td class="rank">{position}</td>'
                 f'<td class="eng-cell">{badge}</td>{cells}'
-                f'<td class="disp">{disp}</td></tr>'
+                f'<td class="disp">{disp}</td>'
+                f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
+                'title="Profil">→</a></td></tr>'
             )
-        header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
+        header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
         return Html(
-            f"<h2>Par moteur — classement (vue : {escape(view)})</h2>\n"
+            f"<h2>Classement (vue : {escape(view)})</h2>\n"
             f'<p class="muted">Trié par {escape(rank)} ↑ · dispersion = '
-            f"{escape(rank)} min · médiane · max par document.</p>\n"
-            f'<table class="data">\n'
+            f"{escape(rank)} min · médiane · max par document. "
+            "Cliquer un en-tête de métrique pour trier ; survoler pour la "
+            "définition.</p>\n"
+            f'<table class="data sortable">\n'
             f'<thead><tr><th>#</th><th>Moteur</th>{header}'
-            f'<th class="num-cell">dispersion</th></tr></thead>\n'
+            f'<th class="num-cell">dispersion</th><th></th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table>\n"
         )
 

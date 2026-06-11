@@ -280,7 +280,12 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         manifest=manifest,
     )
     by_kind = {a.payload.kind: a for a in result.analyses}
-    assert set(by_kind) == {"inference", "diagnostics", "taxonomy"}
+    assert set(by_kind) == {
+        "inference",
+        "diagnostics",
+        "taxonomy",
+        "document_texts",
+    }
     analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"
     payload = analysis.payload

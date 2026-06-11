@@ -37,7 +37,11 @@ def _row(pipeline: str, cer: float | None, index: int, *, best: bool) -> str:
 
 
 def _card(
-    doc_id: str, entries: list[tuple[str, float | None]], order: dict[str, int]
+    doc_id: str,
+    entries: list[tuple[str, float | None]],
+    order: dict[str, int],
+    idx: int,
+    thumb: str | None,
 ) -> str:
     scored = [c for _, c in entries if c is not None]
     best = min(scored) if scored else None
@@ -52,11 +56,18 @@ def _card(
             entries, key=lambda e: (e[1] is None, e[1] or 0.0, e[0])
         )
     )
+    # Vignette réelle si résolue (intrant de rendu), sinon aperçu synthétique.
+    preview = (
+        f'<div class="doc-preview doc-preview-img"><img src="{escape(thumb)}" '
+        f'alt="" loading="lazy" decoding="async"></div>'
+        if thumb
+        else '<div class="doc-preview" aria-hidden="true"></div>'
+    )
+    # Carte = lien drill-in vers le détail du document (ancre #doc-<idx>).
     return (
-        '<div class="doc-card">'
-        '<div class="doc-preview" aria-hidden="true"></div>'
+        f'<a class="doc-card" href="#doc-{idx}">{preview}'
         f'<div class="dc-id">{escape(doc_id)}</div>'
-        f'<div class="dc-rows">{rows}</div></div>'
+        f'<div class="dc-rows">{rows}</div></a>'
     )
 
 
@@ -80,13 +91,15 @@ class DocumentGallerySection:
                 doc_id,
                 [(d.pipeline, _cer(d.scores)) for d in rows if d.document_id == doc_id],
                 order,
+                idx,
+                ctx.images.get(doc_id),
             )
-            for doc_id in ordered_unique(d.document_id for d in rows)
+            for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
         )
         return Html(
             f"<h2>Galerie des documents (vue : {escape(view)})</h2>\n"
-            '<p class="muted">Aperçu synthétique + CER par moteur '
-            "(badge A→E ; meilleur du document surligné).</p>\n"
+            '<p class="muted">Aperçu + CER par moteur '
+            "(pastille de couleur ; meilleur du document surligné).</p>\n"
             f'<div class="doc-grid">{cards}</div>\n'
         )
 

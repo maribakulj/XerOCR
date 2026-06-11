@@ -16,15 +16,9 @@ from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
 
 
-def _readout(label: str, value: int) -> str:
-    return (
-        f'<div class="readout"><span class="r-label">{escape(label)}</span>'
-        f'<span class="r-value">{value}</span></div>'
-    )
-
-
 class OverviewSection:
-    """Vue d'ensemble : readouts de portée + une table par vue (data-bars)."""
+    """Métriques par vue (data-bars). La **portée** (docs/moteurs) vit dans le
+    héros de la vue (rendu par le renderer), plus dans une bande de readouts ici."""
 
     name = "overview"
     requires: tuple[str, ...] = ()  # générique : affiche les métriques présentes
@@ -33,17 +27,9 @@ class OverviewSection:
         if not result.pipelines:
             return None
         views = ordered_unique(p.view for p in result.pipelines)
-        n_pipelines = len({p.pipeline for p in result.pipelines})
-        n_metrics = len({s.metric for p in result.pipelines for s in p.aggregate})
         parts: list[str] = [
-            "<h2>Vue d'ensemble</h2>",
+            "<h2>Métriques par vue</h2>",
             f'<p class="muted">Corpus : {escape(result.manifest.corpus_name)}</p>',
-            '<div class="readouts">',
-            _readout("Documents", result.manifest.n_documents),
-            _readout("Pipelines", n_pipelines),
-            _readout("Vues", len(views)),
-            _readout("Métriques", n_metrics),
-            "</div>",
         ]
         for view_name in views:
             parts.append(_table_for_view(result, view_name))

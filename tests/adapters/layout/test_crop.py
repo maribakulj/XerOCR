@@ -17,7 +17,7 @@ from xerocr.domain.errors import AdapterStepError
 from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
 from xerocr.pipeline.fanout import run_region_fanout
 from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from xerocr.pipeline.types import RunContext, StepOutput
 
 Image = pytest.importorskip("PIL.Image")
 
@@ -53,15 +53,19 @@ class _SizeRecognizer:
             w, h = im.size
         out = Path(context.workspace_uri) / f"{image.region_id}.txt"
         out.write_text(f"{w}x{h}", encoding="utf-8")
-        return {
-            ArtifactType.RAW_TEXT: Artifact(
-                id=f"{context.document_id}:{image.region_id}:raw",
-                document_id=context.document_id,
-                type=ArtifactType.RAW_TEXT,
-                uri=str(out),
-                region_id=image.region_id,
-            )
-        }
+        # Le contrat ``Module.execute`` renvoie un ``StepOutput`` (artefacts +
+        # usage), pas un dict nu — sinon le fan-out (``output.artifacts``) casse.
+        return StepOutput(
+            artifacts={
+                ArtifactType.RAW_TEXT: Artifact(
+                    id=f"{context.document_id}:{image.region_id}:raw",
+                    document_id=context.document_id,
+                    type=ArtifactType.RAW_TEXT,
+                    uri=str(out),
+                    region_id=image.region_id,
+                )
+            }
+        )
 
 
 def test_crop_region_extracts_relative_box(tmp_path: Path) -> None:

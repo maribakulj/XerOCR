@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
+from xerocr.app.report_images import build_facsimiles, build_thumbnails
 from xerocr.app.results import RunResultError, load_run_result
 from xerocr.app.security import PathSecurityError
 from xerocr.interfaces.web.catalog import available_reports, resolve_report
@@ -38,6 +39,8 @@ def build_reports_router(reports_dir: Path) -> APIRouter:
             result,
             title=f"XerOCR — {result.manifest.run_id}",
             lang=report_lang,
+            images=build_thumbnails(result),
+            facsimiles=build_facsimiles(result),
         )
 
     return router
