@@ -82,12 +82,14 @@ jobs:
       #    une image de TEXTE réelle par le Tesseract baqué (≠ le damier du build).
       #    Le binaire reconnaît du vrai texte avec le modèle ``fra`` ou le déploiement
       #    est refusé. ImageMagick n'est plus préinstallé sur ubuntu-24.04 (le runner
-      #    ``ubuntu-latest`` courant) → on l'installe explicitement (sinon ``convert``
-      #    renvoie 127 et le déploiement échoue à tort).
-      - name: Installer ImageMagick (rendu de l'image de smoke)
+      #    ``ubuntu-latest`` courant) → on l'installe, AVEC une police explicite :
+      #    ``--no-install-recommends`` n'embarque aucune fonte, et ``convert`` n'a
+      #    pas de police par défaut (``font '(null)'``). On baque ``fonts-dejavu-core``
+      #    et on pointe ``-font`` dessus → rendu déterministe, zéro lookup implicite.
+      - name: Installer ImageMagick + une police (rendu de l'image de smoke)
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends imagemagick
+          sudo apt-get install -y --no-install-recommends imagemagick fonts-dejavu-core
 
       - name: Smoke OCR réel (Tesseract baqué)
         run: |
@@ -103,7 +105,9 @@ jobs:
             echo "::error::le conteneur moteur ne répond pas sur /health"; exit 1
           fi
           # Image de texte réelle → OCR via le binaire baqué (modèle fra).
+          # Police explicite (≠ lookup ImageMagick par défaut, qui rend ``(null)``).
           convert -size 360x90 xc:white -gravity center \
+            -font /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf \
             -pointsize 48 -annotate 0 'Bonjour' /tmp/hello.png
           docker cp /tmp/hello.png engine:/tmp/hello.png
           out="$(docker exec engine tesseract /tmp/hello.png - -l fra --psm 7 2>/dev/null || true)"
