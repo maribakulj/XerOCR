@@ -151,10 +151,10 @@ class EngineProfileSection:
             else ""
         )
         return (
-            f'<div class="eng-profile" id="engine-{idx}" hidden '
+            f'<div class="drill-panel eng-profile" id="engine-{idx}" hidden '
             f'role="region" aria-label="{escape(name)}">'
             '<div class="prof-head">'
-            '<a class="eng-back" href="#">← retour au tableau</a>'
+            '<a class="drill-back" href="#">← retour au tableau</a>'
             '<div class="prof-nav">'
             f'<a class="btn-sm" href="#engine-{prev_idx}">← précédent</a>'
             f'<a class="btn-sm" href="#engine-{next_idx}">suivant →</a></div></div>'

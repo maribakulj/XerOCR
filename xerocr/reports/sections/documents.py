@@ -11,6 +11,7 @@ from __future__ import annotations
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections.by_document import DocumentSection
+from xerocr.reports.sections.document_detail import DocumentDetailSection
 from xerocr.reports.sections.gallery import DocumentGallerySection
 
 
@@ -25,6 +26,7 @@ class DocumentsSection:
         lst = DocumentSection().render(result, ctx)
         if grid is None and lst is None:
             return None
+        details = DocumentDetailSection().render(result, ctx) or ""
         toggle = (
             '<div class="view-toggle" role="group" aria-label="Affichage">'
             '<button type="button" class="vt-btn on" data-view="grid" '
@@ -36,6 +38,7 @@ class DocumentsSection:
             f"{toggle}"
             f'<div class="doc-view" data-view="grid">{grid or ""}</div>'
             f'<div class="doc-view" data-view="list" hidden>{lst or ""}</div>'
+            f"{details}"
         )
 
 

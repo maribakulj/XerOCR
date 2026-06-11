@@ -60,7 +60,7 @@ def _result() -> RunResult:
 def test_one_hidden_panel_per_engine_with_anchor() -> None:
     html = EngineProfileSection().render(_result(), SectionContext())
     assert html is not None
-    assert html.count('class="eng-profile"') == 2  # un panneau par moteur
+    assert html.count('class="drill-panel eng-profile"') == 2  # un panneau/moteur
     assert 'id="engine-0"' in html and 'id="engine-1"' in html  # ancres drill-in
     assert html.count('hidden role="region"') == 2  # cachés par défaut (au clic)
     assert "← retour au tableau" in html  # retour dispo dans chaque panneau

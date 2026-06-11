@@ -161,35 +161,37 @@
     },
   );
 
-  /* 6) Profil moteur (drill-in) : un lien #engine-<idx> révèle son panneau et
-   *    masque les autres ; « ← retour » (href="#") les masque tous. Sans JS, le
-   *    panneau s'affiche via :target (cf. CSS). Précédent/suivant = mêmes liens. */
-  var profiles = Array.prototype.slice.call(
-    document.querySelectorAll(".eng-profile"),
+  /* 6) Drill-in générique (profil moteur, détail document) : un lien dont la
+   *    cible est un .drill-panel le révèle et masque les autres ; « ← retour »
+   *    (.drill-back) les masque tous. Sans JS, le panneau s'affiche via :target. */
+  var drillPanels = Array.prototype.slice.call(
+    document.querySelectorAll(".drill-panel"),
   );
-  if (profiles.length) {
-    function showProfile(id) {
-      profiles.forEach(function (p) {
+  if (drillPanels.length) {
+    function showDrill(id) {
+      drillPanels.forEach(function (p) {
         p.hidden = p.id !== id;
       });
       var open = document.getElementById(id);
       if (open) open.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    function hideProfiles() {
-      profiles.forEach(function (p) {
-        p.hidden = true;
-      });
-    }
     document.addEventListener("click", function (e) {
       var link = e.target.closest && e.target.closest("a");
       if (!link) return;
+      if (link.classList.contains("drill-back")) {
+        e.preventDefault();
+        drillPanels.forEach(function (p) {
+          p.hidden = true;
+        });
+        return;
+      }
       var href = link.getAttribute("href") || "";
-      if (link.classList.contains("eng-back")) {
-        e.preventDefault();
-        hideProfiles();
-      } else if (href.indexOf("#engine-") === 0) {
-        e.preventDefault();
-        showProfile(href.slice(1));
+      if (href.charAt(0) === "#" && href.length > 1) {
+        var target = document.getElementById(href.slice(1));
+        if (target && target.classList.contains("drill-panel")) {
+          e.preventDefault();
+          showDrill(href.slice(1));
+        }
       }
     });
   }
