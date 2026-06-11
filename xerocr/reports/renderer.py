@@ -52,6 +52,37 @@ _TAB_LABELS = {
     },
 }
 _TABLIST_LABEL = {"fr": "Onglets du rapport", "en": "Report tabs"}
+#: Héros par vue : ``(titre, description)`` localisés (eyebrow + stats dérivés).
+_HERO_TEXT = {
+    "fr": {
+        "overview": (
+            "Vue d'ensemble du run",
+            "Métadonnées du benchmark, composition du corpus et moteurs exécutés.",
+        ),
+        "engines": (
+            "Par moteur",
+            "Comparaison des moteurs sur l'ensemble des métriques calculées.",
+        ),
+        "documents": (
+            "Par document",
+            "Chaque document du corpus, avec son CER par moteur.",
+        ),
+        "crosses": (
+            "Croisements",
+            "Significativité statistique des écarts entre moteurs.",
+        ),
+    },
+    "en": {
+        "overview": (
+            "Run overview",
+            "Benchmark metadata, corpus composition and engines run.",
+        ),
+        "engines": ("By engine", "Engine comparison across all computed metrics."),
+        "documents": ("By document", "Each corpus document, with its per-engine CER."),
+        "crosses": ("Crosses", "Statistical significance of engine differences."),
+    },
+}
+_HERO_EYEBROW = {"fr": "VUE", "en": "VIEW"}
 #: Section → onglet. Une section absente de la table (ex. ``glossary``) est rendue
 #: **après** les panneaux, hors onglets (matière de référence, toujours visible).
 _SECTION_TAB = {
@@ -76,11 +107,56 @@ def _block(name: str, html: str) -> str:
     )
 
 
-def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> tuple[str, str]:
+def _hero_stats(tab: str, result: RunResult, lang: str) -> list[tuple[int, str]]:
+    """Readouts de portée du **héros**, dérivés du ``RunResult`` (réels, pas figés)."""
+    n_docs = result.manifest.n_documents
+    n_eng = len({p.pipeline for p in result.pipelines})
+    n_met = len({s.metric for p in result.pipelines for s in p.aggregate})
+    en = lang == "en"
+    docs, eng = "documents", ("engines" if en else "moteurs")
+    met = "metrics" if en else "métriques"
+    if tab == "overview":
+        return [(n_docs, docs), (n_eng, eng)]
+    if tab == "engines":
+        return [(n_eng, eng), (n_met, met), (n_docs, docs)]
+    if tab == "documents":
+        return [(n_docs, docs)]
+    if tab == "crosses":
+        return [(n_eng, eng)]
+    return []
+
+
+def _hero(tab: str, num: int, result: RunResult, lang: str) -> str:
+    """Bande **héros** d'un onglet : eyebrow « VUE 0n · NOM » + titre + desc + stats."""
+    labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
+    title, desc = _HERO_TEXT.get(lang, _HERO_TEXT["fr"])[tab]
+    eyebrow = f"{_HERO_EYEBROW.get(lang, 'VUE')} {num:02d} · {labels[tab]}"
+    stats = "".join(
+        f'<div class="hero-stat"><div class="v">{v}</div>'
+        f'<div class="k">{escape(k)}</div></div>'
+        for v, k in _hero_stats(tab, result, lang)
+    )
+    stats_html = f'<div class="view-hero-stats">{stats}</div>' if stats else ""
+    return (
+        '<div class="view-hero"><div>'
+        f'<div class="view-hero-eyebrow">{escape(eyebrow)}</div>'
+        f'<div class="view-hero-name">{escape(title)}</div>'
+        f'<div class="view-hero-desc">{escape(desc)}</div>'
+        f"</div>{stats_html}</div>"
+    )
+
+
+def _tab_layout(
+    rendered: list[tuple[str, str]],
+    lang: str,
+    *,
+    result: RunResult | None = None,
+) -> tuple[str, str]:
     """Regroupe les sections en **4 onglets** → ``(barre_onglets, corps_panneaux)``.
 
     La **barre** part dans le chrome ; le **corps** (panneaux) dans ``<main>``.
-    Sans JS, tous les panneaux restent empilés et visibles (= le rapport plat) ;
+    Chaque panneau s'ouvre sur un **héros de vue** (si ``result`` fourni). Sans JS,
+    tous les panneaux restent empilés et visibles (= le rapport plat) ;
     ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
     (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
     actifs, pas de barre : on empile (une barre d'un onglet est inutile)."""
@@ -108,8 +184,10 @@ def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> tuple[str, str]:
     )
     panels = "".join(
         f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
-        f'aria-labelledby="tab-{t}">{"".join(by_tab[t])}</div>'
-        for t in active
+        f'aria-labelledby="tab-{t}">'
+        f"{_hero(t, i + 1, result, lang) if result is not None else ''}"
+        f'{"".join(by_tab[t])}</div>'
+        for i, t in enumerate(active)
     )
     return nav, panels + "".join(trailer)
 
@@ -174,7 +252,7 @@ class ReportRenderer:
                 rendered.append((section.name, html))
         # IA en 4 onglets : barre (→ chrome) + panneaux (→ corps). Enrichissement
         # progressif : sections rendues serveur ; ``report.js`` bascule l'affichage.
-        tabs, body = _tab_layout(rendered, lang)
+        tabs, body = _tab_layout(rendered, lang, result=result)
         meta = _chrome_meta(result, lang)
         # Pied : widget « comparer un run » + script d'interactivité (onglets +
         # navigation clavier + palette). Tous client-side, déterministes, inlinés.

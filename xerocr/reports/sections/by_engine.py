@@ -77,7 +77,7 @@ class EngineSection:
             )
         header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
         return Html(
-            f"<h2>Par moteur — classement (vue : {escape(view)})</h2>\n"
+            f"<h2>Classement (vue : {escape(view)})</h2>\n"
             f'<p class="muted">Trié par {escape(rank)} ↑ · dispersion = '
             f"{escape(rank)} min · médiane · max par document.</p>\n"
             f'<table class="data">\n'

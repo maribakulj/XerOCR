@@ -145,6 +145,16 @@ def test_chrome_meta_and_exports_present() -> None:
     assert "https://" not in html
 
 
+def test_view_hero_present_with_eyebrow_and_stats() -> None:
+    # Chaque panneau s'ouvre sur un héros : eyebrow « VUE 0n · … » + titre + stats.
+    html = default_report_renderer().render(_result())
+    assert 'class="view-hero"' in html
+    assert 'class="view-hero-eyebrow"' in html
+    assert 'class="view-hero-name"' in html
+    assert "VUE 01" in html  # numérotation de vue (overview = 1ʳᵉ)
+    assert 'class="hero-stat"' in html  # readouts de portée dans le héros
+
+
 def test_each_section_is_its_own_card() -> None:
     # Plus de méga-carte : chaque section porte sa propre carte .sec ancrée.
     html = default_report_renderer().render(_result())

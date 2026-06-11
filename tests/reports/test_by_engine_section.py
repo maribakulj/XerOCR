@@ -58,7 +58,7 @@ def _result() -> RunResult:
 def test_engines_ranked_by_cer_ascending() -> None:
     html = EngineSection().render(_result(), SectionContext())
     assert html is not None
-    assert "Par moteur" in html
+    assert "Classement" in html  # titre de carte (le titre de vue est dans le héros)
     # le meilleur (fast, CER 0.10) précède le pire (slow, 0.30)
     assert html.index("fast") < html.index("slow")
     # dispersion de fast : min 0.05 · médiane 0.10 · max 0.15
