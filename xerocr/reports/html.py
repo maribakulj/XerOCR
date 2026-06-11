@@ -222,7 +222,7 @@ _CSS = (
     ".dc-rows{display:flex;flex-direction:column;gap:4px;}"
     ".dc-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);"
     "font-size:11px;color:var(--g-500);}"
-    ".dc-row .eng-badge{margin-right:0;width:16px;height:16px;font-size:9px;}"
+    ".dc-row .eng-badge{margin-right:0;}"
     ".dc-row .dc-name{flex:1;overflow:hidden;text-overflow:ellipsis;"
     "white-space:nowrap;}"
     ".dc-row .dc-cer{font-variant-numeric:tabular-nums;color:var(--g-700);}"
@@ -346,9 +346,12 @@ _CSS = (
     ".hero-stat .k{font-family:var(--mono);font-size:10px;color:var(--g-400);"
     "letter-spacing:0.06em;text-transform:uppercase;}"
     # Badge moteur (lettre + accent cyclique) — identité stable entre sections.
+    # Marqueur moteur = **pastille de couleur** (l'accent relie le moteur à ses
+    # courbes/barres). La lettre est masquée (redondante avec le nom adjacent),
+    # gardée dans le DOM pour les lecteurs d'écran / le repli sans couleur.
     ".eng-badge{display:inline-flex;align-items:center;justify-content:center;"
-    "width:18px;height:18px;border-radius:5px;background:var(--badge,var(--ink));"
-    "color:var(--paper);font-family:var(--mono);font-size:10px;font-weight:600;"
+    "width:9px;height:9px;border-radius:50%;background:var(--badge,var(--ink));"
+    "color:transparent;font-size:0;flex:0 0 auto;"
     "margin-right:8px;vertical-align:middle;}"
     # Widget « comparer un run » (client-side) — bouton + bandeau sticky des deltas.
     ".compare-bar{display:flex;justify-content:flex-end;margin-top:2px;}"

@@ -98,8 +98,8 @@ class DocumentGallerySection:
         )
         return Html(
             f"<h2>Galerie des documents (vue : {escape(view)})</h2>\n"
-            '<p class="muted">Aperçu synthétique + CER par moteur '
-            "(badge A→E ; meilleur du document surligné).</p>\n"
+            '<p class="muted">Aperçu + CER par moteur '
+            "(pastille de couleur ; meilleur du document surligné).</p>\n"
             f'<div class="doc-grid">{cards}</div>\n'
         )
 
