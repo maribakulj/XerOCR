@@ -1,11 +1,28 @@
 # Plan UI/UX — Rapport interactif : de la coquille à la cible `design/`
 
-> **Statut : analyse + propositions** (options ouvertes marquées ⚖️, recommandations
-> marquées ★). Complète `DECISION_RAPPORT_INTERACTIF.md` (D-094, le *cadre*) par le
+> **Statut : plan validé** (recommandations ★ retenues, décision IA (c) validée —
+> D-096). Complète `DECISION_RAPPORT_INTERACTIF.md` (D-094, le *cadre*) par le
 > *design d'expérience*. La source visuelle canonique est **`design/`**
 > (`tokens.css` + `chrome.jsx` + 4 vues JSX + screenshots — D-018) : ce doc mappe
 > chaque élément de la cible sur (a) sa faisabilité données, (b) son implémentation
 > disciplinée, (c) sa tranche.
+>
+> **Ce doc porte LA file unique du chantier rapport** (§4) : il remplace toute
+> numérotation antérieure de tranches (le pointeur « tranche 2 = graphes SVG »
+> de D-095 ≙ U2 ici ; les « tranches 3/4 images » de D-094 ≙ T3/T4 en queue de
+> file). Pas de double comptabilité : une seule séquence, U1 → … → T4.
+>
+> **Décision IA (D-096, validée)** : les **4 onglets sont confirmés**
+> (Vue d'ensemble / Par moteur / Par document / Croisements — option (c)), avec
+> deux amendements : (1) la **significativité apparaît inline dans le verdict**
+> (badges « écart significatif / non séparable » sur le classement de la Vue
+> d'ensemble — le verdict n'est jamais lu sans sa qualification ; Croisements
+> reste l'approfondissement, et accueillera la famille inter-moteurs de
+> l'étape 4e) ; (2) **règle de croissance** : *un onglet = une question, une
+> section = une réponse* — chaque famille de métriques de l'étape 4 atterrit
+> dans l'onglet de la question qu'elle éclaire (fidélité/philologie → Moteurs ;
+> lignes/pires-cas → Documents ; inter-moteurs → Croisements), jamais un onglet
+> par famille.
 
 ---
 
@@ -153,16 +170,20 @@ scroll ; impression (CSS print : onglets → empilé).
 | Tranche | Contenu | Dépend de | Effet |
 |---|---|---|---|
 | **U1 — Design system** | A1 (chrome+tabs+méta+exports) · B2 (héros + cartes par vue) · E1+E2 (glossaire contextuel, dépose la section) · typo onglets | rien | le rapport *ressemble* à la cible |
-| **U2 — Graphes SVG** | G (dispersion · calibration · CER/doc · composition) | U1 (cartes où les poser) | les vues *parlent* |
+| **U2 — Graphes SVG + verdict qualifié** | G (dispersion · calibration · CER/doc · composition) · **badges de significativité inline** sur le classement de la Vue d'ensemble (D-096) | U1 (cartes où les poser) | les vues *parlent*, le verdict est *qualifié* |
 | **U3 — Tables vivantes + profils moteur** | F (tri, survol-définitions) · D (drill-in moteur) | U1, U2 | l'exploration *moteur* |
 | **U4 — Documents : galerie-entrée + détail léger** | C (galerie d'abord, toggle ⊞/≡, hash-drill-in, détail données-présentes) | U1 | l'exploration *document* |
 | **U5 — Strates** | H (enveloppe + composition + filtres + CER/strate) | U4 (les filtres ont leur galerie) | la dimension *corpus* |
-| **T3/T4 (D-094)** | réfs image + vraies vignettes · fac-similé medium + diff complet borné | U4 | la *preuve visuelle* |
+| **T3 (D-094)** | réfs image dans l'enveloppe + vraies vignettes (saveur fichier + budget) | U4 | la galerie devient *réelle* |
+| **T4 (D-094)** | fac-similé medium + diff complet borné dans le détail document | T3 | la *preuve visuelle* |
 
-Logique de l'ordre : U1 d'abord parce que tout le reste se pose *dans* ses cartes
-et son chrome ; graphes avant drill-ins parce que les profils moteur (U3) les
-réutilisent ; documents (U4) avant strates (U5) parce que les filtres sans
-galerie-entrée n'ont pas de sens ; les images restent sur leur séquence D-094.
+**File unique** : U1 → U2 → U3 → U4 → U5 → T3 → T4 (puis saveurs dossier/IIIF et
+volet app web, D-094 §4, à re-prioriser face à l'étape 4 du `PLAN_FIN_MIGRATION.md`
+le moment venu). Logique de l'ordre : U1 d'abord parce que tout le reste se pose
+*dans* ses cartes et son chrome ; graphes avant drill-ins parce que les profils
+moteur (U3) les réutilisent ; documents (U4) avant strates (U5) parce que les
+filtres sans galerie-entrée n'ont pas de sens ; les images (T3/T4) closent la
+file parce qu'elles seules touchent l'enveloppe.
 
 ---
 
@@ -173,6 +194,10 @@ galerie-entrée n'ont pas de sens ; les images restent sur leur séquence D-094.
   rendu serveur — jamais ne construit du contenu. Si on s'approche du budget,
   on élague avant d'ajouter.
 - **Pas de section en avance sur la donnée** (IC bootstrap, strates avant H…).
+- **Règle de croissance de l'IA** (D-096) : *un onglet = une question, une
+  section = une réponse*. Les familles de métriques de l'étape 4 atterrissent
+  dans l'onglet de leur question — jamais un onglet par famille, jamais un
+  5ᵉ onglet sans décision explicite.
 - **La couche « vue » (B2) est de l'agencement**, pas un second contrat : si un
   compositeur de vue se met à calculer des données, il est au mauvais étage.
 - **Sans JS, tout reste lisible** : onglets empilés, tables non triées mais
