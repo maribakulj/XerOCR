@@ -81,7 +81,14 @@ jobs:
       # 4) Smoke OCR RÉEL : lancer le conteneur, vérifier /health, puis faire OCRiser
       #    une image de TEXTE réelle par le Tesseract baqué (≠ le damier du build).
       #    Le binaire reconnaît du vrai texte avec le modèle ``fra`` ou le déploiement
-      #    est refusé. ImageMagick est préinstallé sur les runners ubuntu-latest.
+      #    est refusé. ImageMagick n'est plus préinstallé sur ubuntu-24.04 (le runner
+      #    ``ubuntu-latest`` courant) → on l'installe explicitement (sinon ``convert``
+      #    renvoie 127 et le déploiement échoue à tort).
+      - name: Installer ImageMagick (rendu de l'image de smoke)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends imagemagick
+
       - name: Smoke OCR réel (Tesseract baqué)
         run: |
           set -euo pipefail
