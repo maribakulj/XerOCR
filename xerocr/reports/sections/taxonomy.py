@@ -7,7 +7,7 @@ empilée SVG** (part de chaque classe) + une légende (classe · part · occurre
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import TaxonomyPayload
+from xerocr.evaluation.analysis import PipelineTaxonomy, TaxonomyPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent
 from xerocr.reports.html import escape
@@ -15,13 +15,36 @@ from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import composition_bar
 
 
-def _block(view: str, payload: TaxonomyPayload) -> str:
-    # Couleur par classe (palette cyclique partagée, indexée sur l'ordre canonique).
-    color = {cls: engine_accent(i) for i, cls in enumerate(payload.classes)}
+def composition_html(classes: tuple[str, ...], pipeline: PipelineTaxonomy) -> str:
+    """Barre empilée + légende pour **un** pipeline (réutilisable : section + profil).
+
+    Couleur par classe = palette cyclique partagée, indexée sur l'ordre canonique
+    ``classes``. Renvoie ``""`` si le pipeline n'a aucune erreur classée."""
+    color = {cls: engine_accent(i) for i, cls in enumerate(classes)}
 
     def _c(label: str) -> str:
         return color.get(label, engine_accent(0))
 
+    total = pipeline.total_errors
+    present = [(c.label, c.count) for c in pipeline.counts if c.count > 0]
+    if not present:
+        return ""
+    segments = [(cnt / total, _c(lbl)) for lbl, cnt in present]
+    legend = "".join(
+        f'<div class="comp-row">'
+        f'<span class="comp-sw" style="background:{_c(lbl)}"></span>'
+        f'<span class="comp-label">{escape(lbl)}</span>'
+        f'<span class="comp-share mono">{cnt / total:.0%}</span>'
+        f'<span class="comp-count mono">{cnt}</span></div>'
+        for lbl, cnt in present
+    )
+    return (
+        f'<div class="comp">{composition_bar(segments)}'
+        f'<div class="comp-legend">{legend}</div></div>'
+    )
+
+
+def _block(view: str, payload: TaxonomyPayload) -> str:
     parts: list[str] = [
         f"<h3>{escape(view)} — composition des erreurs</h3>\n",
         '<p class="muted">Classification par règles pures (casse, diacritiques, '
@@ -29,24 +52,12 @@ def _block(view: str, payload: TaxonomyPayload) -> str:
         "part relative au total des erreurs de mots du pipeline.</p>\n",
     ]
     for pipeline in payload.pipelines:
-        total = pipeline.total_errors
-        present = [(c.label, c.count) for c in pipeline.counts if c.count > 0]
-        if not present:
-            continue
-        segments = [(cnt / total, _c(lbl)) for lbl, cnt in present]
-        legend = "".join(
-            f'<div class="comp-row">'
-            f'<span class="comp-sw" style="background:{_c(lbl)}"></span>'
-            f'<span class="comp-label">{escape(lbl)}</span>'
-            f'<span class="comp-share mono">{cnt / total:.0%}</span>'
-            f'<span class="comp-count mono">{cnt}</span></div>'
-            for lbl, cnt in present
-        )
-        parts.append(
-            f"<h4>{escape(pipeline.pipeline)} — {total} erreurs</h4>\n"
-            f'<div class="comp">{composition_bar(segments)}'
-            f'<div class="comp-legend">{legend}</div></div>\n'
-        )
+        block = composition_html(payload.classes, pipeline)
+        if block:
+            parts.append(
+                f"<h4>{escape(pipeline.pipeline)} — "
+                f"{pipeline.total_errors} erreurs</h4>\n{block}\n"
+            )
     return "".join(parts)
 
 
@@ -67,4 +78,4 @@ class TaxonomySection:
         return Html("<h2>Taxonomie des erreurs</h2>\n" + "".join(blocks))
 
 
-__all__ = ["TaxonomySection"]
+__all__ = ["TaxonomySection", "composition_html"]

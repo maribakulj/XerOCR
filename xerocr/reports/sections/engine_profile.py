@@ -10,13 +10,14 @@ déterministe, zéro donnée reconstruite. Réutilise les builders SVG (U2).
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import CalibrationPayload
+from xerocr.evaluation.analysis import CalibrationPayload, TaxonomyPayload
 from xerocr.evaluation.result import PipelineResult, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
-from xerocr.reports.svg import bar_series
+from xerocr.reports.sections.taxonomy import composition_html
+from xerocr.reports.svg import bar_series, calibration_curve
 
 _METRIC = "cer"
 
@@ -31,14 +32,32 @@ def _per_doc_cer(result: RunResult, pipeline: str, view: str) -> list[float]:
     ]
 
 
-def _ece(result: RunResult, view: str, pipeline: str) -> float | None:
+def _calibration(
+    result: RunResult, view: str, pipeline: str
+) -> tuple[float, str] | None:
+    """(ECE, courbe SVG) du moteur si calibration présente, sinon ``None``."""
     for analysis in result.analyses:
         payload = analysis.payload
         if analysis.view == view and isinstance(payload, CalibrationPayload):
             for row in payload.pipelines:
                 if row.pipeline == pipeline:
-                    return row.ece
+                    curve = calibration_curve(
+                        [(b.mean_confidence, b.accuracy) for b in row.bins],
+                        accent="var(--fern)",
+                    )
+                    return row.ece, curve
     return None
+
+
+def _composition(result: RunResult, view: str, pipeline: str) -> str:
+    """Composition d'erreurs du moteur (réutilise ``taxonomy.composition_html``)."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if analysis.view == view and isinstance(payload, TaxonomyPayload):
+            for row in payload.pipelines:
+                if row.pipeline == pipeline:
+                    return composition_html(payload.classes, row)
+    return ""
 
 
 def _kpi(label: str, value: str) -> str:
@@ -100,15 +119,35 @@ class EngineProfileSection:
             for s in pipe.aggregate
             if s.value is not None
         ]
-        ece = _ece(result, view, name)
-        if ece is not None:
-            kpis.append(_kpi("ece", _pct(ece)))
+        cal = _calibration(result, view, name)
+        if cal is not None:
+            kpis.append(_kpi("ece", _pct(cal[0])))
         cer_vals = sorted(_per_doc_cer(result, name, view))
         chart = (
             '<div class="prof-chart"><div class="prof-chart-title">CER par document '
             f'<span class="muted">· {len(cer_vals)} docs, triés</span></div>'
             f"{bar_series(cer_vals, accent=engine_accent(idx))}</div>"
             if cer_vals
+            else ""
+        )
+        # Calibration + composition du moteur (réutilise les builders U2b/U2c),
+        # en 2 colonnes ; chaque bloc n'apparaît que si sa donnée est présente.
+        cal_block = (
+            '<div class="prof-cell"><div class="prof-chart-title">Courbe de '
+            f"calibration</div>{cal[1]}</div>"
+            if cal is not None
+            else ""
+        )
+        comp = _composition(result, view, name)
+        comp_block = (
+            '<div class="prof-cell"><div class="prof-chart-title">Composition des '
+            f"erreurs</div>{comp}</div>"
+            if comp
+            else ""
+        )
+        extras = (
+            f'<div class="prof-row">{cal_block}{comp_block}</div>'
+            if (cal_block or comp_block)
             else ""
         )
         return (
@@ -124,7 +163,7 @@ class EngineProfileSection:
             f"<span>{escape(name)}</span>"
             f'<span class="muted prof-pos">moteur {pos + 1} sur {total}</span></div>'
             f'<div class="kpi-band">{"".join(kpis)}</div>'
-            f"{chart}</div>"
+            f"{chart}{extras}</div>"
         )
 
 

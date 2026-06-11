@@ -5,6 +5,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
+from xerocr.evaluation.analysis import (
+    Analysis,
+    CalibrationBin,
+    CalibrationPayload,
+    PipelineCalibration,
+    PipelineTaxonomy,
+    TaxonomyCount,
+    TaxonomyPayload,
+)
 from xerocr.evaluation.result import (
     MetricScore,
     PipelineResult,
@@ -70,6 +79,49 @@ def test_prev_next_links_cycle() -> None:
     assert html is not None
     # panneau 0 → suivant #engine-1 ; précédent boucle sur #engine-1
     assert 'href="#engine-1"' in html and 'href="#engine-0"' in html
+
+
+def test_profile_includes_calibration_and_composition_when_present() -> None:
+    base = _result()
+    calib = CalibrationPayload(
+        n_bins=2,
+        pipelines=(
+            PipelineCalibration(
+                pipeline="tesseract", n_tokens=10, ece=0.08, mce=0.2,
+                bins=(
+                    CalibrationBin(
+                        lower=0.8, upper=1.0, mean_confidence=0.9,
+                        accuracy=0.85, count=10,
+                    ),
+                ),
+            ),
+        ),
+    )
+    taxo = TaxonomyPayload(
+        classes=("visual", "case"),
+        pipelines=(
+            PipelineTaxonomy(
+                pipeline="tesseract", total_errors=4,
+                counts=(
+                    TaxonomyCount(label="visual", count=3),
+                    TaxonomyCount(label="case", count=1),
+                ),
+            ),
+        ),
+    )
+    result = base.model_copy(
+        update={
+            "analyses": (
+                Analysis(scope="corpus", view="text", payload=calib),
+                Analysis(scope="corpus", view="text", payload=taxo),
+            )
+        }
+    )
+    html = EngineProfileSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="calib-svg"' in html  # courbe de calibration du moteur
+    assert 'class="comp-bar"' in html  # composition d'erreurs du moteur
+    assert "8.0 %" in html  # ECE en KPI (réutilise les builders U2b/U2c)
 
 
 def test_none_without_pipelines() -> None:

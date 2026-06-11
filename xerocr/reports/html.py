@@ -157,6 +157,8 @@ _CSS = (
     ".prof-chart-title{font-size:12px;color:var(--g-500);margin-bottom:6px;}"
     ".bars-svg{width:100%;height:120px;display:block;background:var(--surface);"
     "border-radius:var(--r-md);}"
+    ".prof-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;}"
+    ".prof-cell{flex:1;min-width:240px;}"
     # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
