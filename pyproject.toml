@@ -21,6 +21,7 @@ dependencies = [
 dev = [
     "ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML",
     "jiwer", "fastapi", "httpx", "httpcore", "jinja2", "python-multipart",
+    "Pillow",
 ]
 tesseract = ["pytesseract"]
 kraken = ["kraken"]
@@ -35,6 +36,7 @@ ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
 segment = ["paddlex"]
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
+images = ["Pillow"]  # vignettes réelles du rapport (redimensionnement) — dégradé gracieux sans
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

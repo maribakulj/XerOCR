@@ -21,9 +21,12 @@ from xerocr.domain.run_spec import RunSpec
 DEMO_ENGINES = ("tesseract", "pero")
 
 #: Mini-corpus déterministe : (id, vérité-terrain, {moteur: sortie pré-calculée}).
-_DEMO_DOCS: tuple[tuple[str, str, dict[str, str]], ...] = (
+#: ``(doc_id, strate, vérité-terrain, {moteur: sortie})``. Deux strates pour
+#: démontrer la composition / le CER par strate (forme optionnelle, P0/U5′).
+_DEMO_DOCS: tuple[tuple[str, str, str, dict[str, str]], ...] = (
     (
         "folio_001",
+        "manuscrit médiéval",
         "Icy commence le prologue",
         {
             "tesseract": "Icy commence le prologve",
@@ -32,6 +35,7 @@ _DEMO_DOCS: tuple[tuple[str, str, dict[str, str]], ...] = (
     ),
     (
         "folio_002",
+        "manuscrit médiéval",
         "maistre Jehan Froissart",
         {
             "tesseract": "maistre Jehan Froissart",
@@ -40,10 +44,29 @@ _DEMO_DOCS: tuple[tuple[str, str, dict[str, str]], ...] = (
     ),
     (
         "folio_003",
+        "manuscrit médiéval",
         "les croniques de France",
         {
             "tesseract": "les croniques de France",
             "pero": "les croniques de France",
+        },
+    ),
+    (
+        "imprime_001",
+        "imprimé ancien",
+        "DE L'IMPRIMERIE DE PIERRE LE ROUGE",
+        {
+            "tesseract": "DE L'IMPRIMERIE DE PIERRE LE ROVGE",
+            "pero": "DE L'IMPRIMERIE DE PIERRE LE ROUGE",
+        },
+    ),
+    (
+        "imprime_002",
+        "imprimé ancien",
+        "Imprimé à Paris l'an mil cinq cens",
+        {
+            "tesseract": "Imprime a Paris l'an mil cinq cens",
+            "pero": "Imprimé à Paris l'an mil cinq cens",
         },
     ),
 )
@@ -67,7 +90,7 @@ _DIPLOMATIC_VIEW = EvaluationView(
 def write_demo_corpus(root: Path) -> CorpusSpec:
     """Matérialise le mini-corpus dans ``root`` et renvoie sa ``CorpusSpec``."""
     documents: list[DocumentRef] = []
-    for doc_id, ground_truth, engine_texts in _DEMO_DOCS:
+    for doc_id, stratum, ground_truth, engine_texts in _DEMO_DOCS:
         (root / f"{doc_id}.gt.txt").write_text(ground_truth, encoding="utf-8")
         for label, text in engine_texts.items():
             (root / f"{doc_id}.{label}.txt").write_text(text, encoding="utf-8")
@@ -81,6 +104,7 @@ def write_demo_corpus(root: Path) -> CorpusSpec:
                         uri=str(root / f"{doc_id}.gt.txt"),
                     ),
                 ),
+                metadata={"stratum": stratum},
             )
         )
     return CorpusSpec(name="demo", documents=tuple(documents))

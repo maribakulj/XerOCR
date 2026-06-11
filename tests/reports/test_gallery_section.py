@@ -77,3 +77,15 @@ def test_is_deterministic_and_escapes_ids() -> None:
     assert html is not None
     assert "<x>" not in html and "&lt;x&gt;" in html  # id échappé (anti-XSS)
     assert html == DocumentGallerySection().render(result, SectionContext())
+
+
+def test_real_thumbnail_when_image_provided() -> None:
+    result = _result(_doc("doc1", "tesseract", 0.20))
+    ctx = SectionContext(images={"doc1": "data:image/jpeg;base64,AAAA"})
+    html = DocumentGallerySection().render(result, ctx)
+    assert html is not None
+    assert 'class="doc-preview doc-preview-img"' in html  # vignette réelle
+    assert '<img src="data:image/jpeg;base64,AAAA"' in html
+    # un doc sans vignette retombe sur l'aperçu synthétique
+    plain = DocumentGallerySection().render(result, SectionContext())
+    assert plain is not None and "doc-preview-img" not in plain

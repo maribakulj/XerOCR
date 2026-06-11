@@ -60,6 +60,14 @@ def test_renders_ece_mce_and_bins() -> None:
     assert html == CalibrationSection().render(_result(), SectionContext())
 
 
+def test_renders_calibration_curve() -> None:
+    html = CalibrationSection().render(_result(), SectionContext())
+    assert html is not None
+    assert 'class="calib-svg"' in html  # courbe SVG
+    assert 'class="calib-diag"' in html  # diagonale = calibration parfaite
+    assert 'class="calib-line"' in html  # polyligne du moteur
+
+
 def test_without_payload_renders_nothing() -> None:
     manifest = RunManifest(
         run_id="r", corpus_name="c", n_documents=0,

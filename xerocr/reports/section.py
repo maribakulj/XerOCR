@@ -12,7 +12,8 @@ données utilisateur sont échappées à la construction) — la frontière anti
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import NewType, Protocol, runtime_checkable
 
 from xerocr.evaluation.result import RunResult
@@ -23,10 +24,16 @@ Html = NewType("Html", str)
 
 @dataclass(frozen=True)
 class SectionContext:
-    """Contexte de rendu (extensible : langue, options…)."""
+    """Contexte de rendu (extensible : langue, vignettes…)."""
 
     title: str = "XerOCR"
     lang: str = "fr"
+    #: ``{document_id: data-URI}`` des vignettes résolues (intrant de rendu,
+    #: calculé hors résultat ; vide → aperçu synthétique). Cf. `app.report_images`.
+    images: Mapping[str, str] = field(default_factory=dict)
+    #: ``{document_id: data-URI}`` des **fac-similés medium** (détail document) —
+    #: plus grands, plafond plus serré (intrant de rendu, hors résultat).
+    facsimiles: Mapping[str, str] = field(default_factory=dict)
 
 
 @runtime_checkable
