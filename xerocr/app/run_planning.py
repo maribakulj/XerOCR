@@ -41,13 +41,19 @@ from xerocr.domain.pipeline import (
 from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.run_spec import RunSpec
 from xerocr.formats.text import NORMALIZATION_PROFILES
+from xerocr.prompts import PromptError, load_prompt
 
 #: Segmenteur de mise en page du socle — **source unique** du *kind* (consommé
 #: par la planification du run de segmentation ET par le gate du routeur).
 SEGMENTER_KIND = "pp_doclayout"
 
 #: Moteurs OCR câblés pour un run réel (amont d'une chaîne ou OCR seul).
-_OCR_ENGINES = frozenset({"tesseract", "kraken", "mistral_ocr"})
+_OCR_ENGINES = frozenset(
+    {
+        "tesseract", "kraken", "pero", "calamari",
+        "mistral_ocr", "google_vision", "azure_di",
+    }
+)
 #: Fournisseurs de post-correction LLM (mode ``text_only``).
 _LLM_ENGINES = frozenset({"openai", "anthropic", "mistral", "ollama"})
 #: Fournisseurs **vision** (modes ``text_and_image`` et ``zero_shot``).
@@ -75,8 +81,11 @@ class Competitor(BaseModel):
     model: str | None = Field(default=None, max_length=128)
     lang: str = Field(default="fra", max_length=64)
     #: Prompt de post-correction/transcription (modes LLM/VLM). ``None`` → prompt
-    #: par défaut du rôle (``default_prompt_for_role``). Exposé à l'UI.
+    #: par défaut du rôle (``default_prompt_for_role``). Exposé à l'UI (texte libre).
     prompt: str | None = Field(default=None, max_length=8000)
+    #: Nom d'un **prompt curé** (``xerocr.prompts``) à utiliser à la place du défaut.
+    #: Mutuellement exclusif avec ``prompt`` (libre). Résolu au plan en son texte.
+    prompt_name: str | None = Field(default=None, max_length=128)
 
 
 #: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
@@ -85,16 +94,19 @@ class Competitor(BaseModel):
 _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
-def _ocr_view(normalization: str | None) -> EvaluationView:
+def _ocr_view(normalization: str | None, char_exclude: str | None) -> EvaluationView:
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
         metric_names=("cer", "wer", "mer", "searchability", "hallucination"),
         normalization_profile=normalization,
+        char_exclude=char_exclude,
     )
 
 
-def _reference_view(normalization: str | None) -> EvaluationView:
+def _reference_view(
+    normalization: str | None, char_exclude: str | None
+) -> EvaluationView:
     """Vue **référence OCR** (opt-in) : compare le candidat à une référence
     ``REFERENCE_TEXT`` (ex. OCR Gallica) via une projection identité. Le **nom de
     la vue porte l'avertissement** : ce n'est PAS une vérité-terrain manuelle, le
@@ -112,27 +124,52 @@ def _reference_view(normalization: str | None) -> EvaluationView:
         metric_names=("cer", "wer", "mer"),
         ignored_dimensions=("exactitude (la référence est elle-même un OCR)",),
         normalization_profile=normalization,
+        char_exclude=char_exclude,
     )
 
 
 def _views_for_corpus(
-    corpus: CorpusSpec, normalization: str | None = None
+    corpus: CorpusSpec,
+    normalization: str | None = None,
+    char_exclude: str | None = None,
 ) -> tuple[EvaluationView, ...]:
     """Vues à évaluer selon les **types de GT présents**, sous ``normalization``.
 
     GT manuelle ``RAW_TEXT`` → vue ``text`` ; référence ``REFERENCE_TEXT`` (OCR
     Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
-    défaut (le run reste exécutable, simplement non scoré).
+    défaut (le run reste exécutable, simplement non scoré). ``char_exclude``
+    filtre des caractères des deux côtés (GT/hyp) avant le calcul (runner couche 3).
     """
     gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
     views: list[EvaluationView] = []
     if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_ocr_view(normalization))
+        views.append(_ocr_view(normalization, char_exclude))
     if ArtifactType.REFERENCE_TEXT in gt_types:
-        views.append(_reference_view(normalization))
+        views.append(_reference_view(normalization, char_exclude))
     if not views:
-        views.append(_ocr_view(normalization))
+        views.append(_ocr_view(normalization, char_exclude))
     return tuple(views)
+
+
+def _resolve_prompt(comp: Competitor) -> str | None:
+    """Texte du prompt : libre (prioritaire) > curé (par nom) > défaut du rôle.
+
+    ``prompt`` (texte libre saisi) et ``prompt_name`` (prompt curé) sont
+    **mutuellement exclusifs** : les fournir tous deux est une erreur de plan
+    (jamais un choix silencieux). Un nom curé inconnu → ``RunPlanningError`` (422).
+    """
+    if comp.prompt and comp.prompt_name:
+        raise RunPlanningError(
+            "prompt : choisir un prompt libre OU un prompt curé, pas les deux."
+        )
+    if comp.prompt:
+        return comp.prompt
+    if comp.prompt_name:
+        try:
+            return load_prompt(comp.prompt_name)
+        except PromptError as exc:
+            raise RunPlanningError(str(exc)) from exc
+    return None
 
 
 def _llm_kwargs(
@@ -141,8 +178,9 @@ def _llm_kwargs(
     kwargs: dict[str, str | int | float | bool] = {"label": label, "role": role}
     if comp.model:
         kwargs["model"] = comp.model
-    if comp.prompt:
-        kwargs["prompt"] = comp.prompt
+    prompt = _resolve_prompt(comp)
+    if prompt:
+        kwargs["prompt"] = prompt
     return kwargs
 
 
@@ -174,6 +212,12 @@ def _pipeline_for_competitor(
         ocr_kwargs: dict[str, dict[str, str | int | float | bool]] = {
             name: {"label": suffix, "lang": comp.lang}
         }
+        # En OCR seul, ``model`` est le **modèle du moteur** (chemin .mlmodel
+        # kraken, config PERO, checkpoint Calamari, nom Mistral OCR) — requis par
+        # ces moteurs. Tesseract/Google/Azure ignorent ce kwarg. (En chaîne,
+        # ``model`` désigne le LLM aval, cf. ``_llm_kwargs``.)
+        if comp.model:
+            ocr_kwargs[name]["model"] = comp.model
         return pipeline, ocr_kwargs
 
     if comp.mode == "zero_shot":
@@ -258,6 +302,7 @@ def plan_benchmark_run(
     run_id: str,
     *,
     normalization: str | None = None,
+    char_exclude: str | None = None,
 ) -> Callable[[Path], RunSpec]:
     """Builder de spec d'un **benchmark** : N concurrents → un ``RunSpec``.
 
@@ -290,7 +335,9 @@ def plan_benchmark_run(
     spec = RunSpec(
         corpus=corpus,
         pipelines=tuple(pipelines),
-        evaluation=EvaluationSpec(views=_views_for_corpus(corpus, normalization)),
+        evaluation=EvaluationSpec(
+            views=_views_for_corpus(corpus, normalization, char_exclude)
+        ),
         adapter_kwargs=adapter_kwargs,
         run_id=run_id,
     )

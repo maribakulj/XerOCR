@@ -19,8 +19,8 @@ def test_lists_all_socle_engines(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/api/engines").json()
     kinds = {e["kind"] for e in body["engines"]}
     assert kinds == {
-        "precomputed", "tesseract", "kraken", "mistral_ocr",
-        "openai", "anthropic", "mistral", "ollama",
+        "precomputed", "tesseract", "kraken", "pero", "calamari", "mistral_ocr",
+        "google_vision", "azure_di", "openai", "anthropic", "mistral", "ollama",
     }
     # forme du contrat : chaque entrée porte available + detail
     for entry in body["engines"]:
@@ -50,3 +50,54 @@ def test_normalization_profiles_are_read_dynamically(tmp_path: Path) -> None:
     # Jamais une liste statique : l'endpoint reflète la couche 2 telle quelle.
     assert body["profiles"] == sorted(NORMALIZATION_PROFILES)
     assert "nfc" in body["profiles"]
+
+
+def test_models_endpoint_lists_provider_models_with_vision(tmp_path: Path) -> None:
+    body = _client(tmp_path).get("/api/models/openai").json()
+    assert body["provider"] == "openai"
+    names = {m["name"]: m["vision"] for m in body["models"]}
+    assert "gpt-4o" in names and names["gpt-4o"] is True
+
+
+def test_models_endpoint_unknown_provider_is_empty(tmp_path: Path) -> None:
+    body = _client(tmp_path).get("/api/models/bogus").json()
+    assert body == {"provider": "bogus", "models": []}  # champ libre, pas d'erreur
+
+
+def test_normalization_preview_named_and_custom(tmp_path: Path) -> None:
+    from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+
+    client = _client(tmp_path)
+    headers = {CSRF_HEADER: "1"}
+    # profil nommé : caseless → minuscules.
+    r = client.post(
+        "/api/normalization/preview",
+        headers=headers,
+        json={"sample": "NOSTRE", "profile": "caseless"},
+    )
+    assert r.status_code == 200 and r.json()["normalized"] == "nostre"
+    # config YAML custom (sans persistance) : exclut « X ».
+    r = client.post(
+        "/api/normalization/preview",
+        headers=headers,
+        json={"sample": "aXb", "config": 'exclude_chars: "X"'},
+    )
+    assert r.json()["normalized"] == "ab"
+
+
+def test_normalization_preview_invalid_config_is_422(tmp_path: Path) -> None:
+    from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+
+    r = _client(tmp_path).post(
+        "/api/normalization/preview",
+        headers={CSRF_HEADER: "1"},
+        json={"sample": "x", "config": "bogus_key: 1"},
+    )
+    assert r.status_code == 422
+
+
+def test_normalization_preview_requires_csrf(tmp_path: Path) -> None:
+    r = _client(tmp_path).post(
+        "/api/normalization/preview", json={"sample": "x", "profile": "nfc"}
+    )
+    assert r.status_code == 403

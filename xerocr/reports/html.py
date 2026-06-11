@@ -100,8 +100,88 @@ _CSS = (
     "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
     "color:var(--g-400);border-bottom:1px solid var(--g-50);}"
     "table.data td.verdict.sig{color:var(--fern);font-weight:600;}"
+    # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
+    "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
+    "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
+    "word-break:break-word;vertical-align:top;}"
+    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:line-through;"
+    "color:var(--ink);}"
+    "ins.d-ins{background:rgba(159,195,160,0.38);text-decoration:none;"
+    "color:var(--ink);}"
+    # Galerie de documents : grille de cartes au design (monochrome, charte rapport).
+    ".doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));"
+    "gap:14px;margin:14px 0 4px;}"
+    ".doc-card{background:var(--surface);border-radius:var(--r-md);padding:12px;"
+    "display:flex;flex-direction:column;gap:10px;}"
+    # Aperçu de page synthétique : lignes monochromes sur papier (≠ vignette colorée).
+    ".doc-preview{height:78px;border-radius:10px;border:1px solid var(--g-50);"
+    "background-color:var(--paper);background-image:repeating-linear-gradient("
+    "180deg,transparent 0 6px,rgba(26,25,23,0.10) 6px 7px);}"
+    ".doc-card .dc-id{font-family:var(--mono);font-size:12px;font-weight:600;"
+    "color:var(--ink);word-break:break-all;}"
+    ".dc-rows{display:flex;flex-direction:column;gap:4px;}"
+    ".dc-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);"
+    "font-size:11px;color:var(--g-500);}"
+    ".dc-row .eng-badge{margin-right:0;width:16px;height:16px;font-size:9px;}"
+    ".dc-row .dc-name{flex:1;overflow:hidden;text-overflow:ellipsis;"
+    "white-space:nowrap;}"
+    ".dc-row .dc-cer{font-variant-numeric:tabular-nums;color:var(--g-700);}"
+    ".dc-row.best .dc-cer{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
+    ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
+    ".gl-item{background:var(--surface);border-radius:var(--r-md);"
+    "padding:4px 16px;}"
+    ".gl-term{font-family:var(--display);font-weight:800;font-size:14px;"
+    "font-optical-sizing:auto;color:var(--ink);cursor:pointer;"
+    "padding:10px 0;list-style:none;}"
+    ".gl-term::-webkit-details-marker{display:none;}"
+    ".gl-term::before{content:'+';display:inline-block;width:16px;"
+    "font-family:var(--mono);color:var(--g-400);}"
+    ".gl-item[open] .gl-term::before{content:'\\2212';}"
+    ".gl-body{margin:0 0 12px 16px;display:grid;grid-template-columns:auto 1fr;"
+    "gap:4px 14px;}"
+    ".gl-k{font-size:10px;font-weight:500;letter-spacing:0.05em;"
+    "text-transform:uppercase;color:var(--g-400);padding-top:2px;"
+    "white-space:nowrap;}"
+    ".gl-v{font-size:12.5px;color:var(--g-700);line-height:1.45;}"
+    # Sommaire deeplinkable (ancres natives) + régions de section ancrées.
+    ".report-toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;}"
+    ".report-toc a{font-family:var(--mono);font-size:11px;text-decoration:none;"
+    "color:var(--g-500);background:var(--surface);border-radius:var(--r-pill);"
+    "padding:6px 13px;}"
+    ".report-toc a:hover{color:var(--ink);background:var(--g-50);}"
+    ".r-block{scroll-margin-top:18px;}"
+    # Badge moteur (lettre + accent cyclique) — identité stable entre sections.
+    ".eng-badge{display:inline-flex;align-items:center;justify-content:center;"
+    "width:18px;height:18px;border-radius:5px;background:var(--badge,var(--ink));"
+    "color:var(--paper);font-family:var(--mono);font-size:10px;font-weight:600;"
+    "margin-right:8px;vertical-align:middle;}"
+    # Widget « comparer un run » (client-side) — bouton + bandeau sticky des deltas.
+    ".compare-bar{display:flex;justify-content:flex-end;margin-top:2px;}"
+    ".compare-btn{font-family:var(--mono);font-size:12px;background:var(--ink);"
+    "color:var(--paper);border:none;border-radius:var(--r-pill);"
+    "padding:8px 16px;cursor:pointer;}"
+    ".compare-banner{position:fixed;left:22px;right:22px;bottom:14px;"
+    "background:var(--ink);color:var(--paper);border-radius:var(--r-md);"
+    "padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;"
+    "font-family:var(--mono);font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.25);"
+    "z-index:50;}"
+    ".compare-banner.empty{justify-content:center;color:var(--g-100);}"
+    ".compare-banner .cb-title{font-weight:600;letter-spacing:0.02em;}"
+    ".compare-banner .cb-row{display:inline-flex;gap:6px;align-items:baseline;}"
+    ".compare-banner .cb-row .cb-delta{font-variant-numeric:tabular-nums;}"
+    ".compare-banner .cb-row.worse .cb-delta{color:#E59A8A;}"
+    ".compare-banner .cb-row.better .cb-delta{color:#9FC3A0;}"
+    # Palette daltonien (``?palette=cb`` via report.js → classe sur <html>) : le
+    # vert/rouge confusables → paire bleu/orange distinguable. Les badges moteur
+    # portent une lettre → restent identifiables sans couleur.
+    ".palette-cb{--fern:oklch(0.55 0.13 250);}"
+    ".palette-cb .compare-banner .cb-row.worse .cb-delta{color:#E0A23C;}"
+    ".palette-cb .compare-banner .cb-row.better .cb-delta{color:#7FB0D9;}"
+    ".palette-cb del.d-del{background:rgba(224,162,60,0.32);}"
+    ".palette-cb ins.d-ins{background:rgba(127,176,217,0.38);}"
 )
 
 
@@ -110,12 +190,22 @@ def escape(text: str) -> str:
     return _html.escape(text, quote=True)
 
 
-def render_document(title: str, body: Html) -> str:
-    """Assemble un document HTML autonome, au design, et déterministe."""
+def render_document(
+    title: str, body: Html, *, footer: Html | None = None, lang: str = "fr"
+) -> str:
+    """Assemble un document HTML autonome, au design, et déterministe.
+
+    ``footer`` (optionnel) : HTML inséré en fin de ``<body>``, après le contenu
+    principal — p. ex. le widget « comparer un run » (client-side). Absent → rien
+    n'est ajouté (le rapport reste identique au squelette, ex. la voie
+    ``compare`` server-side qui n'embarque pas le widget). ``lang`` pilote
+    l'attribut ``<html lang>`` (a11y / lecteurs d'écran)."""
     safe_title = escape(title)
+    safe_lang = escape(lang)
+    tail = f"{footer}" if footer is not None else ""
     return (
         "<!DOCTYPE html>\n"
-        '<html lang="fr">\n'
+        f'<html lang="{safe_lang}">\n'
         "<head>\n"
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
@@ -130,6 +220,7 @@ def render_document(title: str, body: Html) -> str:
         '<main class="report-main"><section class="sec">\n'
         f"{body}"
         "</section></main>\n"
+        f"{tail}"
         "</body>\n"
         "</html>\n"
     )

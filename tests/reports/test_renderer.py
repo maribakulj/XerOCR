@@ -6,7 +6,12 @@ from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.renderer import ReportRenderer, default_report_renderer
+from xerocr.reports.renderer import (
+    ReportRenderer,
+    _label,
+    _toc_nav,
+    default_report_renderer,
+)
 from xerocr.reports.section import Html, SectionContext
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
@@ -47,6 +52,15 @@ def test_document_structure_and_determinism() -> None:
     assert 'class="sec"' in html1
     # trame de points (halftone Xerox) en fond, via data: URI inline
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
+    # 3a : widget « comparer un run » (client-side) en pied de rapport.
+    assert 'id="xerocr-compare-btn"' in html1
+    # 3a : badge moteur (lettre + accent) devant le nom du moteur.
+    assert 'class="eng-badge"' in html1
+    # 3a : sommaire deeplinkable (ancres natives) + régions ancrées + ARIA.
+    assert 'class="report-toc"' in html1
+    assert 'aria-label="Sommaire du rapport"' in html1
+    assert 'id="r-by_engine"' in html1  # région ancrée
+    assert 'href="#r-by_engine"' in html1  # deeplink vers la région
     # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
     assert "@import" not in html1
     assert "https://" not in html1
@@ -76,3 +90,17 @@ def test_no_orphan_skips_section_with_unmet_requires() -> None:
     # hasard dans le data-URI. "<p>…</p>" ne peut pas (pas de "<" en base64).
     assert "<p>ALWAYS</p>" in html  # requires=() rendu
     assert "<p>WER</p>" not in html  # requires=("wer",) sauté (seul cer présent)
+
+
+def test_toc_suppressed_below_two_sections() -> None:
+    # Un sommaire d'une seule entrée est inutile → masqué ; ≥ 2 → affiché.
+    assert _toc_nav([]) == ""
+    assert _toc_nav(["by_engine"]) == ""
+    nav = _toc_nav(["by_engine", "overview"])
+    assert 'class="report-toc"' in nav
+    assert 'href="#r-by_engine"' in nav and 'href="#r-overview"' in nav
+
+
+def test_label_falls_back_to_raw_name() -> None:
+    assert _label("by_engine") == "Par moteur"  # libellé FR connu
+    assert _label("inconnue") == "inconnue"  # repli : nom brut

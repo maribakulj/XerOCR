@@ -24,9 +24,13 @@ dev = [
 ]
 tesseract = ["pytesseract"]
 kraken = ["kraken"]
+pero = ["pero-ocr"]  # OCR/HTR local (imprimé ancien + manuscrit) — non déployé au Space
+calamari = ["calamari-ocr"]  # OCR local par ligne — non déployé au Space
 openai = ["openai"]
 anthropic = ["anthropic"]
 mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistralai import Mistral`)
+google = ["httpx", "httpcore"]  # Vision via REST (≠ SDK gRPC lourd) — clé GOOGLE_VISION_API_KEY
+azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_INTEL_ENDPOINT + _KEY
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
 segment = ["paddlex"]
@@ -44,11 +48,15 @@ include = ["xerocr*"]
 "xerocr.interfaces.web" = [
     "templates/*.html", "static/css/*.css", "static/js/*.js", "static/fonts/*",
 ]
-# Le rapport autonome (couche 7) incorpore ses polices en data-URI : les woff2
-# doivent voyager dans le wheel pour exister après ``pip install``.
-"xerocr.reports" = ["_assets/*.woff2"]
+# Le rapport autonome (couche 7) incorpore ses polices (data-URI) et son script
+# de comparaison (inliné) : woff2 + compare.js doivent voyager dans le wheel.
+"xerocr.reports" = ["_assets/*.woff2", "_assets/*.js"]
+# Glossaire pédagogique (donnée FR/EN) — doit voyager dans le wheel.
+"xerocr.reports.glossary" = ["*.yaml"]
 # Table de tarifs (donnée datée) du calcul économique (couche 3).
 "xerocr.evaluation" = ["pricing.json"]
+# Prompts curés par période (donnée LLM/VLM) — doivent voyager dans le wheel.
+"xerocr.prompts" = ["*.txt"]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"

@@ -109,6 +109,8 @@ ADAPTERS_ALLOWED_PKG = (
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
     "datasets", "PIL", "yaml", "paddlex", "kraken",
+    # Moteurs OCR/HTR locaux in-tree (extras `[pero]`/`[calamari]`, D-078).
+    "pero_ocr", "calamari_ocr", "cv2", "numpy",
 }
 
 
@@ -166,9 +168,29 @@ APP_ALLOWED_PKG = (
     "xerocr.pipeline",
     "xerocr.adapters",
     "xerocr.app",
+    # Paquet de **données** (prompts curés), loader pur (stdlib + domain) — leaf.
+    "xerocr.prompts",
 )
 #: app charge des specs YAML (loader) → ``yaml`` autorisé.
 APP_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
+
+
+def test_prompts_imports_are_pure():
+    """``prompts`` est un paquet de **données** : loader pur (stdlib + domain).
+    Jamais une couche externe (un prompt ne calcule rien, ne fait pas d'I/O métier)."""
+    offenders: dict[str, list[str]] = {}
+    for path in (ROOT / "prompts").rglob("*.py"):
+        bad: list[str] = []
+        for mod in _imported_modules(path):
+            top = mod.split(".")[0]
+            if mod == "xerocr" or mod.startswith("xerocr.domain"):
+                continue
+            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+                continue
+            bad.append(mod)
+        if bad:
+            offenders[str(path.relative_to(ROOT))] = bad
+    assert not offenders, f"imports interdits dans prompts : {offenders}"
 
 
 def test_app_imports_are_allowed():
@@ -189,6 +211,10 @@ def test_app_imports_are_allowed():
     assert not offenders, f"imports interdits dans app : {offenders}"
 
 
+#: reports lit aussi une donnée YAML (glossaire pédagogique FR/EN).
+REPORTS_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
+
+
 def test_reports_imports_are_allowed():
     """reports lit le RunResult : domain + evaluation seulement (jamais app/
     pipeline/adapters). Pas de data-layer, pas de moteur."""
@@ -200,7 +226,7 @@ def test_reports_imports_are_allowed():
             top = mod.split(".")[0]
             if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
                 continue
-            if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
+            if mod == "__future__" or top in REPORTS_ALLOWED_EXT or top in STDLIB:
                 continue
             bad.append(mod)
         if bad:

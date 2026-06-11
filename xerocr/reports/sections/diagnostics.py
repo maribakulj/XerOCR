@@ -7,10 +7,11 @@ seule** : « voir où ça casse », texte à l'appui. Les extraits sont verbatim
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import DiagnosticsPayload
+from xerocr.evaluation.analysis import DiagnosticsPayload, WorstLine
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
+from xerocr.reports.text_diff import char_diff
 
 
 def _confusion_table(payload: DiagnosticsPayload) -> str:
@@ -34,23 +35,31 @@ def _confusion_table(payload: DiagnosticsPayload) -> str:
     )
 
 
-def _worst_lines_table(payload: DiagnosticsPayload) -> str:
-    if not payload.worst_lines:
-        return ""
-    rows = "".join(
+def _worst_lines_row(line: WorstLine) -> str:
+    # Drill-in : GT vs hypothèse surlignées caractère à caractère (écarts visibles).
+    ref_html, hyp_html = char_diff(line.reference, line.hypothesis)
+    return (
         f'<tr><td class="eng-cell">{escape(line.pipeline)}</td>'
         f'<td class="eng-cell">{escape(line.document_id)}</td>'
         f'<td class="disp">{line.line_index}</td>'
         f'<td class="disp">{line.cer:.4f}</td>'
-        f'<td class="disp">{escape(line.reference)}</td>'
-        f'<td class="disp">{escape(line.hypothesis)}</td></tr>'
-        for line in payload.worst_lines
+        f'<td class="diff">{ref_html}</td>'
+        f'<td class="diff">{hyp_html}</td></tr>'
     )
+
+
+def _worst_lines_table(payload: DiagnosticsPayload) -> str:
+    if not payload.worst_lines:
+        return ""
+    rows = "".join(_worst_lines_row(line) for line in payload.worst_lines)
     return (
-        "<h4>Pires lignes du corpus</h4>\n"
+        "<h4>Pires lignes du corpus — diff GT ↔ hypothèse</h4>\n"
+        '<p class="muted">Surlignage : '
+        '<del class="d-del">supprimé</del> (présent en GT) · '
+        '<ins class="d-ins">inséré</ins> (produit par le moteur).</p>\n'
         '<table class="data">\n<thead><tr><th>Pipeline</th><th>Document</th>'
         '<th class="num-cell">ligne</th><th class="num-cell">CER</th>'
-        "<th>référence</th><th>hypothèse</th></tr></thead>\n"
+        "<th>référence (GT)</th><th>hypothèse</th></tr></thead>\n"
         f"<tbody>{rows}</tbody>\n</table>\n"
     )
 

@@ -28,6 +28,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "stat_reports": "rapports",
         "reports_title": "Rapports générés",
         "reports_desc": "Historique des benchmarks, rendus HTML autonomes.",
+        "skip_to_content": "Aller au contenu",
+        "bench_progress_label": "Progression du run",
         # NB : la sous-chaîne « aucun rapport » est attendue par les tests.
         "reports_empty": "aucun rapport disponible pour l'instant.",
         "open_report": "Ouvrir",
@@ -67,7 +69,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt": "Prompt",
         "bench_prompt_ph": "Vide = prompt par défaut. Pour la correction, inclus "
         "{ocr_text} là où le texte OCR doit être inséré (sinon il est ignoré).",
+        "bench_prompt_curated_none": "— Prompt curé (par période) —",
+        "bench_prompt_hint": "Choisis un prompt curé OU écris le tien ci-dessous "
+        "(le texte libre est prioritaire).",
         "bench_normalization": "Normalisation",
+        "bench_norm_preview": "Aperçu de normalisation",
+        "bench_norm_sample_ph": "Colle un échantillon de texte pour voir l'effet…",
+        "bench_norm_custom": "Profil personnalisé (YAML) — prioritaire si rempli",
+        "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
+        "bench_norm_preview_btn": "Aperçu",
+        "bench_char_exclude": "Caractères à exclure",
+        "bench_char_exclude_ph": "ex : ,.;:!? — exclus des deux côtés",
+        "bench_char_exclude_hint": "Filtrés de la GT ET de l'hypothèse avant le "
+        "calcul (ne mesure plus ces caractères).",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
         "vue de segmentation.",
@@ -207,6 +221,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "stat_reports": "reports",
         "reports_title": "Generated reports",
         "reports_desc": "Benchmark history, standalone HTML renders.",
+        "skip_to_content": "Skip to content",
+        "bench_progress_label": "Run progress",
         "reports_empty": "no report available yet.",
         "open_report": "Open",
         "bench_eyebrow": "Benchmark · compare",
@@ -244,7 +260,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_prompt": "Prompt",
         "bench_prompt_ph": "Empty = default prompt. For correction, include "
         "{ocr_text} where the OCR text should be inserted (else it is ignored).",
+        "bench_prompt_curated_none": "— Curated prompt (by period) —",
+        "bench_prompt_hint": "Pick a curated prompt OR write your own below "
+        "(free text takes precedence).",
         "bench_normalization": "Normalization",
+        "bench_norm_preview": "Normalization preview",
+        "bench_norm_sample_ph": "Paste a text sample to see the effect…",
+        "bench_norm_custom": "Custom profile (YAML) — takes precedence if filled",
+        "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
+        "bench_norm_preview_btn": "Preview",
+        "bench_char_exclude": "Characters to exclude",
+        "bench_char_exclude_ph": "e.g. ,.;:!? — excluded on both sides",
+        "bench_char_exclude_hint": "Filtered from GT AND hypothesis before scoring "
+        "(those characters are no longer measured).",
         "bench_options": "Options",
         "bench_execute_desc": "Launch the run, then open the final report or "
         "segmentation view.",

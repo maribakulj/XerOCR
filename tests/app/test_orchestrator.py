@@ -222,6 +222,61 @@ def test_manifest_captures_module_versions(
         "precomputed:engA": "1.0",
         "precomputed:engB": "1.0",
     }
+    # precomputed/openai n'enveloppent aucun binaire système → lock vide.
+    assert result.manifest.system_binaries_lock == {}
+
+
+def _tesseract_spec(corpus: CorpusSpec) -> RunSpec:
+    """Pipeline 1 étape tesseract (IMAGE→RAW_TEXT) — moteur réel, OCR mocké."""
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="tesseract:fra",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    pipeline = PipelineSpec(
+        name="tess", initial_inputs=(ArtifactType.IMAGE,), steps=(step,)
+    )
+    return RunSpec(
+        corpus=corpus,
+        pipelines=(pipeline,),
+        evaluation=EvaluationSpec(views=(TEXT_VIEW,)),
+        adapter_kwargs={"tesseract:fra": {"label": "fra", "lang": "fra"}},
+    )
+
+
+def test_manifest_captures_tesseract_binary_version(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Déterminisme (§12) : la version du binaire tesseract atterrit dans le
+    # manifeste via le hook de provenance `system_binaries()` (duck-typing).
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "abcd"
+    )
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences", lambda **_: []
+    )
+    monkeypatch.setattr(
+        "xerocr.adapters.ocr.tesseract.tesseract_binary_version",
+        lambda: "tesseract 5.3.0",
+    )
+    (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
+    document = DocumentRef(
+        id="doc1",
+        image_uri=str(tmp_path / "doc1.png"),
+        ground_truths=(
+            GroundTruthRef(
+                type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "doc1.gt.txt")
+            ),
+        ),
+    )
+    result = run(
+        _tesseract_spec(CorpusSpec(name="c", documents=(document,))),
+        registry=_registry(),
+        code_version="1.0",
+    )
+    assert result.manifest.system_binaries_lock == {"tesseract": "tesseract 5.3.0"}
 
 
 # --- Sink d'artefacts (LAYOUT → persistance, T2) -------------------------------

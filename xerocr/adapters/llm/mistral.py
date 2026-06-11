@@ -9,6 +9,8 @@ corrigé), ``zero_shot`` (Pixtral : image → texte). Clé ``MISTRAL_API_KEY`` ;
 
 from __future__ import annotations
 
+from typing import Any
+
 from xerocr.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -31,6 +33,25 @@ from xerocr.pipeline.types import RunContext, StepOutput
 _VERSION = "1.0"
 _DEFAULT_MODEL = "mistral-small-latest"
 _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
+
+
+def _completion_from_chat(response: Any) -> LLMCompletion:
+    """Réponse SDK ``chat.complete`` → ``LLMCompletion`` (texte + jetons).
+
+    **Pur** (aucun réseau, aucun SDK) → la cartographie usage→jetons
+    (``prompt_tokens``/``completion_tokens``) est **testable sur cassette** (étape
+    2d) ; le client live (``# pragma: no cover``) ne le permettrait pas. Jetons →
+    économie (coût cloud réel).
+    """
+    usage = getattr(response, "usage", None)
+    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
+    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
+    choices = getattr(response, "choices", None)
+    if not choices:
+        return LLMCompletion("", tokens_in, tokens_out)
+    return LLMCompletion(
+        normalize_llm_content(choices[0].message.content), tokens_in, tokens_out
+    )
 
 
 def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
@@ -65,16 +86,7 @@ def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'li
         raise AdapterStepError(
             f"mistral a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
-    usage = getattr(response, "usage", None)
-    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
-    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
-    if not response.choices:
-        return LLMCompletion("", tokens_in, tokens_out)
-    return LLMCompletion(
-        normalize_llm_content(response.choices[0].message.content),
-        tokens_in,
-        tokens_out,
-    )
+    return _completion_from_chat(response)
 
 
 def _invoke_mistral(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')

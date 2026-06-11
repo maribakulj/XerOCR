@@ -57,6 +57,14 @@
     "mistral_ocr": {
       "eur_per_1k_pages": 0.92,
       "pricing_date": "2026-06-10"
+    },
+    "google_vision": {
+      "eur_per_1k_pages": 1.38,
+      "pricing_date": "2026-06-10"
+    },
+    "azure_di": {
+      "eur_per_1k_pages": 1.38,
+      "pricing_date": "2026-06-10"
     }
   }
 }

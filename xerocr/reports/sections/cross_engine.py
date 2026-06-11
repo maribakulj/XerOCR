@@ -14,8 +14,11 @@ indiscernables, et IC bootstrap à 95 % par pipeline.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from xerocr.evaluation.analysis import InferencePayload
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
 
@@ -41,7 +44,9 @@ def _verdict(value: float | None) -> tuple[str, str]:
     return "non sig.", ""
 
 
-def _inference_block(view: str, payload: InferencePayload) -> str:
+def _inference_block(
+    view: str, payload: InferencePayload, order: Mapping[str, int]
+) -> str:
     """Rendu d'un payload ``inference`` : rangs, Nemenyi, IC bootstrap."""
     rows: list[str] = []
     intervals = {item.pipeline: item for item in payload.intervals}
@@ -53,8 +58,9 @@ def _inference_block(view: str, payload: InferencePayload) -> str:
             else "—"
         )
         mean = f"{interval.mean:.4f}" if interval is not None else "—"
+        badge = engine_cell(rank.pipeline, order.get(rank.pipeline, 0))
         rows.append(
-            f'<tr><td class="eng-cell">{escape(rank.pipeline)}</td>'
+            f'<tr><td class="eng-cell">{badge}</td>'
             f'<td class="disp">{rank.mean_rank:.3f}</td>'
             f'<td class="disp">{mean}</td>'
             f'<td class="disp">{ic}</td></tr>'
@@ -97,6 +103,7 @@ class CrossEngineSection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         if not result.cross_engine:
             return None
+        order = engine_order(p.pipeline for p in result.pipelines)
         body: list[str] = []
         for score in result.cross_engine:
             view, metric = _split_key(score.metric)
@@ -109,7 +116,7 @@ class CrossEngineSection:
                 f'<td class="verdict{css}">{label}</td></tr>'
             )
         blocks = "".join(
-            _inference_block(analysis.view, analysis.payload)
+            _inference_block(analysis.view, analysis.payload, order)
             for analysis in result.analyses
             if isinstance(analysis.payload, InferencePayload)
         )

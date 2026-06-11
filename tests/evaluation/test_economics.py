@@ -282,3 +282,71 @@ def test_per_page_cloud_kind_hand_computed() -> None:
     assert analysis is not None
     rows = {r.pipeline: r for r in analysis.payload.pipelines}  # type: ignore[union-attr]
     assert rows["ocr_seul"].cost_eur == pytest.approx(0.005 + 0.00184)
+
+
+def test_google_vision_priced_from_packaged_table() -> None:
+    # Anti-silence : un moteur cloud facturé à l'image NE doit PAS retomber en
+    # « temps machine seul ». La table PACKAGÉE porte google_vision (1.38 €/1k
+    # pages). Pipeline google_vision seul, 2 docs × 90 s, taux packagé 0.08 €/h :
+    #   machine = 0.05 h × 0.08 = 0.004 € ; pages = 2/1000 × 1.38 = 0.00276 €.
+    packaged = load_pricing()
+    assert packaged["cloud_page_kinds"]["google_vision"]["eur_per_1k_pages"] == 1.38
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="google_vision:c0",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    manifest = _manifest().model_copy(
+        update={
+            "pipeline_specs": (
+                PipelineSpec(
+                    name="ocr_seul",
+                    initial_inputs=(ArtifactType.IMAGE,),
+                    steps=(step,),
+                ),
+                _manifest().pipeline_specs[1],
+            )
+        }
+    )
+    analysis = economics_analysis(
+        "text", "cer", _series(), _usage(), manifest, pricing=packaged
+    )
+    assert analysis is not None
+    rows = {r.pipeline: r for r in analysis.payload.pipelines}  # type: ignore[union-attr]
+    assert rows["ocr_seul"].cost_eur == pytest.approx(0.004 + 0.00276)
+    assert "pages" in rows["ocr_seul"].basis
+
+
+def test_azure_di_priced_from_packaged_table() -> None:
+    # Même anti-silence pour Azure DI (facturé à la page) : 1.38 €/1k packagé.
+    #   machine = 0.05 h × 0.08 = 0.004 € ; pages = 2/1000 × 1.38 = 0.00276 €.
+    packaged = load_pricing()
+    assert packaged["cloud_page_kinds"]["azure_di"]["eur_per_1k_pages"] == 1.38
+    step = PipelineStep(
+        id="ocr",
+        kind="ocr",
+        adapter_name="azure_di:c0",
+        input_types=(ArtifactType.IMAGE,),
+        output_types=(ArtifactType.RAW_TEXT,),
+    )
+    manifest = _manifest().model_copy(
+        update={
+            "pipeline_specs": (
+                PipelineSpec(
+                    name="ocr_seul",
+                    initial_inputs=(ArtifactType.IMAGE,),
+                    steps=(step,),
+                ),
+                _manifest().pipeline_specs[1],
+            )
+        }
+    )
+    analysis = economics_analysis(
+        "text", "cer", _series(), _usage(), manifest, pricing=packaged
+    )
+    assert analysis is not None
+    rows = {r.pipeline: r for r in analysis.payload.pipelines}  # type: ignore[union-attr]
+    assert rows["ocr_seul"].cost_eur == pytest.approx(0.004 + 0.00276)
+    assert "pages" in rows["ocr_seul"].basis

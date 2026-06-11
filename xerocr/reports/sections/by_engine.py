@@ -13,6 +13,7 @@ from __future__ import annotations
 from statistics import median
 
 from xerocr.evaluation.result import PipelineResult, RunDocumentResult, RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
@@ -53,6 +54,9 @@ class EngineSection:
             return (value is None, value if value is not None else 0.0, p.pipeline)
 
         ordered = sorted(rows, key=_key)
+        # Badge moteur (lettre + accent) = identité STABLE, indépendante du rang :
+        # ordre canonique = première apparition dans le run (partagé entre sections).
+        order = engine_order(p.pipeline for p in result.pipelines)
         maxes = [col_max([p.aggregate for p in rows], i) for i in range(len(metrics))]
         body: list[str] = []
         for position, pipeline in enumerate(ordered, start=1):
@@ -65,9 +69,10 @@ class EngineSection:
                 if vals
                 else "—"
             )
+            badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
             body.append(
                 f'<tr><td class="rank">{position}</td>'
-                f'<td class="eng-cell">{escape(pipeline.pipeline)}</td>{cells}'
+                f'<td class="eng-cell">{badge}</td>{cells}'
                 f'<td class="disp">{disp}</td></tr>'
             )
         header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)

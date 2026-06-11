@@ -94,7 +94,8 @@
           </select>
         </label>
 
-        <label class="comp-field" data-show="text_only text_and_image zero_shot">
+        <label class="comp-field"
+               data-show="ocr_only text_only text_and_image zero_shot">
           <span class="comp-label">{{ t.bench_model }}</span>
           <input id="draft-model" class="input" type="text"
                  placeholder="{{ t.bench_model_ph }}">
@@ -104,10 +105,22 @@
         <label class="comp-field comp-field-prompt"
                data-show="text_only text_and_image zero_shot">
           <span class="comp-label">{{ t.bench_prompt }}</span>
+          {% if curated_prompts %}
+          <select id="draft-prompt-curated" class="select">
+            <option value="">{{ t.bench_prompt_curated_none }}</option>
+            {% for name in curated_prompts %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
           <textarea id="draft-prompt" class="input comp-prompt" rows="3"
                     placeholder="{{ t.bench_prompt_ph }}"></textarea>
+          <span class="dropzone-meta">{{ t.bench_prompt_hint }}</span>
         </label>
 
+        {# Suggestions canoniques openai/anthropic — peuplée par benchmark.js
+           depuis /api/models/{provider} (avec capacité vision). #}
+        <datalist id="api-model-list"></datalist>
         {% if ollama_models %}
         <datalist id="ollama-models">
           {% for m in ollama_models %}<option value="{{ m }}"></option>{% endfor %}
@@ -155,6 +168,24 @@
         {% endfor %}
       </select>
     </div>
+    <div class="panel stack-panel">
+      <label class="label" for="norm-sample">{{ t.bench_norm_preview }}</label>
+      <textarea id="norm-sample" class="input" rows="2"
+                placeholder="{{ t.bench_norm_sample_ph }}"></textarea>
+      <details class="norm-custom">
+        <summary class="dropzone-meta">{{ t.bench_norm_custom }}</summary>
+        <textarea id="norm-config" class="input" rows="3"
+                  placeholder="{{ t.bench_norm_config_ph }}"></textarea>
+      </details>
+      <button id="norm-preview-btn" class="btn" type="button">{{ t.bench_norm_preview_btn }}</button>
+      <pre id="norm-result" class="norm-result" aria-live="polite"></pre>
+    </div>
+    <div class="panel stack-panel">
+      <label class="label" for="char-exclude">{{ t.bench_char_exclude }}</label>
+      <input id="char-exclude" class="input" type="text"
+             placeholder="{{ t.bench_char_exclude_ph }}">
+      <span class="dropzone-meta">{{ t.bench_char_exclude_hint }}</span>
+    </div>
   </div>
 </section>
 
@@ -174,8 +205,12 @@
         <span id="run-status" class="run-status">{{ t.bench_idle }}</span>
       </div>
 
-      <div id="run-progress" class="run-progress" hidden>
-        <div class="progress"><div id="run-progress-bar" class="progress-bar"></div></div>
+      <div id="run-progress" class="run-progress" hidden role="status" aria-live="polite">
+        <div id="run-progress-rail" class="progress" role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+             aria-label="{{ t.bench_progress_label }}">
+          <div id="run-progress-bar" class="progress-bar"></div>
+        </div>
         <span id="run-progress-text" class="run-progress-text mono"></span>
       </div>
 

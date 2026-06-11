@@ -52,6 +52,46 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_char_exclude_field_present_and_sent(tmp_path: Path) -> None:
+    # 3c : champ « caractères à exclure » + le JS le met dans le payload du run.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="char-exclude"' in body
+    assert "payload.char_exclude" in _JS.read_text(encoding="utf-8")
+
+
+def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
+    # 3c : aperçu de normalisation (échantillon + config custom) + le JS poste à l'API.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="norm-sample"' in body  # échantillon
+    assert 'id="norm-config"' in body  # config YAML custom (sans persistance)
+    assert 'id="norm-preview-btn"' in body and 'id="norm-result"' in body
+    assert "/api/normalization/preview" in _JS.read_text(encoding="utf-8")
+
+
+def test_model_suggestions_datalist_and_api_wired(tmp_path: Path) -> None:
+    # 3c : datalist canonique (peuplée via /api/models) + le JS interroge l'API.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="api-model-list"' in body  # cible des suggestions openai/anthropic
+    assert "/api/models/" in _JS.read_text(encoding="utf-8")  # le JS la consomme
+
+
+def test_model_field_shown_in_ocr_only_mode(tmp_path: Path) -> None:
+    # 3c : le champ « Modèle » est désormais visible aussi en OCR seul (pour
+    # kraken/pero/calamari/mistral_ocr qui exigent un modèle) — gap 2c refermé.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'data-show="ocr_only text_only text_and_image zero_shot"' in body
+    assert 'id="draft-model"' in body
+
+
+def test_benchmark_exposes_prompt_inputs(tmp_path: Path) -> None:
+    # Prompt libre (textarea) ET prompts curés (select) — l'utilisateur choisit.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="draft-prompt"' in body  # textarea : écrire son propre prompt
+    assert 'id="draft-prompt-curated"' in body  # select : prompts curés par période
+    assert "correction_medieval_french" in body  # noms rendus serveur (dynamiques)
+    assert "zero_shot_medieval_french" in body
+
+
 def test_benchmark_engine_select_disables_unavailable(tmp_path: Path) -> None:
     # tesseract indisponible ici (ni binaire ni pytesseract) → option disabled.
     body = _client(tmp_path).get("/benchmark").text
@@ -72,6 +112,27 @@ def test_nav_links_benchmark_and_reports(tmp_path: Path) -> None:
 def test_benchmark_english(tmp_path: Path) -> None:
     body = _client(tmp_path).get("/benchmark?lang=en").text
     assert "Run the benchmark" in body
+
+
+def test_skip_link_and_landmark_present(tmp_path: Path) -> None:
+    # Lien d'évitement clavier + cible de saut (a11y).
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'class="skip-link"' in body
+    assert 'href="#main-content"' in body
+    assert 'id="main-content"' in body
+    assert "Aller au contenu" in body  # libellé FR
+    en = _client(tmp_path).get("/benchmark?lang=en").text
+    assert "Skip to content" in en
+
+
+def test_run_progress_has_progressbar_role(tmp_path: Path) -> None:
+    # La barre de progression annonce sa valeur aux lecteurs d'écran.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'role="progressbar"' in body
+    assert 'aria-valuemin="0"' in body
+    assert 'aria-valuemax="100"' in body
+    assert 'aria-valuenow="0"' in body
+    assert 'role="status"' in body  # la zone enveloppe est une live-region
 
 
 def test_js_asset_is_served(tmp_path: Path) -> None:

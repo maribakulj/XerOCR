@@ -29,11 +29,15 @@ def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
         "anthropic",
+        "azure_di",
+        "calamari",
+        "google_vision",
         "kraken",
         "mistral",
         "mistral_ocr",
         "ollama",
         "openai",
+        "pero",
         "pp_doclayout",
         "precomputed",
         "precomputed_layout",
@@ -45,6 +49,36 @@ def test_kinds_listed() -> None:
 def test_builds_tesseract_module() -> None:
     module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
     assert module.name == "tesseract:fra"
+
+
+def test_builds_pero_and_calamari_modules() -> None:
+    pero = _registry().build("pero:c0", {"label": "c0", "model": "config.ini"})
+    assert pero.name == "pero:c0"
+    assert pero.output_types == frozenset({ArtifactType.RAW_TEXT})
+    cal = _registry().build("calamari:c0", {"label": "c0", "model": "ckpt"})
+    assert cal.name == "calamari:c0"
+    assert cal.output_types == frozenset({ArtifactType.RAW_TEXT})
+
+
+def test_pero_requires_model() -> None:
+    with pytest.raises(ModuleResolutionError):
+        _registry().build("pero:c0", {"label": "c0"})
+
+
+def test_builds_azure_di_module() -> None:
+    module = _registry().build("azure_di:c0", {"label": "c0", "lang": "fra"})
+    assert module.name == "azure_di:c0"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
+
+
+def test_builds_google_vision_module() -> None:
+    # Le planificateur passe un `lang` à tout moteur OCR : le builder le tolère
+    # (Vision détecte la langue, pas de hint) et résout le bon module.
+    module = _registry().build("google_vision:c0", {"label": "c0", "lang": "fra"})
+    assert module.name == "google_vision:c0"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
 
 
 def test_builds_anthropic_with_role() -> None:

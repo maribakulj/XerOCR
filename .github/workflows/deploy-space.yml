@@ -57,10 +57,12 @@ jobs:
           echo "smoke OK"
 
       # 2) Assembler le dépôt « racine plate » attendu par le Space.
+      #    On déploie désormais l'image MOTEUR (Dockerfile.engine) : le Space public
+      #    exécute un vrai Tesseract gratuit, plus seulement une vitrine lecture seule.
       - name: Assembler le contexte du Space
         run: |
           mkdir -p space/reports
-          cp deploy/Dockerfile.space space/Dockerfile
+          cp deploy/Dockerfile.engine space/Dockerfile
           cp deploy/requirements.txt space/requirements.txt
           cp deploy/README_SPACE.md  space/README.md
           cp pyproject.toml          space/pyproject.toml
@@ -69,7 +71,42 @@ jobs:
           touch space/reports/.gitkeep
           find space -name '__pycache__' -type d -prune -exec rm -rf {} +
 
-      # 3) Pousser vers le Space. Le token n'est JAMAIS imprimé (env + masquage).
+      # 3) Construire l'image moteur (le smoke-test du BUILD échoue si Tesseract /
+      #    la langue ``fra`` manquent, ou si l'OCR deadlock/timeoute — cf. Dockerfile).
+      #    Le contexte plat n'a pas de .git → setuptools_scm retombe sur
+      #    ``fallback_version`` (pyproject), comme l'image vitrine.
+      - name: Build de l'image moteur (smoke build inclus)
+        run: docker build -f space/Dockerfile -t xerocr-engine:ci space/
+
+      # 4) Smoke OCR RÉEL : lancer le conteneur, vérifier /health, puis faire OCRiser
+      #    une image de TEXTE réelle par le Tesseract baqué (≠ le damier du build).
+      #    Le binaire reconnaît du vrai texte avec le modèle ``fra`` ou le déploiement
+      #    est refusé. ImageMagick est préinstallé sur les runners ubuntu-latest.
+      - name: Smoke OCR réel (Tesseract baqué)
+        run: |
+          set -euo pipefail
+          docker run -d --name engine -p 7860:7860 xerocr-engine:ci
+          ok=0
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:7860/health >/dev/null 2>&1 && { ok=1; break; }
+            sleep 1
+          done
+          if [ "$ok" != 1 ]; then
+            docker logs engine || true
+            echo "::error::le conteneur moteur ne répond pas sur /health"; exit 1
+          fi
+          # Image de texte réelle → OCR via le binaire baqué (modèle fra).
+          convert -size 360x90 xc:white -gravity center \
+            -pointsize 48 -annotate 0 'Bonjour' /tmp/hello.png
+          docker cp /tmp/hello.png engine:/tmp/hello.png
+          out="$(docker exec engine tesseract /tmp/hello.png - -l fra --psm 7 2>/dev/null || true)"
+          echo "OCR => [$out]"
+          docker rm -f engine >/dev/null 2>&1 || true
+          echo "$out" | grep -iq 'Bonjour' || {
+            echo "::error::OCR réel échoué (texte 'Bonjour' non reconnu)"; exit 1; }
+          echo "smoke OCR réel OK"
+
+      # 5) Pousser vers le Space. Le token n'est JAMAIS imprimé (env + masquage).
       - name: Pousser vers le Space
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}

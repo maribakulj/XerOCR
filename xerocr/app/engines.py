@@ -41,6 +41,16 @@ class EngineStatus(BaseModel):
 #: Source unique du contrat ; les routeurs (couche 8) l'importent — pas de copie.
 StatusProvider = Callable[[], tuple[EngineStatus, ...]]
 
+#: **Socle first-party gratuit** exécutable sur une instance **publique** (Space).
+#: Seuls ces kinds tournent en mode public : ils sont **gratuits, sans clé et
+#: locaux** (aucun secret exposé, aucun appel cloud facturé). Tout le reste —
+#: moteurs cloud (clé), HTR lourds, et a fortiori les **plugins tiers** — reste
+#: *gated* (``403``, fail-closed) : un kind ajouté plus tard est refusé par défaut
+#: tant qu'il n'est pas explicitement inscrit ici. ``precomputed`` est le moteur de
+#: **démonstration** (jamais un concurrent OCR câblé) ; ``tesseract`` est le seul
+#: moteur réel offert au visiteur du Space public.
+PUBLIC_ENGINE_KINDS: frozenset[str] = frozenset({"precomputed", "tesseract"})
+
 
 def _module_present(name: str) -> bool:
     try:
@@ -71,7 +81,11 @@ def engine_statuses(
         ),
         _tesseract_status(has_binary, has_module),
         _kraken_status(has_module),
+        _pero_status(has_module),
+        _calamari_status(has_module),
         _mistral_ocr_status(has_module, get_env),
+        _google_vision_status(has_module, get_env),
+        _azure_di_status(has_module, get_env),
         _openai_status(has_module, get_env),
         _anthropic_status(has_module, get_env),
         _mistral_status(has_module, get_env),
@@ -101,6 +115,22 @@ def _kraken_status(has_module: ModuleProbe) -> EngineStatus:
     )
 
 
+def _pero_status(has_module: ModuleProbe) -> EngineStatus:
+    if not has_module("pero_ocr"):
+        detail, ok = "lib pero_ocr non installée (extra [pero])", False
+    else:
+        detail, ok = "prêt (lib ; fournir un modèle PERO au lancement)", True
+    return EngineStatus(kind="pero", label="PERO", available=ok, detail=detail)
+
+
+def _calamari_status(has_module: ModuleProbe) -> EngineStatus:
+    if not has_module("calamari_ocr"):
+        detail, ok = "lib calamari_ocr non installée (extra [calamari])", False
+    else:
+        detail, ok = "prêt (lib ; fournir un checkpoint au lancement)", True
+    return EngineStatus(kind="calamari", label="Calamari", available=ok, detail=detail)
+
+
 def _mistral_ocr_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
     if not has_module("mistralai"):
         detail, ok = "SDK mistralai non installé (extra [mistral])", False
@@ -110,6 +140,35 @@ def _mistral_ocr_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineSta
         detail, ok = "prêt (SDK + clé)", True
     return EngineStatus(
         kind="mistral_ocr", label="Mistral OCR", available=ok, detail=detail
+    )
+
+
+def _google_vision_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("httpx"):
+        detail, ok = "httpx non installé (extra [google])", False
+    elif not get_env("GOOGLE_VISION_API_KEY"):
+        detail, ok = "clé GOOGLE_VISION_API_KEY absente", False
+    else:
+        detail, ok = "prêt (REST + clé)", True
+    return EngineStatus(
+        kind="google_vision", label="Google Vision", available=ok, detail=detail
+    )
+
+
+def _azure_di_status(has_module: ModuleProbe, get_env: EnvProbe) -> EngineStatus:
+    if not has_module("httpx"):
+        detail, ok = "httpx non installé (extra [azure])", False
+    elif not get_env("AZURE_DOC_INTEL_ENDPOINT"):
+        detail, ok = "endpoint AZURE_DOC_INTEL_ENDPOINT absent", False
+    elif not get_env("AZURE_DOC_INTEL_KEY"):
+        detail, ok = "clé AZURE_DOC_INTEL_KEY absente", False
+    else:
+        detail, ok = "prêt (REST + endpoint + clé)", True
+    return EngineStatus(
+        kind="azure_di",
+        label="Azure Document Intelligence",
+        available=ok,
+        detail=detail,
     )
 
 
@@ -207,9 +266,21 @@ def normalization_profiles() -> tuple[str, ...]:
     return tuple(sorted(NORMALIZATION_PROFILES))
 
 
+def curated_prompts() -> tuple[str, ...]:
+    """Noms des **prompts curés** (``xerocr.prompts``), lus **dynamiquement**.
+
+    Comme les profils de normalisation : un prompt ``.txt`` ajouté au paquet
+    apparaît ici (et au formulaire) sans câblage. Import local (zéro effet de bord)."""
+    from xerocr.prompts import available_prompts
+
+    return available_prompts()
+
+
 __all__ = [
     "normalization_profiles",
+    "curated_prompts",
     "EngineStatus",
+    "PUBLIC_ENGINE_KINDS",
     "StatusProvider",
     "engine_statuses",
     "segmenter_statuses",

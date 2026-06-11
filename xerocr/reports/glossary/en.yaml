@@ -1,0 +1,191 @@
+# Pedagogical report glossary — English.
+#
+# Definitions for the non-expert reader, shown at the end of the report for the
+# metrics the engine actually computes. DATA (not executable surface): an entry
+# is added only for a metric that has a real consumer (a score in RunResult).
+#
+# Per-entry fields:
+#   title       : short title (shown in the disclosure summary)
+#   definition  : 2-3 sentences of formal definition
+#   measures    : what the metric concretely measures
+#   limits      : known limits and common pitfalls
+
+cer:
+  title: "CER — character error rate"
+  definition: >-
+    Ratio of the character-level edit distance (substitutions + insertions +
+    deletions) to the length of the reference, expressed as a proportion.
+    0 = perfect transcription.
+  measures: >-
+    Character-by-character fidelity between the engine output and the ground
+    truth, after the chosen normalization profile.
+  limits: >-
+    Blind to error meaning: a mistake on a rare character weighs as much as a
+    common one. Depends on the normalization profile applied.
+
+cer_diplo:
+  title: "Diplomatic CER"
+  definition: >-
+    CER computed without any graphical normalization: historical variants
+    (long s ſ, u/v, ligatures) are counted as distinct.
+  measures: >-
+    Fidelity to the exact spelling of the witness, as expected in a
+    diplomatic edition of a heritage document.
+  limits: >-
+    Stricter than normalized CER; comparable only across engines evaluated on
+    the same diplomatic ground truth.
+
+wer:
+  title: "WER — word error rate"
+  definition: >-
+    The word-level counterpart of CER: edit distance between the word
+    sequences of hypothesis and reference, divided by the reference word
+    count.
+  measures: >-
+    Word-by-word fidelity; a word is wrong as soon as a single character
+    differs.
+  limits: >-
+    Very sensitive to word segmentation and attached punctuation; a high WER
+    can hide a low CER.
+
+mer:
+  title: "MER — match error rate"
+  definition: >-
+    Ratio of the number of edit operations to the alignment length (reference
+    + insertions), bounded between 0 and 1.
+  measures: >-
+    The fraction of the character alignment that is not an exact match; a
+    bounded variant of CER.
+  limits: >-
+    Close to CER on clean text; diverges mainly with long
+    insertions/deletions.
+
+del_rate:
+  title: "Deletion rate"
+  definition: >-
+    Share of reference characters missing from the hypothesis, relative to
+    the reference length.
+  measures: >-
+    The engine's tendency to "drop" text (under-transcription).
+  limits: >-
+    A single error component: read together with the insertion rate to
+    diagnose an imbalance.
+
+ins_rate:
+  title: "Insertion rate"
+  definition: >-
+    Share of characters present in the hypothesis with no counterpart in the
+    reference, relative to the reference length.
+  measures: >-
+    The engine's tendency to "invent" text (over-transcription, sometimes a
+    sign of LLM hallucination).
+  limits: >-
+    A single error component; a high rate in isolation points to noise or
+    hallucination rather than a misreading.
+
+diacritic_err:
+  title: "Diacritic error"
+  definition: >-
+    Error rate restricted to diacritical marks (accents, cedillas, breves…)
+    after isolating the diacritic layer of the text.
+  measures: >-
+    The engine's fidelity to accentuation, often lost by OCR trained on
+    modern text.
+  limits: >-
+    Not applicable to scripts without diacritics; depends on the Unicode
+    normalization applied to the reference.
+
+mufi_err:
+  title: "MUFI error (medieval characters)"
+  definition: >-
+    Error rate restricted to characters from the Medieval Unicode Font
+    Initiative (abbreviations, rare letters) present in the reference.
+  measures: >-
+    The engine's ability to render the specialized characters of medieval
+    scripts.
+  limits: >-
+    Not applicable if the ground truth contains no MUFI character.
+
+hallucination:
+  title: "Hallucination index"
+  definition: >-
+    Signal derived from surplus text produced with no support in the
+    reference (massive insertions, repetitions), typical of an LLM that
+    "fills in".
+  measures: >-
+    The risk that the output contains plausible but invented text, absent
+    from the source document.
+  limits: >-
+    An indicator, not proof: a legitimate insertion (text truly present but
+    outside the GT) can raise it.
+
+searchability:
+  title: "Searchability index"
+  definition: >-
+    Estimate of the share of text that would remain retrievable by a
+    full-text search despite transcription errors.
+  measures: >-
+    The practical usefulness of the output for indexing and search, beyond
+    raw CER.
+  limits: >-
+    A usage heuristic: it does not replace a recall evaluation on real
+    queries.
+
+region_cer:
+  title: "Per-region CER"
+  definition: >-
+    CER aggregated at the level of a layout region (block, column), when
+    segmentation provides a partition.
+  measures: >-
+    Localized transcription quality, to spot the areas of a page where the
+    engine breaks down.
+  limits: >-
+    Depends on upstream segmentation quality; not applicable without a
+    structural layer.
+
+region_detection:
+  title: "Region detection"
+  definition: >-
+    Overlap measure between the regions found by segmentation and the regions
+    of the layout ground truth.
+  measures: >-
+    The accuracy of segmentation (did we find the right blocks, in the right
+    place) independently of text.
+  limits: >-
+    Not applicable without layout ground truth; sensitive to the chosen
+    overlap threshold.
+
+significance_p:
+  title: "p-value (statistical test)"
+  definition: >-
+    Probability of observing a difference at least as large between two
+    engines if they were in fact equivalent (null hypothesis).
+  measures: >-
+    How surprising a performance gap is; a low p-value (< 0.05) indicates a
+    gap unlikely to be due to chance.
+  limits: >-
+    Measures neither the magnitude nor the practical importance of the gap;
+    sensitive to corpus size and requires correction for multiple comparisons.
+
+ece:
+  title: "ECE — expected calibration error"
+  definition: >-
+    Token-weighted average gap between the confidence an engine reports and
+    its actually observed accuracy.
+  measures: >-
+    How trustworthy an engine's confidence scores are: a well-calibrated
+    engine is right as often as it claims.
+  limits: >-
+    Not applicable to engines without confidence scores; depends on the
+    confidence binning.
+
+mce:
+  title: "MCE — maximum calibration error"
+  definition: >-
+    Largest gap, across all confidence bins, between reported confidence and
+    observed accuracy.
+  measures: >-
+    The worst case of an engine's over- or under-confidence, where ECE only
+    gives the average.
+  limits: >-
+    Sensitive to sparsely populated bins; read together with ECE.

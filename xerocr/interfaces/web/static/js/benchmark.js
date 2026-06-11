@@ -29,7 +29,35 @@
     });
   }
 
+  function wireNormalizationPreview() {
+    var btn = document.getElementById("norm-preview-btn");
+    var sample = document.getElementById("norm-sample");
+    var config = document.getElementById("norm-config");
+    var select = document.getElementById("normalization");
+    var out = document.getElementById("norm-result");
+    if (!btn || !sample || !out) return;
+    btn.addEventListener("click", function () {
+      var payload = { sample: sample.value };
+      var custom = config && config.value ? config.value.trim() : "";
+      if (custom) payload.config = custom;
+      else if (select && select.value) payload.profile = select.value;
+      var headers = { "Content-Type": "application/json" };
+      headers[CSRF] = "1";
+      out.textContent = "…";
+      fetchJson("/api/normalization/preview", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      }).then(function (r) {
+        out.textContent = r.ok
+          ? r.body.normalized || ""
+          : "Erreur : " + (r.body.detail || r.status);
+      });
+    });
+  }
+
   ready(function () {
+    wireNormalizationPreview();
     var launchBtn = document.getElementById("launch");
     var statusEl = document.getElementById("run-status");
     var resultEl = document.getElementById("run-result");
@@ -40,6 +68,7 @@
     var progressText = document.getElementById("run-progress-text");
     var corpusSelect = document.getElementById("corpus-select");
     var normalization = document.getElementById("normalization");
+    var charExclude = document.getElementById("char-exclude");
     var addBtn = document.getElementById("add-competitor");
     var queueTpl = document.getElementById("queue-row-tpl");
     var queueList = document.getElementById("queue-list");
@@ -55,6 +84,7 @@
     var draftVlm = document.getElementById("draft-vlm");
     var draftModel = document.getElementById("draft-model");
     var draftPrompt = document.getElementById("draft-prompt");
+    var draftPromptCurated = document.getElementById("draft-prompt-curated");
     var queueLabels = {
       ocr: queueList.getAttribute("data-label-ocr") || "OCR",
       ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
@@ -74,29 +104,71 @@
     // Le champ « Modèle » pointe vers la datalist du fournisseur sélectionné
     // (ollama / mistral), qui n'existe que si le serveur a renvoyé des modèles.
     // Sinon : saisie libre. Rien de hardcodé — les options viennent du serveur.
-    function updateModelList() {
-      if (!draftModel) return;
-      var provider =
-        activeMode === "text_only"
-          ? draftLlm && draftLlm.value
-          : activeMode === "text_and_image" || activeMode === "zero_shot"
-          ? draftVlm && draftVlm.value
-          : "";
-      var listId =
-        provider === "ollama"
-          ? "ollama-models"
-          : provider === "mistral"
-          ? "mistral-models"
-          : "";
-      var dl = listId ? document.getElementById(listId) : null;
-      if (dl) draftModel.setAttribute("list", listId);
+    var modelCache = {};
+
+    function applyDatalist(listId, count) {
+      if (listId && count) draftModel.setAttribute("list", listId);
       else draftModel.removeAttribute("list");
       var hint = document.getElementById("model-hint");
       if (hint) {
-        hint.textContent = dl
-          ? dl.children.length + " modèle(s) — clique pour choisir"
+        hint.textContent = count
+          ? count + " modèle(s) suggéré(s) — clique pour choisir"
           : "";
       }
+    }
+
+    function fillApiList(models) {
+      var dl = document.getElementById("api-model-list");
+      if (!dl) return 0;
+      dl.textContent = "";
+      for (var i = 0; i < models.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = models[i].name;
+        if (models[i].vision) opt.label = "vision";
+        dl.appendChild(opt);
+      }
+      return models.length;
+    }
+
+    function currentProvider() {
+      if (activeMode === "text_only") return draftLlm && draftLlm.value;
+      if (activeMode === "text_and_image" || activeMode === "zero_shot") {
+        return draftVlm && draftVlm.value;
+      }
+      return "";
+    }
+
+    function updateModelList() {
+      if (!draftModel) return;
+      var provider = currentProvider();
+      // Modèles réellement installés (live) : datalists rendues côté serveur.
+      if (provider === "ollama" || provider === "mistral") {
+        var dl = document.getElementById(provider + "-models");
+        applyDatalist(provider + "-models", dl ? dl.children.length : 0);
+        return;
+      }
+      // openai/anthropic : pas de source live → liste canonique + capacité vision
+      // via /api/models/{provider} (même origine ; mise en cache).
+      if (provider === "openai" || provider === "anthropic") {
+        if (modelCache[provider]) {
+          applyDatalist("api-model-list", fillApiList(modelCache[provider]));
+          return;
+        }
+        var asked = provider;
+        fetch("/api/models/" + encodeURIComponent(provider))
+          .then(function (r) {
+            return r.ok ? r.json() : { models: [] };
+          })
+          .then(function (data) {
+            modelCache[asked] = data.models || [];
+            if (currentProvider() === asked) {
+              applyDatalist("api-model-list", fillApiList(modelCache[asked]));
+            }
+          })
+          .catch(function () {});
+        return;
+      }
+      applyDatalist("", 0);
     }
 
     function setMode(mode) {
@@ -163,8 +235,14 @@
     function buildDraft() {
       var model = draftModel && draftModel.value ? draftModel.value.trim() : "";
       var prompt = draftPrompt && draftPrompt.value ? draftPrompt.value.trim() : "";
+      // Texte libre prioritaire : s'il est saisi, on ignore le prompt curé (le
+      // serveur refuse d'ailleurs les deux à la fois).
+      var promptName =
+        !prompt && draftPromptCurated ? draftPromptCurated.value : "";
       if (activeMode === "ocr_only") {
-        return { engine: draftOcr.value, mode: "ocr_only" };
+        // En OCR seul, `model` = le modèle du moteur (kraken/pero/calamari : path ;
+        // mistral_ocr : nom). Tesseract/Google/Azure l'ignorent.
+        return { engine: draftOcr.value, mode: "ocr_only", model: model };
       }
       if (activeMode === "text_only") {
         return {
@@ -173,6 +251,7 @@
           llm: draftLlm.value,
           model: model,
           prompt: prompt,
+          promptName: promptName,
         };
       }
       if (activeMode === "text_and_image") {
@@ -182,6 +261,7 @@
           llm: draftVlm.value,
           model: model,
           prompt: prompt,
+          promptName: promptName,
         };
       }
       return {
@@ -189,6 +269,7 @@
         mode: "zero_shot",
         model: model,
         prompt: prompt,
+        promptName: promptName,
       };
     }
 
@@ -201,6 +282,7 @@
         if (queue[i].llm) entry.llm = queue[i].llm;
         if (queue[i].model) entry.model = queue[i].model;
         if (queue[i].prompt) entry.prompt = queue[i].prompt;
+        else if (queue[i].promptName) entry.prompt_name = queue[i].promptName;
         out.push(entry);
       }
       return out;
@@ -238,6 +320,8 @@
       progressWrap.hidden = false;
       var pct = Math.round((doneN / total) * 100);
       progressBar.style.width = pct + "%";
+      var rail = document.getElementById("run-progress-rail");
+      if (rail) rail.setAttribute("aria-valuenow", String(pct));
       if (progressText) progressText.textContent = doneN + " / " + total;
     }
 
@@ -316,6 +400,7 @@
       var corpusId = currentCorpusId();
       if (corpusId) payload.corpus_id = corpusId;
       if (normalization && normalization.value) payload.normalization = normalization.value;
+      if (charExclude && charExclude.value) payload.char_exclude = charExclude.value;
       fetchJson("/api/runs", {
         method: "POST",
         headers: headers,

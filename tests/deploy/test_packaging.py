@@ -33,11 +33,37 @@ def test_dockerfile_serves_readonly_vitrine() -> None:
     assert "USER xerocr" in text  # non-root
 
 
-def test_requirements_embark_no_engine() -> None:
-    # Vitrine lecture seule : aucun moteur lourd (OCR/LLM) dans l'image servie.
+def test_requirements_embark_no_heavy_engine() -> None:
+    # `requirements.txt` est partagé par la vitrine ET l'image moteur (Étape 1).
+    # `pytesseract` (wrapper PUR du binaire, inerte sans lui) y est désormais
+    # **attendu** : c'est le socle OCR gratuit du Space. Mais aucun moteur **lourd**
+    # (SDK GPU / API cloud à dépendances volumineuses) ne doit y entrer.
     reqs = (DEPLOY / "requirements.txt").read_text(encoding="utf-8").lower()
-    for engine in ("pytesseract", "openai", "torch", "transformers"):
-        assert engine not in reqs, f"{engine!r} ne doit pas être dans la vitrine"
+    assert "pytesseract" in reqs, "pytesseract = socle OCR gratuit (Étape 1)"
+    for engine in ("openai", "anthropic", "torch", "transformers", "paddlex"):
+        assert engine not in reqs, f"{engine!r} (moteur lourd) hors requirements"
+
+
+def test_engine_dockerfile_bakes_free_ocr() -> None:
+    # Contrat de l'image moteur (Étape 1) : Tesseract + langues baquées, garde
+    # anti-deadlock OpenMP, mode public verrouillé, non-root, smoke build fail-fast.
+    text = (DEPLOY / "Dockerfile.engine").read_text(encoding="utf-8")
+    for token in ("tesseract-ocr-fra", "tesseract-ocr-lat", "tesseract-ocr-eng"):
+        assert token in text, f"langue {token} non baquée"
+    assert "OMP_THREAD_LIMIT=1" in text  # garde deadlock free-tier (leçon Picarones)
+    assert "TESSDATA_PREFIX" in text
+    assert "XEROCR_PUBLIC_MODE=true" in text  # fail-closed par défaut sur le Space
+    assert "USER xerocr" in text  # non-root
+    assert "--list-langs" in text and "grep -qx fra" in text  # smoke fra
+    assert "serve" in text and "7860" in text  # lance le serveur
+
+
+def test_deploy_workflow_builds_engine_and_smoke_ocr() -> None:
+    # Le déploiement construit l'image MOTEUR et fait un smoke OCR RÉEL avant push.
+    wf = (ROOT / ".github/workflows/deploy-space.yml").read_text(encoding="utf-8")
+    assert "Dockerfile.engine" in wf  # le Space déploie le moteur, pas la vitrine
+    assert "docker build" in wf and "xerocr-engine" in wf
+    assert "tesseract /tmp/hello.png" in wf  # OCR réel d'une image de texte générée
 
 
 def test_space_readme_declares_docker_sdk() -> None:
@@ -46,15 +72,20 @@ def test_space_readme_declares_docker_sdk() -> None:
     assert "app_port: 7860" in header
 
 
-def test_flat_dockerfile_has_no_deploy_paths() -> None:
-    # Le Dockerfile « racine plate » (dépôt du Space) ne doit copier AUCUN chemin
-    # deploy/… : dans le Space, tout est à la racine. (Les commentaires exceptés.)
-    text = (DEPLOY / "Dockerfile.space").read_text(encoding="utf-8")
-    copy_lines = [
-        line for line in text.splitlines() if line.strip().upper().startswith("COPY")
-    ]
-    assert copy_lines, "Dockerfile.space sans COPY ?"
-    assert all("deploy/" not in line for line in copy_lines)
+def test_flat_dockerfiles_have_no_deploy_paths() -> None:
+    # Les Dockerfiles « racine plate » (dépôt du Space) ne doivent copier AUCUN
+    # chemin deploy/… : dans le Space, tout est à la racine. (Commentaires exceptés.)
+    # Couvre la vitrine (.space) ET l'image moteur (.engine), tous deux assemblés
+    # en racine plate par le workflow de déploiement.
+    for name in ("Dockerfile.space", "Dockerfile.engine"):
+        text = (DEPLOY / name).read_text(encoding="utf-8")
+        copy_lines = [
+            line
+            for line in text.splitlines()
+            if line.strip().upper().startswith("COPY")
+        ]
+        assert copy_lines, f"{name} sans COPY ?"
+        assert all("deploy/" not in line for line in copy_lines), name
 
 
 def test_deploy_workflow_uses_secret_not_literal_token() -> None:

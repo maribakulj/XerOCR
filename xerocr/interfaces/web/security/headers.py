@@ -80,12 +80,25 @@ def _frame_ancestors_directive() -> str:
 CONTENT_SECURITY_POLICY = f"{_CSP_BASE}; frame-ancestors 'none'"
 
 
-def get_csp_policy() -> str:
-    """CSP à appliquer : base + ``frame-ancestors`` selon l'environnement."""
-    return f"{_CSP_BASE}; {_frame_ancestors_directive()}"
+def get_csp_policy(path: str | None = None) -> str:
+    """CSP à appliquer : base + ``frame-ancestors`` selon l'environnement.
+
+    Pour les réponses **``/reports/``** seulement, ``script-src`` autorise en plus
+    les **empreintes sha256** des scripts statiques inlinés du rapport autonome
+    (comparaison, navigation clavier, palette) — l'``'unsafe-inline'`` reste
+    **exclu** partout (la CSP reste un contrat ; seuls ces scripts connus, épinglés
+    par hash, peuvent s'exécuter)."""
+    base = _CSP_BASE
+    if path is not None and path.startswith("/reports/"):
+        from xerocr.reports.embedded import script_csp_hashes
+
+        base = base.replace(
+            "script-src 'self'", f"script-src 'self' {script_csp_hashes()}"
+        )
+    return f"{base}; {_frame_ancestors_directive()}"
 
 
-def security_headers() -> dict[str, str]:
+def security_headers(path: str | None = None) -> dict[str, str]:
     """En-têtes de sécurité de la réponse, **calculés selon le déploiement**.
 
     ``X-Frame-Options: DENY`` est sciemment **omis sur HF Space** : ce header a
@@ -95,7 +108,7 @@ def security_headers() -> dict[str, str]:
     ``frame-ancestors``.
     """
     headers = {
-        "Content-Security-Policy": get_csp_policy(),
+        "Content-Security-Policy": get_csp_policy(path),
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
         "Cross-Origin-Opener-Policy": "same-origin",
@@ -116,10 +129,12 @@ class SecurityHeadersMiddleware:
             await self._app(scope, receive, send)
             return
 
+        path = scope.get("path", "")
+
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
                 raw = list(message.get("headers", []))
-                for key, value in security_headers().items():
+                for key, value in security_headers(path).items():
                     raw.append((key.encode("latin-1"), value.encode("latin-1")))
                 message = {**message, "headers": raw}
             await send(message)
@@ -127,9 +142,9 @@ class SecurityHeadersMiddleware:
         await self._app(scope, receive, send_with_headers)
 
 
-def apply_security_headers(response: Response) -> Response:
+def apply_security_headers(response: Response, path: str | None = None) -> Response:
     """Variante utilitaire (tests / réponses construites à la main)."""
-    for key, value in security_headers().items():
+    for key, value in security_headers(path).items():
         response.headers[key] = value
     return response
 

@@ -22,7 +22,7 @@ def build_reports_router(reports_dir: Path) -> APIRouter:
         return {"reports": available_reports(reports_dir)}
 
     @router.get("/reports/{name}", response_class=HTMLResponse)
-    def get_report(name: str) -> str:
+    def get_report(name: str, lang: str = "fr") -> str:
         try:
             path = resolve_report(reports_dir, name)
         except PathSecurityError as exc:
@@ -32,8 +32,12 @@ def build_reports_router(reports_dir: Path) -> APIRouter:
             result = load_run_result(path)
         except RunResultError as exc:
             raise HTTPException(status_code=500, detail="rapport illisible") from exc
+        # Langue du glossaire pédagogique (fr par défaut ; en seul autre porté).
+        report_lang = "en" if lang == "en" else "fr"
         return default_report_renderer().render(
-            result, title=f"XerOCR — {result.manifest.run_id}"
+            result,
+            title=f"XerOCR — {result.manifest.run_id}",
+            lang=report_lang,
         )
 
     return router

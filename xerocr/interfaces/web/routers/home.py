@@ -25,6 +25,7 @@ from xerocr.app import resolve_code_version
 from xerocr.app.corpus_upload import CorpusStore
 from xerocr.app.engines import (
     StatusProvider,
+    curated_prompts,
     installed_mistral_models,
     installed_ollama_models,
 )
@@ -209,6 +210,9 @@ def build_home_router(
             {"name": p.name, "description": p.description}
             for p in NORMALIZATION_PROFILES.values()
         ]
+        # Prompts curés par période (lus dynamiquement) → menu déroulant ; le
+        # texte libre du formulaire reste prioritaire (résolu au plan).
+        context["curated_prompts"] = list(curated_prompts())
         # Segmenteur (catégorie séparée) : son statut alimente le bouton
         # « Segmenter » — désactivé + motif si l'extra [segment] manque.
         context["segmenter"] = next(

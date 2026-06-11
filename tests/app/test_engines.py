@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.app.engines import engine_statuses
+from xerocr.app.engines import PUBLIC_ENGINE_KINDS, engine_statuses
 
 
 def _statuses(**kw: object) -> dict[str, tuple[bool, str]]:
@@ -53,6 +53,62 @@ def test_openai_needs_module_and_key() -> None:
     assert st["openai"][0] is True
 
 
+def test_google_vision_needs_httpx_and_key() -> None:
+    base = {"has_binary": lambda _n: None}
+    # httpx absent → extra [google] manquant
+    st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
+    assert st["google_vision"][0] is False and "[google]" in st["google_vision"][1]
+    # httpx présent, clé absente
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: None, **base)
+    assert (
+        st["google_vision"][0] is False
+        and "GOOGLE_VISION_API_KEY" in st["google_vision"][1]
+    )
+    # httpx + clé
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: "k", **base)
+    assert st["google_vision"][0] is True
+
+
+def test_pero_and_calamari_need_their_lib() -> None:
+    # Moteurs locaux (pas de clé) : dispo dès que la lib est présente, comme Kraken.
+    common = {"has_binary": lambda _n: None, "get_env": lambda _n: None}
+    absent = _statuses(has_module=lambda _n: False, **common)
+    assert absent["pero"][0] is False and "[pero]" in absent["pero"][1]
+    assert absent["calamari"][0] is False and "[calamari]" in absent["calamari"][1]
+    present = _statuses(has_module=lambda _n: True, **common)
+    assert present["pero"][0] is True
+    assert present["calamari"][0] is True
+
+
+def test_azure_di_needs_httpx_endpoint_and_key() -> None:
+    base = {"has_binary": lambda _n: None}
+    # httpx absent
+    st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "v", **base)
+    assert st["azure_di"][0] is False and "[azure]" in st["azure_di"][1]
+    # httpx présent, endpoint absent
+    st = _statuses(
+        has_module=lambda _n: True,
+        get_env=lambda n: None if n == "AZURE_DOC_INTEL_ENDPOINT" else "v",
+        **base,
+    )
+    assert (
+        st["azure_di"][0] is False
+        and "AZURE_DOC_INTEL_ENDPOINT" in st["azure_di"][1]
+    )
+    # endpoint présent, clé absente
+    st = _statuses(
+        has_module=lambda _n: True,
+        get_env=lambda n: "https://x" if n == "AZURE_DOC_INTEL_ENDPOINT" else None,
+        **base,
+    )
+    assert (
+        st["azure_di"][0] is False and "AZURE_DOC_INTEL_KEY" in st["azure_di"][1]
+    )
+    # endpoint + clé
+    st = _statuses(has_module=lambda _n: True, get_env=lambda _n: "v", **base)
+    assert st["azure_di"][0] is True
+
+
 def test_mistral_needs_sdk_and_key() -> None:
     base = {"has_binary": lambda _n: None}
     st = _statuses(has_module=lambda _n: False, get_env=lambda _n: "k", **base)
@@ -87,6 +143,19 @@ def test_cloud_available_with_sdk_and_key() -> None:
     assert st["anthropic"][0] is True
 
 
+def test_public_engine_kinds_is_free_first_party_socle() -> None:
+    # Le socle gratuit exécutable publiquement = precomputed (démo) + tesseract.
+    # Fail-closed : aucun moteur cloud (clé) n'y figure → il est gated en 403.
+    assert PUBLIC_ENGINE_KINDS == frozenset({"precomputed", "tesseract"})
+    cloud = {
+        "openai", "anthropic", "mistral", "mistral_ocr", "google_vision", "azure_di"
+    }
+    assert PUBLIC_ENGINE_KINDS.isdisjoint(cloud)
+    # Tout kind du socle public est un moteur réellement connu (pas un typo).
+    known = {s.kind for s in engine_statuses()}
+    assert PUBLIC_ENGINE_KINDS <= known
+
+
 def test_ollama_needs_httpx() -> None:
     common = {"has_binary": lambda _n: None, "get_env": lambda _n: None}
     assert _statuses(has_module=lambda _n: False, **common)["ollama"][0] is False
@@ -98,8 +167,8 @@ def test_default_probes_run_without_error() -> None:
     statuses = engine_statuses()
     kinds = {s.kind for s in statuses}
     assert kinds == {
-        "precomputed", "tesseract", "kraken", "mistral_ocr",
-        "openai", "anthropic", "mistral", "ollama",
+        "precomputed", "tesseract", "kraken", "pero", "calamari", "mistral_ocr",
+        "google_vision", "azure_di", "openai", "anthropic", "mistral", "ollama",
     }
     assert next(s for s in statuses if s.kind == "precomputed").available
 

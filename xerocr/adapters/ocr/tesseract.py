@@ -19,6 +19,8 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
+from collections.abc import Callable
 
 from xerocr.adapters._workspace import workspace_artifact_path
 from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
@@ -37,6 +39,38 @@ _DEFAULT_TIMEOUT = 120.0
 #: (``fra+lat``). ``lang`` finit sur la ligne de commande tesseract → on refuse
 #: tout caractère interprétable comme flag/séparateur (anti-injection).
 _LANG_RE = re.compile(r"^[a-zA-Z]{3,}(?:\+[a-zA-Z]{3,})*$")
+
+#: Lanceur de sous-processus, injectable → version sondable en test sans binaire.
+BinaryRunner = Callable[..., "subprocess.CompletedProcess[str]"]
+
+
+def tesseract_binary_version(*, run: BinaryRunner = subprocess.run) -> str | None:
+    """Version du binaire ``tesseract`` (1ʳᵉ ligne de ``tesseract --version``).
+
+    **Best-effort, jamais bloquant** : binaire absent, timeout, ou sortie illisible
+    → ``None`` (jamais une panne). Sert la **reproductibilité** (``RunManifest`` §12) :
+    deux runs ne sont comparables qu'à version de binaire égale — la version
+    d'*adapter* (``_VERSION``) ne dit rien du Tesseract réellement installé.
+    ``run`` est injecté → la sonde est déterministe en test, sans le binaire.
+
+    Tesseract émet sa bannière tantôt sur ``stdout`` tantôt sur ``stderr`` selon le
+    build → on lit les deux et garde la 1ʳᵉ ligne non vide (ex. ``tesseract 5.3.0``).
+    """
+    try:
+        completed = run(
+            ["tesseract", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = ((completed.stdout or "") + "\n" + (completed.stderr or "")).splitlines()
+    for line in lines:
+        if line.strip():
+            return line.strip()
+    return None
 
 
 def _invoke_tesseract(  # pragma: no cover -- binaire requis (cf. marqueur 'live')
@@ -124,6 +158,17 @@ class TesseractAdapter:
     @property
     def version(self) -> str:
         return _VERSION
+
+    def system_binaries(self) -> dict[str, str]:
+        """Version du **binaire externe** pour le ``RunManifest`` (reproductibilité).
+
+        Hook de **provenance optionnel** (hors ``Module`` Protocol, qui reste le
+        contrat d'exécution unique) : l'orchestrateur l'appelle par *duck-typing*
+        sur les modules qui l'exposent et fusionne le résultat dans
+        ``system_binaries_lock``. Best-effort : binaire absent → ``{}``.
+        """
+        version = tesseract_binary_version()
+        return {"tesseract": version} if version is not None else {}
 
     @property
     def input_types(self) -> frozenset[ArtifactType]:
@@ -213,4 +258,4 @@ class TesseractAdapter:
         )
 
 
-__all__ = ["TesseractAdapter"]
+__all__ = ["TesseractAdapter", "tesseract_binary_version"]

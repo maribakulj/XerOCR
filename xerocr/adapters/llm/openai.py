@@ -10,6 +10,8 @@ paresseusement dans ``_invoke_openai`` / ``_invoke_openai_vision`` (isolés →
 
 from __future__ import annotations
 
+from typing import Any
+
 from xerocr.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -32,6 +34,25 @@ from xerocr.pipeline.types import RunContext, StepOutput
 _VERSION = "1.0"
 _DEFAULT_MODEL = "gpt-4o-mini"
 _SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
+
+
+def _completion_from_chat(response: Any) -> LLMCompletion:
+    """Réponse SDK ``chat.completions`` → ``LLMCompletion`` (texte + jetons).
+
+    **Pur** (aucun réseau, aucun import SDK) → la cartographie usage→jetons
+    (``prompt_tokens``/``completion_tokens``) est **testable sur une réponse de
+    cassette**, ce que le client live (``# pragma: no cover``) ne permet pas. Les
+    jetons alimentent l'économie (coût réel par modèle).
+    """
+    usage = getattr(response, "usage", None)
+    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
+    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
+    choices = getattr(response, "choices", None)
+    if not choices:
+        return LLMCompletion("", tokens_in, tokens_out)
+    return LLMCompletion(
+        normalize_llm_content(choices[0].message.content), tokens_in, tokens_out
+    )
 
 
 def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')
@@ -64,16 +85,7 @@ def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
         raise AdapterStepError(
             f"openai a échoué ({model}) : {type(exc).__name__}: {exc}"
         ) from exc
-    usage = getattr(response, "usage", None)
-    tokens_in = usage_tokens(getattr(usage, "prompt_tokens", None))
-    tokens_out = usage_tokens(getattr(usage, "completion_tokens", None))
-    if not response.choices:
-        return LLMCompletion("", tokens_in, tokens_out)
-    return LLMCompletion(
-        normalize_llm_content(response.choices[0].message.content),
-        tokens_in,
-        tokens_out,
-    )
+    return _completion_from_chat(response)
 
 
 def _invoke_openai(  # pragma: no cover -- réseau + clé API (cf. marqueur 'live')

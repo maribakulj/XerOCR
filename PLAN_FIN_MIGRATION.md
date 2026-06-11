@@ -43,7 +43,7 @@ calibration, statistiques (Nemenyi + bootstrap), synthèse factuelle.
 | **Abandons définitifs** | 8 familles jetées (liste §« Abandons »), validées |
 | **NER** | extra optionnel `[ner]`, jamais de silence si absent |
 | **Économie** | coûts mesurés réels (déjà l'état du code) — pas de CO₂ |
-| **Parité moteurs** | Google + Azure **first-party** (extras `[google]`/`[azure]`) ; Pero + Calamari **plugins hors-dépôt** |
+| **Parité moteurs** | Google + Azure **first-party** (extras `[google]`/`[azure]`) ; Pero + Calamari **first-party in-tree** (comme Kraken — décision révisée D-078 ; le seam plugin reste pour les vrais tiers) |
 | **Toutes les métriques gardées** | **obligatoires avant 1.0** (le gel ferme la fenêtre de portage — rien en backlog) |
 | **Fin** | release `1.0.0` puis gel immédiat de Picarones |
 
@@ -82,18 +82,18 @@ indisponible, jamais de crash). C'est la couche adapters dans son rôle légitim
 |---|---|---|
 | **2a — Google Vision** | adapter cloud first-party | `xerocr/adapters/ocr/google_vision.py` (**nouveau**), extra `[google]` dans `pyproject.toml`, entrée `xerocr/app/engines.py`, `tests/adapters/ocr/test_google_vision.py` (cassette + valeurs main) |
 | **2b — Azure Document Intelligence** | adapter cloud first-party | `xerocr/adapters/ocr/azure_di.py` (**nouveau**), extra `[azure]`, entrée factory, `tests/adapters/ocr/test_azure_di.py` |
-| **2c — Pero + Calamari** | plugins de référence hors-dépôt | aucun fichier in-tree → dépôts `xerocr-pero` / `xerocr-calamari` + `docs/PLUGINS.md` (prouve le chemin entry-points `xerocr.modules`) |
+| **2c — Pero + Calamari** | **first-party in-tree** (révisé D-078, comme Kraken) | `xerocr/adapters/ocr/{pero,calamari}.py` (**nouveaux**), extras `[pero]`/`[calamari]`, builders + sondes `xerocr/app/engines.py`, `_OCR_ENGINES`, tests mockés ; `docs/PLUGINS.md` documente le seam entry-points `xerocr.modules` pour les **vrais** tiers (déjà prouvé D-034) |
 | **2d — Vérifs** | zero-shot déjà livré → test bout-en-bout + doc ; tous les adapters cloud remontent bien `tokens_in/out` (alimente l'économie) | `tests/pipeline/` (spec zero_shot 1 étage IMAGE→texte), `tests/adapters/llm/` (jetons non-`None` sur cassette) |
-| **2e — Prompts curés par période** | porter les **16 prompts** Picarones (correction + zero-shot) calibrés par type : médiéval FR/EN, imprimé ancien, presse XIXe FR/EN/DE/européenne. **Donnée curée**, pas de la surface exécutable (comme les profils de normalisation) | `xerocr/prompts/*.txt` (**nouveau dossier**), sélection exposée au pipeline LLM/VLM (`app/run_planning`) + au formulaire web (étape 3c), `package-data` dans `pyproject.toml`, `tests/` (chargement + sélection) |
+| **2e — Prompts curés par période** ✅ (D-080) | porter les **16 prompts** Picarones (correction + zero-shot) calibrés par type : médiéval FR/EN, imprimé ancien, presse XIXe FR/EN/DE/européenne. **Donnée curée**, pas de la surface exécutable (comme les profils de normalisation) + **prompt libre dans l'UI** (demande utilisateur — textarea déjà câblé) | `xerocr/prompts/*.txt` + loader (`available_prompts`/`load_prompt`), `Competitor.prompt_name` + résolution `app/run_planning` (mutuellement exclusif avec le prompt libre prioritaire), `<select>` curé au formulaire web + `benchmark.js`, `package-data`, `tests/` (chargement + sélection + résolution) |
 
 | | |
 |---|---|
 | **Risques** | Croissance de surface → mitigée : un `Protocol`, un test par moteur, extra-gated, fail-closed. Ne **jamais** réintroduire de double contrat interne. Prompts = données versionnées (déterminisme : fichier tracé dans `RunManifest`). |
-| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. `pip install xerocr-pero` rend Pero découvrable sans forker. Zero-shot testé. Les 16 prompts sélectionnables. `make ci` vert. |
+| **Fait quand** | Google/Azure listés ; avec clé → OCR réel sur cassette ; sans clé → indisponible propre. Pero/Calamari listés in-tree (extras), indisponibles sans leur lib, non déployés au Space. Zero-shot testé. Les 16 prompts sélectionnables **+ prompt libre éditable dans l'UI** (D-080). `make ci` vert. **→ Étape 2 COMPLÈTE (2a–2e).** |
 
 ---
 
-## Étape 3 — Parité de l'interface et du rapport
+## Étape 3 — Parité de l'interface et du rapport ✅ (3a→3e livrés)
 
 Le web et le rapport portent déjà beaucoup (benchmark, SSE `Last-Event-ID`,
 library, history, segmentation, CSRF, rate-limit, i18n FR/EN). Cette étape comble
@@ -102,11 +102,11 @@ anti-hallucination) ; le JS client est en lecture seule, zéro appel réseau.
 
 | Sous-étape | Contenu | Fichiers touchés |
 |---|---|---|
-| **3a — Rapport interactif** | compare 2 runs **client-side** (`FileReader`+`JSON.parse`, plafond 50 Mo, bandeau sticky des deltas) ; badges moteur A→E (helper unique) ; hash-router + deeplinks + navigation clavier (ARIA) ; formatage des nombres localisé FR/EN ; palette daltonien (`?palette=`) | `xerocr/reports/` (templates + JS embarqué) ; la voie server-side `reports/compare.py` reste pour `xerocr compare` |
-| **3b — Galerie & drill-in** | galerie de documents avec **miniatures lazy-load** (IntersectionObserver) ; drill-in image + **diff caractère/mot surligné** GT vs hypothèse | `xerocr/reports/` (section galerie + template drill-in + JS lazy + util diff) |
-| **3c — Champs de formulaire** | parité CLI/web : preview de profil de normalisation (validation YAML custom sans persistance) ; config save/load JSON ; `/api/models/{provider}` (capacités texte/vision, fallback liste canonique) ; sélecteurs `char_exclude`, profil métrique, toggle expose-ALTO | `xerocr/interfaces/web/routers/` + templates ; la construction de spec reste en `app/run_planning` (garde-fou `interfaces` mince) |
-| **3d — Observabilité & a11y** | `/metrics` Prometheus **opt-in** ; sélecteur de langue ; tooltips/ARIA ; feedback dropzone ; spinner/progress | `xerocr/interfaces/web/routers/` (system) + templates |
-| **3e — Glossaire FR/EN** | porter le glossaire pédagogique du rapport (définitions CER/WER/ECE/… pour le lecteur non-expert) | `xerocr/reports/glossary/{fr,en}.yaml` (**nouveau**) + intégration dans le rapport (tooltips/section), `package-data`, `tests/` |
+| **3a — Rapport interactif** | **compare 2 runs client-side ✅ (D-081)** (`FileReader`+`JSON.parse`, plafond 50 Mo, bandeau sticky, CSP `/reports/` par hash) · **badges moteur A→E ✅ (D-082)** · **deeplinks + sommaire + ARIA ✅ (D-083)** · **navigation clavier + palette daltonien ✅ (D-084)** ; *reste hors-3a* : **formatage des nombres FR/EN** = en réalité une **i18n complète du rapport** (texte FR uniquement aujourd'hui) → à planifier à part (cf. 3e), pas une sous-tranche 3a | `xerocr/reports/` (`compare.js`+`report.js`/`embedded.py` + `engine_badges.py` + `renderer.py`) ; la voie server-side `reports/compare.py` reste pour `xerocr compare` |
+| **3b — Galerie & drill-in** ✅ | **drill-in diff caractère surligné GT↔hypothèse ✅ (D-085)** · **galerie de documents synthétique ✅ (D-086)** (cartes : aperçu CSS sur la charte + CER par moteur/badges A→E, comme le défaut Picarones — zéro image, autonome) ; **fac-similés réels = opt-in séparé** (canal images base64, décision ultérieure) | `xerocr/reports/text_diff.py` + `sections/gallery.py` + section `diagnostics` |
+| **3c — Champs de formulaire** | parité CLI/web : **champ `model` des moteurs OCR ✅ (D-087)** · **`/api/models/{provider}` + suggestions vision ✅ (D-088)** · **preview de normalisation (config YAML custom sans persistance) ✅ (D-089)** · **`char_exclude` ✅ (D-090)** ; *reste* : config save/load JSON ; sélecteur profil métrique ; toggle expose-ALTO | `xerocr/interfaces/web/routers/` + `app/{models,normalization_preview,run_planning}.py` + templates ; la construction de spec reste en `app/run_planning` (garde-fou `interfaces` mince) |
+| **3d — Observabilité & a11y ✅** | **`/metrics` Prometheus opt-in ✅ (D-091)** · **polish a11y ✅ (D-092)** : lien d'évitement clavier + `progressbar` ARIA ; sélecteur de langue, feedback dropzone (`.is-dragover`), désactivation bouton + barre de progression + `aria-live` **déjà présents** (audit) | `xerocr/interfaces/web/metrics.py` + `create_app` ; `base.html`/`benchmark.html`/`benchmark.js`/`shell.css`/`i18n.py` |
+| **3e — Glossaire FR/EN ✅ (D-093)** | glossaire pédagogique porté : 15 entrées FR/EN (métriques **réellement calculées**), `GlossarySection` en disclosure natif `<details>` (zéro JS), lang via `SectionContext`/`/reports/{name}?lang=` | `xerocr/reports/glossary/{fr,en}.yaml` + `glossary/__init__` (loader) + `sections/glossary.py` ; `SectionContext.lang`, `render_document(lang=)`, router `?lang=` ; `package-data`, CSS au design, `tests/` |
 
 | | |
 |---|---|
@@ -151,8 +151,8 @@ défauts.
 ### Checklist « 1.0 prête »
 
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
-- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari en plugins, zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
-- [ ] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
+- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
+- [x] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
 - [ ] **Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
 - [ ] `README`/`CHANGELOG`/`pricing.json` à jour, roll-up réconcilié.

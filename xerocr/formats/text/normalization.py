@@ -279,19 +279,33 @@ class NormalizationProfile(BaseModel):
         return cls(**fields)
 
     @classmethod
+    def from_yaml_text(
+        cls, text: str, *, default_name: str = "custom"
+    ) -> NormalizationProfile:
+        """Charge un profil depuis du **texte YAML** (pas un fichier).
+
+        Pour une entrée non fiable (aperçu web d'une config saisie) : ``safe_load``
+        seul, **objet attendu** (sinon ``ValueError``), aucun accès disque. La
+        validation Pydantic (clés inconnues interdites) protège le reste.
+        """
+        import yaml  # type: ignore[import-untyped]
+
+        raw = yaml.safe_load(text) or {}
+        if not isinstance(raw, dict):
+            raise ValueError("profil YAML invalide (objet attendu).")
+        raw.setdefault("name", default_name)
+        return cls.from_dict(raw)
+
+    @classmethod
     def from_yaml(cls, path: str | Path) -> NormalizationProfile:
         """Charge un profil depuis un fichier YAML (usage CLI/local uniquement).
 
         Ne jamais exposer un chemin fourni par une entrée non fiable (lecture
         de fichier arbitraire).
         """
-        import yaml  # type: ignore[import-untyped]
-
-        raw = yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
-        if not isinstance(raw, dict):
-            raise ValueError(f"profil YAML invalide (objet attendu) : {path}")
-        raw.setdefault("name", Path(path).stem)
-        return cls.from_dict(raw)
+        return cls.from_yaml_text(
+            Path(path).read_text(encoding="utf-8"), default_name=Path(path).stem
+        )
 
 
 # ---------------------------------------------------------------------------
