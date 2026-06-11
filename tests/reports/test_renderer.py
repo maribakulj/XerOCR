@@ -118,13 +118,22 @@ def test_tab_labels_are_localized() -> None:
 
 
 def test_unmapped_section_renders_after_panels() -> None:
-    # glossary n'est pas mappé à un onglet → rendu hors onglets, après les panneaux.
+    # Une section non mappée à un onglet → rendue hors onglets, après les panneaux.
     _, body = _tab_layout(
-        [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>"), ("glossary", "<p>G</p>")],
+        [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>"), ("notes", "<p>N</p>")],
         "fr",
     )
-    assert 'id="r-glossary"' in body
-    assert body.index('id="r-glossary"') > body.index('id="panel-engines"')
+    assert 'id="r-notes"' in body
+    assert body.index('id="r-notes"') > body.index('id="panel-engines"')
+
+
+def test_glossary_is_a_chrome_dialog_not_a_section() -> None:
+    # Le glossaire est de la périphérie : dialog (footer) + lien-ancre du chrome,
+    # plus une section bas-de-page.
+    html = default_report_renderer().render(_result())
+    assert '<dialog id="glossary-dialog"' in html
+    assert 'href="#glossary-dialog"' in html  # entrée « Glossaire » dans le chrome
+    assert 'id="r-glossary"' not in html  # plus de section
 
 
 def test_label_falls_back_to_raw_name() -> None:

@@ -12,6 +12,7 @@ from xerocr.evaluation.result import RunResult
 from xerocr.reports.compare_widget import compare_widget
 from xerocr.reports.csv_export import run_result_csv
 from xerocr.reports.embedded import inline_script
+from xerocr.reports.glossary_panel import glossary_chrome_link, glossary_dialog
 from xerocr.reports.html import escape, render_document
 from xerocr.reports.section import Html, Section, SectionContext
 
@@ -27,7 +28,6 @@ _SECTION_LABELS = {
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
     "calibration": "Calibration",
-    "glossary": "Glossaire",
 }
 
 
@@ -198,12 +198,14 @@ def _data_href(text: str, mime: str) -> str:
     return f"data:{mime};charset=utf-8;base64,{payload}"
 
 
-def _chrome_meta(result: RunResult, lang: str) -> str:
-    """Méta de run (docs/moteurs/date) + boutons d'export **CSV/JSON**.
+def _chrome_meta(result: RunResult, lang: str, *, glossary_btn: str = "") -> str:
+    """Méta de run (docs/moteurs/date) + actions (**Glossaire** · CSV · JSON).
 
     Exports = ``<a download>`` vers des ``data:`` URI (zéro JS, autonome,
     hors-ligne). Le JSON embarqué est le ``RunResult`` complet — la matière à
-    redonner à un outil tiers (cf. saveur « données » du cadre rapport)."""
+    redonner à un outil tiers (cf. saveur « données » du cadre rapport).
+    ``glossary_btn`` (lien-ancre vers le dialog) précède les exports ; vide si
+    aucune métrique présente n'a d'entrée de glossaire."""
     n_docs = result.manifest.n_documents
     n_engines = len({p.pipeline for p in result.pipelines})
     date = result.manifest.completed_at.date().isoformat()
@@ -218,6 +220,7 @@ def _chrome_meta(result: RunResult, lang: str) -> str:
         f'<span><span class="v">{n_engines}</span> {eng_lbl}</span>'
         f'<span class="v">{escape(date)}</span>'
         '<div class="chrome-actions">'
+        f"{glossary_btn}"
         f'<a class="chrome-btn" download="{stem}.csv" href="{csv_href}">⬇ CSV</a>'
         f'<a class="chrome-btn" download="{stem}.json" href="{json_href}">⬇ JSON</a>'
         "</div></div>"
@@ -253,10 +256,16 @@ class ReportRenderer:
         # IA en 4 onglets : barre (→ chrome) + panneaux (→ corps). Enrichissement
         # progressif : sections rendues serveur ; ``report.js`` bascule l'affichage.
         tabs, body = _tab_layout(rendered, lang, result=result)
-        meta = _chrome_meta(result, lang)
-        # Pied : widget « comparer un run » + script d'interactivité (onglets +
-        # navigation clavier + palette). Tous client-side, déterministes, inlinés.
-        footer = Html(compare_widget(result) + inline_script("report.js"))
+        # Glossaire = périphérie (chrome) : dialog (vide si aucune métrique connue
+        # n'a d'entrée) + lien-ancre dans la barre d'actions.
+        gloss_dialog = glossary_dialog(known, lang)
+        gloss_link = glossary_chrome_link(lang) if gloss_dialog else ""
+        meta = _chrome_meta(result, lang, glossary_btn=gloss_link)
+        # Pied : widget « comparer un run » + dialog glossaire + script (onglets +
+        # dialog + nav clavier + palette). Tous client-side, déterministes, inlinés.
+        footer = Html(
+            compare_widget(result) + gloss_dialog + inline_script("report.js")
+        )
         return render_document(
             title, Html(body), footer=footer, lang=lang, tabs=tabs, meta=meta
         )
@@ -264,7 +273,7 @@ class ReportRenderer:
 
 def default_report_renderer() -> ReportRenderer:
     """Socle : synthèse, overview, par-moteur/document, stats, économie,
-    diagnostic, glossaire pédagogique."""
+    diagnostic. Le glossaire est **hors sections** (dialog du chrome)."""
     from xerocr.reports.sections.by_document import DocumentSection
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
@@ -272,7 +281,6 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.gallery import DocumentGallerySection
-    from xerocr.reports.sections.glossary import GlossarySection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -289,7 +297,6 @@ def default_report_renderer() -> ReportRenderer:
             DiagnosticsSection(),
             TaxonomySection(),
             CalibrationSection(),
-            GlossarySection(),
         )
     )
 

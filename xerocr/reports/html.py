@@ -157,6 +157,21 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);padding-top:2px;"
     "white-space:nowrap;}"
     ".gl-v{font-size:12.5px;color:var(--g-700);line-height:1.45;}"
+    # Dialog du glossaire (périphérie, ouvert depuis le chrome). Modale native
+    # avec JS (showModal + ::backdrop) ; repli ``:target`` (panneau centré) sans JS.
+    ".glossary-dialog{border:none;border-radius:var(--r-lg);padding:22px 24px;"
+    "max-width:680px;width:90vw;max-height:82vh;overflow:auto;"
+    "background:var(--raised);color:var(--ink);"
+    "box-shadow:0 16px 48px rgba(0,0,0,0.3);}"
+    ".glossary-dialog::backdrop{background:rgba(26,25,23,0.45);}"
+    ".glossary-dialog:target{display:block;position:fixed;top:9vh;left:50%;"
+    "transform:translateX(-50%);z-index:60;}"
+    ".gd-head{display:flex;align-items:center;justify-content:space-between;"
+    "margin-bottom:4px;}"
+    ".gd-head h2{margin:0;}"
+    ".gd-close{font-family:var(--mono);font-size:14px;text-decoration:none;"
+    "color:var(--g-400);padding:2px 8px;border-radius:var(--r-md);}"
+    ".gd-close:hover{color:var(--ink);background:var(--g-50);}"
     # Onglets du rapport (IA 4 vues) — **intégrés au chrome** (fond sombre) :
     # bande translucide, onglet actif en pilule claire (cf. design/tokens.css).
     # Enrichissement progressif : sans JS, panneaux empilés et visibles, les

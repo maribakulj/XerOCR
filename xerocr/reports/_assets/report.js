@@ -96,4 +96,27 @@
       });
     });
   }
+
+  /* 4) Glossaire : le lien-ancre du chrome ouvre le <dialog> en MODALE (showModal,
+   *    Échap + ::backdrop natifs). Sans JS, l'ancre déclenche le repli :target
+   *    (panneau centré). Fermeture : bouton [data-close] ou clic sur le fond. */
+  var glossaryDialog = document.getElementById("glossary-dialog");
+  if (glossaryDialog && typeof glossaryDialog.showModal === "function") {
+    var glossaryLink = document.querySelector('[href="#glossary-dialog"]');
+    if (glossaryLink) {
+      glossaryLink.addEventListener("click", function (e) {
+        e.preventDefault();
+        glossaryDialog.showModal();
+      });
+    }
+    glossaryDialog.querySelectorAll("[data-close]").forEach(function (b) {
+      b.addEventListener("click", function (e) {
+        e.preventDefault();
+        glossaryDialog.close();
+      });
+    });
+    glossaryDialog.addEventListener("click", function (e) {
+      if (e.target === glossaryDialog) glossaryDialog.close();
+    });
+  }
 })();
