@@ -146,12 +146,18 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);padding-top:2px;"
     "white-space:nowrap;}"
     ".gl-v{font-size:12.5px;color:var(--g-700);line-height:1.45;}"
-    # Sommaire deeplinkable (ancres natives) + régions de section ancrées.
-    ".report-toc{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px;}"
-    ".report-toc a{font-family:var(--mono);font-size:11px;text-decoration:none;"
-    "color:var(--g-500);background:var(--surface);border-radius:var(--r-pill);"
-    "padding:6px 13px;}"
-    ".report-toc a:hover{color:var(--ink);background:var(--g-50);}"
+    # Onglets du rapport (IA 4 vues) — barre pilule au design ; enrichissement
+    # progressif : sans JS tous les panneaux restent empilés, les onglets sont
+    # de simples ancres (#panel-<t>). report.js bascule l'affichage (un panneau).
+    ".report-tabs{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 18px;padding:5px;"
+    "background:var(--surface);border-radius:var(--r-pill);width:fit-content;}"
+    ".report-tab{font-family:var(--mono);font-size:12px;text-decoration:none;"
+    "color:var(--g-500);padding:7px 16px;border-radius:var(--r-pill);"
+    "white-space:nowrap;}"
+    ".report-tab:hover{color:var(--ink);}"
+    ".report-tab.on{background:var(--ink);color:var(--paper);}"
+    ".tab-panel[hidden]{display:none;}"
+    ".tab-panel:focus{outline:none;}"
     ".r-block{scroll-margin-top:18px;}"
     # Badge moteur (lettre + accent cyclique) — identité stable entre sections.
     ".eng-badge{display:inline-flex;align-items:center;justify-content:center;"

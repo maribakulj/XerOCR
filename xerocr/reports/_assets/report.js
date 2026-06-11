@@ -48,4 +48,52 @@
       e.preventDefault();
     }
   });
+
+  /* 3) Onglets (enrichissement progressif). Le serveur rend TOUS les panneaux
+   *    (sans JS : empilés et visibles, les onglets sont de simples ancres). Ici
+   *    on n'affiche qu'un panneau à la fois et on câble la navigation ARIA. */
+  var tablist = document.querySelector(".report-tabs");
+  if (tablist) {
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+    var panels = tabs.map(function (t) {
+      return document.getElementById(t.getAttribute("aria-controls"));
+    });
+
+    function activate(index, focusTab) {
+      tabs.forEach(function (t, j) {
+        var on = j === index;
+        t.setAttribute("aria-selected", on ? "true" : "false");
+        t.classList.toggle("on", on);
+        t.tabIndex = on ? 0 : -1;
+        if (panels[j]) panels[j].hidden = !on;
+      });
+      if (focusTab && tabs[index]) tabs[index].focus();
+    }
+
+    /* Onglet initial : celui désigné par le hash (#panel-x), sinon le premier. */
+    var initial = 0;
+    var hash = (window.location.hash || "").slice(1);
+    tabs.forEach(function (t, j) {
+      if (t.getAttribute("aria-controls") === hash) initial = j;
+    });
+    activate(initial, false);
+
+    tabs.forEach(function (t, i) {
+      t.addEventListener("click", function (e) {
+        e.preventDefault();
+        activate(i, false);
+      });
+      t.addEventListener("keydown", function (e) {
+        var n = null;
+        if (e.key === "ArrowRight") n = (i + 1) % tabs.length;
+        else if (e.key === "ArrowLeft") n = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === "Home") n = 0;
+        else if (e.key === "End") n = tabs.length - 1;
+        if (n !== null) {
+          e.preventDefault();
+          activate(n, true);
+        }
+      });
+    });
+  }
 })();

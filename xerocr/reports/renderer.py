@@ -32,18 +32,82 @@ def _label(name: str) -> str:
     return _SECTION_LABELS.get(name, name)
 
 
-def _toc_nav(names: list[str]) -> str:
-    """Sommaire **deeplinkable** (ancres natives, zéro JS) + landmark ARIA.
+#: Onglets du rapport (IA en 4 vues — cf. DECISION_RAPPORT_INTERACTIF.md).
+_TAB_ORDER = ("overview", "engines", "documents", "crosses")
+_TAB_LABELS = {
+    "fr": {
+        "overview": "Vue d'ensemble",
+        "engines": "Par moteur",
+        "documents": "Par document",
+        "crosses": "Croisements",
+    },
+    "en": {
+        "overview": "Overview",
+        "engines": "Engines",
+        "documents": "Documents",
+        "crosses": "Crosses",
+    },
+}
+_TABLIST_LABEL = {"fr": "Onglets du rapport", "en": "Report tabs"}
+#: Section → onglet. Une section absente de la table (ex. ``glossary``) est rendue
+#: **après** les panneaux, hors onglets (matière de référence, toujours visible).
+_SECTION_TAB = {
+    "synthesis": "overview",
+    "overview": "overview",
+    "by_engine": "engines",
+    "calibration": "engines",
+    "economics": "engines",
+    "taxonomy": "engines",
+    "by_document": "documents",
+    "documents_gallery": "documents",
+    "diagnostics": "documents",
+    "cross_engine": "crosses",
+}
 
-    Affiché dès qu'il y a ≥ 2 sections (un sommaire d'une entrée est inutile)."""
-    if len(names) < 2:
-        return ""
-    links = "".join(
-        f'<a href="#r-{escape(name)}">{escape(_label(name))}</a>' for name in names
-    )
+
+def _block(name: str, html: str) -> str:
+    """Une section = une **région** ancrée (deeplink ``#r-<name>`` + ARIA)."""
     return (
-        '<nav class="report-toc" aria-label="Sommaire du rapport">' f"{links}</nav>"
+        f'<section id="r-{escape(name)}" class="r-block" '
+        f'aria-label="{escape(_label(name))}">{html}</section>'
     )
+
+
+def _tab_layout(rendered: list[tuple[str, str]], lang: str) -> str:
+    """Regroupe les sections en **4 onglets** (enrichissement progressif).
+
+    Sans JS, tous les panneaux restent empilés et visibles (= le rapport plat) ;
+    ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
+    (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
+    actifs, pas de barre : on empile (une barre d'un onglet est inutile)."""
+    by_tab: dict[str, list[str]] = {t: [] for t in _TAB_ORDER}
+    trailer: list[str] = []
+    for name, html in rendered:
+        tab = _SECTION_TAB.get(name)
+        bucket = trailer if tab is None else by_tab[tab]
+        bucket.append(_block(name, html))
+    active = [t for t in _TAB_ORDER if by_tab[t]]
+    if len(active) < 2:
+        body = "".join("".join(by_tab[t]) for t in active) + "".join(trailer)
+        return body
+    labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
+    tabs = "".join(
+        f'<a id="tab-{t}" class="report-tab{" on" if i == 0 else ""}" role="tab" '
+        f'href="#panel-{t}" aria-controls="panel-{t}" '
+        f'aria-selected="{"true" if i == 0 else "false"}">{escape(labels[t])}</a>'
+        for i, t in enumerate(active)
+    )
+    nav = (
+        f'<nav class="report-tabs" role="tablist" '
+        f'aria-label="{escape(_TABLIST_LABEL.get(lang, _TABLIST_LABEL["fr"]))}">'
+        f"{tabs}</nav>"
+    )
+    panels = "".join(
+        f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
+        f'aria-labelledby="tab-{t}">{"".join(by_tab[t])}</div>'
+        for t in active
+    )
+    return nav + panels + "".join(trailer)
 
 
 class ReportRenderer:
@@ -72,18 +136,13 @@ class ReportRenderer:
             html = section.render(result, ctx)
             if html is not None:
                 rendered.append((section.name, html))
-        # Chaque section devient une **région** ancrée (deeplink #r-<name> + ARIA) ;
-        # un sommaire en tête relie les régions (navigation native, sans JS).
-        nav = _toc_nav([name for name, _ in rendered])
-        blocks = "".join(
-            f'<section id="r-{escape(name)}" class="r-block" '
-            f'aria-label="{escape(_label(name))}">{html}</section>'
-            for name, html in rendered
-        )
-        # Pied : widget « comparer un run » + script d'interactivité (navigation
-        # clavier + palette). Tous deux client-side, déterministes, inlinés.
+        # IA en 4 onglets (regroupement des sections), enrichissement progressif :
+        # sections rendues serveur, panneaux ancrés ; ``report.js`` bascule l'affichage.
+        body = _tab_layout(rendered, lang)
+        # Pied : widget « comparer un run » + script d'interactivité (onglets +
+        # navigation clavier + palette). Tous client-side, déterministes, inlinés.
         footer = Html(compare_widget(result) + inline_script("report.js"))
-        return render_document(title, Html(nav + blocks), footer=footer, lang=lang)
+        return render_document(title, Html(body), footer=footer, lang=lang)
 
 
 def default_report_renderer() -> ReportRenderer:
