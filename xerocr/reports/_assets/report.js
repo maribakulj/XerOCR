@@ -193,4 +193,30 @@
       }
     });
   }
+
+  /* 7) Bascule galerie ⇄ liste (vue Documents). Sans JS, la grille (entrée) est
+   *    visible et la liste cachée ; un bouton montre l'une, cache l'autre. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".view-toggle"),
+    function (group) {
+      var scope = group.parentNode;
+      var btns = group.querySelectorAll(".vt-btn");
+      Array.prototype.forEach.call(btns, function (btn) {
+        btn.addEventListener("click", function () {
+          var want = btn.getAttribute("data-view");
+          Array.prototype.forEach.call(btns, function (b) {
+            var on = b === btn;
+            b.classList.toggle("on", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          Array.prototype.forEach.call(
+            scope.querySelectorAll(".doc-view"),
+            function (v) {
+              v.hidden = v.getAttribute("data-view") !== want;
+            },
+          );
+        });
+      });
+    },
+  );
 })();

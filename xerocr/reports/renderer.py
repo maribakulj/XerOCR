@@ -22,8 +22,7 @@ _SECTION_LABELS = {
     "overview": "Vue d'ensemble",
     "by_engine": "Par moteur",
     "engine_profiles": "Profils moteur",
-    "by_document": "Par document",
-    "documents_gallery": "Galerie",
+    "documents": "Par document",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
     "economics": "Économie",
@@ -96,8 +95,7 @@ _SECTION_TAB = {
     "calibration": "engines",
     "economics": "engines",
     "taxonomy": "engines",
-    "by_document": "documents",
-    "documents_gallery": "documents",
+    "documents": "documents",
     "diagnostics": "documents",
     "cross_engine": "crosses",
 }
@@ -278,15 +276,14 @@ class ReportRenderer:
 def default_report_renderer() -> ReportRenderer:
     """Socle : synthèse, overview, par-moteur/document, stats, économie,
     diagnostic. Le glossaire est **hors sections** (dialog du chrome)."""
-    from xerocr.reports.sections.by_document import DocumentSection
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
+    from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
-    from xerocr.reports.sections.gallery import DocumentGallerySection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -298,8 +295,7 @@ def default_report_renderer() -> ReportRenderer:
             EngineSection(),
             EngineProfileSection(),
             DispersionSection(),
-            DocumentSection(),
-            DocumentGallerySection(),
+            DocumentsSection(),
             CrossEngineSection(),
             EconomicsSection(),
             DiagnosticsSection(),

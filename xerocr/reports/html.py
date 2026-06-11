@@ -159,6 +159,15 @@ _CSS = (
     "border-radius:var(--r-md);}"
     ".prof-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;}"
     ".prof-cell{flex:1;min-width:240px;}"
+    # Bascule galerie ⇄ liste (vue Documents) : pilule à 2 boutons, sur la charte.
+    ".view-toggle{display:inline-flex;gap:2px;padding:3px;background:var(--surface);"
+    "border-radius:var(--r-pill);margin-bottom:8px;}"
+    ".vt-btn{font-family:var(--mono);font-size:11px;border:none;cursor:pointer;"
+    "background:transparent;color:var(--g-500);padding:6px 14px;"
+    "border-radius:var(--r-pill);}"
+    ".vt-btn:hover{color:var(--ink);}"
+    ".vt-btn.on{background:var(--ink);color:var(--paper);}"
+    ".doc-view[hidden]{display:none;}"
     # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
