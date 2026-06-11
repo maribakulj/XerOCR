@@ -48,11 +48,13 @@ def test_satisfies_section_protocol() -> None:
     assert section.name == "taxonomy"
 
 
-def test_renders_counts_and_shares() -> None:
+def test_renders_composition_bar_and_legend() -> None:
     html = TaxonomySection().render(_result(), SectionContext())
     assert html is not None
-    assert "visual" in html and "75.0%" in html  # 3/4 dérivé à la main
-    assert "25.0%" in html
+    assert 'class="comp-bar"' in html  # barre empilée SVG
+    assert 'class="comp-legend"' in html and 'class="comp-row"' in html
+    assert "visual" in html and "75%" in html  # 3/4 dérivé à la main
+    assert "25%" in html
     assert html == TaxonomySection().render(_result(), SectionContext())
 
 

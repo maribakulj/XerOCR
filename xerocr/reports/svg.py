@@ -52,7 +52,33 @@ def dispersion_strip(
     )
 
 
-__all__ = ["calibration_curve", "dispersion_strip", "num"]
+__all__ = ["calibration_curve", "composition_bar", "dispersion_strip", "num"]
+
+
+def composition_bar(
+    segments: list[tuple[float, str]],
+    *,
+    width: float = 100.0,
+    height: float = 14.0,
+) -> str:
+    """Barre **empilée** horizontale : ``segments`` = ``(part, couleur)``.
+
+    Les parts sont normalisées (somme → largeur pleine). Étirée à 100 % par CSS
+    (``preserveAspectRatio="none"``). Déterministe (coords ``num``), zéro JS."""
+    total = sum(s for s, _ in segments) or 1.0
+    parts: list[str] = []
+    x = 0.0
+    for share, color in segments:
+        w = share / total * width
+        parts.append(
+            f'<rect x="{num(x)}" y="0" width="{num(w)}" height="{num(height)}" '
+            f'style="fill:{color}"/>'
+        )
+        x += w
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="comp-bar" '
+        f'preserveAspectRatio="none" aria-hidden="true">{"".join(parts)}</svg>'
+    )
 
 
 def calibration_curve(

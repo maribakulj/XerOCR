@@ -2,7 +2,25 @@
 
 from __future__ import annotations
 
-from xerocr.reports.svg import calibration_curve, dispersion_strip, num
+from xerocr.reports.svg import (
+    calibration_curve,
+    composition_bar,
+    dispersion_strip,
+    num,
+)
+
+
+def test_composition_bar_segments_normalized_and_stacked() -> None:
+    svg = composition_bar([(3.0, "#aaa"), (1.0, "#bbb")], width=100.0)
+    assert 'class="comp-bar"' in svg
+    assert "#aaa" in svg and "#bbb" in svg
+    # parts normalisées (3:1) → 75 puis 25, empilées (x = 0 puis 75)
+    assert 'x="0.00" y="0" width="75.00"' in svg
+    assert 'x="75.00" y="0" width="25.00"' in svg
+
+
+def test_composition_bar_handles_zero_total() -> None:
+    assert "<svg" in composition_bar([], width=100.0)  # somme nulle → pas de /0
 
 
 def test_num_is_fixed_precision_deterministic() -> None:

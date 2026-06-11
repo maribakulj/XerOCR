@@ -165,6 +165,17 @@ _CSS = (
     ".calib-block table.data{flex:1;min-width:240px;}"
     ".calib-diag{stroke:var(--g-300);stroke-width:1;stroke-dasharray:3 3;}"
     ".calib-line{fill:none;stroke-width:2;stroke-linejoin:round;}"
+    # Composition d'erreurs (taxonomy) : barre empilée SVG + légende par classe.
+    ".comp{display:flex;flex-direction:column;gap:10px;margin:.3rem 0 1rem;}"
+    ".comp-bar{width:100%;height:14px;display:block;border-radius:6px;"
+    "overflow:hidden;}"
+    ".comp-legend{display:flex;flex-direction:column;gap:4px;}"
+    ".comp-row{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;"
+    "align-items:center;font-size:12px;}"
+    ".comp-sw{width:12px;height:12px;border-radius:3px;}"
+    ".comp-label{color:var(--g-700);}"
+    ".comp-share{color:var(--ink);font-variant-numeric:tabular-nums;}"
+    ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"
