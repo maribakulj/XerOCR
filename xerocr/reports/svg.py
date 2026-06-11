@@ -52,4 +52,42 @@ def dispersion_strip(
     )
 
 
-__all__ = ["dispersion_strip", "num"]
+__all__ = ["calibration_curve", "dispersion_strip", "num"]
+
+
+def calibration_curve(
+    points: list[tuple[float, float]],
+    *,
+    accent: str,
+    size: float = 180.0,
+) -> str:
+    """Courbe de fiabilité : ``points`` = ``(confiance, exactitude)`` dans [0,1].
+
+    Diagonale pointillée = calibration parfaite ; la polyligne (+ disques) = le
+    moteur. L'axe **y** est inversé (SVG vers le bas) : ``y = (1 - exactitude)``.
+    Déterministe (coordonnées via ``num``), zéro JS."""
+
+    def px(v: float) -> float:
+        return max(0.0, min(v, 1.0)) * size
+
+    diag = (
+        f'<line x1="0" y1="{num(size)}" x2="{num(size)}" y2="0" class="calib-diag"/>'
+    )
+    if not points:
+        return (
+            f'<svg viewBox="0 0 {num(size)} {num(size)}" class="calib-svg" '
+            f'aria-hidden="true">{diag}</svg>'
+        )
+    pts = sorted(points)
+    coords = " ".join(f"{num(px(c))},{num(size - px(a))}" for c, a in pts)
+    dots = "".join(
+        f'<circle cx="{num(px(c))}" cy="{num(size - px(a))}" r="2.6" '
+        f'class="calib-pt" style="fill:{accent}"/>'
+        for c, a in pts
+    )
+    return (
+        f'<svg viewBox="0 0 {num(size)} {num(size)}" class="calib-svg" '
+        f'aria-hidden="true">{diag}'
+        f'<polyline points="{coords}" class="calib-line" style="stroke:{accent}"/>'
+        f"{dots}</svg>"
+    )

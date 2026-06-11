@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports.svg import dispersion_strip, num
+from xerocr.reports.svg import calibration_curve, dispersion_strip, num
 
 
 def test_num_is_fixed_precision_deterministic() -> None:
@@ -32,4 +32,26 @@ def test_dispersion_strip_clamps_and_handles_zero_scale() -> None:
 def test_dispersion_strip_is_deterministic() -> None:
     a = dispersion_strip(0.1, 0.2, 0.25, 0.5, 0.5, accent="#abc")
     b = dispersion_strip(0.1, 0.2, 0.25, 0.5, 0.5, accent="#abc")
+    assert a == b
+
+
+def test_calibration_curve_diagonal_polyline_and_inverted_y() -> None:
+    svg = calibration_curve([(0.5, 0.5), (0.8, 0.6)], accent="#f0f", size=100.0)
+    assert 'class="calib-diag"' in svg  # diagonale = calibration parfaite
+    assert 'class="calib-line"' in svg and 'points="' in svg
+    assert "#f0f" in svg
+    # y inversé : exactitude 0.5 sur 100 → y = 50 ; conf 0.5 → x = 50
+    assert "50.00,50.00" in svg
+
+
+def test_calibration_curve_empty_keeps_diagonal_only() -> None:
+    svg = calibration_curve([], accent="#000")
+    assert 'class="calib-diag"' in svg
+    assert 'class="calib-line"' not in svg  # aucun point → pas de polyligne
+
+
+def test_calibration_curve_is_deterministic() -> None:
+    pts = [(0.2, 0.3), (0.9, 0.85)]
+    a = calibration_curve(pts, accent="#abc")
+    b = calibration_curve(pts, accent="#abc")
     assert a == b

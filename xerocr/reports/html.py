@@ -154,6 +154,17 @@ _CSS = (
     ".disp-mean{stroke:var(--ink);stroke-width:1.5;}"
     ".disp-labels{grid-column:2;font-size:11px;color:var(--g-500);"
     "font-variant-numeric:tabular-nums;}"
+    # Courbe de calibration (SVG serveur) : diagonale pointillée = parfaite,
+    # polyligne + disques = le moteur. Plot carré à gauche, table à droite.
+    ".calib-block{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;"
+    "margin:.4rem 0 1rem;}"
+    ".calib-plot{display:flex;flex-direction:column;gap:4px;flex:0 0 auto;}"
+    ".calib-svg{width:180px;height:180px;display:block;background:var(--surface);"
+    "border-radius:var(--r-md);}"
+    ".calib-axis{font-size:10px;color:var(--g-400);text-align:center;}"
+    ".calib-block table.data{flex:1;min-width:240px;}"
+    ".calib-diag{stroke:var(--g-300);stroke-width:1;stroke-dasharray:3 3;}"
+    ".calib-line{fill:none;stroke-width:2;stroke-linejoin:round;}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"
