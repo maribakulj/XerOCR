@@ -119,4 +119,45 @@
       if (e.target === glossaryDialog) glossaryDialog.close();
     });
   }
+
+  /* 5) Tables vivantes : clic sur un <th class="sortable"> réordonne les <tr>
+   *    du corps par la valeur data-sort de la colonne (cellIndex). On DÉPLACE
+   *    des lignes déjà rendues — aucune donnée reconstruite (cf. discipline). */
+  function sortNumber(cell) {
+    var v = cell ? parseFloat(cell.getAttribute("data-sort")) : NaN;
+    return isNaN(v) ? Infinity : v; /* valeurs absentes → en fin de tri */
+  }
+  Array.prototype.forEach.call(
+    document.querySelectorAll("table.sortable"),
+    function (table) {
+      var heads = table.querySelectorAll("thead th.sortable");
+      Array.prototype.forEach.call(heads, function (th) {
+        th.addEventListener("click", function () {
+          var tbody = table.tBodies[0];
+          if (!tbody) return;
+          var col = th.cellIndex;
+          var asc = th.getAttribute("aria-sort") !== "ascending";
+          var rows = Array.prototype.slice.call(tbody.rows);
+          rows.sort(function (a, b) {
+            var x = sortNumber(a.cells[col]);
+            var y = sortNumber(b.cells[col]);
+            return asc ? x - y : y - x;
+          });
+          rows.forEach(function (r) {
+            tbody.appendChild(r);
+          });
+          Array.prototype.forEach.call(heads, function (h) {
+            h.setAttribute("aria-sort", "none");
+          });
+          th.setAttribute("aria-sort", asc ? "ascending" : "descending");
+          /* renuméroter la colonne de rang (#) selon le nouvel ordre */
+          var n = 1;
+          Array.prototype.forEach.call(tbody.rows, function (r) {
+            var rk = r.querySelector("td.rank");
+            if (rk) rk.textContent = String(n++);
+          });
+        });
+      });
+    },
+  );
 })();

@@ -94,6 +94,14 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"
     "padding:8px 14px 10px;border-bottom:1px solid var(--g-100);}"
     "table.data th.num-cell{text-align:right;}"
+    # Tables vivantes : en-tête triable (clic) + définition au survol (E1).
+    "table.data th.sortable{cursor:pointer;user-select:none;}"
+    "table.data th.sortable:hover{color:var(--ink);}"
+    "th .th-sort{font-size:9px;opacity:0.35;margin-left:2px;}"
+    'th.sortable[aria-sort="ascending"] .th-sort,'
+    'th.sortable[aria-sort="descending"] .th-sort{opacity:1;color:var(--fern);}'
+    ".has-def{text-decoration:underline dotted;text-underline-offset:3px;"
+    "text-decoration-color:var(--g-300);}"
     "table.data td.eng-cell{vertical-align:middle;padding:10px 14px;"
     "border-bottom:1px solid var(--g-50);color:var(--g-700);}"
     "table.data tr:last-child td{border-bottom:none;}"

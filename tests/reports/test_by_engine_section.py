@@ -68,6 +68,16 @@ def test_engines_ranked_by_cer_ascending() -> None:
     assert 'class="eng-badge"' in html
 
 
+def test_table_is_sortable_with_def_headers() -> None:
+    # Tables vivantes : table triable, en-têtes de métrique avec def au survol,
+    # cellules porteuses de la clé de tri.
+    html = EngineSection().render(_result(), SectionContext())
+    assert html is not None
+    assert 'class="data sortable"' in html
+    assert "has-def" in html and "aria-sort" in html  # en-tête triable + def
+    assert "data-sort=" in html  # cellules métriques porteuses de la valeur
+
+
 def test_returns_none_without_pipelines() -> None:
     manifest = RunManifest(
         run_id="r",
