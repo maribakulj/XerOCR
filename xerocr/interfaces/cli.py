@@ -26,7 +26,7 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
-from xerocr.app.report_images import build_thumbnails
+from xerocr.app.report_images import build_facsimiles, build_thumbnails
 from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
@@ -145,6 +145,7 @@ def _run_config(
             result,
             title=f"XerOCR — {spec.corpus.name}",
             images=build_thumbnails(result),
+            facsimiles=build_facsimiles(result),
         ),
         encoding="utf-8",
     )

@@ -80,6 +80,17 @@ def test_worst_lines_diff_when_present() -> None:
     assert "ligne 3" in html
 
 
+def test_facsimile_shown_when_provided() -> None:
+    ctx = SectionContext(facsimiles={"folio_1": "data:image/jpeg;base64,ZZZ"})
+    html = DocumentDetailSection().render(_result(), ctx)
+    assert html is not None
+    assert 'class="dd-cols"' in html  # 2 colonnes (fac-similé | CER/diff)
+    assert 'class="dd-fac-img" src="data:image/jpeg;base64,ZZZ"' in html
+    # un doc sans fac-similé reste en pleine largeur (pas d'image vide)
+    plain = DocumentDetailSection().render(_result(), SectionContext())
+    assert plain is not None and "dd-fac-img" not in plain
+
+
 def test_none_without_documents() -> None:
     manifest = RunManifest(
         run_id="r", corpus_name="demo", n_documents=0,

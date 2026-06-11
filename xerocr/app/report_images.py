@@ -15,6 +15,9 @@ from xerocr.evaluation.result import RunResult
 
 #: Plafond par défaut de documents vignettés (borne le poids du rapport autonome).
 _DEFAULT_MAX_DOCS = 300
+#: Fac-similés medium (détail) : plus grands → plafond plus serré.
+_FACSIMILE_MAX_PX = 1100
+_FACSIMILE_MAX_DOCS = 60
 
 
 def _worst_first_doc_ids(result: RunResult) -> list[str]:
@@ -51,4 +54,17 @@ def build_thumbnails(
     return out
 
 
-__all__ = ["build_thumbnails"]
+def build_facsimiles(
+    result: RunResult,
+    *,
+    max_px: int = _FACSIMILE_MAX_PX,
+    max_docs: int = _FACSIMILE_MAX_DOCS,
+) -> dict[str, str]:
+    """``{document_id: data-URI}`` des **fac-similés medium** (détail document).
+
+    Même résolution que ``build_thumbnails`` mais plus grands et plus plafonnés
+    (le détail montre une image, pas une grille)."""
+    return build_thumbnails(result, max_px=max_px, max_docs=max_docs)
+
+
+__all__ = ["build_facsimiles", "build_thumbnails"]

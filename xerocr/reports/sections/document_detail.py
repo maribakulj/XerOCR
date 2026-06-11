@@ -58,7 +58,9 @@ class DocumentDetailSection:
             d.pipeline for d in rows
         )
         panels = "".join(
-            self._panel(result, view, doc_id, idx, doc_ids, order)
+            self._panel(
+                result, view, doc_id, idx, doc_ids, order, ctx.facsimiles.get(doc_id)
+            )
             for idx, doc_id in enumerate(doc_ids)
         )
         return Html(f'<div class="doc-details">{panels}</div>')
@@ -71,6 +73,7 @@ class DocumentDetailSection:
         idx: int,
         doc_ids: list[str],
         order: dict[str, int],
+        facsimile: str | None,
     ) -> str:
         total = len(doc_ids)
         prev_i = (idx - 1) % total
@@ -93,6 +96,22 @@ class DocumentDetailSection:
                 '<div class="dd-diffs"><div class="prof-chart-title">Pires lignes '
                 f"(diff vérité-terrain ↔ sortie)</div>{items}</div>"
             )
+        # Fac-similé medium à gauche (si résolu), CER + diff à droite ; sinon
+        # CER + diff en pleine largeur (dégradé propre, pas d'image vide).
+        inner = (
+            '<div class="prof-chart-title">CER par moteur</div>'
+            f'<div class="dd-cers">{cer_rows}</div>{diffs}'
+        )
+        if facsimile:
+            body = (
+                '<div class="dd-cols"><div class="dd-fac">'
+                '<div class="prof-chart-title">Fac-similé</div>'
+                f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
+                'loading="lazy" decoding="async"></div>'
+                f'<div class="dd-right">{inner}</div></div>'
+            )
+        else:
+            body = inner
         return (
             f'<div class="drill-panel doc-detail" id="doc-{idx}" hidden '
             f'role="region" aria-label="{escape(doc_id)}">'
@@ -103,8 +122,7 @@ class DocumentDetailSection:
             f'<a class="btn-sm" href="#doc-{next_i}">suivant →</a></div></div>'
             f'<div class="prof-title"><span>{escape(doc_id)}</span>'
             f'<span class="muted prof-pos">document {idx + 1} sur {total}</span></div>'
-            '<div class="prof-chart-title">CER par moteur</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{diffs}</div>'
+            f"{body}</div>"
         )
 
     @staticmethod

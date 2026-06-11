@@ -31,6 +31,9 @@ class SectionContext:
     #: ``{document_id: data-URI}`` des vignettes résolues (intrant de rendu,
     #: calculé hors résultat ; vide → aperçu synthétique). Cf. `app.report_images`.
     images: Mapping[str, str] = field(default_factory=dict)
+    #: ``{document_id: data-URI}`` des **fac-similés medium** (détail document) —
+    #: plus grands, plafond plus serré (intrant de rendu, hors résultat).
+    facsimiles: Mapping[str, str] = field(default_factory=dict)
 
 
 @runtime_checkable

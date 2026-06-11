@@ -249,13 +249,19 @@ class ReportRenderer:
         title: str = "XerOCR — rapport",
         lang: str = "fr",
         images: Mapping[str, str] | None = None,
+        facsimiles: Mapping[str, str] | None = None,
     ) -> str:
         known = {
             score.metric
             for pipeline in result.pipelines
             for score in pipeline.aggregate
         }
-        ctx = SectionContext(title=title, lang=lang, images=images or {})
+        ctx = SectionContext(
+            title=title,
+            lang=lang,
+            images=images or {},
+            facsimiles=facsimiles or {},
+        )
         rendered: list[tuple[str, str]] = []
         for section in self._sections:
             if section.requires and not set(section.requires) <= known:

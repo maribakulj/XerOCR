@@ -147,6 +147,12 @@ _CSS = (
     ".dd-diff{background:var(--surface);border-radius:var(--r-md);padding:10px 12px;}"
     ".dd-diff-head{font-size:11px;color:var(--g-500);margin-bottom:6px;"
     "display:flex;align-items:center;gap:6px;}"
+    # Détail document : fac-similé medium à gauche, CER + diff à droite.
+    ".dd-cols{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;}"
+    ".dd-fac{flex:0 0 300px;max-width:100%;}"
+    ".dd-fac-img{width:100%;border-radius:var(--r-md);border:1px solid var(--g-50);"
+    "display:block;}"
+    ".dd-right{flex:1;min-width:260px;}"
     ".prof-head{display:flex;justify-content:space-between;align-items:center;"
     "gap:12px;flex-wrap:wrap;margin-bottom:10px;}"
     ".eng-back{font-family:var(--mono);font-size:12px;text-decoration:none;"
