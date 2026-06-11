@@ -197,6 +197,9 @@ _CSS = (
     ".doc-preview{height:78px;border-radius:10px;border:1px solid var(--g-50);"
     "background-color:var(--paper);background-image:repeating-linear-gradient("
     "180deg,transparent 0 6px,rgba(26,25,23,0.10) 6px 7px);}"
+    # Vignette réelle : couvre la zone d'aperçu (objet centré, recadré).
+    ".doc-preview-img{background:var(--g-50);overflow:hidden;padding:0;}"
+    ".doc-preview-img img{width:100%;height:100%;object-fit:cover;display:block;}"
     ".doc-card .dc-id{font-family:var(--mono);font-size:12px;font-weight:600;"
     "color:var(--ink);word-break:break-all;}"
     ".dc-rows{display:flex;flex-direction:column;gap:4px;}"

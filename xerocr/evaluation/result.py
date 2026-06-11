@@ -54,6 +54,10 @@ class RunDocumentResult(BaseModel):
     #: Projection de ``DocumentRef.metadata["stratum"]`` ; consommée par la
     #: composition / filtres / CER par strate (rendus seulement si présent).
     stratum: str | None = Field(default=None, max_length=128)
+    #: **Référence** image du document (chemin corpus-relatif ou URL IIIF),
+    #: jamais les octets → déterminisme/hash du résultat intacts. Résolue en
+    #: vignette **au rendu** (adapter, hors résultat). ``None`` = pas d'image.
+    image_ref: str | None = Field(default=None, max_length=2048)
 
 
 class PipelineResult(BaseModel):

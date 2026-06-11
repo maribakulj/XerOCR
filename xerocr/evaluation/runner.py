@@ -120,6 +120,7 @@ def evaluate_run(
                         view=view.name,
                         scores=scores,
                         stratum=document.metadata.get("stratum"),
+                        image_ref=document.image_uri,
                     )
                 )
             pipelines.append(

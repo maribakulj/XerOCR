@@ -26,6 +26,7 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
+from xerocr.app.report_images import build_thumbnails
 from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
@@ -68,6 +69,11 @@ def demo_to_html() -> str:
                 }
             ),
             "usage": (),
+            # Réfs image = chemins du TemporaryDirectory (éphémères) → neutralisés
+            # comme les autres canaux environnementaux (golden octet-stable).
+            "documents": tuple(
+                d.model_copy(update={"image_ref": None}) for d in result.documents
+            ),
             "analyses": tuple(
                 analysis
                 for analysis in result.analyses
@@ -136,7 +142,9 @@ def _run_config(
     )
     Path(output).write_text(
         default_report_renderer().render(
-            result, title=f"XerOCR — {spec.corpus.name}"
+            result,
+            title=f"XerOCR — {spec.corpus.name}",
+            images=build_thumbnails(result),
         ),
         encoding="utf-8",
     )

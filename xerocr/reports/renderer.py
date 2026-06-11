@@ -7,6 +7,7 @@ sections. ``default_report_renderer`` fournit le socle (overview) du squelette.
 from __future__ import annotations
 
 import base64
+from collections.abc import Mapping
 
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.compare_widget import compare_widget
@@ -247,13 +248,14 @@ class ReportRenderer:
         *,
         title: str = "XerOCR — rapport",
         lang: str = "fr",
+        images: Mapping[str, str] | None = None,
     ) -> str:
         known = {
             score.metric
             for pipeline in result.pipelines
             for score in pipeline.aggregate
         }
-        ctx = SectionContext(title=title, lang=lang)
+        ctx = SectionContext(title=title, lang=lang, images=images or {})
         rendered: list[tuple[str, str]] = []
         for section in self._sections:
             if section.requires and not set(section.requires) <= known:
