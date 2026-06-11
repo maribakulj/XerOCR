@@ -172,16 +172,24 @@ scroll ; impression (CSS print : onglets → empilé).
 | **U1 — Design system** | A1 (chrome+tabs+méta+exports) · B2 (héros + cartes par vue) · E1+E2 (glossaire contextuel, dépose la section) · typo onglets | rien | le rapport *ressemble* à la cible |
 | **U2 — Graphes SVG + verdict qualifié** | G (dispersion · calibration · CER/doc · composition) · **badges de significativité inline** sur le classement de la Vue d'ensemble (D-096) | U1 (cartes où les poser) | les vues *parlent*, le verdict est *qualifié* |
 | **U3 — Tables vivantes + profils moteur** | F (tri, survol-définitions) · D (drill-in moteur) | U1, U2 | l'exploration *moteur* |
-| **U4 — Documents : galerie-entrée + détail léger** | C (galerie d'abord, toggle ⊞/≡, hash-drill-in, détail données-présentes) | U1 | l'exploration *document* |
-| **U5 — Strates** | H (enveloppe + composition + filtres + CER/strate) | U4 (les filtres ont leur galerie) | la dimension *corpus* |
-| **T3 (D-094)** | réfs image dans l'enveloppe + vraies vignettes (saveur fichier + budget) | U4 | la galerie devient *réelle* |
-| **T4 (D-094)** | fac-similé medium + diff complet borné dans le détail document | T3 | la *preuve visuelle* |
+| **U4 — Documents : galerie-entrée + détail** ✅ (U4a/U4b) | C (galerie d'abord, toggle ⊞/≡, hash-drill-in, détail données-présentes) | U1 | l'exploration *document* |
+| **T3 — Vraies vignettes** (= P1, `PLAN_FIN`) | réf image dans l'enveloppe (P0) + vraies vignettes (budget) | P0 | la galerie devient *réelle* |
+| **T4 — Fac-similé + diff complet** (= P1) | fac-similé medium + diff complet borné dans le détail document | T3 | la *preuve visuelle* |
+| **U5′ — Strates** (forme **optionnelle**, = P1) | métadonnée strate optionnelle (P0) + composition + filtres galerie + CER/strate, **rendus si présents** ; démo élargie multi-genre | P0, U4 | la dimension *corpus* |
 
-**File unique** : U1 → U2 → U3 → U4 → U5 → T3 → T4 (puis saveurs dossier/IIIF et
-volet app web, D-094 §4, à re-prioriser face à l'étape 4 du `PLAN_FIN_MIGRATION.md`
-le moment venu). Logique de l'ordre : U1 d'abord parce que tout le reste se pose
-*dans* ses cartes et son chrome ; graphes avant drill-ins parce que les profils
-moteur (U3) les réutilisent ; documents (U4) avant strates (U5) parce que les
+> **Repositionnement (D-109)** : U5/T3/T4 sortent de cette « file UI » et
+> deviennent les **Phases P0→P1** du `PLAN_FIN_MIGRATION.md` (scope v1 élargi :
+> images + strates + **dataset de référence** + saveurs). **Correction** : les
+> images **ne sont pas** « bloquées sur producteur » (`DocumentRef.image_uri`
+> existe, l'upload garde les images) — T3/T4 sont constructibles. Les strates
+> prennent une **forme optionnelle** (champ `metadata` + rendu conditionnel),
+> avec le **dataset curé (P3)** comme producteur réel à l'échelle.
+
+**File UI livrée** : U1 → U2 → U3 → U4 ✅. La suite (images/strates/saveurs/dataset)
+est portée par les **phases P0→P4** de `PLAN_FIN_MIGRATION.md`. Logique de l'ordre
+UI : U1 d'abord parce que tout le reste se pose *dans* ses cartes et son chrome ;
+graphes avant drill-ins parce que les profils moteur (U3) les réutilisent ;
+documents (U4) avant strates parce que les
 filtres sans galerie-entrée n'ont pas de sens ; les images (T3/T4) closent la
 file parce qu'elles seules touchent l'enveloppe.
 

@@ -36,6 +36,51 @@ calibration, statistiques (Nemenyi + bootstrap), synthèse factuelle.
 
 ---
 
+## Révision juin 2026 — scope v1 élargi : 6 phases (parité **+** plateforme)
+
+> **Décision produit (D-109)** : la v1 ne se contente pas de la **parité
+> Picarones** ; elle inclut le **rapport interactif complet** (U1→U4 livrés),
+> **les images + strates**, **un dataset de référence curé** (preuve d'extensibilité,
+> **un seul** suffit) et **les saveurs** (fichier/dossier/IIIF/servie). La v1 passe
+> de « portage propre » à « plateforme de benchmark complète ». Le **dataset curé
+> est la clé de voûte** : il *produit* la donnée que strates, images-à-l'échelle,
+> IIIF et les **familles de métriques riches** (layout/NER/image) consomment.
+
+**Correction d'un classement erroné** : les images **ne sont pas** « bloquées sur
+producteur » (contrairement à ce que j'avais dit). `DocumentRef.image_uri` existe,
+l'upload de corpus garde les images, le runner a le `DocumentRef` en main → **T3/T4
+sont constructibles** (il manque le câblage de la *référence* dans le résultat).
+Seules **les strates** manquaient d'un champ ; c'est l'objet de la Phase 0.
+
+| Phase | Contenu | Dépend de | Parité ou neuf |
+|---|---|---|---|
+| **P0 — Enveloppe données** (socle, petit) | `DocumentRef.metadata` optionnel (→ strate) + **référence image** propagée dans `RunDocumentResult` (jamais les octets). domain/evaluation/pipeline. | — | parité (forme) |
+| **P1 — Rapport sur données locales** | **T3** vraies vignettes · **T4** fac-similé medium + diff pleine page borné · **U5′** strates (forme **optionnelle**, rendues si présentes) + démo élargie multi-genre · micro (nombres FR, saveur **dossier**). | P0 | **parité Picarones** |
+| **P2 — Métriques** (ex-étape 4) | 4a-4c (texte/philologie) · 4d (robustesse/image — **besoin réfs image P0**) · 4e (inter-moteurs/lignes) · 4f (NER) + métriques layout/région. *Parallélisable après P0.* | P0 | parité |
+| **P3 — Dataset de référence curé** (le neuf, **UN seul**) | spec de standardisation (alignée P0) · **un** corpus libre de droits, GT riche (texte + layout + entités) + métadonnée strate + **IIIF statique** (manifestes + vignettes) · importeur (SHA → `RunManifest`). **Preuve que la chaîne tient et qu'elle est extensible** ; d'autres datasets = incrémental post-v1. | P0 ; conception ⇄ P2 (schéma GT) | **neuf** |
+| **P4 — Saveurs & échelle** | saveur **réfs IIIF** (URLs du dataset P3) · saveur **servie** (app web : galerie paginée, images à la demande, échelle 5000). *(dossier déjà en P1.)* | P1, P3 | partiel neuf |
+| **P5 — Release 1.0 + gel Picarones** | checklist · tag · README/CHANGELOG · gel. | tout | — |
+
+**Intégration métriques ⇄ dataset** (le point clé) : P2 et P3 se renforcent. Le
+dataset **donne aux métriques leur vérité-terrain** (layout→région/structure ;
+entités→NER ; multi-genres→**par strate** ; images→qualité/robustesse) ; sans lui,
+la moitié des familles de l'étape 4 ne se testent que sur fixtures minces. **Point
+de couplage = le schéma de GT de la spec P3**, à concevoir en connaissant ce que
+les familles consomment → **l'analyse de l'étape 4 nourrit la spec du dataset**.
+En pratique : métriques développées sur fixtures (P2), puis **exercées sur la vraie
+donnée diverse** quand P3 arrive. Parallélisme propre.
+
+**Ordre de build** : **P0 → P1** d'abord (rapport complet sur corpus locaux,
+valeur visible vite), **P2 (métriques)** en parallèle après P0, **P3 (dataset)**
+chantier de fond, **P4** une fois P1+P3 prêts, **P5** la fin.
+
+**Le long pôle** = la curation/les droits du **seul** dataset P3 (diligence
+humaine, pas du code) — réduit à « choisir **un** corpus libre de droits et le
+faire à fond ».
+
+---
+
+
 ## Décisions déjà actées
 
 | Décision | Choix |
@@ -152,8 +197,12 @@ défauts.
 
 - [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
 - [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
-- [x] **Étape 3** : compare client-side, galerie lazy, drill-in diff, champs de formulaire complets, observabilité/a11y, **glossaire FR/EN porté**.
-- [ ] **Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
+- [x] **Étape 3 / Rapport interactif** : 4 onglets, chrome unifié + exports, héros+cartes, glossaire en dialog, graphes SVG, tables triables + survol-définitions, profil moteur drill-in, galerie-entrée + détail document drill-in (U1→U4 livrés, cf. `PLAN_UI_RAPPORT.md`).
+- [ ] **P0 — Enveloppe données** : `DocumentRef.metadata` optionnel + référence image dans `RunDocumentResult` (jamais les octets).
+- [ ] **P1 — Rapport données locales** : T3 vraies vignettes · T4 fac-similé medium + diff pleine page borné · U5′ strates (forme optionnelle) + démo multi-genre · nombres FR · saveur dossier.
+- [ ] **P2 / Étape 4** : **toutes** les familles métriques gardées portées (4a→4f), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR.
+- [ ] **P3 — Dataset de référence curé** (**un seul**) : spec de standardisation + 1 corpus libre de droits (GT riche + strate + IIIF statique) + importeur (SHA → `RunManifest`). Chaîne prouvée extensible.
+- [ ] **P4 — Saveurs & échelle** : saveur réfs IIIF (dataset P3) · saveur servie (app web : galerie paginée, images à la demande, échelle 5000).
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
 - [ ] `README`/`CHANGELOG`/`pricing.json` à jour, roll-up réconcilié.
 - [ ] Gel de Picarones exécuté (5b).
