@@ -256,6 +256,15 @@ les sens ». Ils étaient absents de Picarones.
   construction de specs vit en `app/run_planning` (couche 8 = transport mince,
   garde-fou `test_interfaces_thin`) ; stockage runtime via `app/data_dir`
   (≠ dossier rapports baké). Détail : `MIGRATION_PLAN.md` D-065.
+- **Rapport interactif *et* autonome** (D-094, décision d'architecture) :
+  *autonome ≠ statique* → **interactivité disciplinée** (enrichissement
+  progressif, île de données = `RunResult` inline, un script mince CSP-hashé,
+  **pas** la SPA Picarones, **pas** Chart.js → SVG inline). **Images = références**
+  dans `RunResult` (jamais les octets) ; **saveurs** fichier/dossier/réfs IIIF/
+  servie ; budget d'octets + drill-in plafonné ; onglets 4 ; zoom medium **sans**
+  deep-zoom. Nuance assumée de l'anti « rapport-application » du §8 (≠ retour à la
+  SPA). Détail : `xerocr/reports/DECISION_RAPPORT_INTERACTIF.md` + vision banc de
+  corpus HF `VISION_DATASET_XEROCR.md`.
 
 ---
 
