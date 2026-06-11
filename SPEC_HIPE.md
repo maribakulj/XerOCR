@@ -226,7 +226,7 @@ Toutes dans `CorrectionPayload`, calculées sur **une** extraction avant/après
 
 | Exigence v1.1 | Destination | Note |
 |---|---|---|
-| R-1.7 HCPR/AIR | **famille 4b** (philologie) | **une seule liste, archaïque uniquement** (ſ ꝛ œ æ ß ⁊ ꝑ… + aͤ oͤ uͤ) pour HCPR **et** AIR ; accents modernes exclus — perte déjà couverte par `diacritic_err`, deux directions visibles en classe taxonomy `diacritic`. Contenu par défaut = Q4, fixé à la tranche 4b. HCPR = généralisation paramétrable de `diacritic_err`/`mufi_err` (parité bit-à-bit si factorisation) ; **AIR est l'apport net**. |
+| R-1.7 HCPR/AIR | **famille 4b** (philologie) | **Q4 actée (2026-06-11, D1-D5)** : une seule liste, archaïque uniquement, pour HCPR **et** AIR. Défaut = **`archaic_core`** trans-langue sans ambiguïté : `ſ ꝛ ⁊ ꝑ ꝓ ꝗ ꝙ ꝯ ꝝ ꝫ ꝭ þ ð ȝ` + formes décomposées `aͤ oͤ uͤ` ; **exclus du défaut : œ æ ß ç et tout accent moderne** (langue-relatifs — œ est du français moderne standard, ß de l'allemand → faux positifs AIR structurels ; la perte est déjà couverte par `diacritic_err`/`mufi_err`, les deux directions visibles en classe taxonomy). **`air` actif par défaut** (scalaire, `None` si la sortie ne porte aucun caractère de la liste) ; **`hcpr` visible seulement avec liste configurée** (anti-colonne-jumelle de `mufi_err`). Listes nommées en **package-data** (`archaic_core`, `archaic_de`, `archaic_fr_medieval`…) sélectionnables par corpus + override par run ; **nom + hash de la liste au manifeste et au rapport** (comparabilité). HCPR = généralisation paramétrable de `diacritic_err`/`mufi_err` (parité bit-à-bit si factorisation) ; **AIR est l'apport net**. Reste au build : dénominateur exact d'AIR (borné [0,1]) + comportement sur l'étage brut des pipelines 2 étages. |
 | R-2.5 `cev_jsd` + `reading_order_suspect` | tranche 4e (ou 4g.2+) **avec sa section** | implémentation directe de la JSD (quelques lignes, pattern inter_engine) — Q6 résolue : pas de dépendance lib CEV |
 | R-2.1 IC bootstrap | déjà livré (T9) | bootstrap maison ; avertissement « IC chevauchants » = ajout mineur aux sections cross/synthesis |
 | R-2.4 folds/pondération · R-2.7 stabilité répliques | différés d'**enveloppe** | cf. §3.6 |
@@ -265,7 +265,7 @@ Les clés et sémantiques gèlent à la 1.0. Trois décisions **avant** le gel :
 | Q1 | Python ≥ 3.12 ? | **Résolue** : scorer en dépendance de test, golden sur job CI 3.12, `skipif` ailleurs |
 | Q2 | worst-pages : UI ou export ? | **Résolue** : extension du `DiagnosticsPayload`/section existants (T11) |
 | Q3 | granularité de l'unité ? | **Résolue** : document (page) XerOCR, inscrite au rapport |
-| Q4 | liste `C` par défaut ? | **Ouverte** — contenu archaïque fixé à la tranche 4b (par corpus) |
+| Q4 | liste `C` par défaut ? | **Actée (2026-06-11)** : défaut = `archaic_core` trans-langue (œ/æ/ß/ç **exclus** — langue-relatifs) ; `air` actif par défaut, `hcpr` sur liste configurée ; listes nommées package-data + override par run, nom + hash tracés (détail §9). Au build : dénominateur AIR + étage brut |
 | Q5 | revendiquer la conformité au README/papier ? | **Actée (plan A)** : oui, à la 1.0 |
 | Q6 | lib CEV ou implémentation directe ? | **Résolue** : implémentation directe de la JSD |
 
@@ -304,7 +304,9 @@ de v1.1 n'avait aucun consommateur : perte = `diacritic_err`, directions = class
 taxonomy) · over_normalization + error_absorption absorbés dans `CorrectionPayload`
 · worst-pages = extension du payload diagnostics existant · folds + répliques =
 différés d'enveloppe · `hallucination` = procédure différée-avec-critères (§8) ·
-unité = document/page.
+unité = document/page · **Q4 actée le même jour (post-v1.2)** : défaut =
+`archaic_core` trans-langue, œ/æ/ß/ç exclus ; `air` par défaut, `hcpr` sur liste
+configurée (§9, §12).
 
 ## Annexe C — Protocole de contamination (conception de corpus, pas de code)
 
