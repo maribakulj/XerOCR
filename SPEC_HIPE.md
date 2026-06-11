@@ -14,6 +14,13 @@
 > `PLAN_FIN_MIGRATION.md` n'est **pas** modifié par ce document : l'insertion de 4g
 > dans la table Étape 4 se réconcilie **au premier commit 4g** (rituel du roll-up +
 > entrée journal D-0xx), pas dans une session d'analyse.
+>
+> **Post-D-109 (même jour)** : la route v1 est passée à **6 phases (P0→P5)** et
+> l'Étape 4 s'appelle désormais **P2** (« ex-étape 4 », parallélisable après P0 —
+> **P0 livrée** : strates + référence image). 4g s'insère donc **en tête de P2** ;
+> l'arbitrage plan A (« avant la 1.0 » = avant P5) est inchangé. Vérifié contre
+> `main` (D-094→D-114) : aucune contradiction ; amendements folds → strates
+> (§3.6, §6).
 
 **Références** : HIPE-OCRepair 2026 (page Evaluation + scorer officiel
 `hipe-ocrepair-scorer` v0.9.9, MIT) · OCR-D eval spec · Levchenko 2025
@@ -61,10 +68,14 @@ distributionnelle) · Kanerva et al. 2025 (RESOURCEFUL — écarts entre folds).
    les tirages numpy du scorer serait de la dette pure.
 5. Participation à la compétition (fenêtre close) ; le leaderboard HF =
    consommateur opportuniste de l'**export JSONL** (§7.4), pas une contrainte.
-6. **Stabilité inter-répliques (R-2.7)** et **folds/pondération intra-run (R-2.4)** :
-   différés d'**enveloppe** — la notion de réplique et le tag `dataset` par document
-   n'existent pas dans `RunResult`/`DocumentRef` ; tranches d'enveloppe dédiées,
-   **aucun champ créé d'avance** (garde-fou « pas de consommateur = supprimé »).
+6. **Stabilité inter-répliques (R-2.7)** : différée d'**enveloppe** — la notion
+   de réplique n'existe pas dans `RunResult` ; tranche dédiée, aucun champ créé
+   d'avance. **Folds/pondération (R-2.4)** *(amendé post-P0, D-110/D-111)* : le
+   canal existe désormais — `DocumentRef.metadata["stratum"]` →
+   `RunDocumentResult.stratum` ; les folds HIPE se mappent sur les **strates**.
+   Reste hors périmètre 4g la seule mécanique d'agrégation/pondération par
+   strate (consommateur « CER par strate » prévu par D-109), à réévaluer à sa
+   tranche.
 
 ## 4. Faits vérifiés sur le scorer officiel (v0.9.9 — source : code)
 
@@ -153,10 +164,11 @@ niveau mot — vérifié) : **aucune clé jumelle au registre**.
   `system_output` = candidat aval (`CORRECTED_TEXT` si présent, sinon `RAW_TEXT`).
   Mode dégradé : pipeline mono-étage → les mesures avant/après (pref, pcis,
   triplet, CCR) sont **absentes du payload avec mention** — jamais un zéro muet.
-- Niveaux de sortie : `corpus` = payloads ; `folds` = différé d'enveloppe (§3.6) —
-  en attendant, **aucun agrégat sans son détail** est déjà tenu par
-  `RunResult.documents` ; `units` = `RunDocumentResult` existant + champs du
-  payload (drapeaux par document capés/échantillonnés).
+- Niveaux de sortie : `corpus` = payloads ; `folds` = **strates** (`stratum` par
+  document depuis P0/D-110 — l'agrégation par strate reste différée, §3.6) ;
+  **aucun agrégat sans son détail** est déjà tenu par `RunResult.documents` ;
+  `units` = `RunDocumentResult` existant + champs du payload (drapeaux par
+  document capés/échantillonnés).
 
 ## 7. Exigences — 4g.1 « conformité » (P0)
 
@@ -269,11 +281,11 @@ Les clés et sémantiques gèlent à la 1.0. Trois décisions **avant** le gel :
 | Q5 | revendiquer la conformité au README/papier ? | **Actée (plan A)** : oui, à la 1.0 |
 | Q6 | lib CEV ou implémentation directe ? | **Résolue** : implémentation directe de la JSD |
 
-## 13. Phasage (intégré à l'Étape 4 — plan A)
+## 13. Phasage (intégré à P2, ex-Étape 4 — plan A)
 
-| Tranche | Contenu | Place dans l'Étape 4 |
+| Tranche | Contenu | Place dans P2 |
 |---|---|---|
-| **4g.1** | profils `hipe`/`heritage` (couche 2) · `cmer` · `ConformityPayload` + section · export JSONL · golden/property/Unicode | **1ʳᵉ tranche** de l'Étape 4 révisée |
+| **4g.1** | profils `hipe`/`heritage` (couche 2) · `cmer` · `ConformityPayload` + section · export JSONL · golden/property/Unicode | **1ʳᵉ tranche** de P2 révisée |
 | **4g.2** | `CorrectionPayload` (triplet · pcis+médiane · catastrophic · CCR/change/length · char_ins_ratio · absorption · over_normalization · éditions consécutives) · worst-pages étendu · **procédure `hallucination`** | 2ᵉ tranche |
 | Suite | 4a (sans readability) → 4b (+hcpr/air) → 4c réduit → 4e réduit (± cev_jsd) → 4f (avec R14) → 4d | cf. `ANALYSE_ETAPE_4.md` §Ordre |
 

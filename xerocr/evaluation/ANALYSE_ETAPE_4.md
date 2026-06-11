@@ -21,6 +21,15 @@
 > réparation R14. Détail : §0 (C9-C10), bloc « Arbitrages actés », §4g, §Ordre.
 > `PLAN_FIN_MIGRATION.md` n'est pas modifié ici — réconciliation au 1ᵉʳ commit 4g
 > (rituel roll-up + journal D-0xx).
+>
+> **Vérifié contre `main` post D-094→D-114 (même jour)** : aucune contradiction —
+> `evaluation/metrics/` et `formats/text/` intacts, décisions UI/rapport
+> orthogonales, pas de collision de `kind` (un 6ᵉ payload `document_texts` est
+> arrivé, D-113). Renommage : **l'Étape 4 s'appelle désormais P2** (« ex-étape
+> 4 », D-109 — parallélisable après P0, qui est livrée). Mises à jour induites :
+> folds → strates (arbitrage n°7) ; **synergie P3** : le schéma GT du dataset
+> curé (D-109) se conçoit en lisant CE guide (entités `.gt.entities.json` pour
+> 4f, layout, strates, images pour 4d).
 
 ---
 
@@ -281,8 +290,13 @@ circulaire du renderer.
    **`air` actif par défaut**, **`hcpr` visible seulement avec liste configurée**
    (anti-colonne-jumelle de `mufi_err`) ; listes nommées en package-data +
    override par run, nom + hash au manifeste et au rapport.
-7. **Différés d'enveloppe** : stabilité inter-répliques (R-2.7) et folds/tag
-   `dataset` (R-2.4) — tranches d'enveloppe dédiées, aucun champ créé d'avance.
+7. **Différés d'enveloppe** *(amendé post-P0, D-110/D-111)* : la stabilité
+   inter-répliques (R-2.7) **reste différée** (aucune notion de réplique dans
+   `RunResult`). Les **folds (R-2.4)**, eux, ont désormais leur canal :
+   `DocumentRef.metadata["stratum"]` → `RunDocumentResult.stratum` (P0) — les
+   folds HIPE se mappent sur les **strates** ; ne reste différée que la
+   mécanique d'agrégation/pondération par strate (consommateur « CER par
+   strate » prévu par D-109), à réévaluer à sa tranche.
 
 ## Rappel des coutures d'enveloppe disponibles (rien à modifier, tout existe)
 
@@ -295,7 +309,8 @@ circulaire du renderer.
 | Nouveau type d'artefact GT | `ArtifactType.ENTITIES` existe (`domain/artifacts.py:66`) ; loader à étendre dans `representations.load_representation` |
 | Version d'un module externe | `RunManifest.module_versions` (T6) — un Module déclare sa version |
 | Section de rapport | `Protocol Section` (`render(RunResult, ctx) → Html|None`), modèle = `sections/taxonomy.py` |
-| Glossaire | entrée FR/EN par métrique **réellement calculée** (D-093) |
+| Glossaire | entrée FR/EN par métrique **réellement calculée** (D-093 ; mécanisme = panneau `<dialog>` du chrome depuis D-099). ⚠️ D-114 : la **prose des sections** reste FR (i18n = passe unique post-P2) |
+| Strate par document (folds, CER par strate) | `DocumentRef.metadata["stratum"]` → `RunDocumentResult.stratum` (P0, D-110/D-111) |
 | Comparer des profils de normalisation | système de **vues** existant : une vue par profil, un payload croise (les « deltas » 4g.1 = différences entre vues, zéro mécanique nouvelle) |
 | Export nécessitant les **textes** (pas les scores) | couche **app** (seule à détenir corpus + `pipeline_outputs`) — ex. JSONL HIPE |
 
@@ -400,11 +415,11 @@ des caps explicites) ; tris déterministes ; clés de métriques **courtes**
 | **4g.2 — payload correction** | `CorrectionPayload(kind="correction")` par pipeline 2 étages : triplet {improvement, regression, no_change} + `catastrophic_rate` (seuil 0.10 conf.) · `pref`/`pcis` (+ `pcis_median` + comptage \|pcis\|>1) · `ccr`/`change_ratio`/`length_ratio` + drapeau `overedited` (> 2.0) · `char_ins_ratio` + `hallucination_heavy` (> 0.10) — dérivés des comptes cmer, pas un 3ᵉ alignement ; n'altère pas `ins_rate`/`del_rate` (niveau mot, cousins documentés) · **absorption** (ex-4e) · **over_normalization** (ex-4c) · éditions consécutives (médiane, max, part > 20) · échantillons capés. Pipeline mono-étage → payload absent avec mention, jamais un zéro muet. |
 | **4g.2 — mécanique** | **Une** extraction avant/après (RAW_TEXT/CORRECTED_TEXT depuis `pipeline_outputs`, pattern `calibration_analysis`) partagée par toutes les mesures. |
 | **4g.2 — procédure `hallucination`** | exécutée ici (arbitrage n°5) — décision retrait/conservation **avant la 1.0**. |
-| **4g.2 — worst-pages** | extension du `DiagnosticsPayload` existant (T11) : tri par `delta_cmer` / `ccr` — consommateur déjà livré, ne pas recréer. |
+| **4g.2 — worst-pages** | extension du `DiagnosticsPayload` existant (T11) : tri par `delta_cmer` / `ccr` — consommateur déjà livré, ne pas recréer. Synergie : le payload `document_texts` (D-113) porte déjà les textes complets des pires documents — le diff pleine page des régressions 4g.2 le réutilise tel quel. |
 | **Glossaire** | + `cmer`, `pref_score`, `pcis`, `ccr` (+ entrées correction affichées) ; une phrase documente la différence cer/cmer. |
 | **Budget** | 4g.1 ≈ profils (donnée) + cmer (~60 LOC) + payload/section (~250) + export (~150) ; 4g.2 ≈ payload (~300) + section (~150) — sous budgets. |
 
-## Ordre de tranches recommandé (PROVISOIRE — révisé 2026-06-11, plan A)
+## Ordre de tranches recommandé (PROVISOIRE — révisé 2026-06-11, plan A ; = ordre interne de **P2**, ex-Étape 4)
 
 Chaque tranche = métriques + payload + section + glossaire + tests, **livrée
 entièrement** (une sous-étape par session de construction). Contraintes **dures** :
@@ -414,14 +429,14 @@ Le reste est de la préférence.
 
 | # | Tranche | Pourquoi à cette place |
 |---|---|---|
-| 1 | **4g.1** conformité HIPE (profils `hipe`/`heritage` · `cmer` · `ConformityPayload` + section · export JSONL · golden) | La valeur la plus haute : répare la comparaison la plus trompeuse du produit (VLM à CER > 100 %), pose les profils que 4b consomme, et porte l'argument de conformité de la 1.0 (plan A). Pas besoin d'« échauffement » : les patterns payload/section/scalaire-adaptatif sont déjà établis (5 payloads livrés, `mufi_err`). |
+| 1 | **4g.1** conformité HIPE (profils `hipe`/`heritage` · `cmer` · `ConformityPayload` + section · export JSONL · golden) | La valeur la plus haute : répare la comparaison la plus trompeuse du produit (VLM à CER > 100 %), pose les profils que 4b consomme, et porte l'argument de conformité de la 1.0 (plan A). Pas besoin d'« échauffement » : les patterns payload/section/scalaire-adaptatif sont déjà établis (6 payloads livrés, `mufi_err`). |
 | 2 | **4g.2** bilan de correction (triplet · pcis+médiane · catastrophic · CCR/change/length · char_ins_ratio · absorption · over_normalization · éditions consécutives) | Consomme `cmer` (4g.1) ; absorbe les modules déplacés de 4c/4e ; **exécute la procédure `hallucination`** (décision avant 1.0). |
 | 3 | **4a** `structured_data` (sans readability) | Petite, indépendante ; avant 4b (transfert de propriété du roman — entre les deux tranches, le roman n'est compté nulle part : acceptable et court). |
 | 4 | **4b** `philology` (+ `hcpr`/`air`) | Consomme le profil `heritage` (4g.1) ; possède le roman ; introduit les tables YAML package-data. |
 | 5 | **4c réduit** `textual_fidelity` (rare_tokens + lexical_modernization) | Collecteur corpus ; plus de dépendance avant/après (partie en 4g). |
 | 6 | **4e réduit** `inter_engine` + `lines` + longitudinal/Pettitt (± `cev_jsd` si sa section est prête) | Réutilise les comptages taxonomy (JSD) ; Pettitt indépendant ; scindable 4e.1/4e.2/4e.3 si une session sature. |
 | 7 | **4f** NER (avec R14) | Verticale autonome (adapter + extra `[ner]` + loader + métrique + section) ; permutable sans risque. |
-| 8 | **4d** robustness + image_quality | **La plus lourde hors couche 3** : whitelist PIL(/numpy), orchestration re-OCR couche 6, surface CLI à arbitrer. La garder pour la fin évite de bloquer les familles purement couche 3 derrière des décisions d'orchestration. Ses dégradations servent aussi de sonde de contamination (SPEC_HIPE Annexe C). |
+| 8 | **4d** robustness + image_quality | **La plus lourde hors couche 3** : whitelist `evaluation/` PIL(/numpy) — Pillow est déjà une dépendance du projet (extra `[images]`, D-111) —, orchestration re-OCR couche 6, surface CLI à arbitrer. La garder pour la fin évite de bloquer les familles purement couche 3 derrière des décisions d'orchestration. Ses dégradations servent aussi de sonde de contamination (SPEC_HIPE Annexe C). |
 
 ---
 
@@ -444,7 +459,7 @@ Le reste est de la préférence.
 | **`norm()` HIPE copiée inexactement** | 4g.1 | La pièce la plus sensible (sémantique `\w` Unicode, ordre des mappings, césures DTA) : golden 1e-9 épinglé (job CI 3.12, `skipif` explicite ailleurs — jamais un faux vert) + tests de sensibilité Unicode + docs dégénérés dans le golden. |
 | **Double convention « absent »** (HIPE : vide = erreur max ; XerOCR : `None` = N/A) | 4g | La famille conformité matérialise l'absence en `""` + warning (R-1.8) ; partout ailleurs `None` reste `None` ; les deux documentées côte à côte — sinon les chiffres de conformité divergent du scorer sur run incomplet. |
 | **Hygiène de clés pré-1.0 oubliée** | transverse | 3 décisions AVANT le gel des clés : `hallucination` (procédure à 4g.2), `searchability` (échelle AUTO — les valeurs baisseront vs runs passés, à faire pré-1.0 précisément), `flesch` (abandonné, journal D-0xx au 1ᵉʳ commit concerné). |
-| **Surface 4g qui enfle** | 4g.2+ | Items T2 de la spec (`cev_jsd`, stabilité, folds) livrés **seulement avec leur consommateur** ; stabilité/folds = différés d'enveloppe explicites (aucun champ d'avance). |
+| **Surface 4g qui enfle** | 4g.2+ | Items T2 de la spec (`cev_jsd`, stabilité, folds) livrés **seulement avec leur consommateur** ; stabilité = différé d'enveloppe ; folds = canal strate livré (P0/D-110), seule la mécanique d'agrégation reste différée. |
 
 ## Abandons recommandés (à acter au lancement des tranches concernées)
 
