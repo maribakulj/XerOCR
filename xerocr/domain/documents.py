@@ -52,6 +52,12 @@ class DocumentRef(BaseModel):
     id: str = Field(min_length=1, max_length=256)
     image_uri: str | None = Field(default=None, max_length=2048)
     ground_truths: tuple[GroundTruthRef, ...] = Field(default_factory=tuple)
+    #: Métadonnées libres par document (analogue documentaire de
+    #: ``CorpusSpec.metadata``). Clé conventionnelle ``"stratum"`` = strate du
+    #: document (genre/période/écriture), si la source la fournit. Optionnel :
+    #: les consommateurs (composition, filtres, CER/strate) ne s'affichent que
+    #: si présent. Renseigné par les importeurs/corpus, jamais figé.
+    metadata: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("id")
     @classmethod

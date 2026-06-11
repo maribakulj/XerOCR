@@ -209,6 +209,21 @@ _CSS = (
     ".dc-row.best .dc-cer{color:var(--fern);font-weight:600;}"
     ".muted{color:var(--g-400);}"
     "::selection{background:var(--ink);color:var(--paper);}"
+    # Composition du corpus par strate : nom + effectif, barre proportionnelle, part.
+    ".strata-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"
+    ".strata-row{display:grid;grid-template-columns:1fr 2fr auto;gap:14px;"
+    "align-items:center;}"
+    ".strata-head{display:flex;align-items:center;gap:8px;}"
+    ".strata-name{font-family:var(--display);font-weight:800;"
+    "font-optical-sizing:auto;font-size:15px;color:var(--ink);}"
+    ".strata-bar{height:8px;background:var(--g-50);border-radius:var(--r-pill);"
+    "overflow:hidden;}"
+    ".strata-fill{display:block;height:100%;background:var(--fern);opacity:0.55;}"
+    ".strata-pct{font-family:var(--display);font-weight:800;"
+    "font-optical-sizing:auto;font-size:22px;font-variant-numeric:tabular-nums;"
+    "color:var(--ink);}"
+    ".preview-chip{font-family:var(--mono);font-size:10px;color:var(--g-500);"
+    "background:var(--surface);border-radius:var(--r-pill);padding:2px 8px;}"
     # Graphe de dispersion CER (SVG serveur, échelle commune) : badge+nom, bande,
     # labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
     ".disp-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"

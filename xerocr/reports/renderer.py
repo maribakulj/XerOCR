@@ -20,6 +20,7 @@ from xerocr.reports.section import Html, Section, SectionContext
 _SECTION_LABELS = {
     "synthesis": "Synthèse",
     "overview": "Vue d'ensemble",
+    "corpus_composition": "Composition",
     "by_engine": "Par moteur",
     "engine_profiles": "Profils moteur",
     "documents": "Par document",
@@ -89,6 +90,7 @@ _HERO_EYEBROW = {"fr": "VUE", "en": "VIEW"}
 _SECTION_TAB = {
     "synthesis": "overview",
     "overview": "overview",
+    "corpus_composition": "overview",
     "by_engine": "engines",
     "engine_profiles": "engines",
     "dispersion": "engines",
@@ -114,11 +116,15 @@ def _hero_stats(tab: str, result: RunResult, lang: str) -> list[tuple[int, str]]
     n_docs = result.manifest.n_documents
     n_eng = len({p.pipeline for p in result.pipelines})
     n_met = len({s.metric for p in result.pipelines for s in p.aggregate})
+    n_strata = len({d.stratum for d in result.documents if d.stratum})
     en = lang == "en"
     docs, eng = "documents", ("engines" if en else "moteurs")
     met = "metrics" if en else "métriques"
+    strata_lbl = "strata" if en else "strates"
     if tab == "overview":
-        return [(n_docs, docs), (n_eng, eng)]
+        base = [(n_docs, docs), (n_eng, eng)]
+        # « N strates » seulement si le corpus en porte (jamais un faux compteur).
+        return base + [(n_strata, strata_lbl)] if n_strata else base
     if tab == "engines":
         return [(n_eng, eng), (n_met, met), (n_docs, docs)]
     if tab == "documents":
@@ -278,6 +284,7 @@ def default_report_renderer() -> ReportRenderer:
     diagnostic. Le glossaire est **hors sections** (dialog du chrome)."""
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
+    from xerocr.reports.sections.corpus_composition import CorpusCompositionSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
@@ -292,6 +299,7 @@ def default_report_renderer() -> ReportRenderer:
         (
             SynthesisSection(),
             OverviewSection(),
+            CorpusCompositionSection(),
             EngineSection(),
             EngineProfileSection(),
             DispersionSection(),

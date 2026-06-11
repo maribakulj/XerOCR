@@ -1,0 +1,62 @@
+"""Section composition du corpus : répartition par **strate** (couche 7).
+
+Rendue **seulement si** le corpus porte des strates (``RunDocumentResult.stratum``,
+projeté de ``DocumentRef.metadata["stratum"]``) — sinon ``None`` (pas de fausse
+carte, pas de strate inventée). Une ligne par strate : nom, effectif, part + barre
+proportionnelle. Server-side, déterministe, zéro JS.
+"""
+
+from __future__ import annotations
+
+from collections import Counter
+
+from xerocr.evaluation.result import RunResult
+from xerocr.reports.html import escape
+from xerocr.reports.section import Html, SectionContext
+from xerocr.reports.sections._tables import ordered_unique
+
+
+def _strata_by_doc(result: RunResult, view: str) -> dict[str, str]:
+    """``document_id -> strate`` (1ʳᵉ occurrence) pour les docs qui en portent une."""
+    out: dict[str, str] = {}
+    for d in result.documents:
+        if d.view == view and d.stratum and d.document_id not in out:
+            out[d.document_id] = d.stratum
+    return out
+
+
+class CorpusCompositionSection:
+    """Répartition des documents par strate (effectif + part), si présentes."""
+
+    name = "corpus_composition"
+    requires: tuple[str, ...] = ()
+
+    def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        if not result.documents:
+            return None
+        view = ordered_unique(d.view for d in result.documents)[0]
+        strata = _strata_by_doc(result, view)
+        if not strata:
+            return None  # aucune strate → pas de carte (jamais de strate inventée)
+        counts = Counter(strata.values())
+        total = sum(counts.values())
+        # Ordre déterministe : effectif décroissant puis nom.
+        ordered = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+        rows = "".join(
+            f'<div class="strata-row"><div class="strata-head">'
+            f'<span class="strata-name">{escape(name)}</span>'
+            f'<span class="preview-chip mono">n = {n}</span></div>'
+            f'<div class="strata-bar"><span class="strata-fill" '
+            f'style="width:{round(n / total * 100)}%"></span></div>'
+            f'<span class="strata-pct">{n / total:.0%}</span></div>'
+            for name, n in ordered
+        )
+        return Html(
+            "<h2>Composition du corpus</h2>\n"
+            f'<p class="muted">{len(ordered)} strates · {total} documents '
+            "(répartition figée à la création du run).</p>\n"
+            f'<div class="strata-grid">{rows}</div>\n'
+        )
+
+
+__all__ = ["CorpusCompositionSection"]

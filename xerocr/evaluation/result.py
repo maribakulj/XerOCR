@@ -50,6 +50,10 @@ class RunDocumentResult(BaseModel):
     pipeline: str = Field(min_length=1, max_length=128)
     view: str = Field(min_length=1, max_length=128)
     scores: tuple[MetricScore, ...] = Field(default_factory=tuple)
+    #: Strate du document (genre/période…) si le corpus la porte, sinon ``None``.
+    #: Projection de ``DocumentRef.metadata["stratum"]`` ; consommée par la
+    #: composition / filtres / CER par strate (rendus seulement si présent).
+    stratum: str | None = Field(default=None, max_length=128)
 
 
 class PipelineResult(BaseModel):

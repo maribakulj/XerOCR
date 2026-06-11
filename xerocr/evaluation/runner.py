@@ -119,6 +119,7 @@ def evaluate_run(
                         pipeline=pipeline_name,
                         view=view.name,
                         scores=scores,
+                        stratum=document.metadata.get("stratum"),
                     )
                 )
             pipelines.append(
