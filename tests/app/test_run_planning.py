@@ -108,6 +108,48 @@ def test_char_exclude_absent_by_default(tmp_path: Path) -> None:
     assert all(v.char_exclude is None for v in spec.evaluation.views)
 
 
+def _text_view_metrics(spec: object) -> tuple[str, ...]:
+    views = spec.evaluation.views  # type: ignore[attr-defined]
+    text = next(v for v in views if v.name == "text")
+    return text.metric_names
+
+
+def test_air_active_by_default_hcpr_opt_in(tmp_path: Path) -> None:
+    # ``air`` est actif d'office (Q4) ; ``hcpr`` n'apparaît PAS sans liste
+    # configurée — anti-colonne-jumelle de mufi_err sur corpus médiéval.
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    metrics = _text_view_metrics(spec)
+    assert "air" in metrics
+    assert "hcpr" not in metrics
+    # Toujours tracé au manifeste (la liste qu'``air`` a utilisée).
+    assert spec.metadata["archaic_list"] == "archaic_core"
+    assert len(spec.metadata["archaic_list_hash"]) == 64
+
+
+def test_configured_archaic_list_enables_hcpr(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),),
+        _corpus(tmp_path),
+        "r",
+        archaic_list="archaic_core",
+    )(tmp_path)
+    metrics = _text_view_metrics(spec)
+    assert "air" in metrics and "hcpr" in metrics
+    assert spec.metadata["archaic_list"] == "archaic_core"
+
+
+def test_unknown_archaic_list_refused(tmp_path: Path) -> None:
+    with pytest.raises(RunPlanningError):
+        plan_benchmark_run(
+            (Competitor(engine="tesseract"),),
+            _corpus(tmp_path),
+            "r",
+            archaic_list="nope",
+        )
+
+
 def test_ocr_only_model_plumbed_to_engine(tmp_path: Path) -> None:
     # Referme le gap 2c : un moteur OCR à modèle (kraken) reçoit son ``model``
     # depuis le formulaire OCR-seul → il se construit (au lieu d'échouer).

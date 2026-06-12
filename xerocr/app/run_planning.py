@@ -40,6 +40,7 @@ from xerocr.domain.pipeline import (
 )
 from xerocr.domain.projection import ProjectionSpec
 from xerocr.domain.run_spec import RunSpec
+from xerocr.evaluation.archaic import resolve_archaic_list
 from xerocr.formats.text import NORMALIZATION_PROFILES
 from xerocr.prompts import PromptError, load_prompt
 
@@ -94,19 +95,31 @@ class Competitor(BaseModel):
 _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
 
-def _ocr_view(normalization: str | None, char_exclude: str | None) -> EvaluationView:
+def _ocr_view(
+    normalization: str | None,
+    char_exclude: str | None,
+    *,
+    with_hcpr: bool = False,
+) -> EvaluationView:
+    # ``air`` (apport net d'archaïsmes) est actif d'office (Q4) ; ``hcpr``
+    # (préservation) n'apparaît que sur une liste **explicitement** configurée
+    # — sinon il doublonnerait ``mufi_err`` sur tout corpus médiéval.
+    metric_names: tuple[str, ...] = (
+        "cer",
+        "wer",
+        "mer",
+        "searchability",
+        "hallucination",
+        "numseq_strict",
+        "numseq_value",
+        "air",
+    )
+    if with_hcpr:
+        metric_names = (*metric_names, "hcpr")
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
-        metric_names=(
-            "cer",
-            "wer",
-            "mer",
-            "searchability",
-            "hallucination",
-            "numseq_strict",
-            "numseq_value",
-        ),
+        metric_names=metric_names,
         normalization_profile=normalization,
         char_exclude=char_exclude,
     )
@@ -140,6 +153,8 @@ def _views_for_corpus(
     corpus: CorpusSpec,
     normalization: str | None = None,
     char_exclude: str | None = None,
+    *,
+    with_hcpr: bool = False,
 ) -> tuple[EvaluationView, ...]:
     """Vues à évaluer selon les **types de GT présents**, sous ``normalization``.
 
@@ -147,15 +162,17 @@ def _views_for_corpus(
     Gallica) → vue *référence* distincte. Un corpus sans GT → vue ``text`` par
     défaut (le run reste exécutable, simplement non scoré). ``char_exclude``
     filtre des caractères des deux côtés (GT/hyp) avant le calcul (runner couche 3).
+    ``with_hcpr`` ajoute la colonne ``hcpr`` à la vue ``text`` (liste archaïque
+    configurée).
     """
     gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
     views: list[EvaluationView] = []
     if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_ocr_view(normalization, char_exclude))
+        views.append(_ocr_view(normalization, char_exclude, with_hcpr=with_hcpr))
     if ArtifactType.REFERENCE_TEXT in gt_types:
         views.append(_reference_view(normalization, char_exclude))
     if not views:
-        views.append(_ocr_view(normalization, char_exclude))
+        views.append(_ocr_view(normalization, char_exclude, with_hcpr=with_hcpr))
     return tuple(views)
 
 
@@ -311,12 +328,19 @@ def plan_benchmark_run(
     *,
     normalization: str | None = None,
     char_exclude: str | None = None,
+    archaic_list: str | None = None,
 ) -> Callable[[Path], RunSpec]:
     """Builder de spec d'un **benchmark** : N concurrents → un ``RunSpec``.
 
     Exhaustif : tout moteur/mode non câblé est refusé (``RunPlanningError``).
     Les noms de pipeline sont rendus **uniques** (suffixe ``#n`` en cas de
     doublon) pour ne pas se piétiner dans les sorties indexées par nom.
+
+    ``archaic_list`` (nom d'une liste curée, cf. ``ARCHAIC_LISTS``) **active
+    ``hcpr``** (préservation des archaïsmes) et **relie ``air``/``hcpr`` à cette
+    liste** ; sans lui, seul ``air`` reste actif sur la liste par défaut. Le nom
+    et l'empreinte de la liste effective entrent au ``RunManifest.metadata``
+    (reproductibilité) ; un nom inconnu est refusé (``RunPlanningError``).
     """
     if not competitors:
         raise RunPlanningError("benchmark : au moins un concurrent requis.")
@@ -326,6 +350,10 @@ def plan_benchmark_run(
         raise RunPlanningError(
             f"profil de normalisation inconnu : {normalization!r}."
         )
+    try:
+        resolved = resolve_archaic_list(archaic_list)
+    except XerOCRError as exc:
+        raise RunPlanningError(str(exc)) from exc
     pipelines: list[PipelineSpec] = []
     adapter_kwargs: dict[str, dict[str, str | int | float | bool]] = {}
     seen: dict[str, int] = {}
@@ -344,10 +372,16 @@ def plan_benchmark_run(
         corpus=corpus,
         pipelines=tuple(pipelines),
         evaluation=EvaluationSpec(
-            views=_views_for_corpus(corpus, normalization, char_exclude)
+            views=_views_for_corpus(
+                corpus, normalization, char_exclude, with_hcpr=archaic_list is not None
+            )
         ),
         adapter_kwargs=adapter_kwargs,
         run_id=run_id,
+        metadata={
+            "archaic_list": resolved.name,
+            "archaic_list_hash": resolved.list_hash,
+        },
     )
     return lambda _ws: spec
 

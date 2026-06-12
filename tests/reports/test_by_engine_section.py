@@ -78,6 +78,38 @@ def test_table_is_sortable_with_def_headers() -> None:
     assert "data-sort=" in html  # cellules métriques porteuses de la valeur
 
 
+def test_air_and_hcpr_render_as_columns() -> None:
+    # Scalaires archaïques affichés comme colonnes by_engine (avec leur valeur),
+    # en-têtes porteurs de leur définition de glossaire.
+    manifest = RunManifest(
+        run_id="r",
+        corpus_name="c",
+        n_documents=1,
+        code_version="1.0",
+        started_at=FIXED,
+        completed_at=FIXED,
+    )
+    pipeline = PipelineResult(
+        pipeline="eng",
+        view="text",
+        aggregate=(
+            MetricScore(metric="cer", value=0.10, support=1),
+            MetricScore(metric="air", value=0.25, support=1),
+            MetricScore(metric="hcpr", value=0.80, support=1),
+        ),
+    )
+    result = RunResult(
+        manifest=manifest,
+        pipelines=(pipeline,),
+        documents=(_doc("d1", "eng", 0.10),),
+    )
+    html = EngineSection().render(result, SectionContext())
+    assert html is not None
+    assert ">air " in html and ">hcpr " in html  # en-têtes de colonne (+ tri ↕)
+    assert "0.2500" in html and "0.8000" in html  # valeurs rendues
+    assert "Apport net" in html  # définition glossaire FR de air au survol
+
+
 def test_returns_none_without_pipelines() -> None:
     manifest = RunManifest(
         run_id="r",

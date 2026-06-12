@@ -14,12 +14,11 @@ Même mécanique que ``diacritic_err`` : alignement caractère ``rapidfuzz``
 
 from __future__ import annotations
 
-from rapidfuzz.distance import Levenshtein
-
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
+from xerocr.evaluation.preservation import preservation_counts
 
 #: Plages Unicode où vivent les glyphes MUFI / médiévaux.
 #: ⚠️ **Pas de signes combinants** ici (bloc U+1DC0–U+1DFF volontairement exclu) :
@@ -61,19 +60,14 @@ def mufi_error(ctx: DocContext) -> Observation | None:
         raise EvaluationError(
             "mufi_err : reference et hypothesis doivent être du texte."
         )
-    targets = [i for i, char in enumerate(ctx.reference) if _is_mufi(char)]
-    if not targets:
-        return None
     # Accept #17 : on compte les glyphes MUFI **de la référence** mal reconnus
     # (substitués/supprimés). Un MUFI *inséré* (présent en hyp, absent en réf)
     # n'est pas compté : le dénominateur est l'ensemble des MUFI attendus.
-    wrong = {
-        op.src_pos
-        for op in Levenshtein.editops(ctx.reference, ctx.hypothesis)
-        if op.tag in ("replace", "delete")
-    }
-    errors = sum(1 for i in targets if i in wrong)
-    return Observation(value=errors / len(targets), weight=len(targets))
+    counts = preservation_counts(ctx.reference, ctx.hypothesis, _is_mufi)
+    if counts is None:
+        return None
+    n_total, n_wrong = counts
+    return Observation(value=n_wrong / n_total, weight=n_total)
 
 
 #: Métriques philologiques MUFI (dépendent de ``rapidfuzz``).

@@ -122,6 +122,41 @@ def test_failing_competitor_does_not_abort_run(tmp_path: Path) -> None:
     assert ko is None or not ko.aggregate or ko.aggregate[0].value is None
 
 
+def test_archaic_list_binds_air_and_hcpr(tmp_path: Path) -> None:
+    # Liste archaïque configurée : l'orchestrateur relie ``air`` et enregistre
+    # ``hcpr`` sur la liste effective ; la vue les demande, le run les score.
+    (tmp_path / "doc1.eng.txt").write_text("meſſe", encoding="utf-8")  # ſ conservé
+    (tmp_path / "doc1.gt.txt").write_text("meſſe", encoding="utf-8")
+    document = DocumentRef(
+        id="doc1",
+        image_uri=str(tmp_path / "doc1.png"),
+        ground_truths=(
+            GroundTruthRef(
+                type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "doc1.gt.txt")
+            ),
+        ),
+    )
+    view = EvaluationView(
+        name="text",
+        candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+        metric_names=("cer", "air", "hcpr"),
+    )
+    spec = RunSpec(
+        corpus=CorpusSpec(name="c", documents=(document,)),
+        pipelines=(_pipeline("eng", "eng"),),
+        evaluation=EvaluationSpec(views=(view,)),
+        adapter_kwargs={"precomputed:eng": {"source_label": "eng"}},
+        metadata={"archaic_list": "archaic_core", "archaic_list_hash": "abc123"},
+    )
+    result = run(spec, registry=_registry(), code_version="1.0")
+    scores = {s.metric: s for s in result.pipelines[0].aggregate}
+    # ſ recopié fidèlement : préservé (hcpr=1), aucun apport net (air=0).
+    assert scores["hcpr"].value == pytest.approx(1.0)
+    assert scores["air"].value == pytest.approx(0.0)
+    assert result.manifest.metadata["archaic_list"] == "archaic_core"
+    assert result.manifest.metadata["archaic_list_hash"] == "abc123"
+
+
 # ── isolation des workspaces + provenance (corrections d'audit) ─────────────
 def _ocr_llm_pipeline(name: str, ocr_label: str) -> PipelineSpec:
     return PipelineSpec(
