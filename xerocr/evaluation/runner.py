@@ -41,6 +41,7 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
+from xerocr.evaluation.roman import RomanNumeralsCollector
 from xerocr.evaluation.structured_data import StructuredDataCollector
 from xerocr.evaluation.taxonomy import TaxonomyCollector
 
@@ -96,6 +97,7 @@ def evaluate_run(
         doc_texts = DocumentTextsCollector()
         structured = StructuredDataCollector()
         markers = MarkerCollector()
+        roman = RomanNumeralsCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -124,6 +126,11 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     markers.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    roman.observe(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
@@ -181,6 +188,9 @@ def evaluate_run(
         markers_analysis = markers.build(view.name)
         if markers_analysis is not None:
             analyses.append(markers_analysis)
+        roman_analysis = roman.build(view.name)
+        if roman_analysis is not None:
+            analyses.append(roman_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)
