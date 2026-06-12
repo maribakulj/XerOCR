@@ -630,6 +630,97 @@ class TextualFidelityPayload(BaseModel):
     pipelines: tuple[PipelineTextualFidelity, ...] = ()
 
 
+class EngineTokenRecall(BaseModel):
+    """Rappel multiset des tokens GT par un pipeline **seul** (corpus entier)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    recall: float = Field(ge=0, le=1)
+
+
+class ComplementarityDocument(BaseModel):
+    """Écart oracle − meilleur moteur sur un document (où l'ensemble gagnerait)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    oracle_recall: float = Field(ge=0, le=1)
+    best_single_recall: float = Field(ge=0, le=1)
+    absolute_gap: float = Field(ge=0, le=1)
+
+
+class InterEngineComplementarity(BaseModel):
+    """Oracle bag-of-words (union des moteurs) vs meilleur moteur seul.
+
+    ``oracle_recall = Σ_token max_moteur(min(occ. GT, occ. moteur)) / Σ occ. GT``
+    — **borne supérieure optimiste** : multiset (multiplicité respectée) mais
+    **ordre ignoré** ; un vote séquentiel réel ferait au mieux autant, en
+    général moins. ``relative_gap`` = part des erreurs du meilleur moteur
+    qu'un ensemble pourrait théoriquement rattraper
+    (``absolute_gap / (1 − best)``, clampé [0,1]). Les documents dont la GT ne
+    porte aucun token sont **exclus** du dénominateur (R10 : jamais un rappel
+    1.0 sur GT vide).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    n_documents: int = Field(ge=1)
+    n_reference_tokens: int = Field(ge=1)
+    oracle_recall: float = Field(ge=0, le=1)
+    best_single_recall: float = Field(ge=0, le=1)
+    best_engine: str = Field(min_length=1, max_length=128)
+    absolute_gap: float = Field(ge=0, le=1)
+    relative_gap: float = Field(ge=0, le=1)
+    #: Triés par pipeline — ordre déterministe.
+    per_engine_recall: tuple[EngineTokenRecall, ...] = ()
+    #: Plus forts écarts oracle − meilleur (tri −gap puis doc), échantillon borné.
+    per_document: tuple[ComplementarityDocument, ...] = ()
+
+
+class TaxonomyDivergencePair(BaseModel):
+    """JS-divergence (bits, [0,1]) entre les profils d'erreurs de deux pipelines."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    a: str = Field(min_length=1, max_length=128)
+    b: str = Field(min_length=1, max_length=128)
+    divergence: float = Field(ge=0, le=1)
+
+
+class InterEngineDivergence(BaseModel):
+    """Matrice de divergence taxonomique paire-à-paire (symétrique).
+
+    ``pairs`` = triangle supérieur (``a < b`` par nom), diagonale (nulle)
+    omise ; ``max_pair`` = la paire la plus divergente, ``None`` si toutes les
+    paires sont à divergence nulle (profils identiques — aucune « paire la
+    plus divergente » à nommer).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pairs: tuple[TaxonomyDivergencePair, ...]
+    max_pair: TaxonomyDivergencePair | None = None
+
+
+class InterEnginePayload(BaseModel):
+    """Analyse inter-moteurs d'une vue : complémentarité + divergence.
+
+    Deux lectures de « les moteurs se trompent-ils pareil ? » : l'**oracle**
+    (que rattraperait un ensemble ?) sur les tokens GT, et la **divergence JS**
+    sur les distributions de classes d'erreurs **déjà comptées** par la
+    taxonomie de la même vue (zéro re-classification). Chaque bloc est ``None``
+    quand son préalable manque (< 2 pipelines, GT sans token, taxonomie
+    absente) — jamais un zéro muet.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["inter_engine"] = "inter_engine"
+    complementarity: InterEngineComplementarity | None = None
+    taxonomy_divergence: InterEngineDivergence | None = None
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -644,7 +735,8 @@ AnalysisPayload = Annotated[
     | StructuredDataPayload
     | PhilologyPayload
     | RomanNumeralsPayload
-    | TextualFidelityPayload,
+    | TextualFidelityPayload
+    | InterEnginePayload,
     Field(discriminator="kind"),
 ]
 
@@ -668,12 +760,17 @@ __all__ = [
     "CalibrationPayload",
     "CategoryBreakdown",
     "CharConfusion",
+    "ComplementarityDocument",
     "ConformityPayload",
     "CorrectionPayload",
     "DiagnosticsPayload",
     "EconomicsPayload",
+    "EngineTokenRecall",
     "HardDocument",
     "InferencePayload",
+    "InterEngineComplementarity",
+    "InterEngineDivergence",
+    "InterEnginePayload",
     "MarginalCost",
     "MarkerPreservation",
     "ModernizedToken",
@@ -697,6 +794,7 @@ __all__ = [
     "RomanNumeralsPayload",
     "StructuredDataPayload",
     "TaxonomyCount",
+    "TaxonomyDivergencePair",
     "TaxonomyPayload",
     "TextualFidelityPayload",
     "WorstLine",

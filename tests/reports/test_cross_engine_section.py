@@ -1,4 +1,8 @@
-"""Section cross_engine : clé parsée en colonnes + verdict, ``None`` si absent."""
+"""Section cross_engine : clé parsée en colonnes + verdict, ``None`` si absent.
+
+Étendue 4e.1 : blocs ``inter_engine`` (complémentarité oracle + divergence JS),
+avec la borne bag-of-words **documentée dans la prose** (anti-surinterprétation).
+"""
 
 from __future__ import annotations
 
@@ -7,9 +11,15 @@ from datetime import UTC, datetime
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.analysis import (
     Analysis,
+    ComplementarityDocument,
+    EngineTokenRecall,
     InferencePayload,
+    InterEngineComplementarity,
+    InterEngineDivergence,
+    InterEnginePayload,
     PipelineInterval,
     PipelineRank,
+    TaxonomyDivergencePair,
 )
 from xerocr.evaluation.result import MetricScore, RunResult
 from xerocr.reports.section import SectionContext
@@ -123,3 +133,74 @@ def test_two_pipeline_inference_block_points_to_wilcoxon() -> None:
     html = CrossEngineSection().render(result, SectionContext())
     assert html is not None
     assert "pas de post-hoc" in html
+
+
+def _inter_engine_result() -> RunResult:
+    """Témoin : payload ``inter_engine`` seul (aucun scalaire cross_engine)."""
+    payload = InterEnginePayload(
+        complementarity=InterEngineComplementarity(
+            n_documents=3,
+            n_reference_tokens=120,
+            oracle_recall=0.95,
+            best_single_recall=0.9,
+            best_engine="alpha",
+            absolute_gap=0.05,
+            relative_gap=0.5,
+            per_engine_recall=(
+                EngineTokenRecall(pipeline="alpha", recall=0.9),
+                EngineTokenRecall(pipeline="beta", recall=0.85),
+            ),
+            per_document=(
+                ComplementarityDocument(
+                    document_id="d2",
+                    oracle_recall=0.9,
+                    best_single_recall=0.7,
+                    absolute_gap=0.2,
+                ),
+            ),
+        ),
+        taxonomy_divergence=InterEngineDivergence(
+            pairs=(
+                TaxonomyDivergencePair(a="alpha", b="beta", divergence=0.1887),
+            ),
+            max_pair=TaxonomyDivergencePair(a="alpha", b="beta", divergence=0.1887),
+        ),
+    )
+    return RunResult(
+        manifest=_manifest(),
+        analyses=(Analysis(scope="corpus", view="text", payload=payload),),
+    )
+
+
+def test_inter_engine_blocks_render_with_documented_bound() -> None:
+    # Le payload seul suffit (pas de scalaire cross_engine requis) ; la borne
+    # bag-of-words est documentée dans la prose (anti-surinterprétation).
+    html = CrossEngineSection().render(_inter_engine_result(), SectionContext())
+    assert html is not None
+    assert "complémentarité" in html
+    assert "oracle" in html
+    assert "Borne supérieure" in html and "ordre est ignoré" in html
+    assert "95.0%" in html and "90.0%" in html  # oracle + meilleur seul
+    assert "alpha" in html and "beta" in html
+    assert "d2" in html and "20.0%" in html  # document au plus fort écart
+    assert "Jensen-Shannon" in html
+    assert "0.1887" in html  # divergence de la paire (et de max_pair)
+    # Déterminisme bit-à-bit du rendu.
+    assert html == CrossEngineSection().render(_inter_engine_result(), SectionContext())
+
+
+def test_divergence_without_max_pair_says_identical_profiles() -> None:
+    payload = InterEnginePayload(
+        taxonomy_divergence=InterEngineDivergence(
+            pairs=(TaxonomyDivergencePair(a="alpha", b="beta", divergence=0.0),),
+            max_pair=None,
+        ),
+    )
+    result = RunResult(
+        manifest=_manifest(),
+        analyses=(Analysis(scope="corpus", view="text", payload=payload),),
+    )
+    html = CrossEngineSection().render(result, SectionContext())
+    assert html is not None
+    assert "identiques" in html  # pas de « paire la plus divergente » inventée
+    assert "0.0000" in html

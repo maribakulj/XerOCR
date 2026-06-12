@@ -29,6 +29,7 @@ from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
+from xerocr.evaluation.inter_engine import InterEngineCollector
 from xerocr.evaluation.markers import MarkerCollector
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
@@ -100,6 +101,7 @@ def evaluate_run(
         markers = MarkerCollector()
         roman = RomanNumeralsCollector()
         textual_fidelity = TextualFidelityCollector()
+        inter_engine = InterEngineCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -138,6 +140,12 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     textual_fidelity.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    inter_engine.observe(
                         pipeline_name,
                         document.id,
                         str(text_context.reference),
@@ -190,6 +198,11 @@ def evaluate_run(
         taxonomy_analysis = taxonomy.build(view.name)
         if taxonomy_analysis is not None:
             analyses.append(taxonomy_analysis)
+        # Post-passe cross-payload : l'inter-moteurs lit les comptages taxonomy
+        # de la même vue (zéro re-classification) — cf. ``inter_engine``.
+        inter_engine_analysis = inter_engine.build(view.name, taxonomy_analysis)
+        if inter_engine_analysis is not None:
+            analyses.append(inter_engine_analysis)
         structured_analysis = structured.build(view.name)
         if structured_analysis is not None:
             analyses.append(structured_analysis)
