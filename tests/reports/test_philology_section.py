@@ -63,5 +63,38 @@ def test_renders_family_and_signs() -> None:
     assert "100.0%" in html  # expansion global 3/3
 
 
+def test_renders_positional_early_modern() -> None:
+    payload = PhilologyPayload(
+        pipelines=(
+            PipelinePhilology(
+                pipeline="eng",
+                family="early_modern",
+                n_total=4,
+                n_strict=3,
+                n_expansion=3,
+                markers=(
+                    MarkerPreservation(
+                        sign="long_s", n_total=2, n_strict=1, n_expansion=1
+                    ),
+                    MarkerPreservation(
+                        sign="ligatures", n_total=2, n_strict=2, n_expansion=2
+                    ),
+                ),
+            ),
+        )
+    )
+    html = PhilologySection().render(
+        _result((Analysis(scope="corpus", view="text", payload=payload),)),
+        SectionContext(),
+    )
+    assert html is not None
+    assert "imprimé ancien" in html  # libellé de famille
+    assert "préservé" in html  # lentille positionnelle
+    assert "avec dév." not in html  # pas la colonne strict/expansion containment
+    assert "s long (ſ)" in html  # libellé de catégorie
+    assert "75.0%" in html  # préservation globale 3/4
+    assert "50.0%" in html  # long_s 1/2
+
+
 def test_without_payload_renders_nothing() -> None:
     assert PhilologySection().render(_result(()), SectionContext()) is None

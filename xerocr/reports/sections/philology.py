@@ -1,9 +1,11 @@
-"""Section philologie : préservation des marqueurs scribaux (couche 7).
+"""Section philologie : préservation des marqueurs philologiques (couche 7).
 
-Rend le payload ``philology`` en **lecture seule** : par pipeline et famille,
-la part des signes abréviatifs de la GT reproduits **à l'identique** (strict)
-vs **développés** (expansion), avec le détail par signe. La question éditoriale
-diplomatique-vs-modernisante, que le CER global ne distingue pas.
+Rend le payload ``philology`` en **lecture seule**. Deux lentilles selon la
+famille : pour les **abréviations** scribales, la part des signes reproduits **à
+l'identique** (strict) vs **développés** (expansion) ; pour la **typographie de
+l'imprimé ancien**, la part des marqueurs restitués **à leur position**
+(préservation, un seul score). La question éditoriale diplomatique-vs-modernisante,
+que le CER global ne distingue pas.
 """
 
 from __future__ import annotations
@@ -13,15 +15,30 @@ from xerocr.evaluation.result import RunResult
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
 
-_FAMILY_LABELS = {"abbreviations": "abréviations médiévales"}
+_FAMILY_LABELS = {
+    "abbreviations": "abréviations médiévales",
+    "early_modern": "typographie de l'imprimé ancien",
+}
+
+#: Familles à préservation **positionnelle** : un seul score (le marqueur est à
+#: sa place), sans lentille « développement ».
+_POSITIONAL_FAMILIES = frozenset({"early_modern"})
+
+#: Libellés lisibles des catégories typographiques de l'imprimé ancien.
+_CATEGORY_LABELS = {
+    "ligatures": "ligatures (ﬁ ﬂ ﬀ)",
+    "long_s": "s long (ſ)",
+    "dotless_i": "i sans point (ı)",
+    "ampersand": "esperluette (&)",
+    "nasal_tildes": "tildes nasaux (ã õ ñ)",
+}
 
 
 def _share(numerator: int, denominator: int) -> str:
     return f"{numerator / denominator:.1%}" if denominator else "—"
 
 
-def _pipeline_block(row: PipelinePhilology) -> str:
-    family = _FAMILY_LABELS.get(row.family, row.family)
+def _containment_block(row: PipelinePhilology, family: str) -> str:
     signs = "".join(
         f'<tr><td class="disp">{escape(marker.sign)}</td>'
         f'<td class="disp">{marker.n_total}</td>'
@@ -41,15 +58,43 @@ def _pipeline_block(row: PipelinePhilology) -> str:
     )
 
 
+def _positional_block(row: PipelinePhilology, family: str) -> str:
+    cats = "".join(
+        f'<tr><td class="disp">'
+        f"{escape(_CATEGORY_LABELS.get(marker.sign, marker.sign))}</td>"
+        f'<td class="disp">{marker.n_total}</td>'
+        f'<td class="disp">{_share(marker.n_strict, marker.n_total)}</td></tr>'
+        for marker in row.markers
+    )
+    return (
+        f"<h4>{escape(row.pipeline)} — {escape(family)} : "
+        f"{_share(row.n_strict, row.n_total)} préservé "
+        f"({row.n_total} marqueurs)</h4>\n"
+        '<table class="data">\n<thead><tr><th>catégorie</th>'
+        '<th class="num-cell">n</th><th class="num-cell">préservé</th>'
+        "</tr></thead>\n"
+        f"<tbody>{cats}</tbody>\n</table>\n"
+    )
+
+
+def _pipeline_block(row: PipelinePhilology) -> str:
+    family = _FAMILY_LABELS.get(row.family, row.family)
+    if row.family in _POSITIONAL_FAMILIES:
+        return _positional_block(row, family)
+    return _containment_block(row, family)
+
+
 def _block(view: str, payload: PhilologyPayload) -> str:
     return (
         f"<h3>{escape(view)} — marqueurs philologiques</h3>\n"
-        '<p class="muted">« strict » = la forme abrégée de la vérité terrain '
-        "est reproduite telle quelle (transcription diplomatique) ; « avec "
+        '<p class="muted">Préservation des conventions de la vérité terrain que '
+        "le CER global ne distingue pas. <b>Abréviations</b> : « strict » = la "
+        "forme abrégée est reproduite telle quelle (diplomatique), « avec "
         "développement » = la forme ou son équivalent développé est présent "
-        "(édition modernisante) — toujours ≥ strict, borne optimiste (un mot "
-        "courant peut compter comme développement). Un écart fort entre les "
-        "deux signale un moteur qui développe les abréviations.</p>\n"
+        "(modernisant) — toujours ≥ strict, borne optimiste (un mot courant peut "
+        "compter comme développement). <b>Imprimé ancien</b> : « préservé » = le "
+        "marqueur typographique (ligature, s long, tilde nasal…) est restitué à "
+        "sa position, selon le même alignement que le CER.</p>\n"
         + "".join(_pipeline_block(row) for row in payload.pipelines)
     )
 
