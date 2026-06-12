@@ -29,6 +29,7 @@ from xerocr.app.engines import (
     installed_mistral_models,
     installed_ollama_models,
 )
+from xerocr.app.history import series_insight
 from xerocr.app.run_planning import benchmark_engine_catalog
 from xerocr.app.segmentation import SegmentationStore
 from xerocr.formats.text import NORMALIZATION_PROFILES
@@ -105,8 +106,9 @@ def _cer_trends(
 ) -> list[dict[str, object]]:
     """Sparklines CER : une série chronologique par ``(pipeline, vue)``.
 
-    Données réelles du store (``history``) — aucune ré-agrégation. Ordre stable
-    (première apparition dans ``records``, plus récent d'abord).
+    Données réelles du store (``history``) — aucune ré-agrégation ici : la
+    tendance OLS et la rupture (Pettitt) viennent d'``app.history`` (couche 6).
+    Ordre stable (première apparition dans ``records``, plus récent d'abord).
     """
     seen: set[tuple[str, str]] = set()
     trends: list[dict[str, object]] = []
@@ -119,6 +121,7 @@ def _cer_trends(
         seen.add(key)
         series = history_store.history(record.pipeline, record.view, "cer")
         values = [s.value for s in series]
+        insight = series_insight(series)
         trends.append(
             {
                 "pipeline": record.pipeline,
@@ -126,6 +129,25 @@ def _cer_trends(
                 "latest": values[-1] if values else None,
                 "n": len(values),
                 "svg": sparkline_svg(values),
+                "slope": (
+                    insight.trend.slope_per_day
+                    if insight.trend is not None
+                    else None
+                ),
+                "r_squared": (
+                    insight.trend.r_squared if insight.trend is not None else None
+                ),
+                # Rupture affichée seulement si significative (p ≤ α) — le
+                # test de Pettitt remplace le max-diff qui « trouvait » toujours.
+                "rupture": (
+                    {
+                        "run_id": insight.rupture_run_id,
+                        "delta": insight.rupture.delta,
+                        "p_value": insight.rupture.p_value,
+                    }
+                    if insight.rupture is not None and insight.rupture.significant
+                    else None
+                ),
             }
         )
     return trends

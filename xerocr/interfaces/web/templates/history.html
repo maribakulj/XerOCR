@@ -37,7 +37,18 @@
           <span class="mono">CER {{ "%.4f"|format(tr.latest) }}</span>
           {% endif %}
           <span class="mono">{{ tr.n }}×</span>
+          {% if tr.slope is not none %}
+          <span class="mono">{{ t.history_slope }} {{ "%+.4f"|format(tr.slope) }}
+            · R² {{ "%.2f"|format(tr.r_squared) }}</span>
+          {% endif %}
         </div>
+        {% if tr.rupture %}
+        <div class="trend-meta">
+          <span class="mono">{{ t.history_rupture }} {{ tr.rupture.run_id }}
+            · Δ {{ "%+.4f"|format(tr.rupture.delta) }}
+            (p={{ "%.3f"|format(tr.rupture.p_value) }})</span>
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

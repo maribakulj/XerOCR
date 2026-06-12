@@ -630,6 +630,228 @@ class TextualFidelityPayload(BaseModel):
     pipelines: tuple[PipelineTextualFidelity, ...] = ()
 
 
+class EngineTokenRecall(BaseModel):
+    """Rappel multiset des tokens GT par un pipeline **seul** (corpus entier)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    recall: float = Field(ge=0, le=1)
+
+
+class ComplementarityDocument(BaseModel):
+    """Écart oracle − meilleur moteur sur un document (où l'ensemble gagnerait)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    oracle_recall: float = Field(ge=0, le=1)
+    best_single_recall: float = Field(ge=0, le=1)
+    absolute_gap: float = Field(ge=0, le=1)
+
+
+class InterEngineComplementarity(BaseModel):
+    """Oracle bag-of-words (union des moteurs) vs meilleur moteur seul.
+
+    ``oracle_recall = Σ_token max_moteur(min(occ. GT, occ. moteur)) / Σ occ. GT``
+    — **borne supérieure optimiste** : multiset (multiplicité respectée) mais
+    **ordre ignoré** ; un vote séquentiel réel ferait au mieux autant, en
+    général moins. ``relative_gap`` = part des erreurs du meilleur moteur
+    qu'un ensemble pourrait théoriquement rattraper
+    (``absolute_gap / (1 − best)``, clampé [0,1]). Les documents dont la GT ne
+    porte aucun token sont **exclus** du dénominateur (R10 : jamais un rappel
+    1.0 sur GT vide).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    n_documents: int = Field(ge=1)
+    n_reference_tokens: int = Field(ge=1)
+    oracle_recall: float = Field(ge=0, le=1)
+    best_single_recall: float = Field(ge=0, le=1)
+    best_engine: str = Field(min_length=1, max_length=128)
+    absolute_gap: float = Field(ge=0, le=1)
+    relative_gap: float = Field(ge=0, le=1)
+    #: Triés par pipeline — ordre déterministe.
+    per_engine_recall: tuple[EngineTokenRecall, ...] = ()
+    #: Plus forts écarts oracle − meilleur (tri −gap puis doc), échantillon borné.
+    per_document: tuple[ComplementarityDocument, ...] = ()
+
+
+class TaxonomyDivergencePair(BaseModel):
+    """JS-divergence (bits, [0,1]) entre les profils d'erreurs de deux pipelines."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    a: str = Field(min_length=1, max_length=128)
+    b: str = Field(min_length=1, max_length=128)
+    divergence: float = Field(ge=0, le=1)
+
+
+class InterEngineDivergence(BaseModel):
+    """Matrice de divergence taxonomique paire-à-paire (symétrique).
+
+    ``pairs`` = triangle supérieur (``a < b`` par nom), diagonale (nulle)
+    omise ; ``max_pair`` = la paire la plus divergente, ``None`` si toutes les
+    paires sont à divergence nulle (profils identiques — aucune « paire la
+    plus divergente » à nommer).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pairs: tuple[TaxonomyDivergencePair, ...]
+    max_pair: TaxonomyDivergencePair | None = None
+
+
+class InterEnginePayload(BaseModel):
+    """Analyse inter-moteurs d'une vue : complémentarité + divergence.
+
+    Deux lectures de « les moteurs se trompent-ils pareil ? » : l'**oracle**
+    (que rattraperait un ensemble ?) sur les tokens GT, et la **divergence JS**
+    sur les distributions de classes d'erreurs **déjà comptées** par la
+    taxonomie de la même vue (zéro re-classification). Chaque bloc est ``None``
+    quand son préalable manque (< 2 pipelines, GT sans token, taxonomie
+    absente) — jamais un zéro muet.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["inter_engine"] = "inter_engine"
+    complementarity: InterEngineComplementarity | None = None
+    taxonomy_divergence: InterEngineDivergence | None = None
+
+
+class LinePercentiles(BaseModel):
+    """Percentiles de la distribution des CER par ligne (interpolation linéaire)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    p50: float = Field(ge=0)
+    p75: float = Field(ge=0)
+    p90: float = Field(ge=0)
+    p95: float = Field(ge=0)
+    p99: float = Field(ge=0)
+
+
+class CatastrophicRate(BaseModel):
+    """Part des lignes « catastrophiques » : CER **≥ seuil** (seuil inclus).
+
+    Le seuil 1.0 compte les lignes totalement perdues (CER plafonné à 1.0) —
+    le ``>`` strict de la source le laissait à zéro pour toujours.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    threshold: float = Field(gt=0)
+    count: int = Field(ge=0)
+    rate: float = Field(ge=0, le=1)
+
+
+class PipelineLines(BaseModel):
+    """Distribution du CER par ligne d'un pipeline (lignes GT du corpus poolées).
+
+    Lignes appariées par alignement Levenshtein **sur les listes de lignes**
+    (une insertion/suppression ne décale pas les suivantes) ; ligne GT sans
+    correspondance → CER 1.0 ; lignes hypothèse en trop ignorées. Agrégat
+    **micro** : toutes les lignes du corpus dans une seule distribution (pas
+    une moyenne de statistiques par document). ``gini`` : 0 = erreurs
+    uniformes, 1 = concentrées sur quelques lignes. ``heatmap`` = CER moyen
+    par tranche de position relative dans le document (``None`` = tranche
+    sans ligne, jamais un faux zéro).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    line_count: int = Field(ge=1)
+    mean_cer: float = Field(ge=0)
+    gini: float = Field(ge=0, le=1)
+    percentiles: LinePercentiles
+    catastrophic: tuple[CatastrophicRate, ...] = ()
+    heatmap: tuple[float | None, ...] = ()
+
+
+class LinesPayload(BaseModel):
+    """Distribution des erreurs par ligne d'une vue.
+
+    Le CER document noie la répartition : 5 % d'erreurs uniformes (correction
+    rapide partout) et 5 % concentrées en lignes détruites (re-saisie locale)
+    ne se relisent pas pareil. **Absent si la normalisation de la vue écrase
+    les sauts de ligne** (profil « à plat ») — une distribution par ligne d'un
+    texte aplati serait un chiffre trompeur, pas une mesure.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["lines"] = "lines"
+    heatmap_bins: int = Field(ge=2)
+    pipelines: tuple[PipelineLines, ...] = ()
+
+
+class EntityCategoryScore(BaseModel):
+    """Précision/rappel/F1 d'une catégorie d'entité (PER, LOC, DATE…)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    label: str = Field(min_length=1, max_length=32)
+    precision: float = Field(ge=0, le=1)
+    recall: float = Field(ge=0, le=1)
+    f1: float = Field(ge=0, le=1)
+    #: Entités GT de la catégorie (TP + FN) — l'assiette du rappel.
+    support: int = Field(ge=1)
+
+
+class EntityMention(BaseModel):
+    """Une entité non appariée (manquée côté GT, ou hallucinée côté sortie)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    label: str = Field(min_length=1, max_length=32)
+    text: str = Field(max_length=128)
+
+
+class PipelineNer(BaseModel):
+    """Précision sur entités nommées d'un pipeline (micro global + par catégorie).
+
+    Appariement IoU ≥ seuil sur des spans **reprojetés en coordonnées GT**
+    (R14 — sans quoi le F1 mesurerait le profil d'insertion/délétion de l'OCR
+    amont, pas la survie des entités). ``hallucinated`` = entités produites
+    sans correspondance GT (utile pour les VLM/LLM qui inventent) ; ``missed``
+    = entités GT non retrouvées. La métrique mesure **conjointement** OCR + NER
+    (le modèle d'extraction faillit aussi) — limite documentée dans la section.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_reference: int = Field(ge=1)
+    true_positives: int = Field(ge=0)
+    false_positives: int = Field(ge=0)
+    false_negatives: int = Field(ge=0)
+    precision: float = Field(ge=0, le=1)
+    recall: float = Field(ge=0, le=1)
+    f1: float = Field(ge=0, le=1)
+    #: Catégories présentes (TP+FN+FP > 0), ordre alphabétique.
+    per_category: tuple[EntityCategoryScore, ...] = ()
+    missed: tuple[EntityMention, ...] = ()
+    hallucinated: tuple[EntityMention, ...] = ()
+
+
+class NerPayload(BaseModel):
+    """Précision sur entités nommées d'une vue : la survie des noms propres.
+
+    Présent seulement si au moins un pipeline a une GT entités **et** une
+    sortie entités (vue déclarant ``ner_f1``). Absent sinon (adaptatif — pas
+    de colonne vide sur un corpus sans entités).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["ner"] = "ner"
+    iou_threshold: float = Field(gt=0, le=1)
+    pipelines: tuple[PipelineNer, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -644,7 +866,10 @@ AnalysisPayload = Annotated[
     | StructuredDataPayload
     | PhilologyPayload
     | RomanNumeralsPayload
-    | TextualFidelityPayload,
+    | TextualFidelityPayload
+    | InterEnginePayload
+    | LinesPayload
+    | NerPayload,
     Field(discriminator="kind"),
 ]
 
@@ -666,18 +891,29 @@ __all__ = [
     "AnalysisPayload",
     "CalibrationBin",
     "CalibrationPayload",
+    "CatastrophicRate",
     "CategoryBreakdown",
     "CharConfusion",
+    "ComplementarityDocument",
     "ConformityPayload",
     "CorrectionPayload",
     "DiagnosticsPayload",
     "EconomicsPayload",
+    "EngineTokenRecall",
+    "EntityCategoryScore",
+    "EntityMention",
     "HardDocument",
     "InferencePayload",
+    "InterEngineComplementarity",
+    "InterEngineDivergence",
+    "InterEnginePayload",
+    "LinePercentiles",
+    "LinesPayload",
     "MarginalCost",
     "MarkerPreservation",
     "ModernizedToken",
     "ModernizedVariant",
+    "NerPayload",
     "OverNormalizedWord",
     "PairwiseDifference",
     "PhilologyPayload",
@@ -687,6 +923,8 @@ __all__ = [
     "PipelineCorrection",
     "PipelineEconomics",
     "PipelineInterval",
+    "PipelineLines",
+    "PipelineNer",
     "PipelinePhilology",
     "PipelineRank",
     "PipelineRomanNumerals",
@@ -697,6 +935,7 @@ __all__ = [
     "RomanNumeralsPayload",
     "StructuredDataPayload",
     "TaxonomyCount",
+    "TaxonomyDivergencePair",
     "TaxonomyPayload",
     "TextualFidelityPayload",
     "WorstLine",

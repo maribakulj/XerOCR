@@ -173,6 +173,18 @@ air:
     Non applicable si la sortie ne contient aucun caractère de la liste ;
     borne supérieure (un archaïsme légitime hors GT peut le faire monter).
 
+ner_f1:
+  title: "F1 sur entités nommées"
+  definition: >-
+    Moyenne harmonique précision/rappel des entités (personnes, lieux, dates)
+    retrouvées dans la sortie, spans alignés en coordonnées vérité terrain.
+  measures: >-
+    L'**utilité aval** pour l'indexation prosopographique : un CER flatteur
+    peut masquer la perte des noms propres, décisifs pour la recherche.
+  limits: >-
+    Mesure **conjointe** OCR + extracteur NER (le modèle d'entités faillit
+    aussi) ; appariement par recouvrement de spans (IoU ≥ 0,5), pas par sens.
+
 hallucination:
   title: "Indice d'hallucination"
   definition: >-

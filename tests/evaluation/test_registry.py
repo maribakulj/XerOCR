@@ -21,6 +21,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "ins_rate",
         "mer",
         "mufi_err",
+        "ner_f1",
         "numseq_strict",
         "numseq_value",
         "region_cer",
@@ -62,6 +63,10 @@ def test_get_and_select_by_input_types() -> None:
         "region_cer",
         "region_detection",
     }
+    entity_metrics = registry.for_input_types(
+        ArtifactType.ENTITIES, ArtifactType.ENTITIES
+    )
+    assert {metric.name for metric in entity_metrics} == {"ner_f1"}
 
 
 def test_fresh_registry_is_empty() -> None:

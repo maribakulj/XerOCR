@@ -35,6 +35,7 @@ def test_kinds_listed() -> None:
         "kraken",
         "mistral",
         "mistral_ocr",
+        "ner",
         "ollama",
         "openai",
         "pero",
@@ -63,6 +64,18 @@ def test_builds_pero_and_calamari_modules() -> None:
 def test_pero_requires_model() -> None:
     with pytest.raises(ModuleResolutionError):
         _registry().build("pero:c0", {"label": "c0"})
+
+
+def test_builds_ner_module() -> None:
+    module = _registry().build("ner:c0", {"label": "c0", "model": "fr_core_news_sm"})
+    assert module.name == "ner:c0"
+    assert module.output_types == frozenset({ArtifactType.ENTITIES})
+    assert ArtifactType.RAW_TEXT in module.input_types
+
+
+def test_ner_requires_label() -> None:
+    with pytest.raises(ModuleResolutionError):
+        _registry().build("ner:c0", {})
 
 
 def test_builds_azure_di_module() -> None:

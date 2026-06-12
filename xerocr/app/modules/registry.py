@@ -262,6 +262,17 @@ def _build_alto_assembler(kwargs: Mapping[str, ParamValue]) -> Module:
     return AltoAssembler()
 
 
+def _build_ner(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError("ner : 'label' (str) requis dans adapter_kwargs.")
+    from xerocr.adapters.ner.spacy_extractor import SpacyNerExtractor
+
+    return SpacyNerExtractor(
+        label=label, model=str(kwargs.get("model", "fr_core_news_sm"))
+    )
+
+
 def register_default_modules(registry: ModuleRegistry) -> None:
     """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
     registry.register_builder("precomputed", _build_precomputed)
@@ -280,6 +291,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("pp_doclayout", _build_pp_doclayout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
+    registry.register_builder("ner", _build_ner)
 
 
 __all__ = [

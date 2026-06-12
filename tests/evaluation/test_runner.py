@@ -286,6 +286,8 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         "taxonomy",
         "document_texts",
         "textual_fidelity",
+        "inter_engine",
+        "lines",
     }
     analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"
@@ -301,6 +303,29 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
     taxonomy = by_kind["taxonomy"].payload
     assert {row.pipeline for row in taxonomy.pipelines} == {"beta", "gamma"}
     assert all(row.total_errors > 0 for row in taxonomy.pipelines)
+    # Inter-moteurs : alpha rattrape tous les tokens (oracle = parfait = 1.0,
+    # gap nul) ; beta/gamma remplacent le seul mot de chaque doc → profils
+    # taxonomy identiques ({other}) → divergence à 0, pas de paire max.
+    inter_engine = by_kind["inter_engine"].payload
+    comp = inter_engine.complementarity
+    assert comp is not None and comp.n_documents == 6
+    assert comp.best_engine == "alpha"
+    assert comp.oracle_recall == 1.0 and comp.absolute_gap == 0.0
+    divergence = inter_engine.taxonomy_divergence
+    assert divergence is not None
+    assert [(p.a, p.b) for p in divergence.pairs] == [("beta", "gamma")]
+    assert divergence.pairs[0].divergence == 0.0
+    assert divergence.max_pair is None
+    # Lignes (vue sans profil → sauts de ligne préservés) : 1 ligne par doc,
+    # CER ligne = CER doc — beta 2/8, gamma 1/8, alpha parfait.
+    lines = by_kind["lines"].payload
+    by_pipeline = {row.pipeline: row for row in lines.pipelines}
+    assert set(by_pipeline) == {"alpha", "beta", "gamma"}
+    assert all(row.line_count == 6 for row in lines.pipelines)
+    assert by_pipeline["alpha"].mean_cer == 0.0
+    assert by_pipeline["beta"].mean_cer == 0.25
+    assert by_pipeline["gamma"].mean_cer == 0.125
+    assert by_pipeline["beta"].gini == 0.0  # erreurs uniformes (0.25 partout)
     assert payload.n_documents == 6
     assert payload.critical_distance is not None  # 3 pipelines → post-hoc
     assert [r.pipeline for r in payload.mean_ranks] == ["alpha", "gamma", "beta"]

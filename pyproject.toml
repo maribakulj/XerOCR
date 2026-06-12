@@ -35,6 +35,7 @@ azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_IN
 ollama = ["httpx", "httpcore"]
 huggingface = ["datasets"]
 segment = ["paddlex"]
+ner = ["spacy"]  # extraction d'entités nommées — modèle téléchargé à part (`spacy download`)
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
 images = ["Pillow"]  # vignettes réelles du rapport (redimensionnement) — dégradé gracieux sans
 # Oracle de conformité HIPE (golden test, jamais en runtime — SPEC_HIPE §5).
