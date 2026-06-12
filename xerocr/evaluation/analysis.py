@@ -345,6 +345,107 @@ class ConformityPayload(BaseModel):
     pipelines: tuple[PipelineConformity, ...] = ()
 
 
+class RegressionSample(BaseModel):
+    """Une régression de correction : le LLM a dégradé ce document."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    cmer_raw: float = Field(ge=0, le=1)
+    cmer_corrected: float = Field(ge=0, le=1)
+    delta: float
+
+
+class OverNormalizedWord(BaseModel):
+    """Un mot juste à l'OCR, dégradé par le correcteur (``∅`` = supprimé)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    reference: str = Field(max_length=64)
+    corrected: str = Field(max_length=64)
+
+
+class PipelineCorrection(BaseModel):
+    """Bilan de correction d'un pipeline 2 étages (brut → corrigé), une vue.
+
+    Tous les nombres dérivent de ``cmer`` par document sur les paires
+    (GT, brut) et (GT, corrigé) — mêmes textes préparés que le scoring.
+    R-1.8 : un étage absent est **matérialisé vide** (erreur maximale) et
+    compté (``n_missing_*``) — jamais une exclusion silencieuse. Les taux
+    valent ``None`` quand leur dénominateur est nul (jamais un faux zéro).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_documents: int = Field(ge=1)
+    n_missing_raw: int = Field(default=0, ge=0)
+    n_missing_corrected: int = Field(default=0, ge=0)
+    #: Triplet de non-régression (Σ = 1) + pref = improvement − regression.
+    improvement_rate: float = Field(ge=0, le=1)
+    regression_rate: float = Field(ge=0, le=1)
+    no_change_rate: float = Field(ge=0, le=1)
+    pref_score: float = Field(ge=-1, le=1)
+    n_catastrophic: int = Field(default=0, ge=0)
+    catastrophic_rate: float = Field(ge=0, le=1)
+    #: pcis (SPEC §4.2) : non borné → macro accompagnée de la médiane robuste
+    #: et du compte des valeurs extrêmes (|pcis| > 1).
+    pcis_macro: float | None = None
+    pcis_median: float | None = None
+    n_pcis_extreme: int = Field(default=0, ge=0)
+    #: Ampleur d'intervention (Koynov 2025) : CCR = MER(brut ↔ corrigé).
+    ccr: float | None = None
+    change_ratio: float | None = None
+    length_ratio: float | None = None
+    n_overedited: int = Field(default=0, ge=0)
+    #: Volume de texte inséré vs GT (R-1.3) : I/(H+S+D+I) sur (GT, corrigé).
+    char_ins_ratio: float | None = None
+    n_hallucination_heavy: int = Field(default=0, ge=0)
+    #: Absorption d'erreurs (multiset de mots GT) : flux corrigé vs introduit.
+    errors_before: int = Field(default=0, ge=0)
+    errors_after: int = Field(default=0, ge=0)
+    corrected: int = Field(default=0, ge=0)
+    introduced: int = Field(default=0, ge=0)
+    kept_wrong: int = Field(default=0, ge=0)
+    correction_rate: float | None = None
+    introduction_rate: float | None = None
+    net_improvement: int = 0
+    corrected_samples: tuple[str, ...] = ()
+    introduced_samples: tuple[str, ...] = ()
+    #: Sur-normalisation (positionnelle) : mots OCR-justes dégradés.
+    n_correct_ocr_words: int = Field(default=0, ge=0)
+    n_over_normalized: int = Field(default=0, ge=0)
+    over_normalization: float | None = None
+    over_normalized_samples: tuple[OverNormalizedWord, ...] = ()
+    #: Localité des modifications (R-2.6) : séquences d'éditions consécutives
+    #: sur (GT, corrigé) — longues séquences = réécriture de passages.
+    edit_run_median: float | None = None
+    edit_run_max: int = Field(default=0, ge=0)
+    edit_run_share: float | None = None
+    worst_regressions: tuple[RegressionSample, ...] = ()
+
+
+class CorrectionPayload(BaseModel):
+    """Bilan de correction d'une vue : que vaut l'étage LLM des pipelines ?
+
+    Présent seulement si la vue a scoré au moins un pipeline **2 étages**
+    (un ``CORRECTED_TEXT`` produit) — un pipeline mono-étage n'a pas de
+    « bilan de correction » (absence ≠ zéro muet). Les seuils sont portés
+    par le payload : chaque drapeau est auditable.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["correction"] = "correction"
+    metric: str = Field(min_length=1, max_length=128)
+    catastrophic_threshold: float = Field(gt=0)
+    overedit_threshold: float = Field(gt=0)
+    insertion_threshold: float = Field(gt=0)
+    edit_run_threshold: int = Field(gt=0)
+    pipelines: tuple[PipelineCorrection, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -354,7 +455,8 @@ AnalysisPayload = Annotated[
     | CalibrationPayload
     | TaxonomyPayload
     | DocumentTextsPayload
-    | ConformityPayload,
+    | ConformityPayload
+    | CorrectionPayload,
     Field(discriminator="kind"),
 ]
 
@@ -378,19 +480,23 @@ __all__ = [
     "CalibrationPayload",
     "CharConfusion",
     "ConformityPayload",
+    "CorrectionPayload",
     "DiagnosticsPayload",
     "EconomicsPayload",
     "HardDocument",
     "InferencePayload",
     "MarginalCost",
     "PairwiseDifference",
+    "OverNormalizedWord",
     "PipelineCalibration",
     "PipelineConformity",
     "PipelineConfusions",
+    "PipelineCorrection",
     "PipelineEconomics",
     "PipelineInterval",
     "PipelineRank",
     "PipelineTaxonomy",
+    "RegressionSample",
     "TaxonomyCount",
     "TaxonomyPayload",
     "WorstLine",

@@ -28,6 +28,7 @@ _SECTION_LABELS = {
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
     "conformity": "Conformité HIPE",
+    "correction": "Bilan de correction",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
@@ -98,6 +99,7 @@ _SECTION_TAB = {
     "dispersion": "engines",
     "calibration": "engines",
     "conformity": "engines",
+    "correction": "engines",
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
@@ -296,6 +298,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.calibration import CalibrationSection
     from xerocr.reports.sections.conformity import ConformitySection
     from xerocr.reports.sections.corpus_composition import CorpusCompositionSection
+    from xerocr.reports.sections.correction import CorrectionSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
@@ -317,6 +320,7 @@ def default_report_renderer() -> ReportRenderer:
             DocumentsSection(),
             CrossEngineSection(),
             ConformitySection(),
+            CorrectionSection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),

@@ -214,7 +214,17 @@ sortie absente) inclus dans le golden.
 `cer`/`wer` livrés, dénominateur = référence, non tronqués (> 1.0 possible).
 - [x] Le rapport documente la différence cer/cmer (entrée glossaire `cmer` FR/EN).
 
-## 8. Exigences — 4g.2 « bilan de correction » (P0/P1)
+## 8. Exigences — 4g.2 « bilan de correction » (P0/P1) — **livrée (D-116, 2026-06-12)**
+
+> Amendements de build (D-116) : les **pires régressions** vivent dans le
+> `CorrectionPayload` (`worst_regressions`, top 10 par Δ) — le
+> `DiagnosticsPayload` livré reste **intact** (on ne modifie pas un payload
+> expédié pour un tri) ; pas d'entrées de glossaire `pref`/`pcis`/`ccr` (le
+> panneau est gaté sur les clés **scalaires** du résultat — entrées orphelines
+> sinon ; la pédagogie vit dans la prose de la section). `prepare_text` extrait
+> vers `representations` : une seule définition de « préparé comme au scoring ».
+> Preuves : `tests/evaluation/test_correction.py` (témoin dérivé à la main),
+> `tests/reports/test_correction_section.py`.
 
 Toutes dans `CorrectionPayload`, calculées sur **une** extraction avant/après
 (`pipeline_outputs`, pattern `calibration_analysis`) :
@@ -246,6 +256,9 @@ Toutes dans `CorrectionPayload`, calculées sur **une** extraction avant/après
   flagge-t-il un document que (char_ins_ratio + part d'éditions groupées) ne
   flagge pas ? (b) faux positifs sur GT diplomatique + LLM modernisant ? Aucun
   signal unique → retrait de la clé ; sinon conservation avec caveat documenté.
+  **État (D-116)** : la machinerie de comparaison est complète
+  (`char_ins_ratio` + `edit_run_share` livrés) — **reste l'exécution sur runs
+  réels**, réserve ouverte au DoD, à faire avant le gel des clés (1.0).
 
 ## 9. Reporté hors 4g (mappé sur les autres familles)
 
