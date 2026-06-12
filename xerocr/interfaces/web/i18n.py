@@ -148,7 +148,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_stat_runs": "mesures",
         "history_trends_title": "Tendances",
         "history_trends_desc": "Évolution du CER par moteur au fil des runs "
-        "(échelle locale).",
+        "(échelle locale). Pente OLS par jour ; rupture signalée seulement si "
+        "le test de Pettitt est significatif (p ≤ 0,05).",
+        "history_slope": "pente/j",
+        "history_rupture": "rupture dès",
         "history_regressions_title": "Régressions",
         "history_regressions_desc": "Métriques dégradées entre les deux runs les "
         "plus récents (plus bas = meilleur).",
@@ -338,7 +341,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_stat_runs": "records",
         "history_trends_title": "Trends",
         "history_trends_desc": "CER evolution per engine across runs "
-        "(local scale).",
+        "(local scale). OLS slope per day; a change point is flagged only "
+        "when the Pettitt test is significant (p ≤ 0.05).",
+        "history_slope": "slope/day",
+        "history_rupture": "change point at",
         "history_regressions_title": "Regressions",
         "history_regressions_desc": "Metrics that worsened between the two most "
         "recent runs (lower is better).",
