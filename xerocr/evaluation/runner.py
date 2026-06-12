@@ -32,6 +32,7 @@ from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.inter_engine import InterEngineCollector
 from xerocr.evaluation.lines import LinesCollector, newline_preserved
 from xerocr.evaluation.markers import MarkerCollector
+from xerocr.evaluation.ner import EntitiesCollector, EntitySet
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation, prepare_text
@@ -103,6 +104,7 @@ def evaluate_run(
         roman = RomanNumeralsCollector()
         textual_fidelity = TextualFidelityCollector()
         inter_engine = InterEngineCollector()
+        entities = EntitiesCollector()
         # Distribution par ligne : applicable seulement si la normalisation de
         # la vue préserve les sauts de ligne (sonde comportementale).
         lines = LinesCollector(enabled=newline_preserved(view))
@@ -113,9 +115,19 @@ def evaluate_run(
                 candidate = _candidate_for(
                     pipeline_outputs, pipeline_name, document.id, view.candidate_types
                 )
-                scores, text_context = _score_document(
+                scores, text_context, entity_context = _score_document(
                     view, document, candidate, registry
                 )
+                if (
+                    entity_context is not None
+                    and isinstance(entity_context.reference, EntitySet)
+                    and isinstance(entity_context.hypothesis, EntitySet)
+                ):
+                    entities.observe(
+                        pipeline_name,
+                        entity_context.reference,
+                        entity_context.hypothesis,
+                    )
                 if text_context is not None:
                     diagnostics.observe(
                         pipeline_name,
@@ -227,6 +239,9 @@ def evaluate_run(
         lines_analysis = lines.build(view.name)
         if lines_analysis is not None:
             analyses.append(lines_analysis)
+        entities_analysis = entities.build(view.name)
+        if entities_analysis is not None:
+            analyses.append(entities_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)
@@ -361,11 +376,11 @@ def _score_document(
     document: DocumentRef,
     candidate: Artifact | None,
     registry: MetricRegistry,
-) -> tuple[tuple[MetricScore, ...], DocContext | None]:
+) -> tuple[tuple[MetricScore, ...], DocContext | None, DocContext | None]:
     # Représentation chargée + normalisée une seule fois par signature, partagée
-    # par toutes les métriques qui la consomment (CER/WER/MER). Le contexte
-    # **texte** est aussi renvoyé : le diagnostic d'erreurs (confusions, pires
-    # lignes) le consomme sans recharger ni renormaliser quoi que ce soit.
+    # par toutes les métriques qui la consomment (CER/WER/MER). Les contextes
+    # **texte** et **entités** sont aussi renvoyés : les collecteurs (confusions,
+    # pires lignes, NER) les consomment sans recharger ni renormaliser.
     contexts: dict[_Signature, DocContext | None] = {}
     scores: list[MetricScore] = []
     for name in view.metric_names:
@@ -385,7 +400,8 @@ def _score_document(
             )
         )
     text_context = contexts.get((ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT))
-    return tuple(scores), text_context
+    entity_context = contexts.get((ArtifactType.ENTITIES, ArtifactType.ENTITIES))
+    return tuple(scores), text_context, entity_context
 
 
 def _context_for(

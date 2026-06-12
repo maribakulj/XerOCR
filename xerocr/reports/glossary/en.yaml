@@ -171,6 +171,18 @@ air:
     Not applicable if the output contains no character from the list; an upper
     bound (a legitimate archaism outside the GT can raise it).
 
+ner_f1:
+  title: "Named-entity F1"
+  definition: >-
+    Harmonic mean of precision/recall over entities (people, places, dates)
+    recovered in the output, with spans aligned to ground-truth coordinates.
+  measures: >-
+    Downstream usefulness for prosopographic indexing: a flattering CER can
+    hide the loss of proper nouns, which are decisive for search.
+  limits: >-
+    Joint OCR + NER measure (the entity model also fails); matching is by span
+    overlap (IoU ≥ 0.5), not by meaning.
+
 hallucination:
   title: "Hallucination index"
   definition: >-

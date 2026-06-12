@@ -33,6 +33,7 @@ _SECTION_LABELS = {
     "philology": "Philologie",
     "textual_fidelity": "Fidélité textuelle",
     "lines": "Par ligne",
+    "ner": "Entités nommées",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
@@ -108,6 +109,7 @@ _SECTION_TAB = {
     "philology": "engines",
     "textual_fidelity": "engines",
     "lines": "engines",
+    "ner": "engines",
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
@@ -314,6 +316,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.lines import LinesSection
+    from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.philology import PhilologySection
     from xerocr.reports.sections.structured_data import StructuredDataSection
@@ -337,6 +340,7 @@ def default_report_renderer() -> ReportRenderer:
             PhilologySection(),
             TextualFidelitySection(),
             LinesSection(),
+            NerSection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),

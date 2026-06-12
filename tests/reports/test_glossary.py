@@ -21,6 +21,7 @@ REAL_METRICS = (
     "searchability",
     "region_cer",
     "region_detection",
+    "ner_f1",
     "significance_p",
     "ece",
     "mce",

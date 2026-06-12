@@ -788,6 +788,70 @@ class LinesPayload(BaseModel):
     pipelines: tuple[PipelineLines, ...] = ()
 
 
+class EntityCategoryScore(BaseModel):
+    """Précision/rappel/F1 d'une catégorie d'entité (PER, LOC, DATE…)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    label: str = Field(min_length=1, max_length=32)
+    precision: float = Field(ge=0, le=1)
+    recall: float = Field(ge=0, le=1)
+    f1: float = Field(ge=0, le=1)
+    #: Entités GT de la catégorie (TP + FN) — l'assiette du rappel.
+    support: int = Field(ge=1)
+
+
+class EntityMention(BaseModel):
+    """Une entité non appariée (manquée côté GT, ou hallucinée côté sortie)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    label: str = Field(min_length=1, max_length=32)
+    text: str = Field(max_length=128)
+
+
+class PipelineNer(BaseModel):
+    """Précision sur entités nommées d'un pipeline (micro global + par catégorie).
+
+    Appariement IoU ≥ seuil sur des spans **reprojetés en coordonnées GT**
+    (R14 — sans quoi le F1 mesurerait le profil d'insertion/délétion de l'OCR
+    amont, pas la survie des entités). ``hallucinated`` = entités produites
+    sans correspondance GT (utile pour les VLM/LLM qui inventent) ; ``missed``
+    = entités GT non retrouvées. La métrique mesure **conjointement** OCR + NER
+    (le modèle d'extraction faillit aussi) — limite documentée dans la section.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_reference: int = Field(ge=1)
+    true_positives: int = Field(ge=0)
+    false_positives: int = Field(ge=0)
+    false_negatives: int = Field(ge=0)
+    precision: float = Field(ge=0, le=1)
+    recall: float = Field(ge=0, le=1)
+    f1: float = Field(ge=0, le=1)
+    #: Catégories présentes (TP+FN+FP > 0), ordre alphabétique.
+    per_category: tuple[EntityCategoryScore, ...] = ()
+    missed: tuple[EntityMention, ...] = ()
+    hallucinated: tuple[EntityMention, ...] = ()
+
+
+class NerPayload(BaseModel):
+    """Précision sur entités nommées d'une vue : la survie des noms propres.
+
+    Présent seulement si au moins un pipeline a une GT entités **et** une
+    sortie entités (vue déclarant ``ner_f1``). Absent sinon (adaptatif — pas
+    de colonne vide sur un corpus sans entités).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["ner"] = "ner"
+    iou_threshold: float = Field(gt=0, le=1)
+    pipelines: tuple[PipelineNer, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -804,7 +868,8 @@ AnalysisPayload = Annotated[
     | RomanNumeralsPayload
     | TextualFidelityPayload
     | InterEnginePayload
-    | LinesPayload,
+    | LinesPayload
+    | NerPayload,
     Field(discriminator="kind"),
 ]
 
@@ -835,6 +900,8 @@ __all__ = [
     "DiagnosticsPayload",
     "EconomicsPayload",
     "EngineTokenRecall",
+    "EntityCategoryScore",
+    "EntityMention",
     "HardDocument",
     "InferencePayload",
     "InterEngineComplementarity",
@@ -846,6 +913,7 @@ __all__ = [
     "MarkerPreservation",
     "ModernizedToken",
     "ModernizedVariant",
+    "NerPayload",
     "OverNormalizedWord",
     "PairwiseDifference",
     "PhilologyPayload",
@@ -856,6 +924,7 @@ __all__ = [
     "PipelineEconomics",
     "PipelineInterval",
     "PipelineLines",
+    "PipelineNer",
     "PipelinePhilology",
     "PipelineRank",
     "PipelineRomanNumerals",

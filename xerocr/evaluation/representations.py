@@ -14,6 +14,7 @@ from xerocr.domain.errors import FormatError
 from xerocr.domain.evaluation import EvaluationView
 from xerocr.domain.layout import CanonicalLayout
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.evaluation.ner import EntitySet, parse_entities
 from xerocr.formats.alto import parse_alto
 from xerocr.formats.alto.layout_map import alto_to_layout
 from xerocr.formats.pagexml import parse_pagexml
@@ -42,6 +43,8 @@ def load_representation(uri: str, artifact_type: ArtifactType) -> object:
         return read_plaintext(data)
     if artifact_type is ArtifactType.LAYOUT:
         return _load_layout(uri, data)
+    if artifact_type is ArtifactType.ENTITIES:
+        return _load_entities(uri, data)
     raise EvaluationError(
         f"représentation non chargeable pour le type {artifact_type.value!r}."
     )
@@ -70,6 +73,14 @@ def _load_layout(uri: str, data: bytes) -> CanonicalLayout:
         return CanonicalLayout.model_validate_json(data)
     except ValueError as exc:
         raise EvaluationError(f"CanonicalLayout invalide ({uri!r}) : {exc}") from exc
+
+
+def _load_entities(uri: str, data: bytes) -> EntitySet:
+    """Charge un ``EntitySet`` depuis un sidecar ``{"text", "entities"}``."""
+    try:
+        return parse_entities(data)
+    except EvaluationError as exc:
+        raise EvaluationError(f"entités illisibles ({uri!r}) : {exc}") from exc
 
 
 def prepare_text(text: str, view: EvaluationView) -> str:
