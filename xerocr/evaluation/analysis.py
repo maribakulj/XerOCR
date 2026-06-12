@@ -485,11 +485,16 @@ class StructuredDataPayload(BaseModel):
 
 
 class MarkerPreservation(BaseModel):
-    """Préservation d'un signe abréviatif sur le corpus (micro)."""
+    """Préservation d'un signe (ou d'une catégorie) sur le corpus (micro).
+
+    ``sign`` porte soit le signe abréviatif (familles containment/positional),
+    soit le **nom de catégorie** (familles agrégées par catégorie : imprimé
+    ancien, archives modernes — ex. ``typographic_punctuation``).
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    sign: str = Field(min_length=1, max_length=16)
+    sign: str = Field(min_length=1, max_length=32)
     n_total: int = Field(ge=1)
     n_strict: int = Field(ge=0)
     n_expansion: int = Field(ge=0)

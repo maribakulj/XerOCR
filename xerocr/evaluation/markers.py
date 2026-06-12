@@ -47,6 +47,7 @@ from xerocr.evaluation.analysis import (
     PhilologyPayload,
     PipelinePhilology,
 )
+from xerocr.evaluation.archives import CATEGORY_ORDER, archival_counts
 
 
 @dataclass(frozen=True)
@@ -70,13 +71,16 @@ class MarkerFamily:
     """Une famille de marqueurs partageant une stratégie d'appariement.
 
     ``strategy`` choisit la sémantique de préservation : ``"containment"`` (la
-    forme ou son développement existe dans l'hypothèse) ou ``"positional"`` (le
-    marqueur est à sa position — opcode ``equal``, cohérent CER).
+    forme ou son développement existe dans l'hypothèse, multiset), ``"positional"``
+    (le marqueur est à sa position — opcode ``equal``, cohérent CER), ou
+    ``"archival"`` (containment multiset **borné par frontière de mot**, données
+    et détection dans :mod:`xerocr.evaluation.archives` ; ``markers`` ne sert que
+    de **clés d'affichage** ordonnées = les catégories).
     """
 
     name: str
     markers: tuple[Marker, ...]
-    strategy: Literal["containment", "positional"] = "containment"
+    strategy: Literal["containment", "positional", "archival"] = "containment"
 
 
 #: Abréviations médiévales (Capelli / MUFI). ``ñ`` (U+00F1) est **exclu** : son
@@ -122,9 +126,20 @@ EARLY_MODERN = MarkerFamily(
     ),
 )
 
+#: Archives modernes (XIXᵉ-XXᵉ), **stratégie `archival`**. Les tables (9
+#: catégories, ~70 marqueurs) et la détection bornée vivent dans
+#: :mod:`xerocr.evaluation.archives` ; ici, ``markers`` ne porte que les **clés
+#: d'affichage** (catégories) dans l'ordre canonique — `_counts_for` délègue le
+#: comptage à ``archival_counts``.
+MODERN_ARCHIVES = MarkerFamily(
+    name="modern_archives",
+    strategy="archival",
+    markers=tuple(Marker(category) for category in CATEGORY_ORDER),
+)
+
 #: Familles actives. ``observe`` les parcourt toutes ; une famille (ou catégorie)
 #: sans signal dans la GT n'écrit rien (adaptatif).
-FAMILIES: tuple[MarkerFamily, ...] = (ABBREVIATIONS, EARLY_MODERN)
+FAMILIES: tuple[MarkerFamily, ...] = (ABBREVIATIONS, EARLY_MODERN, MODERN_ARCHIVES)
 
 #: Motif « mot entier » des développements (R3 : ``\b…\b`` quelle que soit la
 #: longueur), insensible à la casse — précompilé par signe au chargement. Seules
@@ -231,6 +246,13 @@ def _counts_for(
     """Comptes d'une famille selon sa stratégie déclarée."""
     if family.strategy == "positional":
         return positional_counts(family, reference, hypothesis)
+    if family.strategy == "archival":
+        return {
+            category: SignCounts(n_total=total, n_strict=strict, n_expansion=expansion)
+            for category, (total, strict, expansion) in archival_counts(
+                reference, hypothesis
+            ).items()
+        }
     return family_counts(family, reference, hypothesis)
 
 
@@ -304,6 +326,7 @@ __all__ = [
     "ABBREVIATIONS",
     "EARLY_MODERN",
     "FAMILIES",
+    "MODERN_ARCHIVES",
     "Marker",
     "MarkerCollector",
     "MarkerFamily",

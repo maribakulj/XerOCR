@@ -96,5 +96,38 @@ def test_renders_positional_early_modern() -> None:
     assert "50.0%" in html  # long_s 1/2
 
 
+def test_renders_modern_archives_with_category_labels() -> None:
+    payload = PhilologyPayload(
+        pipelines=(
+            PipelinePhilology(
+                pipeline="eng",
+                family="modern_archives",
+                n_total=4,
+                n_strict=3,
+                n_expansion=4,
+                markers=(
+                    MarkerPreservation(
+                        sign="civility_titles", n_total=2, n_strict=2, n_expansion=2
+                    ),
+                    MarkerPreservation(
+                        sign="currency", n_total=2, n_strict=1, n_expansion=2
+                    ),
+                ),
+            ),
+        )
+    )
+    html = PhilologySection().render(
+        _result((Analysis(scope="corpus", view="text", payload=payload),)),
+        SectionContext(),
+    )
+    assert html is not None
+    assert "archives modernes" in html
+    assert "titres de civilité (Mme, Dr)" in html  # libellé de catégorie
+    assert "avec dév." in html  # lentille strict/expansion (containment)
+    assert "<th>catégorie</th>" in html  # en-tête catégorie, pas « signe »
+    assert "75.0%" in html  # strict global 3/4
+    assert "50.0%" in html  # currency strict 1/2
+
+
 def test_without_payload_renders_nothing() -> None:
     assert PhilologySection().render(_result(()), SectionContext()) is None
