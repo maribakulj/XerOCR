@@ -30,6 +30,7 @@ from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.inter_engine import InterEngineCollector
+from xerocr.evaluation.lines import LinesCollector, newline_preserved
 from xerocr.evaluation.markers import MarkerCollector
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
@@ -102,6 +103,9 @@ def evaluate_run(
         roman = RomanNumeralsCollector()
         textual_fidelity = TextualFidelityCollector()
         inter_engine = InterEngineCollector()
+        # Distribution par ligne : applicable seulement si la normalisation de
+        # la vue préserve les sauts de ligne (sonde comportementale).
+        lines = LinesCollector(enabled=newline_preserved(view))
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -135,6 +139,11 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     roman.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    lines.observe(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
@@ -215,6 +224,9 @@ def evaluate_run(
         fidelity_analysis = textual_fidelity.build(view.name)
         if fidelity_analysis is not None:
             analyses.append(fidelity_analysis)
+        lines_analysis = lines.build(view.name)
+        if lines_analysis is not None:
+            analyses.append(lines_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)

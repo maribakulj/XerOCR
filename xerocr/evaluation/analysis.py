@@ -721,6 +721,73 @@ class InterEnginePayload(BaseModel):
     taxonomy_divergence: InterEngineDivergence | None = None
 
 
+class LinePercentiles(BaseModel):
+    """Percentiles de la distribution des CER par ligne (interpolation linéaire)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    p50: float = Field(ge=0)
+    p75: float = Field(ge=0)
+    p90: float = Field(ge=0)
+    p95: float = Field(ge=0)
+    p99: float = Field(ge=0)
+
+
+class CatastrophicRate(BaseModel):
+    """Part des lignes « catastrophiques » : CER **≥ seuil** (seuil inclus).
+
+    Le seuil 1.0 compte les lignes totalement perdues (CER plafonné à 1.0) —
+    le ``>`` strict de la source le laissait à zéro pour toujours.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    threshold: float = Field(gt=0)
+    count: int = Field(ge=0)
+    rate: float = Field(ge=0, le=1)
+
+
+class PipelineLines(BaseModel):
+    """Distribution du CER par ligne d'un pipeline (lignes GT du corpus poolées).
+
+    Lignes appariées par alignement Levenshtein **sur les listes de lignes**
+    (une insertion/suppression ne décale pas les suivantes) ; ligne GT sans
+    correspondance → CER 1.0 ; lignes hypothèse en trop ignorées. Agrégat
+    **micro** : toutes les lignes du corpus dans une seule distribution (pas
+    une moyenne de statistiques par document). ``gini`` : 0 = erreurs
+    uniformes, 1 = concentrées sur quelques lignes. ``heatmap`` = CER moyen
+    par tranche de position relative dans le document (``None`` = tranche
+    sans ligne, jamais un faux zéro).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    line_count: int = Field(ge=1)
+    mean_cer: float = Field(ge=0)
+    gini: float = Field(ge=0, le=1)
+    percentiles: LinePercentiles
+    catastrophic: tuple[CatastrophicRate, ...] = ()
+    heatmap: tuple[float | None, ...] = ()
+
+
+class LinesPayload(BaseModel):
+    """Distribution des erreurs par ligne d'une vue.
+
+    Le CER document noie la répartition : 5 % d'erreurs uniformes (correction
+    rapide partout) et 5 % concentrées en lignes détruites (re-saisie locale)
+    ne se relisent pas pareil. **Absent si la normalisation de la vue écrase
+    les sauts de ligne** (profil « à plat ») — une distribution par ligne d'un
+    texte aplati serait un chiffre trompeur, pas une mesure.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["lines"] = "lines"
+    heatmap_bins: int = Field(ge=2)
+    pipelines: tuple[PipelineLines, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -736,7 +803,8 @@ AnalysisPayload = Annotated[
     | PhilologyPayload
     | RomanNumeralsPayload
     | TextualFidelityPayload
-    | InterEnginePayload,
+    | InterEnginePayload
+    | LinesPayload,
     Field(discriminator="kind"),
 ]
 
@@ -758,6 +826,7 @@ __all__ = [
     "AnalysisPayload",
     "CalibrationBin",
     "CalibrationPayload",
+    "CatastrophicRate",
     "CategoryBreakdown",
     "CharConfusion",
     "ComplementarityDocument",
@@ -771,6 +840,8 @@ __all__ = [
     "InterEngineComplementarity",
     "InterEngineDivergence",
     "InterEnginePayload",
+    "LinePercentiles",
+    "LinesPayload",
     "MarginalCost",
     "MarkerPreservation",
     "ModernizedToken",
@@ -784,6 +855,7 @@ __all__ = [
     "PipelineCorrection",
     "PipelineEconomics",
     "PipelineInterval",
+    "PipelineLines",
     "PipelinePhilology",
     "PipelineRank",
     "PipelineRomanNumerals",
