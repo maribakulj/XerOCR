@@ -40,6 +40,7 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
+from xerocr.evaluation.structured_data import StructuredDataCollector
 from xerocr.evaluation.taxonomy import TaxonomyCollector
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
@@ -92,6 +93,7 @@ def evaluate_run(
         diagnostics = DiagnosticsCollector()
         taxonomy = TaxonomyCollector()
         doc_texts = DocumentTextsCollector()
+        structured = StructuredDataCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -110,6 +112,11 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     taxonomy.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    structured.observe(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
@@ -161,6 +168,9 @@ def evaluate_run(
         taxonomy_analysis = taxonomy.build(view.name)
         if taxonomy_analysis is not None:
             analyses.append(taxonomy_analysis)
+        structured_analysis = structured.build(view.name)
+        if structured_analysis is not None:
+            analyses.append(structured_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)

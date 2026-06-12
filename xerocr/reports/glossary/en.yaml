@@ -75,6 +75,32 @@ cmer:
     punctuation and some heritage forms (œ/oe, æ/ae) — compare the
     hipe/heritage views to isolate that effect.
 
+numseq_strict:
+  title: "Numerical sequences — strict preservation"
+  definition: >-
+    Share of the ground truth's numerical sequences (years, foliation,
+    amounts, regnal years) reproduced in their exact form by the engine.
+    Not applicable when the GT carries none.
+  measures: >-
+    The survival of what a historian cites and searches: "1515", "fol. 12r",
+    "3 livres", "an III" — form included.
+  limits: >-
+    Conservative pattern detection: spelled-out forms ("mil cinq cens") are
+    not covered; precision is favoured over recall.
+
+numseq_value:
+  title: "Numerical sequences — value preservation"
+  definition: >-
+    Share of the ground truth's numerical sequences whose equivalent is
+    reproduced, in any form: "f. 12r" matches "fol. 12r", "an 3" matches
+    "an III", "3 l." matches "3 livres".
+  measures: >-
+    The survival of the numerical information itself, tolerant to
+    abbreviation and form conversion.
+  limits: >-
+    Always greater than or equal to strict preservation; a large gap between
+    the two flags an engine that modernises or abbreviates forms.
+
 del_rate:
   title: "Deletion rate"
   definition: >-

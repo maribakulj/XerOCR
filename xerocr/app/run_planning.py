@@ -98,7 +98,15 @@ def _ocr_view(normalization: str | None, char_exclude: str | None) -> Evaluation
     return EvaluationView(
         name="text",
         candidate_types=_CANDIDATES,
-        metric_names=("cer", "wer", "mer", "searchability", "hallucination"),
+        metric_names=(
+            "cer",
+            "wer",
+            "mer",
+            "searchability",
+            "hallucination",
+            "numseq_strict",
+            "numseq_value",
+        ),
         normalization_profile=normalization,
         char_exclude=char_exclude,
     )

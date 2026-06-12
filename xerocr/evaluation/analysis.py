@@ -446,6 +446,44 @@ class CorrectionPayload(BaseModel):
     pipelines: tuple[PipelineCorrection, ...] = ()
 
 
+class CategoryBreakdown(BaseModel):
+    """Restitution d'une catégorie de séquences (années, folios, montants…)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    category: str = Field(min_length=1, max_length=32)
+    n_total: int = Field(ge=1)
+    n_strict: int = Field(ge=0)
+    n_value: int = Field(ge=0)
+    strict_score: float = Field(ge=0, le=1)
+    value_score: float = Field(ge=0, le=1)
+    #: Formes GT perdues (lentille *value*), échantillon borné.
+    lost: tuple[str, ...] = ()
+
+
+class PipelineStructuredData(BaseModel):
+    """Séquences numériques restituées par un pipeline, par catégorie présente."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    #: Catégories **présentes dans la GT** seulement, ordre canonique.
+    categories: tuple[CategoryBreakdown, ...] = ()
+
+
+class StructuredDataPayload(BaseModel):
+    """Données structurées d'une vue : la survie des dates/folios/montants.
+
+    Absent si la GT du corpus ne porte aucune séquence (adaptatif — la
+    famille ne pollue pas un corpus moderne sans signal).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["structured_data"] = "structured_data"
+    pipelines: tuple[PipelineStructuredData, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -456,7 +494,8 @@ AnalysisPayload = Annotated[
     | TaxonomyPayload
     | DocumentTextsPayload
     | ConformityPayload
-    | CorrectionPayload,
+    | CorrectionPayload
+    | StructuredDataPayload,
     Field(discriminator="kind"),
 ]
 
@@ -478,6 +517,7 @@ __all__ = [
     "AnalysisPayload",
     "CalibrationBin",
     "CalibrationPayload",
+    "CategoryBreakdown",
     "CharConfusion",
     "ConformityPayload",
     "CorrectionPayload",
@@ -495,8 +535,10 @@ __all__ = [
     "PipelineEconomics",
     "PipelineInterval",
     "PipelineRank",
+    "PipelineStructuredData",
     "PipelineTaxonomy",
     "RegressionSample",
+    "StructuredDataPayload",
     "TaxonomyCount",
     "TaxonomyPayload",
     "WorstLine",

@@ -29,6 +29,7 @@ _SECTION_LABELS = {
     "cross_engine": "Inter-moteurs",
     "conformity": "Conformité HIPE",
     "correction": "Bilan de correction",
+    "structured_data": "Données structurées",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
@@ -100,6 +101,7 @@ _SECTION_TAB = {
     "calibration": "engines",
     "conformity": "engines",
     "correction": "engines",
+    "structured_data": "engines",
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
@@ -306,6 +308,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.overview import OverviewSection
+    from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
 
@@ -321,6 +324,7 @@ def default_report_renderer() -> ReportRenderer:
             CrossEngineSection(),
             ConformitySection(),
             CorrectionSection(),
+            StructuredDataSection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),
