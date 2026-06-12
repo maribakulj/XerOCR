@@ -61,6 +61,48 @@ mer:
     Proche du CER sur texte propre ; diverge surtout en présence de longues
     insertions/suppressions.
 
+cmer:
+  title: "cMER — match error rate caractère (HIPE)"
+  definition: >-
+    Match Error Rate au niveau caractère — (S+D+I)/(H+S+D+I) —, borné entre
+    0 et 1. C'est la métrique de classement du benchmark HIPE-OCRepair,
+    calculée sous le profil de normalisation du scorer officiel.
+  measures: >-
+    La part de l'alignement caractère qui n'est pas une correspondance
+    exacte. Contrairement au CER (rapporté à la seule référence), il reste
+    comparable même quand un modèle génératif rallonge le texte (CER > 100 %).
+  limits: >-
+    Dépend du profil de normalisation : le profil « hipe » plie casse,
+    ponctuation et certaines formes patrimoniales (œ/oe, æ/ae) — comparer les
+    vues hipe/heritage pour isoler cet effet.
+
+numseq_strict:
+  title: "Séquences numériques — restitution stricte"
+  definition: >-
+    Part des séquences numériques de la vérité terrain (années, foliotation,
+    montants, années régnales) restituées sous leur forme exacte par le
+    moteur. Non applicable si la GT n'en porte aucune.
+  measures: >-
+    La survie de ce qu'un historien cite et cherche : « 1515 », « fol. 12r »,
+    « 3 livres », « an III » — à la forme près.
+  limits: >-
+    Détection par motifs conservateurs : les formes en toutes lettres
+    (« mil cinq cens ») ne sont pas couvertes ; la précision prime sur le
+    rappel.
+
+numseq_value:
+  title: "Séquences numériques — restitution en valeur"
+  definition: >-
+    Part des séquences numériques de la vérité terrain dont l'équivalent est
+    restitué, quelle que soit la forme : « f. 12r » vaut « fol. 12r »,
+    « an 3 » vaut « an III », « 3 l. » vaut « 3 livres ».
+  measures: >-
+    La survie de l'information numérique elle-même, tolérante aux
+    abréviations et conversions de forme.
+  limits: >-
+    Toujours supérieure ou égale à la restitution stricte ; un écart fort
+    entre les deux signale un moteur qui modernise ou abrège les formes.
+
 del_rate:
   title: "Taux de suppressions"
   definition: >-

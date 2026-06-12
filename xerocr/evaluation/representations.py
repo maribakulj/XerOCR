@@ -11,13 +11,14 @@ from pathlib import Path
 
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.errors import FormatError
+from xerocr.domain.evaluation import EvaluationView
 from xerocr.domain.layout import CanonicalLayout
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.formats.alto import parse_alto
 from xerocr.formats.alto.layout_map import alto_to_layout
 from xerocr.formats.pagexml import parse_pagexml
 from xerocr.formats.pagexml.layout_map import page_to_layout
-from xerocr.formats.text import read_plaintext
+from xerocr.formats.text import get_builtin_profile, read_plaintext
 
 _TEXT_TYPES = frozenset(
     {
@@ -71,4 +72,23 @@ def _load_layout(uri: str, data: bytes) -> CanonicalLayout:
         raise EvaluationError(f"CanonicalLayout invalide ({uri!r}) : {exc}") from exc
 
 
-__all__ = ["load_representation"]
+def prepare_text(text: str, view: EvaluationView) -> str:
+    """Applique la normalisation de la vue (profil + ``char_exclude``) à un texte.
+
+    **La** définition de « préparé comme au scoring » : le runner et les
+    analyses qui chargent leurs propres textes (bilan de correction) passent
+    par ici — une seule implémentation, symétrique GT/hypothèse.
+    """
+    if view.normalization_profile is not None:
+        try:
+            profile = get_builtin_profile(view.normalization_profile)
+        except KeyError as exc:
+            raise EvaluationError(str(exc)) from exc
+        text = profile.normalize(text)
+    if view.char_exclude:
+        excluded = set(view.char_exclude)
+        text = "".join(char for char in text if char not in excluded)
+    return text
+
+
+__all__ = ["load_representation", "prepare_text"]

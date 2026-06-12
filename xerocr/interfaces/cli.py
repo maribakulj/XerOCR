@@ -128,17 +128,26 @@ def _run_config(
     json_output: str | None,
     resume_dir: str | None = None,
     csv_output: str | None = None,
+    hipe_jsonl: str | None = None,
 ) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     spec = load_run_spec(config_path)
     resume_store = ResumeStore(Path(resume_dir)) if resume_dir else None
+    # Export HIPE = sink d'artefacts (les textes sont lus avant le nettoyage du
+    # workspace) — le format JSONL porte les textes, pas les scores.
+    artifact_sink = None
+    if hipe_jsonl is not None:
+        from xerocr.app.hipe_export import hipe_jsonl_sink
+
+        artifact_sink = hipe_jsonl_sink(Path(hipe_jsonl), spec.corpus)
     result = run_orchestrator(
         spec,
         registry=registry,
         code_version=resolve_code_version(),
         resume_store=resume_store,
+        artifact_sink=artifact_sink,
     )
     Path(output).write_text(
         default_report_renderer().render(
@@ -266,6 +275,13 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Écrit aussi le RunResult en JSON (pour comparer plus tard).",
     )
+    run_cmd.add_argument(
+        "--hipe-jsonl",
+        dest="hipe_jsonl",
+        default=None,
+        help="Exporte les sorties au format JSONL HIPE-OCRepair "
+        "(un fichier par pipeline — soumission leaderboard).",
+    )
     history_cmd = subparsers.add_parser(
         "history",
         help="Historique longitudinal : série d'un pipeline ou régressions.",
@@ -315,6 +331,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.json_output,
                 args.resume_dir,
                 args.csv_output,
+                args.hipe_jsonl,
             )
         if args.command == "history":
             return _run_history(

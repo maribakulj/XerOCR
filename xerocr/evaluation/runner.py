@@ -21,15 +21,18 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.calibration import calibration_analysis
+from xerocr.evaluation.conformity import conformity_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
+from xerocr.evaluation.correction import correction_analysis
 from xerocr.evaluation.diagnostics import DiagnosticsCollector
 from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
+from xerocr.evaluation.markers import MarkerCollector
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
-from xerocr.evaluation.representations import load_representation
+from xerocr.evaluation.representations import load_representation, prepare_text
 from xerocr.evaluation.result import (
     Analysis,
     DocumentUsage,
@@ -38,8 +41,8 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
+from xerocr.evaluation.structured_data import StructuredDataCollector
 from xerocr.evaluation.taxonomy import TaxonomyCollector
-from xerocr.formats.text import get_builtin_profile
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
 PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
@@ -91,6 +94,8 @@ def evaluate_run(
         diagnostics = DiagnosticsCollector()
         taxonomy = TaxonomyCollector()
         doc_texts = DocumentTextsCollector()
+        structured = StructuredDataCollector()
+        markers = MarkerCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -109,6 +114,16 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     taxonomy.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    structured.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    markers.observe(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
@@ -160,6 +175,12 @@ def evaluate_run(
         taxonomy_analysis = taxonomy.build(view.name)
         if taxonomy_analysis is not None:
             analyses.append(taxonomy_analysis)
+        structured_analysis = structured.build(view.name)
+        if structured_analysis is not None:
+            analyses.append(structured_analysis)
+        markers_analysis = markers.build(view.name)
+        if markers_analysis is not None:
+            analyses.append(markers_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)
@@ -169,6 +190,15 @@ def evaluate_run(
             )
             if economics is not None:
                 analyses.append(economics)
+        correction = correction_analysis(view, corpus, pipeline_outputs)
+        if correction is not None:
+            analyses.append(correction)
+
+    # Post-passe cross-vues : la conformité HIPE lit les résultats des vues
+    # raw/hipe/heritage déjà calculés (zéro re-scoring) — cf. ``conformity``.
+    conformity = conformity_analysis(evaluation.views, pipelines, documents)
+    if conformity is not None:
+        analyses.append(conformity)
 
     return RunResult(
         manifest=manifest,
@@ -377,17 +407,7 @@ def _prepare(representation: object, view: EvaluationView) -> object:
     """Applique la normalisation de la vue (profil + ``char_exclude``) au texte."""
     if not isinstance(representation, str):
         return representation
-    text = representation
-    if view.normalization_profile is not None:
-        try:
-            profile = get_builtin_profile(view.normalization_profile)
-        except KeyError as exc:
-            raise EvaluationError(str(exc)) from exc
-        text = profile.normalize(text)
-    if view.char_exclude:
-        excluded = set(view.char_exclude)
-        text = "".join(char for char in text if char not in excluded)
-    return text
+    return prepare_text(representation, view)
 
 
 __all__ = ["PipelineOutputs", "evaluate_run"]

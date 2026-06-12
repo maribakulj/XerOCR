@@ -172,8 +172,10 @@ def test_from_yaml_roundtrip(tmp_path) -> None:  # type: ignore[no-untyped-def]
 # --- profils & invariants ----------------------------------------------------
 
 
-def test_exactly_twelve_profiles() -> None:
-    assert len(NORMALIZATION_PROFILES) == 12
+def test_exactly_fourteen_profiles() -> None:
+    """12 profils retenus à la couche 2 + les 2 profils de conformité HIPE
+    (``hipe``/``heritage``, D-115)."""
+    assert len(NORMALIZATION_PROFILES) == 14
 
 
 def test_no_english_profiles() -> None:

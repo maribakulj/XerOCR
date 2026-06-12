@@ -48,11 +48,13 @@ class MetricRegistry:
 
 def register_default_metrics(registry: MetricRegistry) -> None:
     """Collecte explicite du socle de métriques (aucun effet de bord à l'import)."""
+    from xerocr.evaluation.metrics.conformity import CONFORMITY_METRICS
     from xerocr.evaluation.metrics.diacritics import DIACRITIC_METRICS
     from xerocr.evaluation.metrics.diagnostics import DIAGNOSTIC_METRICS
     from xerocr.evaluation.metrics.layout import LAYOUT_METRICS
     from xerocr.evaluation.metrics.philology import PHILOLOGY_METRICS
     from xerocr.evaluation.metrics.stats import CROSS_ENGINE_METRICS
+    from xerocr.evaluation.metrics.structured_data import STRUCTURED_DATA_METRICS
     from xerocr.evaluation.metrics.text import TEXT_METRICS
 
     for document in (
@@ -61,6 +63,8 @@ def register_default_metrics(registry: MetricRegistry) -> None:
         *PHILOLOGY_METRICS,
         *LAYOUT_METRICS,
         *DIAGNOSTIC_METRICS,
+        *CONFORMITY_METRICS,
+        *STRUCTURED_DATA_METRICS,
     ):
         registry.register_document_metric(document)
     for cross in CROSS_ENGINE_METRICS:

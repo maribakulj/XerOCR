@@ -13,12 +13,15 @@ def test_default_metrics_registration_is_idempotent() -> None:
     assert registry.names() == (
         "cer",
         "cer_diplo",
+        "cmer",
         "del_rate",
         "diacritic_err",
         "hallucination",
         "ins_rate",
         "mer",
         "mufi_err",
+        "numseq_strict",
+        "numseq_value",
         "region_cer",
         "region_detection",
         "searchability",
@@ -38,6 +41,7 @@ def test_get_and_select_by_input_types() -> None:
     assert {metric.name for metric in selected} == {
         "cer",
         "cer_diplo",
+        "cmer",
         "del_rate",
         "diacritic_err",
         "hallucination",
@@ -45,6 +49,8 @@ def test_get_and_select_by_input_types() -> None:
         "wer",
         "mer",
         "mufi_err",
+        "numseq_strict",
+        "numseq_value",
         "searchability",
     }
     layout_metrics = registry.for_input_types(

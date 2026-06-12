@@ -12,7 +12,7 @@ couche 2.
 Ordre canonique de ``normalize`` (figé, vérifié par tests) ::
 
     hygiène → unicode_form → casefold(si caseless) → exclude_chars
-            → diplomatic_table → strip_diacritics → whitespace
+            → diplomatic_table → non_word_to_space → strip_diacritics → whitespace
 
 Sous ``caseless`` le casefold précède la table, et les clés de table comme
 l'ensemble exclu sont casefoldés pour la correspondance (sinon la casse ne serait
@@ -87,6 +87,31 @@ DIPLOMATIC_LATIN_MEDIEVAL: dict[str, str] = {
 
 #: Minimal : NFC + s long.
 DIPLOMATIC_MINIMAL: dict[str, str] = {"ſ": "s"}
+
+#: Socle commun des profils de conformité HIPE : césures DTA (un tiret cadratin
+#: ou un ``¬`` en fin de ligne recollent le mot) + underscore → espace, **et**
+#: recomposition des umlauts décomposés — sans elle, le levier ``\W → espace``
+#: (fidèle au scorer) détruirait la marque combinante U+0364 isolée. Vit en
+#: table (multi-codepoints) : l'exclusion ne traite que des caractères isolés.
+_HIPE_DEHYPHEN: dict[str, str] = {
+    "—\n": "",
+    "¬\n": "",
+    "_": " ",
+    "aͤ": "ä",
+    "oͤ": "ö",
+    "uͤ": "ü",
+}
+
+#: ``norm()`` du scorer HIPE-OCRepair (SPEC_HIPE §4.3) : mappings explicites
+#: appliqués après pliage de casse. ``ß→ss`` est déjà l'effet du casefold —
+#: conservé pour documenter la table complète du scorer (idempotent).
+DIPLOMATIC_HIPE: dict[str, str] = {
+    **_HIPE_DEHYPHEN,
+    "ß": "ss",
+    "ꝛ": "r",
+    "œ": "oe",
+    "æ": "ae",
+}
 
 #: Ponctuation courante (pour le profil ``no_punctuation``).
 _PUNCTUATION = ".,;:!?'’\"-–—()[]«»…"
@@ -180,6 +205,10 @@ class NormalizationProfile(BaseModel):
     diplomatic_table: dict[str, str] = Field(default_factory=dict)
     exclude_chars: frozenset[str] = Field(default_factory=frozenset)
     exclude_mode: ExcludeMode = "delete"
+    #: Remplace tout caractère **non-mot** (``\W`` Unicode) par une espace —
+    #: levier requis par la ``norm()`` HIPE (« tout non-\\w → espace »). Appliqué
+    #: après la table (les césures multi-caractères doivent être recollées avant).
+    non_word_to_space: bool = False
     description: str = ""
 
     @field_validator("exclude_chars", mode="before")
@@ -206,6 +235,8 @@ class NormalizationProfile(BaseModel):
             text = self._apply_exclude(text)
         if self.diplomatic_table:
             text = _apply_table(text, self._effective_table())
+        if self.non_word_to_space:
+            text = re.sub(r"[^\w]", " ", text)
         if self.strip_diacritics:
             text = _strip_diacritics(text, self.unicode_form)
         return self._apply_whitespace(text)
@@ -258,6 +289,7 @@ class NormalizationProfile(BaseModel):
             "diplomatic_table": dict(sorted(self.diplomatic_table.items())),
             "exclude_chars": sorted(self.exclude_chars),
             "exclude_mode": self.exclude_mode,
+            "non_word_to_space": self.non_word_to_space,
             "description": self.description,
         }
 
@@ -309,7 +341,7 @@ class NormalizationProfile(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Profils préconfigurés (12) — défaut neutre ``nfc``, aucun profil privilégié
+# Profils préconfigurés (14) — défaut neutre ``nfc``, aucun profil privilégié
 # ---------------------------------------------------------------------------
 
 NORMALIZATION_PROFILES: dict[str, NormalizationProfile] = {
@@ -368,6 +400,39 @@ NORMALIZATION_PROFILES: dict[str, NormalizationProfile] = {
             name="medieval_latin",
             diplomatic_table=DIPLOMATIC_LATIN_MEDIEVAL,
             description="Latin médiéval : ſ=s, u=v, i=j, ꝑ=per, ꝓ=pro, ꝗ=que…",
+        ),
+        # Conformité HIPE-OCRepair (SPEC_HIPE §4.3/§7.2). ``unicode_form="none"``
+        # par fidélité : la ``norm()`` du scorer n'applique aucune normalisation
+        # Unicode. L'hygiène (caractères invisibles) reste appliquée — divergence
+        # potentielle connue (soft-hyphen), arbitrée par le test golden.
+        NormalizationProfile(
+            name="hipe",
+            unicode_form="none",
+            caseless=True,
+            diplomatic_table=DIPLOMATIC_HIPE,
+            non_word_to_space=True,
+            whitespace="flat",
+            description=(
+                "Conformité HIPE : casse pliée, ß/ꝛ/œ/æ/aͤ/oͤ/uͤ mappés, "
+                "césures DTA recollées, non-mot → espace, espaces compactés"
+            ),
+        ),
+        # ``hipe`` SANS les pliages patrimoniaux : l'écart cmer(heritage) −
+        # cmer(hipe) isole la part d'erreur imputable aux équivalences œ/oe,
+        # æ/ae, ꝛ/r. Limites documentées : ß reste plié (casefold Python) et
+        # les umlauts décomposés restent recomposés (sinon ``\W`` détruirait
+        # la marque combinante isolée) — ces deux-là ne comptent pas au delta.
+        NormalizationProfile(
+            name="heritage",
+            unicode_form="none",
+            caseless=True,
+            diplomatic_table=_HIPE_DEHYPHEN,
+            non_word_to_space=True,
+            whitespace="flat",
+            description=(
+                "Comme `hipe` mais préserve les distinctions patrimoniales "
+                "œ, æ, ꝛ (ß plié par le casefold ; umlauts décomposés recomposés)"
+            ),
         ),
     )
 }

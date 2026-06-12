@@ -27,6 +27,10 @@ _SECTION_LABELS = {
     "documents": "Par document",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "conformity": "Conformité HIPE",
+    "correction": "Bilan de correction",
+    "structured_data": "Données structurées",
+    "philology": "Philologie",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
@@ -96,6 +100,10 @@ _SECTION_TAB = {
     "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
+    "conformity": "engines",
+    "correction": "engines",
+    "structured_data": "engines",
+    "philology": "engines",
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
@@ -292,7 +300,9 @@ def default_report_renderer() -> ReportRenderer:
     diagnostic. Le glossaire est **hors sections** (dialog du chrome)."""
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
+    from xerocr.reports.sections.conformity import ConformitySection
     from xerocr.reports.sections.corpus_composition import CorpusCompositionSection
+    from xerocr.reports.sections.correction import CorrectionSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
@@ -300,6 +310,8 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.overview import OverviewSection
+    from xerocr.reports.sections.philology import PhilologySection
+    from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
 
@@ -313,6 +325,10 @@ def default_report_renderer() -> ReportRenderer:
             DispersionSection(),
             DocumentsSection(),
             CrossEngineSection(),
+            ConformitySection(),
+            CorrectionSection(),
+            StructuredDataSection(),
+            PhilologySection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),

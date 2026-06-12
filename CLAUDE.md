@@ -17,7 +17,7 @@ avant d'écrire la moindre ligne.**
 > aux plans UI. Verrouillé par `tests/architecture/test_status_freshness.py`.
 
 - **Couches 1-2 (`domain`, `formats`) : vertes.** Fondations sans dépendance
-  externe (ALTO/PAGE/text, sécurité XML, 12 profils de normalisation). `mypy
+  externe (ALTO/PAGE/text, sécurité XML, 14 profils de normalisation). `mypy
   --strict` (domain) + `ruff` verts, zéro effet de bord à l'import.
 - **Tranches T1→T4e construites** (axe **texte** + **OCR/LLM** + **vitrine web
   lecture seule**) : `tesseract` réel, CER/WER/MER (parité `jiwer`), stats
@@ -342,7 +342,8 @@ couche 3), DTO web (transport → couche 8).
 7. Commentaires de sprint dans le code.
 8. 8+8+8 adapters LLM/VLM (→ minimal), 20 détecteurs narratifs (→ 0, supprimé).
    (Les profils de normalisation, eux, sont de la **donnée**, pas de la surface
-   exécutable : on garde l'ensemble pertinent — 12, profils anglais retirés —
+   exécutable : on garde l'ensemble pertinent — 14 : les 12 retenus, profils
+   anglais retirés, + les 2 profils de conformité HIPE (D-115) —
    cf. `xerocr/formats/MIGRATION_COUCHE_2.md`.)
 9. Dossiers de tests vides « par symétrie », `docs/archive`, `CHANGELOG` de
    97 sprints, scripts de refactor morts.
