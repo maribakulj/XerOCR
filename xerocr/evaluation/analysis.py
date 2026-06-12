@@ -568,6 +568,68 @@ class RomanNumeralsPayload(BaseModel):
     pipelines: tuple[PipelineRomanNumerals, ...] = ()
 
 
+class ModernizedVariant(BaseModel):
+    """Forme produite par le moteur pour un token GT (``∅`` = mot supprimé)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    form: str = Field(min_length=1, max_length=64)
+    count: int = Field(ge=1)
+
+
+class ModernizedToken(BaseModel):
+    """Un token GT et son taux de réécriture par un pipeline (corpus, micro).
+
+    ``rate = n_modernized / n_total`` ∈ ]0,1] — seuls les tokens **réellement
+    réécrits au moins une fois** sont embarqués (sinon la table déborderait du
+    vocabulaire entier). ``variants`` = formes produites, triées (-count, forme).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    token: str = Field(min_length=1, max_length=64)
+    n_total: int = Field(ge=1)
+    n_modernized: int = Field(ge=1)
+    rate: float = Field(gt=0, le=1)
+    variants: tuple[ModernizedVariant, ...] = ()
+
+
+class PipelineTextualFidelity(BaseModel):
+    """Fidélité textuelle d'un pipeline : tokens rares restitués + réécriture.
+
+    ``rare_recall`` = Σ min(occ. GT, occ. hyp) / occurrences rares de la GT
+    (multiset, borne le rappel par la multiplicité) ; ``None`` si la GT du
+    pipeline ne porte aucun token rare (non applicable). ``missed`` = échantillon
+    borné des tokens rares manqués (multiplicité incluse).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_rare_reference: int = Field(ge=0)
+    n_rare_recalled: int = Field(ge=0)
+    rare_recall: float | None = Field(default=None, ge=0, le=1)
+    missed: tuple[str, ...] = ()
+    modernization: tuple[ModernizedToken, ...] = ()
+
+
+class TextualFidelityPayload(BaseModel):
+    """Fidélité textuelle d'une vue : tokens rares + modernisation lexicale.
+
+    Deux lectures complémentaires du même alignement mot-à-mot : le **rappel des
+    tokens rares** (noms propres, toponymes — ce qui compte en prosopographie,
+    invisible au CER global) et la **modernisation lexicale** (quelles formes
+    historiques le moteur réécrit — diagnostic de prompt LLM). ``max_freq`` borne
+    la rareté (≤ 2 = hapax + dis legomena), inscrit pour audit.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["textual_fidelity"] = "textual_fidelity"
+    max_freq: int = Field(ge=1)
+    pipelines: tuple[PipelineTextualFidelity, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -581,7 +643,8 @@ AnalysisPayload = Annotated[
     | CorrectionPayload
     | StructuredDataPayload
     | PhilologyPayload
-    | RomanNumeralsPayload,
+    | RomanNumeralsPayload
+    | TextualFidelityPayload,
     Field(discriminator="kind"),
 ]
 
@@ -613,6 +676,8 @@ __all__ = [
     "InferencePayload",
     "MarginalCost",
     "MarkerPreservation",
+    "ModernizedToken",
+    "ModernizedVariant",
     "OverNormalizedWord",
     "PairwiseDifference",
     "PhilologyPayload",
@@ -627,10 +692,12 @@ __all__ = [
     "PipelineRomanNumerals",
     "PipelineStructuredData",
     "PipelineTaxonomy",
+    "PipelineTextualFidelity",
     "RegressionSample",
     "RomanNumeralsPayload",
     "StructuredDataPayload",
     "TaxonomyCount",
     "TaxonomyPayload",
+    "TextualFidelityPayload",
     "WorstLine",
 ]

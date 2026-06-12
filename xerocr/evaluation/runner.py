@@ -44,6 +44,7 @@ from xerocr.evaluation.result import (
 from xerocr.evaluation.roman import RomanNumeralsCollector
 from xerocr.evaluation.structured_data import StructuredDataCollector
 from xerocr.evaluation.taxonomy import TaxonomyCollector
+from xerocr.evaluation.textual_fidelity import TextualFidelityCollector
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
 PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
@@ -98,6 +99,7 @@ def evaluate_run(
         structured = StructuredDataCollector()
         markers = MarkerCollector()
         roman = RomanNumeralsCollector()
+        textual_fidelity = TextualFidelityCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -132,6 +134,12 @@ def evaluate_run(
                     )
                     roman.observe(
                         pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    textual_fidelity.observe(
+                        pipeline_name,
+                        document.id,
                         str(text_context.reference),
                         str(text_context.hypothesis),
                     )
@@ -191,6 +199,9 @@ def evaluate_run(
         roman_analysis = roman.build(view.name)
         if roman_analysis is not None:
             analyses.append(roman_analysis)
+        fidelity_analysis = textual_fidelity.build(view.name)
+        if fidelity_analysis is not None:
+            analyses.append(fidelity_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)
