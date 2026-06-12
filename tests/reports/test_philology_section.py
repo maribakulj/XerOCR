@@ -12,6 +12,8 @@ from xerocr.evaluation.analysis import (
     MarkerPreservation,
     PhilologyPayload,
     PipelinePhilology,
+    PipelineRomanNumerals,
+    RomanNumeralsPayload,
 )
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.section import SectionContext
@@ -127,6 +129,32 @@ def test_renders_modern_archives_with_category_labels() -> None:
     assert "<th>catégorie</th>" in html  # en-tête catégorie, pas « signe »
     assert "75.0%" in html  # strict global 3/4
     assert "50.0%" in html  # currency strict 1/2
+
+
+def test_renders_roman_numerals() -> None:
+    payload = RomanNumeralsPayload(
+        pipelines=(
+            PipelineRomanNumerals(
+                pipeline="eng",
+                n_total=4,
+                strict_preserved=1,
+                case_changed=1,
+                j_dropped=0,
+                converted_to_arabic=1,
+                lost=1,
+                lost_samples=("XII",),
+            ),
+        )
+    )
+    html = PhilologySection().render(
+        _result((Analysis(scope="corpus", view="text", payload=payload),)),
+        SectionContext(),
+    )
+    assert html is not None
+    assert "numéraux romains" in html
+    assert "converti en arabe" in html  # libellé de statut
+    assert "25.0%" in html  # strict 1/4
+    assert "75.0%" in html  # valeur préservée (4-1)/4
 
 
 def test_without_payload_renders_nothing() -> None:

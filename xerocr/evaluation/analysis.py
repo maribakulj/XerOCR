@@ -528,6 +528,46 @@ class PhilologyPayload(BaseModel):
     pipelines: tuple[PipelinePhilology, ...] = ()
 
 
+class PipelineRomanNumerals(BaseModel):
+    """Restitution des numéraux romains d'un pipeline en **5 statuts**.
+
+    Un numéral de la GT est restitué selon le premier statut applicable :
+    ``strict_preserved`` (forme exacte), ``case_changed`` (``xiv`` → ``XIV``),
+    ``j_dropped`` (``viij`` → ``viii``), ``converted_to_arabic`` (``XIV`` → ``14``)
+    ou ``lost``. Les 4 premiers **préservent la valeur** ; leur somme sur
+    ``n_total`` = score *valeur*, ``strict_preserved / n_total`` = score *strict*
+    (les deux scores du verdict 4a, dérivés ici sans double comptage — R1).
+    Les 5 compteurs somment à ``n_total`` (invariant).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_total: int = Field(ge=1)
+    strict_preserved: int = Field(ge=0)
+    case_changed: int = Field(ge=0)
+    j_dropped: int = Field(ge=0)
+    converted_to_arabic: int = Field(ge=0)
+    lost: int = Field(ge=0)
+    #: Formes GT perdues (échantillon borné, verbatim).
+    lost_samples: tuple[str, ...] = ()
+
+
+class RomanNumeralsPayload(BaseModel):
+    """Numéraux romains d'une vue : la valeur a-t-elle survécu, et sous quelle
+    forme ? Absent si la GT du corpus n'en porte aucun (adaptatif).
+
+    Payload **dédié** (≠ `PhilologyPayload`) : le modèle 5-statuts ne se mappe
+    pas sur la lentille strict/expansion des marqueurs ; le forcer serait un
+    hack. Rendu par la même section « Philologie ».
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["roman"] = "roman"
+    pipelines: tuple[PipelineRomanNumerals, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -540,7 +580,8 @@ AnalysisPayload = Annotated[
     | ConformityPayload
     | CorrectionPayload
     | StructuredDataPayload
-    | PhilologyPayload,
+    | PhilologyPayload
+    | RomanNumeralsPayload,
     Field(discriminator="kind"),
 ]
 
@@ -583,9 +624,11 @@ __all__ = [
     "PipelineInterval",
     "PipelinePhilology",
     "PipelineRank",
+    "PipelineRomanNumerals",
     "PipelineStructuredData",
     "PipelineTaxonomy",
     "RegressionSample",
+    "RomanNumeralsPayload",
     "StructuredDataPayload",
     "TaxonomyCount",
     "TaxonomyPayload",

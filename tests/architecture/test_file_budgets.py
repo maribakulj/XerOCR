@@ -25,7 +25,14 @@ XEROCR = Path(__file__).resolve().parents[2] / "xerocr"
 THRESHOLD = 600
 
 #: Chemin relatif (depuis ``xerocr/``) → budget en lignes. Vide au démarrage.
-FILE_BUDGETS: dict[str, int] = {}
+FILE_BUDGETS: dict[str, int] = {
+    # Hub des payloads ``analyses`` : une **union discriminée** unique (un
+    # membre par famille de métriques) + ses sous-modèles. La cohésion du
+    # contrat prime sur l'éclatement (CLAUDE.md §5.2) — on ne fragmente pas
+    # ``AnalysisPayload``. Budget = LOC au passage du seuil (636, tranche 4b.4
+    # romain) + ~15 %.
+    "evaluation/analysis.py": 731,
+}
 
 
 def _line_count(path: Path) -> int:

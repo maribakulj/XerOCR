@@ -27,6 +27,7 @@ from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
+from xerocr.evaluation.roman import roman_to_int
 
 #: Ordre canonique des catégories (rendu + payload).
 CATEGORIES: tuple[str, ...] = ("year", "foliation", "currency", "regnal")
@@ -76,29 +77,6 @@ _RE_REGNAL = re.compile(
     r"([IVXLCDM]+|[ivxlcdm]+|\d{1,4})\b"
 )
 
-_ROMAN_VALUES = {"I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000}
-
-
-def _roman_to_int(numeral: str) -> int | None:
-    """Valeur d'un numéral romain (soustraction standard), ``None`` si invalide.
-
-    Helper **minimal** pour la valeur régnale — le parseur philologique complet
-    (statuts de restitution, j médiéval, formes plausibles) appartient à la
-    famille 4b, qui absorbera ce helper.
-    """
-    total = 0
-    previous = 0
-    for char in reversed(numeral.upper()):
-        value = _ROMAN_VALUES.get(char)
-        if value is None:
-            return None
-        if value < previous:
-            total -= value
-        else:
-            total += value
-            previous = value
-    return total if total > 0 else None
-
 
 @dataclass(frozen=True)
 class SequenceItem:
@@ -127,7 +105,7 @@ def detect_sequences(text: str) -> tuple[SequenceItem, ...]:
         items.append(SequenceItem("currency", match.group(0), f"{amount}|{unit}"))
     for match in _RE_REGNAL.finditer(text):
         raw = match.group(1)
-        value = int(raw) if raw.isdigit() else _roman_to_int(raw)
+        value = int(raw) if raw.isdigit() else roman_to_int(raw)
         if value is None:
             continue
         items.append(SequenceItem("regnal", match.group(0), str(value)))

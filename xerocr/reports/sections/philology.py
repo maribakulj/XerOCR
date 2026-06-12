@@ -10,10 +10,24 @@ que le CER global ne distingue pas.
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import PhilologyPayload, PipelinePhilology
+from xerocr.evaluation.analysis import (
+    PhilologyPayload,
+    PipelinePhilology,
+    PipelineRomanNumerals,
+    RomanNumeralsPayload,
+)
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
+
+#: Statuts romains : clé → libellé lisible (ordre de rendu).
+_ROMAN_STATUS_LABELS = (
+    ("strict_preserved", "forme stricte"),
+    ("case_changed", "casse modifiée"),
+    ("j_dropped", "j médiéval standardisé"),
+    ("converted_to_arabic", "converti en arabe"),
+    ("lost", "perdu"),
+)
 
 _FAMILY_LABELS = {
     "abbreviations": "abréviations médiévales",
@@ -119,18 +133,57 @@ def _block(view: str, payload: PhilologyPayload) -> str:
     )
 
 
+def _roman_pipeline_block(row: PipelineRomanNumerals) -> str:
+    counts = {
+        "strict_preserved": row.strict_preserved,
+        "case_changed": row.case_changed,
+        "j_dropped": row.j_dropped,
+        "converted_to_arabic": row.converted_to_arabic,
+        "lost": row.lost,
+    }
+    rows = "".join(
+        f'<tr><td class="disp">{escape(label)}</td>'
+        f'<td class="disp">{counts[key]}</td>'
+        f'<td class="disp">{_share(counts[key], row.n_total)}</td></tr>'
+        for key, label in _ROMAN_STATUS_LABELS
+    )
+    value_preserved = row.n_total - row.lost
+    return (
+        f"<h4>{escape(row.pipeline)} — numéraux romains : "
+        f"{_share(row.strict_preserved, row.n_total)} strict · "
+        f"{_share(value_preserved, row.n_total)} valeur préservée "
+        f"({row.n_total} numéraux)</h4>\n"
+        '<table class="data">\n<thead><tr><th>statut</th>'
+        '<th class="num-cell">n</th><th class="num-cell">part</th>'
+        "</tr></thead>\n"
+        f"<tbody>{rows}</tbody>\n</table>\n"
+    )
+
+
+def _roman_block(view: str, payload: RomanNumeralsPayload) -> str:
+    return (
+        f"<h3>{escape(view)} — numéraux romains</h3>\n"
+        '<p class="muted">Pour chaque numéral de la vérité terrain, comment '
+        "l'OCR le restitue : forme stricte (diplomatique) · casse modifiée · "
+        "« j » médiéval standardisé (viij → viii) · converti en chiffres arabes "
+        "(XIV → 14) · perdu. « Valeur préservée » = tout sauf perdu.</p>\n"
+        + "".join(_roman_pipeline_block(row) for row in payload.pipelines)
+    )
+
+
 class PhilologySection:
-    """Préservation des marqueurs scribaux, par pipeline et famille."""
+    """Préservation des marqueurs scribaux et numéraux romains, par pipeline."""
 
     name = "philology"
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        blocks = [
-            _block(analysis.view, analysis.payload)
-            for analysis in result.analyses
-            if isinstance(analysis.payload, PhilologyPayload)
-        ]
+        blocks: list[str] = []
+        for analysis in result.analyses:
+            if isinstance(analysis.payload, PhilologyPayload):
+                blocks.append(_block(analysis.view, analysis.payload))
+            elif isinstance(analysis.payload, RomanNumeralsPayload):
+                blocks.append(_roman_block(analysis.view, analysis.payload))
         if not blocks:
             return None
         return Html("<h2>Philologie</h2>\n" + "".join(blocks))
