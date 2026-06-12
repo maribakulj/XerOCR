@@ -14,12 +14,11 @@ from __future__ import annotations
 
 import unicodedata
 
-from rapidfuzz.distance import Levenshtein
-
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.evaluation.context import DocContext
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metric import DocumentMetric, Observation, document_metric
+from xerocr.evaluation.preservation import preservation_counts
 
 
 def _is_diacritic(char: str) -> bool:
@@ -47,16 +46,11 @@ def diacritic_error(ctx: DocContext) -> Observation | None:
         raise EvaluationError(
             "diacritic_err : reference et hypothesis doivent être du texte."
         )
-    targets = [i for i, char in enumerate(ctx.reference) if _is_diacritic(char)]
-    if not targets:
+    counts = preservation_counts(ctx.reference, ctx.hypothesis, _is_diacritic)
+    if counts is None:
         return None
-    wrong = {
-        op.src_pos
-        for op in Levenshtein.editops(ctx.reference, ctx.hypothesis)
-        if op.tag in ("replace", "delete")
-    }
-    errors = sum(1 for i in targets if i in wrong)
-    return Observation(value=errors / len(targets), weight=len(targets))
+    n_total, n_wrong = counts
+    return Observation(value=n_wrong / n_total, weight=n_total)
 
 
 #: Métriques philologiques par alignement caractère (dépendent de ``rapidfuzz``).

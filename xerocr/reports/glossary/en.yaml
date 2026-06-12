@@ -147,6 +147,30 @@ mufi_err:
   limits: >-
     Not applicable if the ground truth contains no MUFI character.
 
+hcpr:
+  title: "Historical character preservation (HCPR)"
+  definition: >-
+    Share of archaic characters from a configured list (long s, rotunda
+    abbreviations, thorn…) present in the ground truth that survive in the output.
+  measures: >-
+    The engine's *diplomatic* fidelity to historical forms — the "preservation"
+    counterpart of mufi_err/diacritic_err, over a curated list.
+  limits: >-
+    Shown only when an archaic list is explicitly configured (otherwise
+    redundant with mufi_err); not applicable if the GT carries none.
+
+air:
+  title: "Archaism insertion rate (AIR)"
+  definition: >-
+    Share of archaic characters in the **output** that are inserted — at a
+    position not faithful to the ground truth — rather than copied from it.
+  measures: >-
+    Over-historicization: a VLM/LLM that "archaizes" text the GT writes plainly
+    (added long s, invented abbreviations).
+  limits: >-
+    Not applicable if the output contains no character from the list; an upper
+    bound (a legitimate archaism outside the GT can raise it).
+
 hallucination:
   title: "Hallucination index"
   definition: >-

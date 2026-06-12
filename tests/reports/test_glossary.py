@@ -15,6 +15,8 @@ REAL_METRICS = (
     "ins_rate",
     "diacritic_err",
     "mufi_err",
+    "hcpr",
+    "air",
     "hallucination",
     "searchability",
     "region_cer",

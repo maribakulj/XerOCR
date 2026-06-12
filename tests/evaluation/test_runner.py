@@ -285,6 +285,7 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         "diagnostics",
         "taxonomy",
         "document_texts",
+        "textual_fidelity",
     }
     analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"

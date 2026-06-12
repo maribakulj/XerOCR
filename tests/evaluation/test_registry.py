@@ -11,6 +11,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
     register_default_metrics(registry)
     register_default_metrics(registry)
     assert registry.names() == (
+        "air",
         "cer",
         "cer_diplo",
         "cmer",
@@ -39,6 +40,7 @@ def test_get_and_select_by_input_types() -> None:
         ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT
     )
     assert {metric.name for metric in selected} == {
+        "air",
         "cer",
         "cer_diplo",
         "cmer",

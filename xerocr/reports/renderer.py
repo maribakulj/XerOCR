@@ -314,6 +314,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
+    from xerocr.reports.sections.textual_fidelity import TextualFidelitySection
 
     return ReportRenderer(
         (
@@ -329,6 +330,7 @@ def default_report_renderer() -> ReportRenderer:
             CorrectionSection(),
             StructuredDataSection(),
             PhilologySection(),
+            TextualFidelitySection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),

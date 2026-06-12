@@ -26,6 +26,8 @@ from xerocr.domain.documents import DocumentRef
 from xerocr.domain.errors import AdapterStepError, XerOCRError
 from xerocr.domain.run import RunManifest, utcnow
 from xerocr.domain.run_spec import RunSpec
+from xerocr.evaluation.archaic import resolve_archaic_list
+from xerocr.evaluation.metrics.archaic import make_air_metric, make_hcpr_metric
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
 from xerocr.evaluation.result import DocumentUsage, RunResult
 from xerocr.evaluation.runner import evaluate_run
@@ -89,6 +91,7 @@ def run(
     executor = PipelineExecutor(code_version)
     metric_registry = MetricRegistry()
     register_default_metrics(metric_registry)
+    _bind_archaic_metrics(metric_registry, spec)
 
     # Workspace temporaire par run : les modules qui produisent des artefacts
     # (tesseract, LLM…) y écrivent ; le runner lit ces sorties avant le nettoyage.
@@ -195,6 +198,21 @@ def run(
             manifest=manifest,
             usage=tuple(usage_records),
         )
+
+
+def _bind_archaic_metrics(registry: MetricRegistry, spec: RunSpec) -> None:
+    """Relie ``air``/``hcpr`` à la liste archaïque du run (``metadata``).
+
+    ``air`` est déjà au registre (liste par défaut) ; on le **relie** à la liste
+    effective (no-op si défaut), et on **enregistre ``hcpr``** seulement si une vue
+    le demande (liste configurée au plan — cf. ``run_planning``). Les deux côtés
+    lisent la **même** ``metadata["archaic_list"]`` → ils s'accordent.
+    """
+    resolved = resolve_archaic_list(spec.metadata.get("archaic_list"))
+    registry.register_document_metric(make_air_metric(resolved.chars))
+    wants_hcpr = any("hcpr" in view.metric_names for view in spec.evaluation.views)
+    if wants_hcpr:
+        registry.register_document_metric(make_hcpr_metric(resolved.chars))
 
 
 def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:

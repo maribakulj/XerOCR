@@ -48,6 +48,7 @@ class MetricRegistry:
 
 def register_default_metrics(registry: MetricRegistry) -> None:
     """Collecte explicite du socle de métriques (aucun effet de bord à l'import)."""
+    from xerocr.evaluation.metrics.archaic import ARCHAIC_METRICS
     from xerocr.evaluation.metrics.conformity import CONFORMITY_METRICS
     from xerocr.evaluation.metrics.diacritics import DIACRITIC_METRICS
     from xerocr.evaluation.metrics.diagnostics import DIAGNOSTIC_METRICS
@@ -61,6 +62,7 @@ def register_default_metrics(registry: MetricRegistry) -> None:
         *TEXT_METRICS,
         *DIACRITIC_METRICS,
         *PHILOLOGY_METRICS,
+        *ARCHAIC_METRICS,
         *LAYOUT_METRICS,
         *DIAGNOSTIC_METRICS,
         *CONFORMITY_METRICS,

@@ -149,6 +149,30 @@ mufi_err:
   limits: >-
     Non applicable si la vérité terrain ne contient aucun caractère MUFI.
 
+hcpr:
+  title: "Préservation des archaïsmes (HCPR)"
+  definition: >-
+    Part des caractères archaïques d'une liste configurée (s long, abréviations
+    rotunda, thorn…) présents dans la vérité terrain qui survivent dans la sortie.
+  measures: >-
+    La fidélité *diplomatique* du moteur aux formes historiques — le pendant
+    « préservation » de mufi_err/diacritic_err, sur une liste curée.
+  limits: >-
+    Visible seulement quand une liste archaïque est explicitement configurée
+    (sinon redondant avec mufi_err) ; non applicable si la GT n'en porte aucun.
+
+air:
+  title: "Apport net d'archaïsmes (AIR)"
+  definition: >-
+    Part des caractères archaïques de la **sortie** qui sont insérés — à une
+    position non fidèle à la vérité terrain — plutôt que recopiés d'elle.
+  measures: >-
+    La **sur-historicisation** : un VLM/LLM qui « archaïse » un texte que la GT
+    écrit en clair (s long ajouté, abréviations inventées).
+  limits: >-
+    Non applicable si la sortie ne contient aucun caractère de la liste ;
+    borne supérieure (un archaïsme légitime hors GT peut le faire monter).
+
 hallucination:
   title: "Indice d'hallucination"
   definition: >-

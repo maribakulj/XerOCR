@@ -17,6 +17,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.pipeline import PipelineSpec, PipelineStep
 from xerocr.domain.run_spec import RunSpec
+from xerocr.evaluation.archaic import DEFAULT_ARCHAIC_LIST, resolve_archaic_list
 
 DEMO_ENGINES = ("tesseract", "pero")
 
@@ -71,10 +72,12 @@ _DEMO_DOCS: tuple[tuple[str, str, str, dict[str, str]], ...] = (
     ),
 )
 
+# ``air`` figure ici car le mini-corpus exerce un vrai cas : ``pero`` rend
+# « Froiſſart » (ſ long) là où la GT écrit « Froissart » → archaïsme **inséré**.
 _TEXT_VIEW = EvaluationView(
     name="text",
     candidate_types=frozenset({ArtifactType.RAW_TEXT}),
-    metric_names=("cer", "cer_diplo", "wer", "mer"),
+    metric_names=("cer", "cer_diplo", "wer", "mer", "air"),
 )
 
 #: Même corpus, sous équivalence orthographique du français médiéval (ſ=s, u=v,
@@ -131,12 +134,17 @@ def demo_run_spec(corpus: CorpusSpec, *, run_id: str = "demo") -> RunSpec:
     adapter_kwargs = {
         f"precomputed:{label}": {"source_label": label} for label in DEMO_ENGINES
     }
+    archaic = resolve_archaic_list(DEFAULT_ARCHAIC_LIST)
     return RunSpec(
         corpus=corpus,
         pipelines=pipelines,
         evaluation=EvaluationSpec(views=(_TEXT_VIEW, _DIPLOMATIC_VIEW)),
         adapter_kwargs=adapter_kwargs,
         run_id=run_id,
+        metadata={
+            "archaic_list": archaic.name,
+            "archaic_list_hash": archaic.list_hash,
+        },
     )
 
 
