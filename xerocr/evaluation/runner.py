@@ -29,6 +29,7 @@ from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.inference import inference_analysis
+from xerocr.evaluation.markers import MarkerCollector
 from xerocr.evaluation.projectors import get_projector
 from xerocr.evaluation.registry import MetricRegistry
 from xerocr.evaluation.representations import load_representation, prepare_text
@@ -94,6 +95,7 @@ def evaluate_run(
         taxonomy = TaxonomyCollector()
         doc_texts = DocumentTextsCollector()
         structured = StructuredDataCollector()
+        markers = MarkerCollector()
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -117,6 +119,11 @@ def evaluate_run(
                         str(text_context.hypothesis),
                     )
                     structured.observe(
+                        pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    markers.observe(
                         pipeline_name,
                         str(text_context.reference),
                         str(text_context.hypothesis),
@@ -171,6 +178,9 @@ def evaluate_run(
         structured_analysis = structured.build(view.name)
         if structured_analysis is not None:
             analyses.append(structured_analysis)
+        markers_analysis = markers.build(view.name)
+        if markers_analysis is not None:
+            analyses.append(markers_analysis)
         texts_analysis = doc_texts.build(view.name)
         if texts_analysis is not None:
             analyses.append(texts_analysis)

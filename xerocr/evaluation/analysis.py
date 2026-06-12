@@ -484,6 +484,45 @@ class StructuredDataPayload(BaseModel):
     pipelines: tuple[PipelineStructuredData, ...] = ()
 
 
+class MarkerPreservation(BaseModel):
+    """Préservation d'un signe abréviatif sur le corpus (micro)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    sign: str = Field(min_length=1, max_length=16)
+    n_total: int = Field(ge=1)
+    n_strict: int = Field(ge=0)
+    n_expansion: int = Field(ge=0)
+
+
+class PipelinePhilology(BaseModel):
+    """Préservation d'une famille de marqueurs par un pipeline (signes présents).
+
+    ``n_strict`` = forme exacte reproduite ; ``n_expansion`` = forme **ou**
+    développement (``≥ n_strict``, borne optimiste — un mot courant peut compter
+    comme développement, capé au total GT).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    family: str = Field(min_length=1, max_length=32)
+    n_total: int = Field(ge=1)
+    n_strict: int = Field(ge=0)
+    n_expansion: int = Field(ge=0)
+    markers: tuple[MarkerPreservation, ...] = ()
+
+
+class PhilologyPayload(BaseModel):
+    """Préservation des marqueurs philologiques d'une vue (diplomatique vs
+    modernisant). Absent si la GT du corpus n'en porte aucun (adaptatif)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["philology"] = "philology"
+    pipelines: tuple[PipelinePhilology, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -495,7 +534,8 @@ AnalysisPayload = Annotated[
     | DocumentTextsPayload
     | ConformityPayload
     | CorrectionPayload
-    | StructuredDataPayload,
+    | StructuredDataPayload
+    | PhilologyPayload,
     Field(discriminator="kind"),
 ]
 
@@ -526,14 +566,17 @@ __all__ = [
     "HardDocument",
     "InferencePayload",
     "MarginalCost",
-    "PairwiseDifference",
+    "MarkerPreservation",
     "OverNormalizedWord",
+    "PairwiseDifference",
+    "PhilologyPayload",
     "PipelineCalibration",
     "PipelineConformity",
     "PipelineConfusions",
     "PipelineCorrection",
     "PipelineEconomics",
     "PipelineInterval",
+    "PipelinePhilology",
     "PipelineRank",
     "PipelineStructuredData",
     "PipelineTaxonomy",
