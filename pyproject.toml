@@ -37,6 +37,10 @@ huggingface = ["datasets"]
 segment = ["paddlex"]
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
 images = ["Pillow"]  # vignettes réelles du rapport (redimensionnement) — dégradé gracieux sans
+# Oracle de conformité HIPE (golden test, jamais en runtime — SPEC_HIPE §5).
+# Extra DÉDIÉ (pas dans dev) : le scorer exige Python >= 3.12, l'inclure dans
+# dev casserait l'installation 3.11. Installé par le seul job CI 3.12.
+hipe-oracle = ["hipe-ocrepair-scorer==0.9.9"]
 
 [project.scripts]
 xerocr = "xerocr.interfaces.cli:main"

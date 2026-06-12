@@ -13,6 +13,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
     assert registry.names() == (
         "cer",
         "cer_diplo",
+        "cmer",
         "del_rate",
         "diacritic_err",
         "hallucination",
@@ -38,6 +39,7 @@ def test_get_and_select_by_input_types() -> None:
     assert {metric.name for metric in selected} == {
         "cer",
         "cer_diplo",
+        "cmer",
         "del_rate",
         "diacritic_err",
         "hallucination",

@@ -304,6 +304,47 @@ class DocumentTextsPayload(BaseModel):
     documents: tuple[DocumentTexts, ...] = ()
 
 
+class PipelineConformity(BaseModel):
+    """Scores de conformité HIPE d'un pipeline (vue ``hipe``).
+
+    ``cmer``/``wmer`` micro = somme des comptes puis ratio ; macro = moyenne des
+    scores par-document (``None``-exclus) — les deux conventions du scorer
+    (SPEC_HIPE §4.1). ``delta_norm = cmer(raw) − cmer(hipe)`` : part d'erreur
+    imputable à casse/ponctuation/formes mappées ; ``delta_heritage =
+    cmer(heritage) − cmer(hipe)`` : part des seuls mappings patrimoniaux.
+    ``n_missing`` = documents sans sortie scorée sur la vue ``hipe`` — exposé
+    (jamais un silence) ; leur matérialisation « sortie vide = erreur max »
+    (R-1.8) arrive avec le bilan de correction (les textes y sont disponibles).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    cmer_micro: float | None = None
+    cmer_macro: float | None = None
+    wmer_micro: float | None = None
+    wmer_macro: float | None = None
+    delta_norm: float | None = None
+    delta_heritage: float | None = None
+    n_missing: int = Field(default=0, ge=0)
+
+
+class ConformityPayload(BaseModel):
+    """Conformité HIPE d'un run : scores officiels + deltas de normalisation.
+
+    Les noms exportés (``cmer_micro``…) suivent le scorer ; les vues sources
+    sont nommées — chaque nombre a son profil (SPEC_HIPE §7.2).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["hipe"] = "hipe"
+    hipe_view: str = Field(min_length=1, max_length=128)
+    raw_view: str | None = Field(default=None, max_length=128)
+    heritage_view: str | None = Field(default=None, max_length=128)
+    pipelines: tuple[PipelineConformity, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -312,7 +353,8 @@ AnalysisPayload = Annotated[
     | DiagnosticsPayload
     | CalibrationPayload
     | TaxonomyPayload
-    | DocumentTextsPayload,
+    | DocumentTextsPayload
+    | ConformityPayload,
     Field(discriminator="kind"),
 ]
 
@@ -335,6 +377,7 @@ __all__ = [
     "CalibrationBin",
     "CalibrationPayload",
     "CharConfusion",
+    "ConformityPayload",
     "DiagnosticsPayload",
     "EconomicsPayload",
     "HardDocument",
@@ -342,6 +385,7 @@ __all__ = [
     "MarginalCost",
     "PairwiseDifference",
     "PipelineCalibration",
+    "PipelineConformity",
     "PipelineConfusions",
     "PipelineEconomics",
     "PipelineInterval",

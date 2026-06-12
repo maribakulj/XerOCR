@@ -21,6 +21,7 @@ from xerocr.domain.documents import DocumentRef, GroundTruthRef
 from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.calibration import calibration_analysis
+from xerocr.evaluation.conformity import conformity_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.diagnostics import DiagnosticsCollector
 from xerocr.evaluation.document_texts import DocumentTextsCollector
@@ -169,6 +170,12 @@ def evaluate_run(
             )
             if economics is not None:
                 analyses.append(economics)
+
+    # Post-passe cross-vues : la conformité HIPE lit les résultats des vues
+    # raw/hipe/heritage déjà calculés (zéro re-scoring) — cf. ``conformity``.
+    conformity = conformity_analysis(evaluation.views, pipelines, documents)
+    if conformity is not None:
+        analyses.append(conformity)
 
     return RunResult(
         manifest=manifest,

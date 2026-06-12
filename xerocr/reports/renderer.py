@@ -27,6 +27,7 @@ _SECTION_LABELS = {
     "documents": "Par document",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "conformity": "Conformité HIPE",
     "economics": "Économie",
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
@@ -96,6 +97,7 @@ _SECTION_TAB = {
     "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
+    "conformity": "engines",
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
@@ -292,6 +294,7 @@ def default_report_renderer() -> ReportRenderer:
     diagnostic. Le glossaire est **hors sections** (dialog du chrome)."""
     from xerocr.reports.sections.by_engine import EngineSection
     from xerocr.reports.sections.calibration import CalibrationSection
+    from xerocr.reports.sections.conformity import ConformitySection
     from xerocr.reports.sections.corpus_composition import CorpusCompositionSection
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
@@ -313,6 +316,7 @@ def default_report_renderer() -> ReportRenderer:
             DispersionSection(),
             DocumentsSection(),
             CrossEngineSection(),
+            ConformitySection(),
             EconomicsSection(),
             DiagnosticsSection(),
             TaxonomySection(),

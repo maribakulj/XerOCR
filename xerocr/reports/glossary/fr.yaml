@@ -61,6 +61,21 @@ mer:
     Proche du CER sur texte propre ; diverge surtout en présence de longues
     insertions/suppressions.
 
+cmer:
+  title: "cMER — match error rate caractère (HIPE)"
+  definition: >-
+    Match Error Rate au niveau caractère — (S+D+I)/(H+S+D+I) —, borné entre
+    0 et 1. C'est la métrique de classement du benchmark HIPE-OCRepair,
+    calculée sous le profil de normalisation du scorer officiel.
+  measures: >-
+    La part de l'alignement caractère qui n'est pas une correspondance
+    exacte. Contrairement au CER (rapporté à la seule référence), il reste
+    comparable même quand un modèle génératif rallonge le texte (CER > 100 %).
+  limits: >-
+    Dépend du profil de normalisation : le profil « hipe » plie casse,
+    ponctuation et certaines formes patrimoniales (œ/oe, æ/ae) — comparer les
+    vues hipe/heritage pour isoler cet effet.
+
 del_rate:
   title: "Taux de suppressions"
   definition: >-

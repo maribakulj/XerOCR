@@ -170,14 +170,25 @@ niveau mot — vérifié) : **aucune clé jumelle au registre**.
   `units` = `RunDocumentResult` existant + champs du payload (drapeaux par
   document capés/échantillonnés).
 
-## 7. Exigences — 4g.1 « conformité » (P0)
+## 7. Exigences — 4g.1 « conformité » (P0) — **livrée (D-115, 2026-06-12)**
+
+> Amendements de build (D-115) : extra **`hipe-oracle` dédié** (≠ `dev` : le
+> scorer exige Python ≥ 3.12, l'inclure dans dev casserait l'installation
+> 3.11) ; golden **vendoré** (fixture `tests/fixtures/hipe_golden/` générée une
+> fois sur poste 3.12, test skip-gaté avec message tant qu'absente) ; parité de
+> formule prouvée à chaque CI par les **comptes** `jiwer.process_characters` ;
+> `heritage` **recompose** les umlauts décomposés (sinon `\W→espace`, fidèle au
+> scorer, détruirait la marque combinante isolée) — le delta isole œ/æ/ꝛ.
 
 ### 7.1 Les 8 métriques officielles (R-1.1)
 `cmer` (nouvelle clé registre) + `mer`≡wMER existant, micro + macro par vue ;
 pref/pcis par pipeline 2 étages (calculés dans le payload, pas au registre — ils
 exigent la paire raw/system). Noms HIPE à la frontière (Annexe A).
-- [ ] Golden 1e-9 vs scorer épinglé (corpus d'exemple officiel, job 3.12).
-- [ ] Les noms exportés sont identiques caractère pour caractère à ceux du scorer.
+- [~] Golden 1e-9 vs scorer épinglé : **infra livrée** (`test_hipe_golden`,
+  skip-gaté) ; fixture officielle à vendorer (réserve ouverte au DoD) ; parité
+  jiwer (comptes) verte à chaque CI.
+- [x] Les noms exportés sont identiques caractère pour caractère à ceux du
+  scorer (section `conformity` + JSONL §4.8 — `tests/reports/test_conformity_section.py`).
 
 ### 7.2 Deux profils de normalisation (R-1.6)
 - `hipe` : copie exacte de `norm()` (§4.3) ; `heritage` : lowercase + ponctuation +
@@ -185,7 +196,8 @@ exigent la paire raw/system). Noms HIPE à la frontière (Annexe A).
   `caseless`/`no_punctuation` existants) ; le score `raw` = vue sans profil.
 - Les deltas sont des **différences entre vues** (aucune mécanique nouvelle) :
   `delta_norm = cmer_raw − cmer_hipe` ; `delta_heritage = cmer_heritage − cmer_hipe`.
-- [ ] Chaque nombre publié mentionne son profil.
+- [x] Chaque nombre publié mentionne son profil (vues nommées dans le payload,
+  rappelées par la section — `tests/evaluation/test_conformity.py`).
 
 ### 7.3 Sémantique des sorties manquantes (R-1.8)
 Dans **cette famille**, sortie absente → matérialisée `""` (erreur maximale) +
@@ -194,12 +206,13 @@ XerOCR). **Double convention documentée côte à côte** ; docs dégénérés (
 sortie absente) inclus dans le golden.
 
 ### 7.4 Export JSONL HIPE
-- [ ] `xerocr run --hipe-jsonl out.jsonl` produit le format §4.8 (validé contre le
-  schéma embarqué du scorer, en test).
+- [x] `xerocr run --hipe-jsonl out.jsonl` produit le format §4.8 — un fichier
+  par pipeline, R-1.8 appliqué (`tests/app/test_hipe_export.py`) ; la validation
+  contre le schéma embarqué du scorer se vendorise avec le golden (réserve).
 
 ### 7.5 CER/WER classiques (R-1.2) — déjà satisfaite
 `cer`/`wer` livrés, dénominateur = référence, non tronqués (> 1.0 possible).
-- [ ] Le rapport documente la différence cer/cmer en une phrase (glossaire).
+- [x] Le rapport documente la différence cer/cmer (entrée glossaire `cmer` FR/EN).
 
 ## 8. Exigences — 4g.2 « bilan de correction » (P0/P1)
 
