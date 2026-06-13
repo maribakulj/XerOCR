@@ -120,9 +120,9 @@ moteur) · Doc (par document) · Cr (croisements).
 
 | # | Graphique / tableau | Enseigne (didactique) | Source | Matière mots/symboles | Statut | Onglet |
 |---|---|---|---|---|---|---|
-| 1 | **Matrice mots × moteurs** | qui rate quels mots, croisements | `word_errors` | **oui (mots)** | **N** | Cr |
-| 2 | Recouvrement inter-moteurs (mots) | mots durs partagés vs spécifiques | `word_errors` | oui | N | Cr |
-| 3 | Mot → variante produite | la *nature* de l'erreur mot | `word_errors` | oui | N | Cr |
+| 1 | **Matrice mots × moteurs** ✅ (G1, D-131) | qui rate quels mots, croisements | `word_errors` | **oui (mots)** | **N → livré** | Cr |
+| 2 | Recouvrement inter-moteurs (mots) | mots durs partagés vs spécifiques | `word_errors` | oui | N (même payload) | Cr |
+| 3 | Mot → variante produite | la *nature* de l'erreur mot | `word_errors` | oui | N (même payload) | Cr |
 | 4 | **Carte des erreurs** (treemap) | la *forme* du budget d'erreurs | `taxonomy` (+`diagnostics`) | classes/paires | E | Mo |
 | 5 | **Profil taxonomique** par moteur | A diacritique-lourd, B segmentation | `taxonomy` | — | E | Mo |
 | 6 | **Matrice de divergence JS** (heatmap) | moteurs qui se trompent *différemment* | `inter_engine` | — | E | Cr |
@@ -173,7 +173,7 @@ d'emblée** (les graphes portent peu de texte — autant ne pas repasser à l'i1
 
 | Ordre | Tranche | Pourquoi |
 |---|---|---|
-| 1 | **Carte des mots** (#1, puis #2-3) | la demande centrale ; introduit `word_errors` (le seul calcul neuf) + montre la matière |
+| 1 | **Carte des mots** — ✅ **#1 livré (G1, D-131)** ; #2-3 à suivre (même payload) | la demande centrale ; introduit `word_errors` (le seul calcul neuf) + montre la matière. **G1** = payload `word_errors` (couche 3) + matrice mots×moteurs/regroupements + heatmap SVG + section FR/EN (couche 7). **#2 recouvrement** + **#3 variante produite** = incréments suivants, **sur le même payload** (la `variant` dominante y est déjà collectée). |
 | 2 | **Carte d'erreurs + profil taxonomique** (#4, #5) | la *forme* des erreurs, comparatif moteurs — data prête, fort rendement |
 | 3 | **Matière verbatim mise en image** (#8, #16, #17, #19, #22) | confusions/sur-normalisation/modernisation/signes/entités — « voir les symboles » |
 | 4 | **Décision** (#11 coût↔qualité, #14 bilan correction) | les images de choix moteur / valeur du LLM |

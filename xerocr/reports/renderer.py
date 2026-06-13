@@ -28,6 +28,7 @@ _SECTION_LABELS = {
     "image_quality": "Qualité image",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "word_errors": "Carte des mots",
     "conformity": "Conformité HIPE",
     "correction": "Bilan de correction",
     "structured_data": "Données structurées",
@@ -117,6 +118,7 @@ _SECTION_TAB = {
     "diagnostics": "documents",
     "image_quality": "documents",
     "cross_engine": "crosses",
+    "word_errors": "crosses",
 }
 
 
@@ -326,6 +328,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
     from xerocr.reports.sections.textual_fidelity import TextualFidelitySection
+    from xerocr.reports.sections.word_errors import WordErrorsSection
 
     return ReportRenderer(
         (
@@ -338,6 +341,7 @@ def default_report_renderer() -> ReportRenderer:
             DocumentsSection(),
             ImageQualitySection(),
             CrossEngineSection(),
+            WordErrorsSection(),
             ConformitySection(),
             CorrectionSection(),
             StructuredDataSection(),

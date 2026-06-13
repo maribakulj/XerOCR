@@ -288,6 +288,7 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         "textual_fidelity",
         "inter_engine",
         "lines",
+        "word_errors",
     }
     analysis = by_kind["inference"]
     assert analysis.view == "text" and analysis.scope == "corpus"
@@ -329,6 +330,17 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
     assert payload.n_documents == 6
     assert payload.critical_distance is not None  # 3 pipelines → post-hoc
     assert [r.pipeline for r in payload.mean_ranks] == ["alpha", "gamma", "beta"]
+    # Carte des mots : alpha parfait → 0 raté ; beta et gamma ratent l'unique mot
+    # de chaque doc → 6 mots, chacun « partial » (2 moteurs sur 3, total 2).
+    word_errors = by_kind["word_errors"].payload
+    assert word_errors.pipelines == ("alpha", "beta", "gamma")
+    assert {w.word for w in word_errors.words} == set(gt_texts)
+    assert all(
+        w.group == "partial"
+        and w.total_errors == 2
+        and {e.pipeline for e in w.per_engine} == {"beta", "gamma"}
+        for w in word_errors.words
+    )
     # Round-trip JSON : le payload structuré survit tel quel.
     reloaded = RunResult.model_validate_json(result.model_dump_json())
     assert reloaded.analyses == result.analyses

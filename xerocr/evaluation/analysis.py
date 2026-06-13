@@ -903,6 +903,62 @@ class ImageQualityPayload(BaseModel):
     n_poor: int = Field(ge=0)
 
 
+class EngineWordError(BaseModel):
+    """Échecs d'un pipeline sur un mot GT : compte + forme produite dominante.
+
+    ``count`` = occurrences où ce pipeline n'a **pas** restitué le mot GT (tags
+    ``replace``/``delete`` de l'alignement mot-à-mot). ``variant`` = forme produite
+    **dominante** *verbatim* (``∅`` = mot supprimé) : la matière de la confusion,
+    embarquée pour le graphe « mot → variante produite » (incrément ultérieur,
+    même payload). Rien d'inventé — la variante sort de la sortie du moteur (D-094).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    count: int = Field(ge=1)
+    variant: str = Field(min_length=1, max_length=64)
+
+
+class WordError(BaseModel):
+    """Un mot GT raté par ≥ 1 pipeline : total, détail par moteur, regroupement.
+
+    ``word`` = mot **verbatim** de la GT (minuscule — tokenisation partagée de la
+    couche). ``per_engine`` est **creux** : seuls les moteurs qui ratent le mot y
+    figurent (un moteur absent = 0 raté). ``group`` classe le recoupement
+    inter-moteurs : ``universal`` (tous les pipelines observés ratent le mot —
+    difficulté de la *matière*), ``engine_specific`` (un seul — faiblesse *moteur*),
+    ``partial`` (un sous-ensemble).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    word: str = Field(min_length=1, max_length=64)
+    total_errors: int = Field(ge=1)
+    per_engine: tuple[EngineWordError, ...] = ()
+    group: Literal["universal", "engine_specific", "partial"]
+
+
+class WordErrorPayload(BaseModel):
+    """Carte des mots d'une vue : quels mots GT chaque moteur ne restitue pas.
+
+    Le CER dit *combien* d'erreurs, pas *lesquelles*. Ici l'alignement mot-à-mot
+    (même mécanique que ``textual_fidelity``) est **croisé** sur les pipelines :
+    par mot GT, le nombre d'échecs **par moteur** + une signature de regroupement.
+    ``pipelines`` = moteurs ayant produit du texte (base du croisement, ≥ 2) ;
+    ``words`` triés (-total, mot) et **capés** aux plus durs. Absent si < 2
+    pipelines ou aucune erreur (jamais une carte vide). L'appariement dépend de la
+    **normalisation de la vue** ; une fusion/scission de mots est une limite de
+    l'alignement (documentée dans la section).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["word_errors"] = "word_errors"
+    pipelines: tuple[str, ...] = Field(min_length=2)
+    words: tuple[WordError, ...] = ()
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -921,7 +977,8 @@ AnalysisPayload = Annotated[
     | InterEnginePayload
     | LinesPayload
     | NerPayload
-    | ImageQualityPayload,
+    | ImageQualityPayload
+    | WordErrorPayload,
     Field(discriminator="kind"),
 ]
 
@@ -953,6 +1010,7 @@ __all__ = [
     "DocumentImageQuality",
     "EconomicsPayload",
     "EngineTokenRecall",
+    "EngineWordError",
     "EntityCategoryScore",
     "EntityMention",
     "HardDocument",
@@ -992,5 +1050,7 @@ __all__ = [
     "TaxonomyDivergencePair",
     "TaxonomyPayload",
     "TextualFidelityPayload",
+    "WordError",
+    "WordErrorPayload",
     "WorstLine",
 ]

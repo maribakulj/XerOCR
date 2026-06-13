@@ -8,6 +8,7 @@ from xerocr.reports.svg import (
     composition_bar,
     dispersion_strip,
     num,
+    word_engine_heatmap,
 )
 
 
@@ -85,4 +86,36 @@ def test_calibration_curve_is_deterministic() -> None:
     pts = [(0.2, 0.3), (0.9, 0.85)]
     a = calibration_curve(pts, accent="#abc")
     b = calibration_curve(pts, accent="#abc")
+    assert a == b
+
+
+def test_word_engine_heatmap_words_headers_counts_and_teint() -> None:
+    svg = word_engine_heatmap(
+        ["A", "B"],
+        [("prologve", [3, 0]), ("roi", [1, 2])],
+        accent="var(--fern)",
+    )
+    assert svg.startswith("<svg") and svg.endswith("</svg>")
+    assert 'class="wmap-svg"' in svg and 'aria-hidden="true"' in svg
+    assert "prologve" in svg and "roi" in svg  # mots verbatim (lignes)
+    assert ">A<" in svg and ">B<" in svg  # en-têtes moteur
+    assert ">3<" in svg and ">2<" in svg  # comptes inscrits
+    assert "var(--fern)" in svg  # teinte unique (intensité = compte)
+    # case vide (compte 0) = pas de fond teinté
+    assert 'style="fill:none"' in svg
+
+
+def test_word_engine_heatmap_escapes_words_anti_xss() -> None:
+    svg = word_engine_heatmap(["A"], [("<x>", [1])], accent="#abc")
+    assert "&lt;x&gt;" in svg  # mot échappé
+    assert "<x>" not in svg  # jamais injecté brut (pas de fausse balise)
+
+
+def test_word_engine_heatmap_empty_is_valid_svg() -> None:
+    assert "<svg" in word_engine_heatmap([], [], accent="#000")  # ne lève pas
+
+
+def test_word_engine_heatmap_is_deterministic() -> None:
+    a = word_engine_heatmap(["A", "B"], [("roi", [1, 2])], accent="#abc")
+    b = word_engine_heatmap(["A", "B"], [("roi", [1, 2])], accent="#abc")
     assert a == b

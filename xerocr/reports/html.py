@@ -280,6 +280,16 @@ _CSS = (
     ".comp-label{color:var(--g-700);}"
     ".comp-share{color:var(--ink);font-variant-numeric:tabular-nums;}"
     ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
+    # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
+    # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
+    ".wmap-svg{max-width:100%;height:auto;display:block;background:var(--surface);"
+    "border-radius:var(--r-md);margin:.4rem 0 0;}"
+    ".wmap-word{font-family:var(--mono);font-size:11px;fill:var(--ink);}"
+    ".wmap-head{font-family:var(--mono);font-size:10px;fill:var(--g-400);"
+    "letter-spacing:0.04em;}"
+    ".wmap-count{font-family:var(--mono);font-size:10px;"
+    "font-variant-numeric:tabular-nums;}"
+    ".wmap-cell{stroke:var(--surface);stroke-width:1;}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"

@@ -9,8 +9,14 @@ flottant à précision variable). Les couleurs d'accent sont passées par l'appe
 
 from __future__ import annotations
 
+from xerocr.reports.html import escape
+
 #: Précision fixe des coordonnées SVG (déterminisme inter-plateformes).
 _COORD_DECIMALS = 2
+
+#: Mots tronqués à l'affichage dans la heatmap (le mot complet vit dans le payload
+#: et la table de la section) — garde les libellés dans la gouttière de gauche.
+_HEATMAP_WORD_CHARS = 22
 
 
 def num(x: float) -> str:
@@ -58,6 +64,7 @@ __all__ = [
     "composition_bar",
     "dispersion_strip",
     "num",
+    "word_engine_heatmap",
 ]
 
 
@@ -157,4 +164,72 @@ def calibration_curve(
         f'aria-hidden="true">{diag}'
         f'<polyline points="{coords}" class="calib-line" style="stroke:{accent}"/>'
         f"{dots}</svg>"
+    )
+
+
+def _clip_word(word: str) -> str:
+    """Tronque un mot à l'affichage (le mot complet reste dans la table HTML)."""
+    if len(word) <= _HEATMAP_WORD_CHARS:
+        return word
+    return word[: _HEATMAP_WORD_CHARS - 1] + "…"
+
+
+def word_engine_heatmap(
+    columns: list[str],
+    rows: list[tuple[str, list[int]]],
+    *,
+    accent: str,
+    cell_w: float = 30.0,
+    cell_h: float = 22.0,
+    label_w: float = 156.0,
+    header_h: float = 18.0,
+) -> str:
+    """Heatmap mots × moteurs : lignes = mots **verbatim**, colonnes = moteurs.
+
+    ``columns`` = libellés de colonnes (lettres moteur) ; ``rows`` =
+    ``(mot, [compte par colonne])`` aligné sur ``columns``. Chaque case est teintée
+    par **opacité ∝ compte / max** (case vide = pas de fond), le compte est inscrit ;
+    le mot (tronqué à l'affichage) et les en-têtes sont **échappés** (texte SVG sûr,
+    anti-XSS). Compagnon **visuel** de la table de la section (``aria-hidden`` : la
+    matière accessible vit dans la table). Déterministe (coords ``num``),
+    octet-stable, zéro JS."""
+    n_cols = len(columns)
+    width = label_w + cell_w * n_cols
+    height = header_h + cell_h * len(rows)
+    vmax = max((max(counts, default=0) for _, counts in rows), default=0) or 1
+    parts: list[str] = []
+    for j, column in enumerate(columns):
+        cx = label_w + cell_w * j + cell_w / 2
+        parts.append(
+            f'<text x="{num(cx)}" y="{num(header_h - 5)}" class="wmap-head" '
+            f'text-anchor="middle">{escape(column)}</text>'
+        )
+    for i, (word, counts) in enumerate(rows):
+        y = header_h + cell_h * i
+        ty = y + cell_h / 2 + 3.5
+        parts.append(
+            f'<text x="{num(label_w - 7)}" y="{num(ty)}" class="wmap-word" '
+            f'text-anchor="end">{escape(_clip_word(word))}</text>'
+        )
+        for j in range(n_cols):
+            count = counts[j] if j < len(counts) else 0
+            x = label_w + cell_w * j
+            if count <= 0:
+                parts.append(
+                    f'<rect x="{num(x)}" y="{num(y)}" width="{num(cell_w)}" '
+                    f'height="{num(cell_h)}" class="wmap-cell" style="fill:none"/>'
+                )
+                continue
+            opacity = 0.18 + 0.82 * count / vmax
+            ink = "var(--paper)" if opacity > 0.55 else "var(--ink)"
+            parts.append(
+                f'<rect x="{num(x)}" y="{num(y)}" width="{num(cell_w)}" '
+                f'height="{num(cell_h)}" class="wmap-cell" '
+                f'style="fill:{accent};opacity:{num(opacity)}"/>'
+                f'<text x="{num(x + cell_w / 2)}" y="{num(ty)}" class="wmap-count" '
+                f'text-anchor="middle" style="fill:{ink}">{count}</text>'
+            )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="wmap-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
     )
