@@ -1,11 +1,19 @@
-"""Section carte des mots : matrice mots × moteurs + regroupements (couche 7).
+"""Section carte des mots : matrice × moteurs + recouvrement + forme produite.
 
-Lecture seule du payload ``word_errors`` : la **matière** derrière le CER — quels
-mots de la vérité-terrain chaque moteur ne restitue pas, combien de fois, et
-**comment ça se croise** (mots ratés par tous, par un seul, par certains). Une
-heatmap SVG (compagnon **visuel**) double une **table accessible** qui porte la
-matière (mots verbatim + comptes par moteur + recoupement) ; prose pédagogique
-bilingue. Aucun scalaire de classement (pas de glossaire). Onglet « Croisements ».
+Lecture seule du payload ``word_errors`` (couche 7) : la **matière** derrière le
+CER — quels mots de la vérité-terrain chaque moteur ne restitue pas, combien de
+fois, et **comment ça se croise**. Trois lectures de la même donnée (catalogue
+des graphiques didactiques §1) :
+
+1. **Matrice** (#1) — heatmap SVG (compagnon visuel) doublée d'une table
+   accessible (mots verbatim × moteurs, comptes + recoupement par mot) ;
+2. **Recouvrement** (#2) — mots groupés par **signature** exacte de moteurs (façon
+   UpSet) : la matière dure (ratée par tous) vs les faiblesses propres à un moteur ;
+3. **Forme produite** (#3) — pour les mots durs, la ``variant`` produite par chaque
+   moteur (la *nature* de l'erreur, ``∅`` = supprimé).
+
+Prose pédagogique bilingue ; aucun scalaire de classement (pas de glossaire).
+Onglet « Croisements ».
 """
 
 from __future__ import annotations
@@ -26,6 +34,12 @@ _HEATMAP_ROWS = 20
 #: Teinte unique de la heatmap (intensité = compte) — accent neutre de la charte,
 #: pas une couleur de moteur (la matrice teinte par fréquence, pas par identité).
 _HEATMAP_ACCENT = "var(--fern)"
+
+#: Mots durs détaillés dans la table « forme produite » (#3) — bornée en largeur.
+_VARIANT_ROWS = 15
+
+#: Mots échantillonnés par signature de recouvrement (#2) avant le « +N ».
+_OVERLAP_SAMPLES = 6
 
 _TEXT: dict[str, dict[str, str]] = {
     "fr": {
@@ -53,6 +67,21 @@ _TEXT: dict[str, dict[str, str]] = {
         "u_engine_specific": "un seul",
         "u_partial": "plusieurs",
         "empty": "·",
+        "overlap_subtitle": "recouvrement inter-moteurs",
+        "overlap_intro": (
+            "Combien de mots chaque combinaison de moteurs rate <em>ensemble</em> "
+            "(taille d'intersection) : les mots ratés par <strong>tous</strong> "
+            "(matière dure) vs propres à <strong>un seul</strong> (faiblesse "
+            "moteur)."
+        ),
+        "th_overlap_count": "mots",
+        "th_samples": "exemples",
+        "variant_subtitle": "forme produite par moteur",
+        "variant_intro": (
+            "Pour les mots les plus durs, la forme que chaque moteur a produite à "
+            "la place — la <em>nature</em> de l'erreur (« · » = mot restitué par ce "
+            "moteur ; « ∅ » = mot supprimé)."
+        ),
     },
     "en": {
         "title": "Missed-word map",
@@ -78,6 +107,20 @@ _TEXT: dict[str, dict[str, str]] = {
         "u_engine_specific": "one only",
         "u_partial": "several",
         "empty": "·",
+        "overlap_subtitle": "cross-engine overlap",
+        "overlap_intro": (
+            "How many words each engine combination misses <em>together</em> "
+            "(intersection size): words missed by <strong>all</strong> (hard "
+            "matter) vs specific to <strong>one</strong> (engine weakness)."
+        ),
+        "th_overlap_count": "words",
+        "th_samples": "examples",
+        "variant_subtitle": "produced form per engine",
+        "variant_intro": (
+            "For the hardest words, the form each engine produced instead — the "
+            "<em>nature</em> of the error (“·” = word reproduced by that engine; "
+            "“∅” = word deleted)."
+        ),
     },
 }
 
@@ -102,6 +145,99 @@ def _matrix_row(
         f'<tr><td class="eng-cell">{escape(word.word)}</td>{cells}'
         f'<td class="disp">{word.total_errors}</td>'
         f'<td class="verdict">{escape(text[f"u_{word.group}"])}</td></tr>'
+    )
+
+
+def _overlap_block(
+    view: str,
+    payload: WordErrorPayload,
+    order: Mapping[str, int],
+    text: Mapping[str, str],
+) -> str:
+    """Recouvrement inter-moteurs (#2) : mots groupés par **signature** exacte.
+
+    Façon UpSet : chaque combinaison de moteurs qui ratent *ensemble* un mot →
+    une ligne (taille d'intersection en barre + exemples de mots verbatim). Pure
+    présentation : groupe les mots déjà calculés du payload, aucun recalcul.
+    """
+    groups: dict[tuple[str, ...], list[str]] = {}
+    for word in payload.words:
+        signature = tuple(
+            sorted(
+                (engine.pipeline for engine in word.per_engine),
+                key=lambda name: order.get(name, len(order)),
+            )
+        )
+        groups.setdefault(signature, []).append(word.word)
+    ranked = sorted(
+        groups.items(), key=lambda item: (-len(item[1]), len(item[0]), item[0])
+    )
+    max_count = max((len(words) for _, words in ranked), default=1)
+    n_pipelines = len(payload.pipelines)
+    rows: list[str] = []
+    for signature, words in ranked:
+        badges = " ".join(engine_cell(name, order.get(name, 0)) for name in signature)
+        if len(signature) >= n_pipelines:
+            hint = text["u_universal"]
+        elif len(signature) == 1:
+            hint = text["u_engine_specific"]
+        else:
+            hint = text["u_partial"]
+        width = round(len(words) / max_count * 100)
+        sample = ", ".join(escape(word) for word in words[:_OVERLAP_SAMPLES])
+        extra = len(words) - _OVERLAP_SAMPLES
+        more = f' <span class="muted">+{extra}</span>' if extra > 0 else ""
+        rows.append(
+            f'<tr><td class="eng-cell">{badges} '
+            f'<span class="muted">({escape(hint)})</span></td>'
+            f'<td class="databar"><span class="db-fill" style="width:{width}%">'
+            f'</span><span class="db-num">{len(words)}</span></td>'
+            f'<td class="muted">{sample}{more}</td></tr>'
+        )
+    return (
+        f"<h3>{escape(view)} — {text['overlap_subtitle']}</h3>\n"
+        f'<p class="muted">{text["overlap_intro"]}</p>\n'
+        '<table class="data">\n'
+        f'<thead><tr><th>{text["legend"]}</th>'
+        f'<th class="num-cell">{text["th_overlap_count"]}</th>'
+        f'<th>{text["th_samples"]}</th></tr></thead>\n'
+        f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
+    )
+
+
+def _variant_block(
+    view: str,
+    payload: WordErrorPayload,
+    columns: list[str],
+    order: Mapping[str, int],
+    text: Mapping[str, str],
+) -> str:
+    """Forme produite par moteur (#3) : la *nature* de l'erreur, lisible.
+
+    Rend la ``variant`` (forme produite dominante) **déjà portée** par le payload
+    pour les mots les plus durs — ``maistre`` → ``maitre``/``maistrc`` (``∅`` =
+    supprimé). Verbatim, aucune invention.
+    """
+    headers = "".join(
+        f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
+        for name in columns
+    )
+    rows: list[str] = []
+    for word in payload.words[:_VARIANT_ROWS]:
+        produced = {engine.pipeline: engine.variant for engine in word.per_engine}
+        cells = "".join(
+            f'<td class="disp">{escape(produced[name])}</td>'
+            if name in produced
+            else f'<td class="disp">{text["empty"]}</td>'
+            for name in columns
+        )
+        rows.append(f'<tr><td class="eng-cell">{escape(word.word)}</td>{cells}</tr>')
+    return (
+        f"<h3>{escape(view)} — {text['variant_subtitle']}</h3>\n"
+        f'<p class="muted">{text["variant_intro"]}</p>\n'
+        '<table class="data">\n'
+        f'<thead><tr><th>{text["th_word"]}</th>{headers}</tr></thead>\n'
+        f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
     )
 
 
@@ -136,12 +272,14 @@ def _block(
         f'<th class="num-cell">{text["th_total"]}</th>'
         f'<th>{text["th_group"]}</th></tr></thead>\n'
         f"<tbody>{body}</tbody>\n</table>\n"
-        f'<p class="muted">{text["caveats"]}</p>\n'
+        + _overlap_block(view, payload, order, text)
+        + _variant_block(view, payload, columns, order, text)
+        + f'<p class="muted">{text["caveats"]}</p>\n'
     )
 
 
 class WordErrorsSection:
-    """Carte des mots ratés : matrice mots × moteurs + regroupements (lecture seule)."""
+    """Carte des mots : matrice, recouvrement, forme produite (lecture seule)."""
 
     name = "word_errors"
     requires: tuple[str, ...] = ()

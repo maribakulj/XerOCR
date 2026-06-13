@@ -80,11 +80,12 @@ def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     assert 'class="wmap-svg"' in html  # heatmap SVG présente
     # Mots de la GT **verbatim**.
     assert "prologve" in html and "roi" in html
-    # G1 rend la **matrice** (comptes). La variante produite est collectée et
-    # portée par le payload (enveloppe), mais son rendu dédié est l'incrément #3 —
-    # pas encore affiché : la forme produite n'apparaît donc pas (encore).
-    assert "prologue" not in html
-    # Regroupements (libellés FR).
+    # #3 forme produite : la variante dominante (portée par le payload) est
+    # désormais rendue — la forme produite apparaît, verbatim (rien d'inventé).
+    assert "forme produite par moteur" in html
+    assert "prologue" in html and "prolog" in html and "roy" in html
+    # #2 recouvrement inter-moteurs + regroupements (libellés FR).
+    assert "recouvrement inter-moteurs" in html
     assert "tous" in html and "un seul" in html
     # Comptes de la matrice (total + par moteur).
     assert ">3<" in html and ">2<" in html
@@ -99,7 +100,52 @@ def test_renders_english_labels() -> None:
     assert html is not None
     assert "Missed-word map" in html
     assert "all" in html and "one only" in html
+    assert "cross-engine overlap" in html  # bloc #2
+    assert "produced form per engine" in html  # bloc #3
     assert "prologve" in html  # mots verbatim, indépendants de la langue
+
+
+def _overlap_result() -> RunResult:
+    # 4 moteurs : « shared » raté par a+b+c (3/4 → partiel), « lonely » par a seul.
+    payload = WordErrorPayload(
+        pipelines=("a", "b", "c", "d"),
+        words=(
+            WordError(
+                word="shared",
+                total_errors=3,
+                group="partial",
+                per_engine=(
+                    EngineWordError(pipeline="a", count=1, variant="x"),
+                    EngineWordError(pipeline="b", count=1, variant="y"),
+                    EngineWordError(pipeline="c", count=1, variant="z"),
+                ),
+            ),
+            WordError(
+                word="lonely",
+                total_errors=1,
+                group="engine_specific",
+                per_engine=(EngineWordError(pipeline="a", count=1, variant="q"),),
+            ),
+        ),
+    )
+    return RunResult(
+        manifest=_manifest(),
+        pipelines=tuple(
+            PipelineResult(pipeline=name, view="text") for name in ("a", "b", "c", "d")
+        ),
+        analyses=(Analysis(scope="corpus", view="text", payload=payload),),
+    )
+
+
+def test_overlap_groups_words_by_engine_signature() -> None:
+    # #2 : « shared » (3 moteurs sur 4) → signature partielle « plusieurs » ;
+    # « lonely » (1 moteur) → « un seul ». Valeurs dérivées à la main.
+    html = WordErrorsSection().render(_overlap_result(), SectionContext(lang="fr"))
+    assert html is not None
+    assert "recouvrement inter-moteurs" in html
+    assert "plusieurs" in html and "shared" in html  # intersection partielle
+    assert "un seul" in html and "lonely" in html  # propre à un moteur
+    assert html == WordErrorsSection().render(_overlap_result(), SectionContext("fr"))
 
 
 def test_no_payload_returns_none() -> None:
