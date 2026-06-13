@@ -290,6 +290,22 @@ _CSS = (
     ".wmap-count{font-family:var(--mono);font-size:10px;"
     "font-variant-numeric:tabular-nums;}"
     ".wmap-cell{stroke:var(--surface);stroke-width:1;}"
+    # Flux de confusion de caractères (#8) : glyphe attendu → produit, prominents
+    # (« voir les symboles » ; le slot bordé rend une espace visible) + barre de
+    # fréquence. Direction lisible (ſ→f ≠ f→ſ).
+    ".cf-engine{margin:.4rem 0 1rem;}"
+    ".cf-eng-name{font-family:var(--mono);font-size:12px;color:var(--g-500);}"
+    ".cf-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}"
+    ".cf-pair{display:flex;align-items:center;gap:7px;background:var(--surface);"
+    "border-radius:var(--r-md);padding:7px 11px;}"
+    ".cf-glyph{font-family:var(--mono);font-size:17px;line-height:1;min-width:1.3em;"
+    "text-align:center;background:var(--raised);border:1px solid var(--g-50);"
+    "border-radius:6px;padding:3px 5px;color:var(--ink);}"
+    ".cf-arrow{color:var(--g-400);font-size:12px;}"
+    ".cf-bar{height:6px;border-radius:var(--r-pill);background:var(--fern);"
+    "opacity:0.55;min-width:2px;}"
+    ".cf-count{font-family:var(--mono);font-size:11px;color:var(--g-500);"
+    "font-variant-numeric:tabular-nums;}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"
