@@ -104,14 +104,19 @@ def _ocr_view(
     # ``air`` (apport net d'archaïsmes) est actif d'office (Q4) ; ``hcpr``
     # (préservation) n'apparaît que sur une liste **explicitement** configurée
     # — sinon il doublonnerait ``mufi_err`` sur tout corpus médiéval.
+    # ``numseq_strict``/``numseq_value`` **retirés de la vue par défaut** (D-130) :
+    # adaptatifs (``None`` sans séquences) → deux colonnes vides « — » sur tout
+    # corpus sans dates/folios/montants. Ils restent **enregistrés** (utilisables
+    # par une vue custom qui voudrait classer dessus), et la **section
+    # `structured_data` reste affichée** quand des séquences existent (le
+    # collecteur l'observe indépendamment de ``metric_names``) — la donnée n'est
+    # pas perdue, seul le classement scalaire par défaut s'allège.
     metric_names: tuple[str, ...] = (
         "cer",
         "wer",
         "mer",
         "searchability",
         "hallucination",
-        "numseq_strict",
-        "numseq_value",
         "air",
     )
     if with_hcpr:
