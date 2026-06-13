@@ -123,8 +123,8 @@ moteur) · Doc (par document) · Cr (croisements).
 | 1 | **Matrice mots × moteurs** ✅ (G1, D-131) | qui rate quels mots, croisements | `word_errors` | **oui (mots)** | **N → livré** | Cr |
 | 2 | Recouvrement inter-moteurs (mots) ✅ (D-132) | mots durs partagés vs spécifiques | `word_errors` | oui | N → livré | Cr |
 | 3 | Mot → variante produite ✅ (D-132) | la *nature* de l'erreur mot | `word_errors` | oui | N → livré | Cr |
-| 4 | **Carte des erreurs** (treemap) | la *forme* du budget d'erreurs | `taxonomy` (+`diagnostics`) | classes/paires | E | Mo |
-| 5 | **Profil taxonomique** par moteur | A diacritique-lourd, B segmentation | `taxonomy` | — | E | Mo |
+| 4 | **Carte des erreurs** (treemap) ⏸️ déféré (D-133) | la *forme* du budget d'erreurs | `taxonomy` (+`diagnostics`) | classes/paires | E — **redondant** sur classes plates (barre empilée ≥ treemap) ; ré-ouvrable si emboîtement classe→symboles | Mo |
+| 5 | **Profil taxonomique** par moteur ✅ | A diacritique-lourd, B segmentation | `taxonomy` | — | E — barres par-moteur (D-071) + **comparatif classe×moteur** (D-133) | Mo |
 | 6 | **Matrice de divergence JS** (heatmap) | moteurs qui se trompent *différemment* | `inter_engine` | — | E | Cr |
 | 7 | Oracle / complémentarité | gain théorique d'un ensemble | `inter_engine` | — | E | Cr |
 | 8 | **Flux de confusion** `attendu→produit` | directionnalité (`ſ→f` vs `f→ſ`) | `diagnostics.confusions` | **oui (glyphes)** | E | Mo |
@@ -174,7 +174,7 @@ d'emblée** (les graphes portent peu de texte — autant ne pas repasser à l'i1
 | Ordre | Tranche | Pourquoi |
 |---|---|---|
 | 1 | **Carte des mots** — ✅ **TERMINÉE** : #1 (G1, D-131) + #2-3 (D-132), même payload | la demande centrale ; introduit `word_errors` (le seul calcul neuf) + montre la matière. **#1** matrice mots×moteurs (heatmap SVG + table accessible). **#2** recouvrement inter-moteurs (mots groupés par signature de moteurs, tailles d'intersection façon UpSet). **#3** forme produite par moteur (rend la `variant` dominante du payload, `∅`=supprimé). Tout en couche 7 (payload `word_errors` inchangé depuis D-131), section FR/EN. |
-| 2 | **Carte d'erreurs + profil taxonomique** (#4, #5) | la *forme* des erreurs, comparatif moteurs — data prête, fort rendement |
+| 2 | **Profil taxonomique** (#5) ✅ (D-133) — **#4 treemap déféré** (redondant) | la *forme* des erreurs, comparatif moteurs. #5 = barres par-moteur (D-071) **+ table comparative classe×moteur** (D-133, lecture par ligne). #4 treemap **redondant** avec la barre empilée sur classes plates → déféré avec motif (≠ surface spéculative). |
 | 3 | **Matière verbatim mise en image** (#8, #16, #17, #19, #22) | confusions/sur-normalisation/modernisation/signes/entités — « voir les symboles » |
 | 4 | **Décision** (#11 coût↔qualité, #14 bilan correction) | les images de choix moteur / valeur du LLM |
 | 5 | **Divergence + complémentarité** (#6, #7) | croisements quantitatifs |
