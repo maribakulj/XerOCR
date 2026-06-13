@@ -1,14 +1,16 @@
 """Section fidélité textuelle : tokens rares + modernisation lexicale (couche 7).
 
 Rend le payload ``textual_fidelity`` en **lecture seule** : par pipeline, le
-rappel des tokens rares (avec un échantillon de manqués) et la table de
-modernisation lexicale (formes historiques réécrites + variantes produites).
-Pédagogie en prose — aucun scalaire de classement (≠ glossaire).
+rappel des tokens rares (avec un échantillon de manqués) et le **flux de
+modernisation** (#17) — forme historique de la GT → variantes produites, chips
+dimensionnés par fréquence (« voir les tokens réécrits »). Pédagogie en prose —
+aucun scalaire de classement (≠ glossaire).
 """
 
 from __future__ import annotations
 
 from xerocr.evaluation.analysis import (
+    ModernizedToken,
     PipelineTextualFidelity,
     TextualFidelityPayload,
 )
@@ -36,25 +38,48 @@ def _rare_row(row: PipelineTextualFidelity) -> str:
     )
 
 
-def _modernization_rows(row: PipelineTextualFidelity) -> str:
-    rows: list[str] = []
-    for token in row.modernization:
-        variants = ", ".join(
-            f"{escape(variant.form)} ×{variant.count}" for variant in token.variants
+def _token_flow(token: ModernizedToken) -> str:
+    """Une forme GT → ses variantes produites (chips, barre ∝ compte = taille)."""
+    max_count = token.variants[0].count if token.variants else 1
+    chips = "".join(
+        f'<span class="wf-dst"><span class="wf-word">{escape(variant.form)}</span>'
+        f'<span class="wf-bar" style="width:{round(variant.count / max_count * 40)}px">'
+        f'</span><span class="wf-count">×{variant.count}</span></span>'
+        for variant in token.variants
+    )
+    return (
+        '<div class="wf-row">'
+        f'<span class="wf-word wf-src">{escape(token.token)}</span>'
+        f'<span class="wf-meta">{token.rate:.1%}</span>'
+        f'<span class="wf-arrow">→</span>{chips}</div>'
+    )
+
+
+def _modernization_block(view: str, payload: TextualFidelityPayload) -> str:
+    """Flux de modernisation (#17) : par pipeline, forme GT → variantes produites."""
+    groups: list[str] = []
+    for row in payload.pipelines:
+        if not row.modernization:
+            continue
+        flows = "".join(_token_flow(token) for token in row.modernization)
+        groups.append(
+            f'<div class="cf-engine"><span class="cf-eng-name">'
+            f"{escape(row.pipeline)}</span>"
+            f'<div class="wflow">{flows}</div></div>'
         )
-        rows.append(
-            f'<tr><td class="eng-cell">{escape(row.pipeline)}</td>'
-            f'<td class="eng-cell">{escape(token.token)}</td>'
-            f'<td class="disp">{token.n_modernized}/{token.n_total}</td>'
-            f'<td class="disp">{token.rate:.1%}</td>'
-            f'<td><span class="muted">{variants}</span></td></tr>'
-        )
-    return "".join(rows)
+    if not groups:
+        return ""
+    return (
+        f"<h3>{escape(view)} — modernisation lexicale</h3>\n"
+        '<p class="muted">Formes historiques de la GT réécrites par le moteur '
+        "(diagnostic de prompt LLM) : la forme attendue → les variantes produites "
+        "(barre = fréquence ; taux de réécriture en regard ; « ∅ » = mot "
+        "supprimé).</p>\n" + "".join(groups)
+    )
 
 
 def _block(view: str, payload: TextualFidelityPayload) -> str:
     rare_rows = "".join(_rare_row(row) for row in payload.pipelines)
-    mod_rows = "".join(_modernization_rows(row) for row in payload.pipelines)
     rare_table = (
         f"<h3>{escape(view)} — rappel des tokens rares "
         f"(≤ {payload.max_freq} occurrence(s))</h3>\n"
@@ -67,19 +92,7 @@ def _block(view: str, payload: TextualFidelityPayload) -> str:
         "<th>manqués (échantillon)</th></tr></thead>\n"
         f"<tbody>{rare_rows}</tbody>\n</table>\n"
     )
-    if not mod_rows:
-        return rare_table
-    return (
-        rare_table
-        + f"<h3>{escape(view)} — modernisation lexicale</h3>\n"
-        '<p class="muted">Formes historiques de la GT réécrites par le moteur '
-        "(diagnostic de prompt LLM) : taux de réécriture et variantes produites "
-        "(« ∅ » = mot supprimé).</p>\n"
-        '<table class="data">\n<thead><tr><th>Pipeline</th><th>forme GT</th>'
-        '<th class="num-cell">réécrits/total</th><th class="num-cell">taux</th>'
-        "<th>variantes</th></tr></thead>\n"
-        f"<tbody>{mod_rows}</tbody>\n</table>\n"
-    )
+    return rare_table + _modernization_block(view, payload)
 
 
 class TextualFidelitySection:

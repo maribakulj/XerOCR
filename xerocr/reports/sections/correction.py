@@ -108,18 +108,19 @@ def _pipeline_block(row: PipelineCorrection, payload: CorrectionPayload) -> str:
             f"<tbody>{regression_rows}</tbody>\n</table></details>\n"
         )
     if row.over_normalized_samples:
-        sample_rows = "".join(
-            f'<tr><td class="eng-cell">{escape(s.document_id)}</td>'
-            f'<td class="disp">{escape(s.reference)}</td>'
-            f'<td class="disp">{escape(s.corrected)}</td></tr>'
+        # #16 : flux mot OCR-juste → forme du correcteur (« ∅ » = supprimé).
+        flows = "".join(
+            f'<div class="wf-row">'
+            f'<span class="wf-word wf-src">{escape(s.reference)}</span>'
+            f'<span class="wf-arrow">→</span>'
+            f'<span class="wf-word">{escape(s.corrected)}</span>'
+            f'<span class="wf-meta">{escape(s.document_id)}</span></div>'
             for s in row.over_normalized_samples
         )
         parts.append(
             '<details><summary class="muted">Mots sur-normalisés '
-            f"({len(row.over_normalized_samples)} exemples)</summary>"
-            '<table class="data">\n<thead><tr><th>document</th><th>GT (= OCR)</th>'
-            "<th>corrigé</th></tr></thead>\n"
-            f"<tbody>{sample_rows}</tbody>\n</table></details>\n"
+            f"({len(row.over_normalized_samples)} exemples — mot OCR-juste → forme "
+            f'du correcteur)</summary>\n<div class="wflow">{flows}</div></details>\n'
         )
     return "".join(parts)
 

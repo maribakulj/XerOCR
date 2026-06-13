@@ -306,6 +306,20 @@ _CSS = (
     "opacity:0.55;min-width:2px;}"
     ".cf-count{font-family:var(--mono);font-size:11px;color:var(--g-500);"
     "font-variant-numeric:tabular-nums;}"
+    # Flux mot→forme(s) (#16 sur-normalisation, #17 modernisation) : le mot source
+    # (prominent) → la/les forme(s) produite(s) ; chip(s) ± barre (taille = compte).
+    ".wflow{display:flex;flex-direction:column;gap:7px;margin:.4rem 0 1rem;}"
+    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
+    ".wf-word{font-family:var(--mono);font-size:13px;background:var(--surface);"
+    "border:1px solid var(--g-50);border-radius:6px;padding:3px 8px;color:var(--ink);}"
+    ".wf-src{background:var(--raised);font-weight:600;}"
+    ".wf-arrow{color:var(--g-400);font-size:12px;}"
+    ".wf-dst{display:inline-flex;align-items:center;gap:5px;}"
+    ".wf-bar{height:5px;border-radius:var(--r-pill);background:var(--fern);"
+    "opacity:0.5;min-width:2px;}"
+    ".wf-count{font-family:var(--mono);font-size:10.5px;color:var(--g-500);"
+    "font-variant-numeric:tabular-nums;}"
+    ".wf-meta{font-family:var(--mono);font-size:10.5px;color:var(--g-400);}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"

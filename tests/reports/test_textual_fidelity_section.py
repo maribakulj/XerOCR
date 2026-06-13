@@ -60,8 +60,11 @@ def test_renders_rare_and_modernization() -> None:
     assert "Fidélité textuelle" in html
     assert "5/6" in html and "83.3%" in html  # rappel rare
     assert "louis" in html  # échantillon manqué
-    assert "maistre" in html and "maître ×3" in html  # modernisation + variante
-    assert "75.0%" in html
+    # #17 flux de modernisation : forme GT (source) → variante produite (chip ×compte).
+    assert 'class="wflow"' in html
+    assert 'class="wf-word wf-src">maistre</span>' in html  # forme historique
+    assert 'class="wf-word">maître</span>' in html and "×3" in html  # variante
+    assert "75.0%" in html  # taux de réécriture en regard
 
 
 def test_returns_none_without_payload() -> None:

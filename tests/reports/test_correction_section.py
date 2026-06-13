@@ -100,7 +100,9 @@ def test_renders_balance_and_samples() -> None:
     assert "+0.0000" in html  # pref signé
     assert "2.0000" in html  # change_ratio
     assert "Pires régressions" in html and "doc2" in html
-    assert "Mots sur-normalisés" in html and "abx" in html
+    # #16 sur-normalisation : flux mot OCR-juste (référence) → forme du correcteur.
+    assert "Mots sur-normalisés" in html and 'class="wf-row"' in html
+    assert 'class="wf-word wf-src">abc</span>' in html and "abx" in html
     assert "R-1.8" in html  # étages matérialisés vides signalés
 
 

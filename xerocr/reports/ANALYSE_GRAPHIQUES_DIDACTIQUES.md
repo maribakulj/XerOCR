@@ -101,10 +101,10 @@ elle vit dans des **tables** ; la rendre **graphique/groupée** est du rendu pur
 | Matière verbatim | Champ (payload) | Mise en image proposée |
 |---|---|---|
 | Pires lignes (réf vs hyp) | `diagnostics.worst_lines` (`reference`, `hypothesis`) | diff coloré aligné, trié par CER |
-| Mots OCR-justes cassés par le LLM | `correction.over_normalized_samples` (`reference`→`corrected`) | flèches `mot→forme` (sur-normalisation) |
+| Mots OCR-justes cassés par le LLM ✅ (D-135) | `correction.over_normalized_samples` (`reference`→`corrected`) | flux `mot→forme` (sur-normalisation) — **livré** |
 | Régressions de correction | `correction.worst_regressions` | barres divergentes par document |
 | Tokens rares manqués | `textual_fidelity.missed` | nuage/liste des noms propres perdus |
-| Modernisation lexicale | `textual_fidelity.modernization` (`token`→`variants`) | flux token → variantes (taille = compte) |
+| Modernisation lexicale ✅ (D-135) | `textual_fidelity.modernization` (`token`→`variants`) | flux token → variantes (taille = compte) — **livré** |
 | Séquences perdues | `structured_data.lost` (formes verbatim) | liste par catégorie (dates/folios/montants) |
 | Numéraux romains perdus | `roman.lost_samples` | liste + statut (converti/perdu) |
 | Entités manquées / hallucinées | `ner.missed` / `ner.hallucinated` (`text`) | deux colonnes : ce qui disparaît / ce qui est inventé |
@@ -136,8 +136,8 @@ moteur) · Doc (par document) · Cr (croisements).
 | 13 | Débit effectif (pages/h corrigé) | vitesse réelle post-correction | `economics` | — | E | Mo |
 | 14 | **Bilan de correction** (barre triplet) | l'étage LLM aide-t-il, de combien | `correction` | — | E | Mo |
 | 15 | Flux corrigées/introduites/conservées | l'absorption d'erreurs du LLM | `correction` | tokens | E | Mo |
-| 16 | Sur-normalisation `mot→forme` | le LLM casse des mots justes | `correction.over_normalized_samples` | **oui** | E | Mo |
-| 17 | **Flux de modernisation** | formes historiques réécrites | `textual_fidelity.modernization` | **oui (tokens)** | E | Mo |
+| 16 | Sur-normalisation `mot→forme` ✅ (D-135) | le LLM casse des mots justes | `correction.over_normalized_samples` | **oui** | E → livré (flux référence→corrigé) | Mo |
+| 17 | **Flux de modernisation** ✅ (D-135) | formes historiques réécrites | `textual_fidelity.modernization` | **oui (tokens)** | E → livré (flux token→variantes, chips ∝ compte) | Mo |
 | 18 | Tokens rares manqués | noms propres perdus (prosopo) | `textual_fidelity.missed` | oui | E | Mo |
 | 19 | **Préservation philologique** (signes) | abréviations/ligatures tenues | `philology` | **oui (glyphes)** | E | Mo |
 | 20 | Romains : 5 statuts + perdus | la valeur a-t-elle survécu | `roman` | oui | E | Mo |
@@ -176,7 +176,7 @@ d'emblée** (les graphes portent peu de texte — autant ne pas repasser à l'i1
 |---|---|---|
 | 1 | **Carte des mots** — ✅ **TERMINÉE** : #1 (G1, D-131) + #2-3 (D-132), même payload | la demande centrale ; introduit `word_errors` (le seul calcul neuf) + montre la matière. **#1** matrice mots×moteurs (heatmap SVG + table accessible). **#2** recouvrement inter-moteurs (mots groupés par signature de moteurs, tailles d'intersection façon UpSet). **#3** forme produite par moteur (rend la `variant` dominante du payload, `∅`=supprimé). Tout en couche 7 (payload `word_errors` inchangé depuis D-131), section FR/EN. |
 | 2 | **Profil taxonomique** (#5) ✅ (D-133) — **#4 treemap déféré** (redondant) | la *forme* des erreurs, comparatif moteurs. #5 = barres par-moteur (D-071) **+ table comparative classe×moteur** (D-133, lecture par ligne). #4 treemap **redondant** avec la barre empilée sur classes plates → déféré avec motif (≠ surface spéculative). |
-| 3 | **Matière verbatim mise en image** — 🚧 **#8 ✅ (D-134)** ; #16/#17/#19/#22 à venir | confusions (#8 = flux de glyphes ✅) / sur-normalisation (#16) / modernisation (#17) / signes (#19) / entités (#22) — « voir les symboles ». Chacun = rendu pur sur payload existant. |
+| 3 | **Matière verbatim mise en image** — 🚧 **#8 ✅ (D-134) · #16/#17 ✅ (D-135)** ; #19/#22 à venir | confusions (#8 = flux de glyphes ✅) / sur-normalisation (#16 = flux référence→corrigé ✅) / modernisation (#17 = flux token→variantes ✅) / signes (#19) / entités (#22) — « voir les symboles ». Chacun = rendu pur sur payload existant. |
 | 4 | **Décision** (#11 coût↔qualité, #14 bilan correction) | les images de choix moteur / valeur du LLM |
 | 5 | **Divergence + complémentarité** (#6, #7) | croisements quantitatifs |
 | 6 | **Qualité ↔ CER** (#30) + heatmap lignes SVG (#24) | donne sa pleine valeur à 4d.1 ; structure |
