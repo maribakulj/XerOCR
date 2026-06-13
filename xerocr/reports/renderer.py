@@ -25,6 +25,7 @@ _SECTION_LABELS = {
     "by_engine": "Par moteur",
     "engine_profiles": "Profils moteur",
     "documents": "Par document",
+    "image_quality": "Qualité image",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
     "conformity": "Conformité HIPE",
@@ -114,6 +115,7 @@ _SECTION_TAB = {
     "taxonomy": "engines",
     "documents": "documents",
     "diagnostics": "documents",
+    "image_quality": "documents",
     "cross_engine": "crosses",
 }
 
@@ -315,6 +317,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
+    from xerocr.reports.sections.image_quality import ImageQualitySection
     from xerocr.reports.sections.lines import LinesSection
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
@@ -333,6 +336,7 @@ def default_report_renderer() -> ReportRenderer:
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),
+            ImageQualitySection(),
             CrossEngineSection(),
             ConformitySection(),
             CorrectionSection(),

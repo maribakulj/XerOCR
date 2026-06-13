@@ -852,6 +852,57 @@ class NerPayload(BaseModel):
     pipelines: tuple[PipelineNer, ...] = ()
 
 
+class DocumentImageQuality(BaseModel):
+    """Qualité mesurée de l'image **d'un document** (features réelles, pas un proxy).
+
+    Toutes les mesures sont des **conventions éditoriales** bornées [0,1] (le
+    détail des constantes — 500, 30, poids — vit dans ``evaluation.image_quality``,
+    sans autorité scientifique externe) : ``sharpness`` (netteté = variance du
+    laplacien 3×3 normalisée), ``noise`` (médiane des |gradients| normalisée),
+    ``contrast`` (Michelson sur percentiles 5/95), ``quality_score`` (combinaison
+    pondérée). ``rotation_degrees`` = inclinaison résiduelle estimée (signée,
+    bornée ±5°, heuristique de projection). ``tier`` discrétise ``quality_score``.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    sharpness: float = Field(ge=0, le=1)
+    noise: float = Field(ge=0, le=1)
+    contrast: float = Field(ge=0, le=1)
+    rotation_degrees: float
+    quality_score: float = Field(ge=0, le=1)
+    tier: Literal["good", "medium", "poor"]
+
+
+class ImageQualityPayload(BaseModel):
+    """Qualité des images du corpus : netteté, bruit, contraste, inclinaison.
+
+    **Scope corpus, par document** — l'unique payload qui n'est PAS par pipeline :
+    la qualité d'une image **ne dépend pas du pipeline** qui la transcrit, c'est
+    une propriété du **corpus**, mesurée une seule fois. Sert à expliquer un CER
+    élevé par une numérisation dégradée plutôt que par un moteur faible (la
+    re-pondération « prédictive » de la source, sans pouvoir prédictif, est
+    **abandonnée** — D-128). Absent si aucun document n'a d'image **locale
+    lisible** (adaptatif : un corpus purement textuel ou à images distantes ne
+    porte pas la mesure). Les images illisibles sont **exclues** (jamais une
+    mesure fabriquée) ; les agrégats portent sur les ``documents`` mesurés.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["image_quality"] = "image_quality"
+    documents: tuple[DocumentImageQuality, ...] = ()
+    mean_quality: float = Field(ge=0, le=1)
+    mean_sharpness: float = Field(ge=0, le=1)
+    mean_noise: float = Field(ge=0, le=1)
+    mean_contrast: float = Field(ge=0, le=1)
+    #: Distribution par palier : ``good`` (≥ 0.70) · ``medium`` (≥ 0.40) · ``poor``.
+    n_good: int = Field(ge=0)
+    n_medium: int = Field(ge=0)
+    n_poor: int = Field(ge=0)
+
+
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
 AnalysisPayload = Annotated[
@@ -869,7 +920,8 @@ AnalysisPayload = Annotated[
     | TextualFidelityPayload
     | InterEnginePayload
     | LinesPayload
-    | NerPayload,
+    | NerPayload
+    | ImageQualityPayload,
     Field(discriminator="kind"),
 ]
 
@@ -898,11 +950,13 @@ __all__ = [
     "ConformityPayload",
     "CorrectionPayload",
     "DiagnosticsPayload",
+    "DocumentImageQuality",
     "EconomicsPayload",
     "EngineTokenRecall",
     "EntityCategoryScore",
     "EntityMention",
     "HardDocument",
+    "ImageQualityPayload",
     "InferencePayload",
     "InterEngineComplementarity",
     "InterEngineDivergence",
