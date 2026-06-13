@@ -128,6 +128,18 @@ def test_air_active_by_default_hcpr_opt_in(tmp_path: Path) -> None:
     assert len(spec.metadata["archaic_list_hash"]) == 64
 
 
+def test_numseq_not_in_default_view(tmp_path: Path) -> None:
+    # ``numseq_*`` retirés de la vue par défaut (D-130) : adaptatifs → colonnes
+    # vides sur corpus sans séquences. La section ``structured_data`` reste,
+    # elle, adaptative (collecteur indépendant de ``metric_names``).
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    metrics = _text_view_metrics(spec)
+    assert "numseq_strict" not in metrics
+    assert "numseq_value" not in metrics
+
+
 def test_configured_archaic_list_enables_hcpr(tmp_path: Path) -> None:
     spec = plan_benchmark_run(
         (Competitor(engine="tesseract"),),

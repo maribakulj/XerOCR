@@ -365,6 +365,13 @@ des caps explicites) ; tris déterministes ; clés de métriques **courtes**
 
 ## Cible 4d — `robustness` + `image_quality`
 
+> **⚠️ Mis à jour au build.** **`image_quality` livré (4d.1, D-128).**
+> **`robustness` ABANDONNÉ (4d.2, D-129)** — renversement assumé du verdict
+> « GARDER » ci-dessous (ce guide l'autorise, cf. §Abandons) : dégradations
+> *synthétiques* de validité douteuse, coût re-OCR disproportionné, seule feature
+> à traîner la couche 6 + la tension CLI §8.4 ; la résilience *réelle* relève des
+> **strates du dataset P3**. → **P2 terminée.** Détail : `MIGRATION_PLAN.md` D-129.
+
 | Aspect | Cible (PROVISOIRE) |
 |---|---|
 | **Placement** | Dégradations = **fonctions pures seedées** (`Random(0)` conservé) — candidates `evaluation/robustness.py` (PIL whitelisté) pour la partie maths/courbes ; la **ré-exécution** des moteurs sur images dégradées vit **couche 6** (orchestrateur, réutilise les Modules existants — jamais d'import moteur en couche 3, la source l'avait déjà compris via l'injection). |

@@ -28,6 +28,7 @@ from xerocr.evaluation.diagnostics import DiagnosticsCollector
 from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
+from xerocr.evaluation.image_quality import image_quality_analysis
 from xerocr.evaluation.inference import inference_analysis
 from xerocr.evaluation.inter_engine import InterEngineCollector
 from xerocr.evaluation.lines import LinesCollector, newline_preserved
@@ -254,6 +255,16 @@ def evaluate_run(
         correction = correction_analysis(view, corpus, pipeline_outputs)
         if correction is not None:
             analyses.append(correction)
+
+    # Qualité d'image : **scope corpus, indépendante du pipeline ET de la vue**
+    # (une image est la même quelle que soit la lentille de normalisation) →
+    # calculée **une seule fois**, hors boucle des vues, rattachée à la première
+    # vue (comme ``conformity`` se rattache à la vue ``hipe``). La calculer par
+    # vue produirait N payloads identiques et N relectures d'image.
+    if evaluation.views:
+        image_quality = image_quality_analysis(evaluation.views[0].name, corpus)
+        if image_quality is not None:
+            analyses.append(image_quality)
 
     # Post-passe cross-vues : la conformité HIPE lit les résultats des vues
     # raw/hipe/heritage déjà calculés (zéro re-scoring) — cf. ``conformity``.
