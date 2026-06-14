@@ -289,6 +289,26 @@ xerocr/reports/
 
 - [~] **Supprimé** : `narrative/` (D2) · `generator` legacy + `html/data/` + i18n/glossary d'office + Chart.js + SPA. **Différé** : 1 section/métrique à sa tranche (jamais en avance). **Interactivité what-if** = question ouverte (sélection, jamais re-mesure ; cf. §2.7).
 
+### i18n FR/EN du rapport (D-136) — **R7 honorée : inline, sur demande réelle**
+
+Mécanisme retenu = `html.localized(lang, fr, en)` (deux formulations adjacentes,
+sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
+« i18n d'office » de Picarones reste supprimé). Consommateur réel : route web
+`?lang=en` → `renderer.render(lang="en")`. Conversion **par onglet, incrémentale** :
+
+- [x] **Vue d'ensemble** : `overview` · `corpus_composition` · `synthesis` (D-136).
+- [x] **Déjà bilingues** (dicts `_TEXT`, équivalents) : `word_errors` · `taxonomy`
+  (profil) · `diagnostics` (flux). Migration vers `localized` opportuniste.
+- [ ] **Par moteur** : by_engine, engine_profile, dispersion, calibration,
+  conformity, correction, structured_data, philology, textual_fidelity, lines,
+  ner, economics.
+- [ ] **Par document** : documents, by_document, document_detail, gallery,
+  image_quality.
+- [ ] **Croisements** : cross_engine (significativité/oracle/divergence).
+- [ ] **Renderer** : `_SECTION_LABELS` (aria-label des blocs) — tweak séparé.
+
+Convention : FR = défaut (tests FR inchangés) ; **+1 test EN par section convertie**.
+
 ---
 
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/app non encore implémentés) prévaut.*

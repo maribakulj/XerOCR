@@ -98,3 +98,10 @@ def test_data_bars_are_relative_to_column_max() -> None:
     # cer 0.1 vs max 0.2 → 50 % ; 0.2 → 100 % (échelle relative à la colonne)
     assert 'class="db-fill" style="width:50%"' in html
     assert 'class="db-fill" style="width:100%"' in html
+
+
+def test_renders_english_labels() -> None:
+    html = OverviewSection().render(_result(0.25), SectionContext(lang="en"))
+    assert html is not None
+    assert "Metrics per view" in html and "View :" in html
+    assert "Métriques par vue" not in html  # bascule de langue effective

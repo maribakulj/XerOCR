@@ -425,6 +425,17 @@ def escape(text: str) -> str:
     return _html.escape(text, quote=True)
 
 
+def localized(lang: str, fr: str, en: str) -> str:
+    """Choisit la chaîne selon la langue du rapport (``en`` si ``"en"``, sinon ``fr``).
+
+    Mécanisme i18n **minimal** : les sections gardent leurs deux formulations
+    **adjacentes** au point d'usage (revue/maintenance faciles), sélectionnées via
+    ``SectionContext.lang`` — **pas de catalogue ni de registre** de chaînes. Repli
+    sur le français pour toute langue non gérée (déterminisme : même langue →
+    mêmes octets)."""
+    return en if lang == "en" else fr
+
+
 def render_document(
     title: str,
     body: Html,
@@ -469,4 +480,4 @@ def render_document(
     )
 
 
-__all__ = ["escape", "render_document"]
+__all__ = ["escape", "localized", "render_document"]

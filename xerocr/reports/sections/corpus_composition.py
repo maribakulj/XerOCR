@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections import Counter
 
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 
@@ -51,10 +51,17 @@ class CorpusCompositionSection:
             f'<span class="strata-pct">{n / total:.0%}</span></div>'
             for name, n in ordered
         )
+        title = localized(ctx.lang, "Composition du corpus", "Corpus composition")
+        caption = localized(
+            ctx.lang,
+            f"{len(ordered)} strates · {total} documents "
+            "(répartition figée à la création du run).",
+            f"{len(ordered)} strata · {total} documents "
+            "(distribution fixed at run creation).",
+        )
         return Html(
-            "<h2>Composition du corpus</h2>\n"
-            f'<p class="muted">{len(ordered)} strates · {total} documents '
-            "(répartition figée à la création du run).</p>\n"
+            f"<h2>{title}</h2>\n"
+            f'<p class="muted">{caption}</p>\n'
             f'<div class="strata-grid">{rows}</div>\n'
         )
 
