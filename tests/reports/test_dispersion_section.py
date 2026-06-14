@@ -78,3 +78,19 @@ def test_deterministic() -> None:
     a = DispersionSection().render(r, SectionContext())
     b = DispersionSection().render(r, SectionContext())
     assert a == b
+
+
+def test_renders_english_labels() -> None:
+    html = DispersionSection().render(
+        _result(
+            _doc("d1", "tesseract", 0.10),
+            _doc("d2", "tesseract", 0.30),
+        ),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "CER dispersion" in html and "Dispersion du CER" not in html
+    assert "Range per document" in html and "Étendue par document" not in html
+    assert "Common scale across engines" in html
+    # labels use the English "med" abbreviation, not the French "méd"
+    assert "med 20.0 %" in html and "méd" not in html

@@ -66,3 +66,31 @@ def test_renders_scores_and_deltas() -> None:
 
 def test_without_payload_renders_nothing() -> None:
     assert ConformitySection().render(_result(()), SectionContext()) is None
+
+
+def test_renders_english_labels() -> None:
+    payload = ConformityPayload(
+        hipe_view="hipe",
+        raw_view="raw",
+        heritage_view="heritage",
+        pipelines=(
+            PipelineConformity(
+                pipeline="eng",
+                cmer_micro=0.1234,
+                cmer_macro=0.2,
+                wmer_micro=0.3,
+                wmer_macro=None,
+                delta_norm=0.05,
+                delta_heritage=None,
+                n_missing=1,
+            ),
+        ),
+    )
+    html = ConformitySection().render(
+        _result((Analysis(scope="corpus", view="hipe", payload=payload),)),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "HIPE conformity" in html and "Conformité HIPE" not in html
+    assert "HIPE-OCRepair scores" in html and "scores HIPE-OCRepair" not in html
+    assert "missing" in html and "manquants" not in html

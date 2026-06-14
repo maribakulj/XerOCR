@@ -299,11 +299,11 @@ sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
 - [x] **Vue d'ensemble** : `overview` · `corpus_composition` · `synthesis` (D-136).
 - [x] **Déjà bilingues** (dicts `_TEXT`, équivalents) : `word_errors` · `taxonomy`
   (profil) · `diagnostics` (flux). Migration vers `localized` opportuniste.
-- [ ] **Par moteur** : by_engine, engine_profile, dispersion, calibration,
-  conformity, correction, structured_data, philology, textual_fidelity, lines,
-  ner, economics.
-- [~] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
-  ✅ (D-137) ; **`document_detail`** (drill-in, 199 LOC) à venir.
+- [~] **Par moteur** : `dispersion` · `calibration` · `conformity` ✅ (D-138) ;
+  restent by_engine, engine_profile, correction, structured_data, philology,
+  textual_fidelity, lines, ner, economics, taxonomy (composition).
+- [x] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
+  (D-137) · `document_detail` (D-138) — **onglet clos**.
 - [ ] **Croisements** : cross_engine (significativité/oracle/divergence).
 - [ ] **Renderer** : `_SECTION_LABELS` (aria-label des blocs) — tweak séparé.
 
