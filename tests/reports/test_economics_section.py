@@ -109,6 +109,15 @@ def test_stale_pricing_renders_explicit_warning() -> None:
     assert "Table de tarifs périmée" in stale
 
 
+def test_renders_english_labels() -> None:
+    html = EconomicsSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "Economics" in html and "Économie" not in html
+    assert "costs &amp; throughput" in html and "coûts &amp; débit" not in html
+    assert "Pareto front" in html and "Front de Pareto" not in html
+    assert "duration (s)" in html and "durée (s)" not in html
+
+
 def test_without_economics_payload_renders_nothing() -> None:
     result = RunResult(manifest=_manifest())
     assert EconomicsSection().render(result, SectionContext()) is None
