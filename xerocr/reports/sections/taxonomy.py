@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import PipelineTaxonomy, TaxonomyPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_cell, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import composition_bar
 
@@ -126,18 +126,31 @@ def _profile_block(
 def _block(
     view: str, payload: TaxonomyPayload, order: Mapping[str, int], lang: str
 ) -> str:
-    parts: list[str] = [
-        f"<h3>{escape(view)} — composition des erreurs</h3>\n",
+    head = localized(
+        lang,
+        f"{escape(view)} — composition des erreurs",
+        f"{escape(view)} — error composition",
+    )
+    prose = localized(
+        lang,
         '<p class="muted">Classification par règles pures (casse, diacritiques, '
         "ligatures, confusions visuelles, segmentation, lacunes, insertions) — "
         "part relative au total des erreurs de mots du pipeline.</p>\n",
-    ]
+        '<p class="muted">Pure rule-based classification (case, diacritics, '
+        "ligatures, visual confusions, segmentation, gaps, insertions) — "
+        "share relative to the pipeline's total word errors.</p>\n",
+    )
+    parts: list[str] = [f"<h3>{head}</h3>\n", prose]
     for pipeline in payload.pipelines:
         block = composition_html(payload.classes, pipeline)
         if block:
+            label = localized(
+                lang,
+                f"{pipeline.total_errors} erreurs",
+                f"{pipeline.total_errors} errors",
+            )
             parts.append(
-                f"<h4>{escape(pipeline.pipeline)} — "
-                f"{pipeline.total_errors} erreurs</h4>\n{block}\n"
+                f"<h4>{escape(pipeline.pipeline)} — {label}</h4>\n{block}\n"
             )
     parts.append(_profile_block(view, payload, order, lang))
     return "".join(parts)
@@ -158,7 +171,8 @@ class TaxonomySection:
         ]
         if not blocks:
             return None
-        return Html("<h2>Taxonomie des erreurs</h2>\n" + "".join(blocks))
+        title = localized(ctx.lang, "Taxonomie des erreurs", "Error taxonomy")
+        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
 
 
 __all__ = ["TaxonomySection", "composition_html"]

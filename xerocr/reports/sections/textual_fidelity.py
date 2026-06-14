@@ -15,7 +15,7 @@ from xerocr.evaluation.analysis import (
     TextualFidelityPayload,
 )
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -55,7 +55,9 @@ def _token_flow(token: ModernizedToken) -> str:
     )
 
 
-def _modernization_block(view: str, payload: TextualFidelityPayload) -> str:
+def _modernization_block(
+    view: str, payload: TextualFidelityPayload, lang: str
+) -> str:
     """Flux de modernisation (#17) : par pipeline, forme GT → variantes produites."""
     groups: list[str] = []
     for row in payload.pipelines:
@@ -69,30 +71,60 @@ def _modernization_block(view: str, payload: TextualFidelityPayload) -> str:
         )
     if not groups:
         return ""
-    return (
-        f"<h3>{escape(view)} — modernisation lexicale</h3>\n"
+    head = localized(
+        lang,
+        f"{escape(view)} — modernisation lexicale",
+        f"{escape(view)} — lexical modernization",
+    )
+    prose = localized(
+        lang,
         '<p class="muted">Formes historiques de la GT réécrites par le moteur '
         "(diagnostic de prompt LLM) : la forme attendue → les variantes produites "
         "(barre = fréquence ; taux de réécriture en regard ; « ∅ » = mot "
-        "supprimé).</p>\n" + "".join(groups)
+        "supprimé).</p>\n",
+        '<p class="muted">Historical GT forms rewritten by the engine '
+        "(LLM prompt diagnostic): the expected form → the produced variants "
+        "(bar = frequency; rewrite rate alongside; “∅” = deleted "
+        "word).</p>\n",
     )
+    return f"<h3>{head}</h3>\n" + prose + "".join(groups)
 
 
-def _block(view: str, payload: TextualFidelityPayload) -> str:
+def _block(view: str, payload: TextualFidelityPayload, lang: str) -> str:
     rare_rows = "".join(_rare_row(row) for row in payload.pipelines)
-    rare_table = (
-        f"<h3>{escape(view)} — rappel des tokens rares "
-        f"(≤ {payload.max_freq} occurrence(s))</h3>\n"
+    head = localized(
+        lang,
+        f"{escape(view)} — rappel des tokens rares "
+        f"(≤ {payload.max_freq} occurrence(s))",
+        f"{escape(view)} — rare-token recall "
+        f"(≤ {payload.max_freq} occurrence(s))",
+    )
+    prose = localized(
+        lang,
         '<p class="muted">Les tokens rares (noms propres, toponymes, termes — '
         "hapax et dis legomena du corpus) pèsent en indexation prosopographique "
         "mais sont noyés dans le CER global. Rappel = part des occurrences rares "
-        "de la GT retrouvées (multiset).</p>\n"
-        '<table class="data">\n<thead><tr><th>Pipeline</th>'
-        '<th class="num-cell">rappelés/total</th><th class="num-cell">rappel</th>'
-        "<th>manqués (échantillon)</th></tr></thead>\n"
+        "de la GT retrouvées (multiset).</p>\n",
+        '<p class="muted">Rare tokens (proper nouns, toponyms, terms — '
+        "corpus hapax and dis legomena) matter for prosopographic indexing "
+        "but are drowned out in the global CER. Recall = share of rare GT "
+        "occurrences recovered (multiset).</p>\n",
+    )
+    th_pipeline = localized(lang, "Pipeline", "Pipeline")
+    th_recalled_total = localized(lang, "rappelés/total", "recalled/total")
+    th_recall = localized(lang, "rappel", "recall")
+    th_missed = localized(lang, "manqués (échantillon)", "missed (sample)")
+    rare_table = (
+        f"<h3>{head}</h3>\n"
+        + prose
+        + '<table class="data">\n<thead><tr>'
+        f"<th>{th_pipeline}</th>"
+        f'<th class="num-cell">{th_recalled_total}</th>'
+        f'<th class="num-cell">{th_recall}</th>'
+        f"<th>{th_missed}</th></tr></thead>\n"
         f"<tbody>{rare_rows}</tbody>\n</table>\n"
     )
-    return rare_table + _modernization_block(view, payload)
+    return rare_table + _modernization_block(view, payload, lang)
 
 
 class TextualFidelitySection:
@@ -103,13 +135,14 @@ class TextualFidelitySection:
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         blocks = [
-            _block(analysis.view, analysis.payload)
+            _block(analysis.view, analysis.payload, ctx.lang)
             for analysis in result.analyses
             if isinstance(analysis.payload, TextualFidelityPayload)
         ]
         if not blocks:
             return None
-        return Html("<h2>Fidélité textuelle</h2>\n" + "".join(blocks))
+        title = localized(ctx.lang, "Fidélité textuelle", "Textual fidelity")
+        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
 
 
 __all__ = ["TextualFidelitySection"]

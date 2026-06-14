@@ -125,3 +125,17 @@ def test_comparative_profile_is_bilingual_and_gated_on_two_engines() -> None:
     assert "profil comparatif" not in (
         TaxonomySection().render(_result(), SectionContext()) or ""
     )
+
+
+def test_renders_english_labels() -> None:
+    # Sous lang="en", le titre/h3/prose de la section sont en anglais (le profil
+    # comparatif est déjà couvert par le test bilingue ci-dessus).
+    html = TaxonomySection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "Error taxonomy" in html  # <h2>
+    assert "error composition" in html  # <h3>
+    assert "Pure rule-based classification" in html  # prose
+    # Les libellés FR correspondants sont absents.
+    assert "Taxonomie des erreurs" not in html
+    assert "composition des erreurs" not in html
+    assert "Classification par règles pures" not in html

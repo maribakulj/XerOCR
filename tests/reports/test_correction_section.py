@@ -106,5 +106,22 @@ def test_renders_balance_and_samples() -> None:
     assert "R-1.8" in html  # étages matérialisés vides signalés
 
 
+def test_renders_english_labels() -> None:
+    html = CorrectionSection().render(
+        _result((Analysis(scope="corpus", view="text", payload=_payload()),)),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "Correction balance" in html  # <h2>
+    assert "Worst regressions" in html  # résumé du détail des régressions
+    assert "Over-normalized words" in html  # #16 sur-normalisation
+    assert "cmer corrected" in html  # en-tête de table
+    # Les libellés FR correspondants sont absents.
+    assert "Bilan de correction" not in html
+    assert "Pires régressions" not in html
+    assert "Mots sur-normalisés" not in html
+    assert "cmer corrigé" not in html
+
+
 def test_without_payload_renders_nothing() -> None:
     assert CorrectionSection().render(_result(()), SectionContext()) is None

@@ -299,10 +299,10 @@ sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
 - [x] **Vue d'ensemble** : `overview` · `corpus_composition` · `synthesis` (D-136).
 - [x] **Déjà bilingues** (dicts `_TEXT`, équivalents) : `word_errors` · `taxonomy`
   (profil) · `diagnostics` (flux). Migration vers `localized` opportuniste.
-- [~] **Par moteur** : `dispersion`·`calibration`·`conformity` (D-138) ·
+- [x] **Par moteur** : `dispersion`·`calibration`·`conformity` (D-138) ·
   `structured_data`·`lines`·`ner`·`economics` (D-139) ·
-  `engine_profile`·`philology` (D-140) ✅ ; restent les 4 **partiellement
-  bilingues** : by_engine, correction, textual_fidelity, taxonomy (composition).
+  `engine_profile`·`philology` (D-140) ·
+  `by_engine`·`correction`·`textual_fidelity`·`taxonomy` (D-141) — **onglet clos (13/13)**.
 - [x] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
   (D-137) · `document_detail` (D-138) — **onglet clos**.
 - [ ] **Croisements** : cross_engine (significativité/oracle/divergence).

@@ -80,6 +80,22 @@ def test_returns_none_without_payload() -> None:
     assert TextualFidelitySection().render(empty, SectionContext()) is None
 
 
+def test_renders_english_labels() -> None:
+    html = TextualFidelitySection().render(
+        _result(_payload()), SectionContext(lang="en")
+    )
+    assert html is not None
+    assert "Textual fidelity" in html  # <h2>
+    assert "rare-token recall" in html  # <h3> tokens rares
+    assert "missed (sample)" in html  # en-tête de table
+    assert "lexical modernization" in html  # <h3> flux de modernisation
+    # Les libellés FR correspondants sont absents.
+    assert "Fidélité textuelle" not in html
+    assert "rappel des tokens rares" not in html
+    assert "manqués (échantillon)" not in html
+    assert "modernisation lexicale" not in html
+
+
 def test_modernization_table_absent_when_no_rewrite() -> None:
     row = PipelineTextualFidelity(
         pipeline="eng", n_rare_reference=2, n_rare_recalled=2, rare_recall=1.0
