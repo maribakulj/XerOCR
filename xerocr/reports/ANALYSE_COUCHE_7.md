@@ -305,8 +305,12 @@ sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
   `by_engine`·`correction`·`textual_fidelity`·`taxonomy` (D-141) — **onglet clos (13/13)**.
 - [x] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
   (D-137) · `document_detail` (D-138) — **onglet clos**.
-- [ ] **Croisements** : cross_engine (significativité/oracle/divergence).
-- [ ] **Renderer** : `_SECTION_LABELS` (aria-label des blocs) — tweak séparé.
+- [x] **Croisements** : `cross_engine` (significativité/oracle/divergence) ✅ (D-142).
+- [x] **Renderer** : `_SECTION_LABELS_EN` + aria-label des blocs bilingue ✅ (D-142).
+
+**✅ Chantier i18n CLOS (D-142)** : tout le rapport (chrome + héros + 4 onglets +
+toutes les sections + aria) est bilingue FR/EN via `SectionContext.lang` (route
+web `?lang=en`), mécanisme unique `html.localized` inline (R7 honorée).
 
 Convention : FR = défaut (tests FR inchangés) ; **+1 test EN par section convertie**.
 

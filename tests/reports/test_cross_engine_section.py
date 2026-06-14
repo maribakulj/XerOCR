@@ -189,6 +189,23 @@ def test_inter_engine_blocks_render_with_documented_bound() -> None:
     assert html == CrossEngineSection().render(_inter_engine_result(), SectionContext())
 
 
+def test_renders_english_labels() -> None:
+    # Mêmes fixtures, contexte EN : libellés anglais présents, FR absents.
+    result = _result("text:cer:significance_p", 0.03)
+    html = CrossEngineSection().render(result, SectionContext(lang="en"))
+    assert html is not None
+    assert "Inter-engine significance" in html and "Significativité" not in html
+    assert "significant" in html and "significatif" not in html
+    assert ">View<" in html and ">Vue<" not in html
+    # Le bloc inter-moteurs (complémentarité + divergence) bascule aussi en EN.
+    inter = CrossEngineSection().render(
+        _inter_engine_result(), SectionContext(lang="en")
+    )
+    assert inter is not None
+    assert "engine complementarity" in inter and "complémentarité" not in inter
+    assert "Upper bound" in inter and "Borne supérieure" not in inter
+
+
 def test_divergence_without_max_pair_says_identical_profiles() -> None:
     payload = InterEnginePayload(
         taxonomy_divergence=InterEngineDivergence(
