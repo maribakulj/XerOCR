@@ -159,3 +159,60 @@ def test_renders_roman_numerals() -> None:
 
 def test_without_payload_renders_nothing() -> None:
     assert PhilologySection().render(_result(()), SectionContext()) is None
+
+
+def test_renders_english_labels() -> None:
+    philology = PhilologyPayload(
+        pipelines=(
+            PipelinePhilology(
+                pipeline="eng",
+                family="abbreviations",
+                n_total=3,
+                n_strict=1,
+                n_expansion=3,
+                markers=(
+                    MarkerPreservation(sign="ꝑ", n_total=2, n_strict=1, n_expansion=2),
+                ),
+            ),
+        )
+    )
+    roman = RomanNumeralsPayload(
+        pipelines=(
+            PipelineRomanNumerals(
+                pipeline="eng",
+                n_total=4,
+                strict_preserved=1,
+                case_changed=1,
+                j_dropped=0,
+                converted_to_arabic=1,
+                lost=1,
+                lost_samples=("XII",),
+            ),
+        )
+    )
+    html = PhilologySection().render(
+        _result(
+            (
+                Analysis(scope="corpus", view="text", payload=philology),
+                Analysis(scope="corpus", view="text", payload=roman),
+            )
+        ),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    # libellés EN introduits…
+    assert "Philology" in html
+    assert "philological markers" in html
+    assert "medieval abbreviations" in html
+    assert "with expansion" in html
+    assert "Roman numerals" in html
+    assert "converted to Arabic" in html
+    # … et leurs équivalents FR absents
+    assert "Philologie" not in html
+    assert "marqueurs philologiques" not in html
+    assert "abréviations médiévales" not in html
+    assert "avec développement" not in html
+    assert "numéraux romains" not in html
+    assert "converti en arabe" not in html
+    # signe verbatim conservé (donnée, pas traduite)
+    assert "ꝑ" in html

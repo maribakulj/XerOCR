@@ -13,7 +13,7 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import CalibrationPayload, TaxonomyPayload
 from xerocr.evaluation.result import PipelineResult, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.sections.taxonomy import composition_html
@@ -87,13 +87,20 @@ class EngineProfileSection:
         if not engines:
             return None
         panels = "".join(
-            self._panel(result, view, name, order, engines, pos)
+            self._panel(result, view, name, order, engines, pos, ctx.lang)
             for pos, name in enumerate(engines)
         )
         return Html(
-            "<h2>Profil moteur</h2>\n"
-            '<p class="muted">Cliquer un moteur dans le tableau ci-dessus pour '
-            "ouvrir son profil détaillé.</p>\n"
+            f"<h2>{localized(ctx.lang, 'Profil moteur', 'Engine profile')}</h2>\n"
+            '<p class="muted">'
+            + localized(
+                ctx.lang,
+                "Cliquer un moteur dans le tableau ci-dessus pour "
+                "ouvrir son profil détaillé.",
+                "Click an engine in the table above to "
+                "open its detailed profile.",
+            )
+            + "</p>\n"
             f'<div class="eng-profiles">{panels}</div>\n'
         )
 
@@ -105,6 +112,7 @@ class EngineProfileSection:
         order: dict[str, int],
         engines: list[str],
         pos: int,
+        lang: str,
     ) -> str:
         idx = order[name]
         pipe: PipelineResult = next(
@@ -123,9 +131,15 @@ class EngineProfileSection:
         if cal is not None:
             kpis.append(_kpi("ece", _pct(cal[0])))
         cer_vals = sorted(_per_doc_cer(result, name, view))
+        chart_caption = localized(
+            lang,
+            f'<span class="muted">· {len(cer_vals)} docs, triés</span>',
+            f'<span class="muted">· {len(cer_vals)} docs, sorted</span>',
+        )
         chart = (
-            '<div class="prof-chart"><div class="prof-chart-title">CER par document '
-            f'<span class="muted">· {len(cer_vals)} docs, triés</span></div>'
+            '<div class="prof-chart"><div class="prof-chart-title">'
+            + localized(lang, "CER par document ", "CER per document ")
+            + f"{chart_caption}</div>"
             f"{bar_series(cer_vals, accent=engine_accent(idx))}</div>"
             if cer_vals
             else ""
@@ -133,15 +147,17 @@ class EngineProfileSection:
         # Calibration + composition du moteur (réutilise les builders U2b/U2c),
         # en 2 colonnes ; chaque bloc n'apparaît que si sa donnée est présente.
         cal_block = (
-            '<div class="prof-cell"><div class="prof-chart-title">Courbe de '
-            f"calibration</div>{cal[1]}</div>"
+            '<div class="prof-cell"><div class="prof-chart-title">'
+            + localized(lang, "Courbe de calibration", "Calibration curve")
+            + f"</div>{cal[1]}</div>"
             if cal is not None
             else ""
         )
         comp = _composition(result, view, name)
         comp_block = (
-            '<div class="prof-cell"><div class="prof-chart-title">Composition des '
-            f"erreurs</div>{comp}</div>"
+            '<div class="prof-cell"><div class="prof-chart-title">'
+            + localized(lang, "Composition des erreurs", "Error composition")
+            + f"</div>{comp}</div>"
             if comp
             else ""
         )
@@ -150,18 +166,26 @@ class EngineProfileSection:
             if (cal_block or comp_block)
             else ""
         )
+        back_label = localized(lang, "← retour au tableau", "← back to table")
+        prev_label = localized(lang, "← précédent", "← previous")
+        next_label = localized(lang, "suivant →", "next →")
+        pos_label = localized(
+            lang,
+            f"moteur {pos + 1} sur {total}",
+            f"engine {pos + 1} of {total}",
+        )
         return (
             f'<div class="drill-panel eng-profile" id="engine-{idx}" hidden '
             f'role="region" aria-label="{escape(name)}">'
             '<div class="prof-head">'
-            '<a class="drill-back" href="#">← retour au tableau</a>'
+            f'<a class="drill-back" href="#">{back_label}</a>'
             '<div class="prof-nav">'
-            f'<a class="btn-sm" href="#engine-{prev_idx}">← précédent</a>'
-            f'<a class="btn-sm" href="#engine-{next_idx}">suivant →</a></div></div>'
+            f'<a class="btn-sm" href="#engine-{prev_idx}">{prev_label}</a>'
+            f'<a class="btn-sm" href="#engine-{next_idx}">{next_label}</a></div></div>'
             f'<div class="prof-title"><span class="eng-badge" '
             f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
             f"<span>{escape(name)}</span>"
-            f'<span class="muted prof-pos">moteur {pos + 1} sur {total}</span></div>'
+            f'<span class="muted prof-pos">{pos_label}</span></div>'
             f'<div class="kpi-band">{"".join(kpis)}</div>'
             f"{chart}{extras}</div>"
         )
