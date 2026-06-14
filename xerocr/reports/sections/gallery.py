@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.result import MetricScore, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 
@@ -96,10 +96,21 @@ class DocumentGallerySection:
             )
             for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
         )
+        title = localized(
+            ctx.lang,
+            f"Galerie des documents (vue : {escape(view)})",
+            f"Document gallery (view: {escape(view)})",
+        )
+        caption = localized(
+            ctx.lang,
+            "Aperçu + CER par moteur "
+            "(pastille de couleur ; meilleur du document surligné).",
+            "Preview + CER per engine "
+            "(colour dot; best of the document highlighted).",
+        )
         return Html(
-            f"<h2>Galerie des documents (vue : {escape(view)})</h2>\n"
-            '<p class="muted">Aperçu + CER par moteur '
-            "(pastille de couleur ; meilleur du document surligné).</p>\n"
+            f"<h2>{title}</h2>\n"
+            f'<p class="muted">{caption}</p>\n'
             f'<div class="doc-grid">{cards}</div>\n'
         )
 

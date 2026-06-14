@@ -9,6 +9,7 @@ sans JS, la grille (entrée) s'affiche, ``report.js`` bascule vers la liste.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.html import localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections.by_document import DocumentSection
 from xerocr.reports.sections.document_detail import DocumentDetailSection
@@ -27,12 +28,15 @@ class DocumentsSection:
         if grid is None and lst is None:
             return None
         details = DocumentDetailSection().render(result, ctx) or ""
+        affichage = localized(ctx.lang, "Affichage", "Display")
+        grid_label = localized(ctx.lang, "Grille", "Grid")
+        list_label = localized(ctx.lang, "Liste", "List")
         toggle = (
-            '<div class="view-toggle" role="group" aria-label="Affichage">'
+            f'<div class="view-toggle" role="group" aria-label="{affichage}">'
             '<button type="button" class="vt-btn on" data-view="grid" '
-            'aria-pressed="true">⊞ Grille</button>'
+            f'aria-pressed="true">⊞ {grid_label}</button>'
             '<button type="button" class="vt-btn" data-view="list" '
-            'aria-pressed="false">≡ Liste</button></div>'
+            f'aria-pressed="false">≡ {list_label}</button></div>'
         )
         return Html(
             f"{toggle}"

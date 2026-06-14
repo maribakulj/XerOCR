@@ -302,8 +302,8 @@ sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
 - [ ] **Par moteur** : by_engine, engine_profile, dispersion, calibration,
   conformity, correction, structured_data, philology, textual_fidelity, lines,
   ner, economics.
-- [ ] **Par document** : documents, by_document, document_detail, gallery,
-  image_quality.
+- [~] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
+  ✅ (D-137) ; **`document_detail`** (drill-in, 199 LOC) à venir.
 - [ ] **Croisements** : cross_engine (significativité/oracle/divergence).
 - [ ] **Renderer** : `_SECTION_LABELS` (aria-label des blocs) — tweak séparé.
 

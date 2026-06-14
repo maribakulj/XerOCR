@@ -79,6 +79,15 @@ def test_is_deterministic_and_escapes_ids() -> None:
     assert html == DocumentGallerySection().render(result, SectionContext())
 
 
+def test_renders_english_labels() -> None:
+    result = _result(_doc("doc1", "tesseract", 0.20))
+    html = DocumentGallerySection().render(result, SectionContext(lang="en"))
+    assert html is not None
+    assert "Document gallery" in html and "Galerie des documents" not in html
+    assert "Preview + CER per engine" in html
+    assert "Aperçu + CER par moteur" not in html
+
+
 def test_real_thumbnail_when_image_provided() -> None:
     result = _result(_doc("doc1", "tesseract", 0.20))
     ctx = SectionContext(images={"doc1": "data:image/jpeg;base64,AAAA"})
