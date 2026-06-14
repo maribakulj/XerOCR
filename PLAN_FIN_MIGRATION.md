@@ -26,9 +26,10 @@ calibration, statistiques (Nemenyi + bootstrap), synthèse factuelle.
 **Ce qui manque pour la 1.0**, et que les cinq étapes ci-dessous couvrent
 **entièrement** :
 
-1. Le Space public **n'exécute aucun moteur** (vitrine lecture seule) → le
-   visiteur ne peut pas faire un vrai OCR gratuitement. **Manque n°1.**
-2. **Parité moteurs** Google / Azure / Pero / Calamari.
+1. ~~Le Space public **n'exécute aucun moteur**~~ → **✅ résolu (D-075)** : image
+   moteur Tesseract + mode public fail-closed ; un visiteur fait un vrai OCR sans
+   clé. *(Reste différé : segmenteur PP-DocLayout sur le Space, T2.5.)*
+2. ~~**Parité moteurs** Google / Azure / Pero / Calamari~~ → **✅ (D-076→D-080)**.
 3. **Parité d'interface** (rapport interactif, galerie, champs de formulaire).
 4. Les **métriques restantes** de Picarones jugées utiles (voir §« Verdict
    métrique » plus bas).
@@ -111,7 +112,7 @@ avant chaque push.
 
 # LES 5 ÉTAPES, DANS L'ORDRE
 
-## Étape 1 — Le Space exécute un vrai OCR gratuit
+## Étape 1 — Le Space exécute un vrai OCR gratuit ✅ (D-075)
 
 **C'est le manque n°1 et le point de départ.** Aujourd'hui le Space est une
 vitrine qui ne fait tourner aucun moteur. Cible : un visiteur uploade un corpus,
@@ -126,7 +127,7 @@ lance Tesseract, reçoit un vrai rapport CER — **sans clé, sans installation*
 
 ---
 
-## Étape 2 — Parité moteurs
+## Étape 2 — Parité moteurs ✅ (D-076→D-080)
 
 Compléter les moteurs côté utilisateur, selon l'arbitrage acté. **Un seul contrat
 `Protocol`**, chaque moteur extra-gated, fail-closed sans clé (listé mais
@@ -206,13 +207,20 @@ défauts.
 
 ### Checklist « 1.0 prête »
 
-- [ ] **Étape 1** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent) ; décision segmenteur prise.
-- [ ] **Étape 2** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par tous les adapters cloud, **16 prompts curés portés**.
+> **État au 2026-06-14 (D-143)** : **Étapes 1→4 ✅** (Space-OCR, parité moteurs,
+> interface/rapport, P2 métriques) **+ i18n finale du rapport ✅** (D-136→D-142 :
+> tout le rapport bilingue FR/EN). **Reste** : **P3** (dataset curé) · **P4**
+> (saveurs servie/IIIF) · **P5** (release 1.0 + gel) ; **petits restes** (3c
+> champs config/profil/expose-ALTO · nombres FR · surface NER vivante) ; et la
+> **décision opérationnelle** segmenteur Space (T2.5, différée — ne bloque pas 1.0).
+
+- [x] **Étape 1 ✅ (D-075)** : le Space public exécute Tesseract gratuitement (build fail-fast, OMP borné, `fra` présent ; mode public fail-closed, binaire tracé au `RunManifest`). *Décision segmenteur (PP-DocLayout, T2.5) **différée** — mesurer le cold-start ; dégradé gracieux livré, ne bloque pas 1.0.*
+- [x] **Étape 2 ✅ (D-076→D-080)** : Google + Azure first-party, Pero + Calamari first-party in-tree (D-078), zero-shot vérifié, jetons remontés par les adapters cloud, **16 prompts curés portés** + prompt libre UI.
 - [x] **Étape 3 / Rapport interactif** : 4 onglets, chrome unifié + exports, héros+cartes, glossaire en dialog, graphes SVG, tables triables + survol-définitions, profil moteur drill-in, galerie-entrée + détail document drill-in (U1→U4 livrés, cf. `PLAN_UI_RAPPORT.md`).
 - [x] **P0 — Enveloppe données** : `DocumentRef.metadata` optionnel + référence image dans `RunDocumentResult` (jamais les octets). *(strates D-110 + image D-111)*
 - [ ] **P1 — Rapport données locales** : T3 vignettes ✅ · T4 fac-similé + diff pleine page ✅ · U5′ strates ✅ · *reste* : **nombres FR** (micro) · saveur **dossier** (P4).
 - [x] **P2 / Étape 4 TERMINÉE** : **toutes** les familles métriques gardées portées (4g + 4a→4f, ordre révisé — `ANALYSE_ETAPE_4.md`), chacune avec section + tests valeurs-main. Plus aucune famille gardée hors XerOCR. **4g.1 ✅** (conformité HIPE, D-115) · **4g.2 ✅** (bilan de correction, D-116 — absorbe over_normalization/error_absorption ; procédure `hallucination` : machinerie livrée, **exécution sur runs réels avant 1.0**) · **4a ✅** (données structurées, D-117 — readability abandonné, acté) · **4b.1 ✅** (philologie/abréviations, D-118) · **4b.2 ✅** (philologie/imprimé ancien — stratégie positionnelle, D-119) · **4b.3 ✅** (philologie/archives modernes — stratégie archival bornée, D-120) · **4b.4 ✅** (philologie/numéraux romains — 5 statuts, R1 fermée, R2, D-121) · **4b.5 ✅** (philologie/archaïsmes `air`/`hcpr` — scalaires, moteur de préservation factorisé/parité, listes package-data + empreinte, D-122) → **4b TERMINÉE** · **4c réduit ✅** (fidélité textuelle — rare_tokens + lexical_modernization, collecteur corpus, R6 câblage homogène, D-123) · **4e.1 ✅** (inter-moteurs — JS sur comptages taxonomy + oracle bag-of-words borne documentée, R10, abandon `incremental_comparison` acté, D-124) · **4e.2 ✅** (distribution par ligne — alignement F15, percentiles/Gini, seuils inclusifs, heatmap, sonde `\n`, D-125) · **4e.3 ✅** (longitudinal — OLS parité scipy + **Pettitt** R11, `series_insight` → `/history`, D-126) → **4e TERMINÉE** · **4f ✅** (NER — R14 reprojection des spans en coords GT, scalaire `ner_f1` + 15ᵉ payload + section + adapter spaCy fail-closed + extra `[ner]`, D-127 ; étape NER en pipeline vivant différée = surface) · **4d.1 ✅** (qualité d'image — 16ᵉ payload `image_quality` scope corpus par document, numpy+PIL, constantes = conventions éditoriales R8, pas de mock R9, `image_predictive` abandonné C3, D-128) · **4d.2 robustesse ABANDONNÉE (D-129)** — renversement assumé du verdict GARDER : dégradations **synthétiques** (validité douteuse vs vrais défauts de scan), coût re-OCR disproportionné, seule feature à traîner la couche 6 + la tension CLI §8.4, résilience réelle = affaire des **strates du dataset P3**. → **P2 TERMINÉE.**
-- [ ] **i18n finale du rapport** (passe unique **après P2**, D-114) : contenu des sections → **bilingue FR/EN** sur la surface complète et stable (le chrome est déjà bilingue).
+- [x] **i18n finale du rapport ✅ (D-136→D-142)** : passe unique après P2 (D-114) — **tout** le rapport (chrome + héros + 4 onglets + **toutes** les sections + aria-labels) est bilingue FR/EN via `SectionContext.lang` (route web `?lang=en`), mécanisme unique `html.localized` inline (R7 — pas de catalogue). FR byte-identique ; +1 test EN par section.
 - [ ] **P3 — Dataset de référence curé** (**un seul**) : spec de standardisation + 1 corpus libre de droits (GT riche + strate + IIIF statique) + importeur (SHA → `RunManifest`). Chaîne prouvée extensible.
 - [ ] **P4 — Saveurs & échelle** : saveur réfs IIIF (dataset P3) · saveur servie (app web : galerie paginée, images à la demande, échelle 5000).
 - [ ] `make ci` vert (3 OS × Python 3.11/3.12), couverture ≥ 85 %, tous les garde-fous d'archi verts.
