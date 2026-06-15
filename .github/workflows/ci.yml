@@ -29,6 +29,11 @@ jobs:
       - name: Type
         run: python -m mypy -p xerocr
       - name: Test
+        env:
+          # `coverage` via sys.monitoring (PEP 669) annule l'overhead de tracing
+          # sur Python 3.12+ (≈ ×3 plus rapide, MÊME couverture mesurée → gate
+          # intact). 3.11 garde le traceur C (`ctrace`).
+          COVERAGE_CORE: ${{ matrix.python == '3.11' && 'ctrace' || 'sysmon' }}
         run: python -m pytest -q
 
   # Construit l'image de la vitrine (ce que le sandbox ne pouvait pas vérifier)
