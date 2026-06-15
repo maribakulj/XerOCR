@@ -841,6 +841,12 @@ table.data a { color: var(--fern-deep); font-weight: 500; }
 .norm-custom summary {
   cursor: pointer;
 }
+.config-io {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
 
 /* === Bibliothèque : organisation produit === */
 .tabs {

@@ -69,6 +69,17 @@ def test_metric_profile_selector_present_and_sent(tmp_path: Path) -> None:
     assert "payload.metric_profile" in _JS.read_text(encoding="utf-8")
 
 
+def test_config_io_controls_present_and_wired(tmp_path: Path) -> None:
+    # A : export/import de la config du formulaire (save/load JSON). L'import
+    # valide côté serveur (/api/runs/config) avant de repeupler.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="config-export"' in body  # bouton d'export (download blob)
+    assert 'id="config-import"' in body  # input fichier d'import
+    js = _JS.read_text(encoding="utf-8")
+    assert "/api/runs/config" in js  # le JS valide la config déposée
+    assert "xerocr-config.json" in js  # nom du fichier exporté
+
+
 def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
     # 3c : aperçu de normalisation (échantillon + config custom) + le JS poste à l'API.
     body = _client(tmp_path).get("/benchmark").text

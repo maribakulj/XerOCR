@@ -52,6 +52,47 @@ def test_launch_request_accepts_metric_profile() -> None:
     assert LaunchRequest().metric_profile is None  # absent par défaut (= standard)
 
 
+# --- Config save/load : POST /api/runs/config (validation stateless) ----------
+
+
+def test_config_endpoint_echoes_canonical(tmp_path: Path) -> None:
+    # A : la config du formulaire EST un LaunchRequest ; l'endpoint la valide et
+    # la renvoie canonique (exclude_none) — round-trip pour l'import client.
+    cfg = {
+        "competitors": [{"engine": "tesseract", "mode": "text_only", "llm": "openai"}],
+        "corpus_id": "c1",
+        "char_exclude": ",.;",
+        "metric_profile": "philologie",
+    }
+    r = _client(tmp_path).post("/api/runs/config", headers=_CSRF, json=cfg)
+    assert r.status_code == 200
+    out = r.json()["config"]
+    assert out["corpus_id"] == "c1"
+    assert out["char_exclude"] == ",.;"
+    assert out["metric_profile"] == "philologie"
+    comp = out["competitors"][0]
+    assert comp["engine"] == "tesseract" and comp["mode"] == "text_only"
+    assert comp["llm"] == "openai"
+    # exclude_none : pas de clé None (model absent) ; le défaut non-None reste.
+    assert "model" not in comp and comp["lang"] == "fra"
+    # normalization non fournie (None) → absente de la forme canonique.
+    assert "normalization" not in out
+
+
+def test_config_endpoint_rejects_invalid(tmp_path: Path) -> None:
+    # Champ inconnu → 422 (Pydantic extra="forbid") : un fichier malformé est
+    # rejeté net, jamais repeuplé en silence.
+    r = _client(tmp_path).post("/api/runs/config", headers=_CSRF, json={"bogus": 1})
+    assert r.status_code == 422
+
+
+def test_config_endpoint_requires_csrf(tmp_path: Path) -> None:
+    # Écriture protégée comme la preview de normalisation (corps valide → on
+    # prouve que c'est bien le CSRF qui refuse, pas la validation du corps).
+    r = _client(tmp_path).post("/api/runs/config", json={"competitors": []})
+    assert r.status_code == 403
+
+
 def test_post_without_csrf_is_403(tmp_path: Path) -> None:
     resp = _client(tmp_path).post("/api/runs")
     assert resp.status_code == 403

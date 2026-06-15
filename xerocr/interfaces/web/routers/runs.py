@@ -183,6 +183,20 @@ def build_runs_router(
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"job_id": runner.launch(build)}
 
+    @router.post(
+        "/api/runs/config", dependencies=[Depends(csrf_protect)]
+    )
+    def validate_config(payload: LaunchRequest) -> dict[str, object]:
+        """Valide une **config de lanceur** (= un ``LaunchRequest``) et la renvoie
+        sous forme **canonique**.
+
+        Stateless : aucune persistance (XerOCR reste déterministe). Consommé par
+        l'**import** côté client, qui valide ici le fichier déposé avant de
+        repeupler le formulaire — un champ inconnu ou une borne dépassée tombe en
+        ``422`` (Pydantic, ``extra="forbid"``), jamais un repeuplement muet.
+        """
+        return {"config": payload.model_dump(mode="json", exclude_none=True)}
+
     @router.get("/api/runs/{job_id}")
     def get_run(job_id: str) -> dict[str, object]:
         job = runner.store.get(job_id)
