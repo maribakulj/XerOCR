@@ -77,3 +77,12 @@ def test_without_payload_renders_nothing() -> None:
         CalibrationSection().render(RunResult(manifest=manifest), SectionContext())
         is None
     )
+
+
+def test_renders_english_labels() -> None:
+    html = CalibrationSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "confidence calibration" in html
+    assert "calibration des confidences" not in html
+    assert "mean confidence" in html and "confiance moyenne" not in html
+    assert "accuracy" in html and "exactitude" not in html

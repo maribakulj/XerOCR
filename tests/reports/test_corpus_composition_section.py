@@ -48,6 +48,16 @@ def test_renders_strata_counts_and_shares() -> None:
     assert html.index("manuscrit") < html.index("imprimé")
 
 
+def test_renders_english_labels() -> None:
+    html = CorpusCompositionSection().render(
+        _result(_doc("a", "manuscrit"), _doc("b", "imprimé")),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "Corpus composition" in html and "strata" in html
+    assert "Composition du corpus" not in html
+
+
 def test_none_when_no_stratum() -> None:
     # Aucune strate → pas de carte (jamais de strate inventée).
     html = CorpusCompositionSection().render(

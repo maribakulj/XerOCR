@@ -137,8 +137,10 @@ def test_glossary_is_a_chrome_dialog_not_a_section() -> None:
 
 
 def test_label_falls_back_to_raw_name() -> None:
-    assert _label("by_engine") == "Par moteur"  # libellé FR connu
+    assert _label("by_engine") == "Par moteur"  # libellé FR connu (défaut)
+    assert _label("by_engine", "en") == "By engine"  # libellé EN (aria ?lang=en)
     assert _label("inconnue") == "inconnue"  # repli : nom brut
+    assert _label("inconnue", "en") == "inconnue"  # repli EN aussi
 
 
 def test_chrome_meta_and_exports_present() -> None:

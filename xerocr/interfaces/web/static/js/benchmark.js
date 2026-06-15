@@ -69,6 +69,7 @@
     var corpusSelect = document.getElementById("corpus-select");
     var normalization = document.getElementById("normalization");
     var charExclude = document.getElementById("char-exclude");
+    var metricProfile = document.getElementById("metric-profile");
     var addBtn = document.getElementById("add-competitor");
     var queueTpl = document.getElementById("queue-row-tpl");
     var queueList = document.getElementById("queue-list");
@@ -401,6 +402,7 @@
       if (corpusId) payload.corpus_id = corpusId;
       if (normalization && normalization.value) payload.normalization = normalization.value;
       if (charExclude && charExclude.value) payload.char_exclude = charExclude.value;
+      if (metricProfile && metricProfile.value) payload.metric_profile = metricProfile.value;
       fetchJson("/api/runs", {
         method: "POST",
         headers: headers,

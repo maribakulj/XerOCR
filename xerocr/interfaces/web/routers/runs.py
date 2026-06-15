@@ -50,6 +50,9 @@ class LaunchRequest(BaseModel):
     normalization: str | None = None
     #: Caractères filtrés des deux côtés (GT/hyp) avant le calcul des métriques.
     char_exclude: str | None = Field(default=None, max_length=512)
+    #: Nom d'un profil de métriques (``standard``/``essentiel``/``philologie``) :
+    #: choisit les colonnes de classement de la vue ``text``. Inconnu → 422 (plan).
+    metric_profile: str | None = Field(default=None, max_length=64)
 
 
 def _referenced_kinds(comp: Competitor) -> tuple[str, ...]:
@@ -174,6 +177,7 @@ def build_runs_router(
                 run_id,
                 normalization=req.normalization,
                 char_exclude=req.char_exclude,
+                metric_profile=req.metric_profile,
             )
         except RunPlanningError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc

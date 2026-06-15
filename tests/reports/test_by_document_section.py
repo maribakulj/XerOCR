@@ -59,6 +59,15 @@ def test_renders_per_document_rows_with_grouping() -> None:
     assert 'style="width:100%"' in html
 
 
+def test_renders_english_labels() -> None:
+    html = DocumentSection().render(
+        _result(_doc("folio_1", "tesseract", 0.10)),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "View :" in html and "Vue :" not in html
+
+
 def test_none_value_rendered_as_dash() -> None:
     result = _result(_doc("f", "tesseract", None))
     html = DocumentSection().render(result, SectionContext())

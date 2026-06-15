@@ -94,31 +94,41 @@ class Competitor(BaseModel):
 #: la plus aboutie de chaque pipeline (cf. evaluation).
 _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 
+#: **Profils de métriques** : bundles curés de colonnes scalaires pour la vue
+#: ``text`` (classement par défaut du rapport). Chaque nom ne référence que des
+#: métriques **enregistrées** pour la signature ``(RAW_TEXT, RAW_TEXT)`` — un nom
+#: non enregistré ferait lever le runner (couche 3 ; verrouillé par test). Changer
+#: de profil n'allège **que** les colonnes de classement : les *collecteurs*
+#: (taxonomy, structured_data, NER…) restent indépendants de ``metric_names``, la
+#: donnée n'est jamais perdue. ``standard`` est le défaut **historique**
+#: (byte-identique à l'ancienne vue par défaut).
+DEFAULT_METRIC_PROFILE = "standard"
+METRIC_PROFILES: dict[str, tuple[str, ...]] = {
+    "standard": ("cer", "wer", "mer", "searchability", "hallucination", "air"),
+    "essentiel": ("cer", "wer", "mer"),
+    "philologie": ("cer", "cer_diplo", "mer", "diacritic_err", "mufi_err", "air"),
+}
+
 
 def _ocr_view(
     normalization: str | None,
     char_exclude: str | None,
     *,
     with_hcpr: bool = False,
+    base_metrics: tuple[str, ...] = METRIC_PROFILES[DEFAULT_METRIC_PROFILE],
 ) -> EvaluationView:
-    # ``air`` (apport net d'archaïsmes) est actif d'office (Q4) ; ``hcpr``
-    # (préservation) n'apparaît que sur une liste **explicitement** configurée
-    # — sinon il doublonnerait ``mufi_err`` sur tout corpus médiéval.
-    # ``numseq_strict``/``numseq_value`` **retirés de la vue par défaut** (D-130) :
-    # adaptatifs (``None`` sans séquences) → deux colonnes vides « — » sur tout
-    # corpus sans dates/folios/montants. Ils restent **enregistrés** (utilisables
-    # par une vue custom qui voudrait classer dessus), et la **section
-    # `structured_data` reste affichée** quand des séquences existent (le
-    # collecteur l'observe indépendamment de ``metric_names``) — la donnée n'est
-    # pas perdue, seul le classement scalaire par défaut s'allège.
-    metric_names: tuple[str, ...] = (
-        "cer",
-        "wer",
-        "mer",
-        "searchability",
-        "hallucination",
-        "air",
-    )
+    # ``base_metrics`` vient du **profil de métriques** choisi (défaut
+    # ``standard``). ``air`` (apport net d'archaïsmes) y est d'office (Q4) ;
+    # ``hcpr`` (préservation) n'est **ajouté** que sur une liste **explicitement**
+    # configurée — sinon il doublonnerait ``mufi_err`` sur tout corpus médiéval.
+    # ``numseq_strict``/``numseq_value`` restent **hors** des profils (D-130) :
+    # adaptatifs (``None`` sans séquences) → colonnes vides « — » sur tout corpus
+    # sans dates/folios/montants. Ils restent **enregistrés** (utilisables par une
+    # vue custom qui voudrait classer dessus), et la **section `structured_data`
+    # reste affichée** quand des séquences existent (le collecteur l'observe
+    # indépendamment de ``metric_names``) — la donnée n'est pas perdue, seul le
+    # classement scalaire par défaut s'allège.
+    metric_names = base_metrics
     if with_hcpr:
         metric_names = (*metric_names, "hcpr")
     return EvaluationView(
@@ -160,6 +170,7 @@ def _views_for_corpus(
     char_exclude: str | None = None,
     *,
     with_hcpr: bool = False,
+    base_metrics: tuple[str, ...] = METRIC_PROFILES[DEFAULT_METRIC_PROFILE],
 ) -> tuple[EvaluationView, ...]:
     """Vues à évaluer selon les **types de GT présents**, sous ``normalization``.
 
@@ -168,17 +179,44 @@ def _views_for_corpus(
     défaut (le run reste exécutable, simplement non scoré). ``char_exclude``
     filtre des caractères des deux côtés (GT/hyp) avant le calcul (runner couche 3).
     ``with_hcpr`` ajoute la colonne ``hcpr`` à la vue ``text`` (liste archaïque
-    configurée).
+    configurée). ``base_metrics`` = colonnes scalaires du **profil de métriques**
+    choisi (n'affecte que la vue ``text``, pas la vue *référence* fixe).
     """
     gt_types = {gt.type for doc in corpus.documents for gt in doc.ground_truths}
     views: list[EvaluationView] = []
     if ArtifactType.RAW_TEXT in gt_types:
-        views.append(_ocr_view(normalization, char_exclude, with_hcpr=with_hcpr))
+        views.append(
+            _ocr_view(
+                normalization, char_exclude,
+                with_hcpr=with_hcpr, base_metrics=base_metrics,
+            )
+        )
     if ArtifactType.REFERENCE_TEXT in gt_types:
         views.append(_reference_view(normalization, char_exclude))
     if not views:
-        views.append(_ocr_view(normalization, char_exclude, with_hcpr=with_hcpr))
+        views.append(
+            _ocr_view(
+                normalization, char_exclude,
+                with_hcpr=with_hcpr, base_metrics=base_metrics,
+            )
+        )
     return tuple(views)
+
+
+def _resolve_metric_profile(name: str | None) -> tuple[str, ...]:
+    """Colonnes scalaires d'un profil nommé (défaut : ``standard``).
+
+    Un nom inconnu → ``RunPlanningError`` (jamais un défaut muet ; le routeur le
+    remonte en 422), comme pour un profil de normalisation inconnu.
+    """
+    if name is None:
+        return METRIC_PROFILES[DEFAULT_METRIC_PROFILE]
+    try:
+        return METRIC_PROFILES[name]
+    except KeyError:
+        raise RunPlanningError(
+            f"profil de métriques inconnu : {name!r}."
+        ) from None
 
 
 def _resolve_prompt(comp: Competitor) -> str | None:
@@ -334,6 +372,7 @@ def plan_benchmark_run(
     normalization: str | None = None,
     char_exclude: str | None = None,
     archaic_list: str | None = None,
+    metric_profile: str | None = None,
 ) -> Callable[[Path], RunSpec]:
     """Builder de spec d'un **benchmark** : N concurrents → un ``RunSpec``.
 
@@ -346,6 +385,11 @@ def plan_benchmark_run(
     liste** ; sans lui, seul ``air`` reste actif sur la liste par défaut. Le nom
     et l'empreinte de la liste effective entrent au ``RunManifest.metadata``
     (reproductibilité) ; un nom inconnu est refusé (``RunPlanningError``).
+
+    ``metric_profile`` (nom d'un :data:`METRIC_PROFILES`) choisit le **bundle de
+    colonnes scalaires** de la vue ``text`` (défaut ``standard``, byte-identique à
+    l'historique) ; un nom inconnu est refusé (``RunPlanningError`` → 422). Il
+    n'affecte **que** le classement par défaut — les collecteurs restent intacts.
     """
     if not competitors:
         raise RunPlanningError("benchmark : au moins un concurrent requis.")
@@ -355,6 +399,7 @@ def plan_benchmark_run(
         raise RunPlanningError(
             f"profil de normalisation inconnu : {normalization!r}."
         )
+    base_metrics = _resolve_metric_profile(metric_profile)
     try:
         resolved = resolve_archaic_list(archaic_list)
     except XerOCRError as exc:
@@ -378,7 +423,9 @@ def plan_benchmark_run(
         pipelines=tuple(pipelines),
         evaluation=EvaluationSpec(
             views=_views_for_corpus(
-                corpus, normalization, char_exclude, with_hcpr=archaic_list is not None
+                corpus, normalization, char_exclude,
+                with_hcpr=archaic_list is not None,
+                base_metrics=base_metrics,
             )
         ),
         adapter_kwargs=adapter_kwargs,
@@ -424,6 +471,22 @@ def benchmark_engine_catalog(
     }
 
 
+def metric_profile_catalog() -> tuple[dict[str, object], ...]:
+    """Profils de métriques proposables au lanceur — **source unique** de l'UI.
+
+    ``standard`` (défaut) d'abord, puis les autres triés (ordre déterministe).
+    Chaque entrée porte la liste **ordonnée** de ses métriques : le formulaire
+    s'en sert pour un libellé self-documenté (les noms de métriques sont neutres
+    en langue, pas d'i18n par profil). Anti-vide : on n'offre jamais une option
+    sans branche serveur — chaque nom est résolu par ``_resolve_metric_profile``.
+    """
+    others = sorted(name for name in METRIC_PROFILES if name != DEFAULT_METRIC_PROFILE)
+    return tuple(
+        {"name": name, "metrics": list(METRIC_PROFILES[name])}
+        for name in (DEFAULT_METRIC_PROFILE, *others)
+    )
+
+
 def _segmentation_spec(corpus: CorpusSpec, run_id: str) -> RunSpec:
     """Pipeline de segmentation à 1 étape : ``pp_doclayout`` (IMAGE→LAYOUT).
 
@@ -460,10 +523,13 @@ def plan_segmentation_run(
 
 
 __all__ = [
+    "DEFAULT_METRIC_PROFILE",
+    "METRIC_PROFILES",
     "SEGMENTER_KIND",
     "Competitor",
     "RunPlanningError",
     "benchmark_engine_catalog",
+    "metric_profile_catalog",
     "plan_benchmark_run",
     "plan_segmentation_run",
 ]

@@ -60,8 +60,11 @@ def test_renders_rare_and_modernization() -> None:
     assert "Fidélité textuelle" in html
     assert "5/6" in html and "83.3%" in html  # rappel rare
     assert "louis" in html  # échantillon manqué
-    assert "maistre" in html and "maître ×3" in html  # modernisation + variante
-    assert "75.0%" in html
+    # #17 flux de modernisation : forme GT (source) → variante produite (chip ×compte).
+    assert 'class="wflow"' in html
+    assert 'class="wf-word wf-src">maistre</span>' in html  # forme historique
+    assert 'class="wf-word">maître</span>' in html and "×3" in html  # variante
+    assert "75.0%" in html  # taux de réécriture en regard
 
 
 def test_returns_none_without_payload() -> None:
@@ -75,6 +78,22 @@ def test_returns_none_without_payload() -> None:
     )
     empty = RunResult(manifest=manifest)
     assert TextualFidelitySection().render(empty, SectionContext()) is None
+
+
+def test_renders_english_labels() -> None:
+    html = TextualFidelitySection().render(
+        _result(_payload()), SectionContext(lang="en")
+    )
+    assert html is not None
+    assert "Textual fidelity" in html  # <h2>
+    assert "rare-token recall" in html  # <h3> tokens rares
+    assert "missed (sample)" in html  # en-tête de table
+    assert "lexical modernization" in html  # <h3> flux de modernisation
+    # Les libellés FR correspondants sont absents.
+    assert "Fidélité textuelle" not in html
+    assert "rappel des tokens rares" not in html
+    assert "manqués (échantillon)" not in html
+    assert "modernisation lexicale" not in html
 
 
 def test_modernization_table_absent_when_no_rewrite() -> None:

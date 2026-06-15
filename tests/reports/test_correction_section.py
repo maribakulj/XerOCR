@@ -100,8 +100,27 @@ def test_renders_balance_and_samples() -> None:
     assert "+0.0000" in html  # pref signé
     assert "2.0000" in html  # change_ratio
     assert "Pires régressions" in html and "doc2" in html
-    assert "Mots sur-normalisés" in html and "abx" in html
+    # #16 sur-normalisation : flux mot OCR-juste (référence) → forme du correcteur.
+    assert "Mots sur-normalisés" in html and 'class="wf-row"' in html
+    assert 'class="wf-word wf-src">abc</span>' in html and "abx" in html
     assert "R-1.8" in html  # étages matérialisés vides signalés
+
+
+def test_renders_english_labels() -> None:
+    html = CorrectionSection().render(
+        _result((Analysis(scope="corpus", view="text", payload=_payload()),)),
+        SectionContext(lang="en"),
+    )
+    assert html is not None
+    assert "Correction balance" in html  # <h2>
+    assert "Worst regressions" in html  # résumé du détail des régressions
+    assert "Over-normalized words" in html  # #16 sur-normalisation
+    assert "cmer corrected" in html  # en-tête de table
+    # Les libellés FR correspondants sont absents.
+    assert "Bilan de correction" not in html
+    assert "Pires régressions" not in html
+    assert "Mots sur-normalisés" not in html
+    assert "cmer corrigé" not in html
 
 
 def test_without_payload_renders_nothing() -> None:

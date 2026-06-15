@@ -128,3 +128,13 @@ def test_none_without_documents() -> None:
     )
     empty = RunResult(manifest=manifest)
     assert DocumentDetailSection().render(empty, SectionContext()) is None
+
+
+def test_renders_english_labels() -> None:
+    html = DocumentDetailSection().render(
+        _result(with_worst=True), SectionContext(lang="en")
+    )
+    assert html is not None
+    assert "CER per engine" in html and "CER par moteur" not in html
+    assert "Worst lines" in html and "Pires lignes" not in html
+    assert "← back to gallery" in html and "← retour à la galerie" not in html

@@ -2,36 +2,77 @@
 
 Rend les payloads ``diagnostics`` de ``RunResult.analyses`` en **lecture
 seule** : « voir où ça casse », texte à l'appui. Les extraits sont verbatim du
-``RunResult`` (chargés et normalisés au scoring) — aucun recalcul au rendu.
+``RunResult`` (chargés et normalisés au scoring) — aucun recalcul au rendu. Les
+confusions sont mises en **flux de glyphes** (#8) : le glyphe attendu → produit,
+prominents, barre de fréquence — « voir les symboles » et leur direction.
 """
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import DiagnosticsPayload, WorstLine
+from xerocr.evaluation.analysis import CharConfusion, DiagnosticsPayload, WorstLine
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.html import escape
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.text_diff import char_diff
 
+#: Libellés bilingues du **flux de confusion** (#8). Le reste de la section,
+#: antérieur à la consigne FR/EN des graphiques, reste FR (i18n rapport = jalon).
+_CONFUSION_TEXT: dict[str, dict[str, str]] = {
+    "fr": {
+        "title": "Confusions de caractères récurrentes (attendu → produit)",
+        "intro": (
+            "Le glyphe attendu (vérité-terrain) → le glyphe produit par le "
+            "moteur ; la barre indique la fréquence. La <strong>direction</strong> "
+            "compte : « ſ → f » (long s lu f) n'est pas « f → ſ »."
+        ),
+    },
+    "en": {
+        "title": "Recurring character confusions (expected → produced)",
+        "intro": (
+            "The expected glyph (ground truth) → the glyph the engine produced; "
+            "the bar shows frequency. <strong>Direction</strong> matters: "
+            "“ſ → f” (long s read as f) is not “f → ſ”."
+        ),
+    },
+}
 
-def _confusion_table(payload: DiagnosticsPayload) -> str:
-    if not payload.confusions:
-        return ""
-    rows: list[str] = []
-    for block in payload.confusions:
-        for pair in block.pairs:
-            rows.append(
-                f'<tr><td class="eng-cell">{escape(block.pipeline)}</td>'
-                f'<td class="disp">{escape(pair.expected)} → '
-                f"{escape(pair.observed)}</td>"
-                f'<td class="disp">{pair.count}</td></tr>'
-            )
+
+def _confusion_chip(pair: CharConfusion, max_count: int) -> str:
+    """Une paire de confusion : glyphes attendu → produit + barre de fréquence."""
+    width = round(pair.count / max_count * 48)
     return (
-        "<h4>Confusions de caractères récurrentes</h4>\n"
-        '<table class="data">\n<thead><tr><th>Pipeline</th>'
-        '<th class="num-cell">attendu → produit</th>'
-        '<th class="num-cell">occurrences</th></tr></thead>\n'
-        f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
+        '<div class="cf-pair">'
+        f'<span class="cf-glyph">{escape(pair.expected)}</span>'
+        '<span class="cf-arrow">→</span>'
+        f'<span class="cf-glyph">{escape(pair.observed)}</span>'
+        f'<span class="cf-bar" style="width:{width}px"></span>'
+        f'<span class="cf-count">{pair.count}</span></div>'
+    )
+
+
+def _confusion_flow(payload: DiagnosticsPayload, lang: str) -> str:
+    """Flux de confusion (#8) : par moteur, glyphes attendu → produit + fréquence.
+
+    Les glyphes sont **prominents** (le symbole *est* la donnée — on juge à l'œil) ;
+    la barre est proportionnelle au compte (pairs déjà triées -count). Verbatim,
+    échappés (anti-XSS) ; le slot bordé rend une espace confondue **visible**."""
+    groups: list[str] = []
+    for block in payload.confusions:
+        if not block.pairs:
+            continue
+        max_count = block.pairs[0].count  # pairs triées -count → pairs[0] = max
+        chips = "".join(_confusion_chip(pair, max_count) for pair in block.pairs)
+        groups.append(
+            f'<div class="cf-engine"><span class="cf-eng-name">'
+            f"{escape(block.pipeline)}</span>"
+            f'<div class="cf-grid">{chips}</div></div>'
+        )
+    if not groups:
+        return ""
+    text = _CONFUSION_TEXT.get(lang, _CONFUSION_TEXT["fr"])
+    return (
+        f"<h4>{text['title']}</h4>\n"
+        f'<p class="muted">{text["intro"]}</p>\n' + "".join(groups)
     )
 
 
@@ -95,7 +136,7 @@ class DiagnosticsSection:
             if not isinstance(payload, DiagnosticsPayload):
                 continue
             inner = (
-                _confusion_table(payload)
+                _confusion_flow(payload, ctx.lang)
                 + _worst_lines_table(payload)
                 + _hardest_table(payload)
             )

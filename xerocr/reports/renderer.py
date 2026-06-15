@@ -28,6 +28,7 @@ _SECTION_LABELS = {
     "image_quality": "Qualité image",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "word_errors": "Carte des mots",
     "conformity": "Conformité HIPE",
     "correction": "Bilan de correction",
     "structured_data": "Données structurées",
@@ -41,9 +42,35 @@ _SECTION_LABELS = {
     "calibration": "Calibration",
 }
 
+#: Libellés **EN** des sections (parité de clés avec ``_SECTION_LABELS``) — pour
+#: l'``aria-label`` des blocs quand le rapport est rendu en anglais (``?lang=en``).
+_SECTION_LABELS_EN = {
+    "synthesis": "Synthesis",
+    "overview": "Overview",
+    "corpus_composition": "Composition",
+    "by_engine": "By engine",
+    "engine_profiles": "Engine profiles",
+    "documents": "By document",
+    "image_quality": "Image quality",
+    "dispersion": "Dispersion",
+    "cross_engine": "Cross-engine",
+    "conformity": "HIPE conformity",
+    "correction": "Correction balance",
+    "structured_data": "Structured data",
+    "philology": "Philology",
+    "textual_fidelity": "Textual fidelity",
+    "lines": "Per line",
+    "ner": "Named entities",
+    "economics": "Economics",
+    "diagnostics": "Diagnostics",
+    "taxonomy": "Taxonomy",
+    "calibration": "Calibration",
+}
 
-def _label(name: str) -> str:
-    return _SECTION_LABELS.get(name, name)
+
+def _label(name: str, lang: str = "fr") -> str:
+    table = _SECTION_LABELS_EN if lang == "en" else _SECTION_LABELS
+    return table.get(name, name)
 
 
 #: Onglets du rapport (IA en 4 vues — cf. DECISION_RAPPORT_INTERACTIF.md).
@@ -117,14 +144,15 @@ _SECTION_TAB = {
     "diagnostics": "documents",
     "image_quality": "documents",
     "cross_engine": "crosses",
+    "word_errors": "crosses",
 }
 
 
-def _block(name: str, html: str) -> str:
+def _block(name: str, html: str, lang: str) -> str:
     """Une section = sa **propre carte** ``.sec``, région ancrée (``#r-<name>``)."""
     return (
         f'<section id="r-{escape(name)}" class="r-block sec" '
-        f'aria-label="{escape(_label(name))}">{html}</section>'
+        f'aria-label="{escape(_label(name, lang))}">{html}</section>'
     )
 
 
@@ -190,7 +218,7 @@ def _tab_layout(
     for name, html in rendered:
         tab = _SECTION_TAB.get(name)
         bucket = trailer if tab is None else by_tab[tab]
-        bucket.append(_block(name, html))
+        bucket.append(_block(name, html, lang))
     active = [t for t in _TAB_ORDER if by_tab[t]]
     if len(active) < 2:
         body = "".join("".join(by_tab[t]) for t in active) + "".join(trailer)
@@ -326,6 +354,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
     from xerocr.reports.sections.textual_fidelity import TextualFidelitySection
+    from xerocr.reports.sections.word_errors import WordErrorsSection
 
     return ReportRenderer(
         (
@@ -338,6 +367,7 @@ def default_report_renderer() -> ReportRenderer:
             DocumentsSection(),
             ImageQualitySection(),
             CrossEngineSection(),
+            WordErrorsSection(),
             ConformitySection(),
             CorrectionSection(),
             StructuredDataSection(),

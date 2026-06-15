@@ -82,6 +82,16 @@ def test_image_quality_renders() -> None:
     assert html == ImageQualitySection().render(_result(), SectionContext())
 
 
+def test_renders_english_labels() -> None:
+    html = ImageQualitySection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "Image quality" in html and "Qualité des images" not in html
+    assert "editorial conventions" in html and "conventions éditoriales" not in html
+    assert "sharpness" in html and "netteté" not in html
+    assert "good 1 / medium 0 / poor 1" in html
+    assert "bon 1 / moyen 0 / faible 1" not in html
+
+
 def test_no_payload_returns_none() -> None:
     section = ImageQualitySection()
     assert section.render(RunResult(manifest=_manifest()), SectionContext()) is None

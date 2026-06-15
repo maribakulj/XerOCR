@@ -12,7 +12,7 @@ from statistics import fmean, median
 
 from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.svg import dispersion_strip
@@ -58,20 +58,35 @@ class DispersionSection:
         if not series:
             return None
         scale_max = max(max(v) for _, v in series)
-        rows = "".join(self._row(p, v, order[p], scale_max) for p, v in series)
-        return Html(
-            f"<h2>Dispersion du CER (vue : {escape(view)})</h2>\n"
+        lang = ctx.lang
+        rows = "".join(self._row(p, v, order[p], scale_max, lang) for p, v in series)
+        title = localized(
+            lang,
+            f"Dispersion du CER (vue : {escape(view)})",
+            f"CER dispersion (view: {escape(view)})",
+        )
+        intro = localized(
+            lang,
             '<p class="muted">Étendue par document : min · médiane (disque) · '
-            "moyenne (tick) · max. Échelle commune entre moteurs.</p>\n"
+            "moyenne (tick) · max. Échelle commune entre moteurs.</p>\n",
+            '<p class="muted">Range per document: min · median (disc) · '
+            "mean (tick) · max. Common scale across engines.</p>\n",
+        )
+        return Html(
+            f"<h2>{title}</h2>\n"
+            f"{intro}"
             f'<div class="disp-grid">{rows}</div>\n'
         )
 
     @staticmethod
-    def _row(pipeline: str, vals: list[float], index: int, scale_max: float) -> str:
+    def _row(
+        pipeline: str, vals: list[float], index: int, scale_max: float, lang: str
+    ) -> str:
         lo, hi = min(vals), max(vals)
         med, mean = median(vals), fmean(vals)
         accent = engine_accent(index)
         strip = dispersion_strip(lo, med, mean, hi, scale_max, accent=accent)
+        med_label = localized(lang, "méd", "med")
         return (
             '<div class="disp-row">'
             f'<div class="disp-head"><span class="eng-badge" style="--badge:{accent}">'
@@ -79,7 +94,8 @@ class DispersionSection:
             f'<span class="disp-name">{escape(pipeline)}</span></div>'
             f"{strip}"
             '<div class="disp-labels mono">'
-            f"min {_pct(lo)} · méd {_pct(med)} · µ {_pct(mean)} · max {_pct(hi)}"
+            f"min {_pct(lo)} · {med_label} {_pct(med)} · µ {_pct(mean)} · "
+            f"max {_pct(hi)}"
             "</div></div>"
         )
 

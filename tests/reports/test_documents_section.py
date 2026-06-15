@@ -49,6 +49,14 @@ def test_gallery_is_entry_grid_visible_list_hidden() -> None:
     assert html.index('data-view="grid"') < html.index('data-view="list"')
 
 
+def test_renders_english_labels() -> None:
+    html = DocumentsSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "aria-label=\"Display\"" in html and 'aria-label="Affichage"' not in html
+    assert "⊞ Grid" in html and "⊞ Grille" not in html
+    assert "≡ List" in html and "≡ Liste" not in html
+
+
 def test_none_without_documents() -> None:
     manifest = RunManifest(
         run_id="r", corpus_name="demo", n_documents=0,

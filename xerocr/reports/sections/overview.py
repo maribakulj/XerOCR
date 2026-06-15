@@ -11,7 +11,7 @@ des métriques.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
 
@@ -27,16 +27,18 @@ class OverviewSection:
         if not result.pipelines:
             return None
         views = ordered_unique(p.view for p in result.pipelines)
+        corpus = localized(ctx.lang, "Corpus", "Corpus")
         parts: list[str] = [
-            "<h2>Métriques par vue</h2>",
-            f'<p class="muted">Corpus : {escape(result.manifest.corpus_name)}</p>',
+            f"<h2>{localized(ctx.lang, 'Métriques par vue', 'Metrics per view')}</h2>",
+            f'<p class="muted">{corpus} : '
+            f"{escape(result.manifest.corpus_name)}</p>",
         ]
         for view_name in views:
-            parts.append(_table_for_view(result, view_name))
+            parts.append(_table_for_view(result, view_name, ctx.lang))
         return Html("\n".join(parts) + "\n")
 
 
-def _table_for_view(result: RunResult, view_name: str) -> str:
+def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
     pipelines = [p for p in result.pipelines if p.view == view_name]
     metrics = tuple(score.metric for score in pipelines[0].aggregate)
     header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
@@ -50,8 +52,9 @@ def _table_for_view(result: RunResult, view_name: str) -> str:
         body_rows.append(
             f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>{cells}</tr>'
         )
+    view_label = localized(lang, "Vue", "View")
     return (
-        f"<h2>Vue : {escape(view_name)}</h2>\n"
+        f"<h2>{view_label} : {escape(view_name)}</h2>\n"
         f'<table class="data">\n<thead><tr><th>Pipeline</th>{header}</tr></thead>\n'
         f"<tbody>{''.join(body_rows)}</tbody>\n</table>"
     )

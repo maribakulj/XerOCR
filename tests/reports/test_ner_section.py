@@ -74,6 +74,15 @@ def test_renders_global_categories_and_samples() -> None:
     assert html == NerSection().render(_result(), SectionContext())
 
 
+def test_renders_english_labels() -> None:
+    html = NerSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "Named entities" in html and "Entités nommées" not in html
+    assert "joint" in html and "conjointe" not in html  # caveat OCR + NER
+    assert "recall" in html and "rappel" not in html
+    assert "F1 per category" in html and "F1 par catégorie" not in html
+
+
 def test_no_payload_returns_none() -> None:
     section = NerSection()
     assert section.render(RunResult(manifest=_manifest()), SectionContext()) is None

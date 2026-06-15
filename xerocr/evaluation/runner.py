@@ -49,6 +49,7 @@ from xerocr.evaluation.roman import RomanNumeralsCollector
 from xerocr.evaluation.structured_data import StructuredDataCollector
 from xerocr.evaluation.taxonomy import TaxonomyCollector
 from xerocr.evaluation.textual_fidelity import TextualFidelityCollector
+from xerocr.evaluation.word_errors import WordErrorCollector
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
 PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
@@ -105,6 +106,7 @@ def evaluate_run(
         roman = RomanNumeralsCollector()
         textual_fidelity = TextualFidelityCollector()
         inter_engine = InterEngineCollector()
+        word_errors = WordErrorCollector()
         entities = EntitiesCollector()
         # Distribution par ligne : applicable seulement si la normalisation de
         # la vue préserve les sauts de ligne (sonde comportementale).
@@ -173,6 +175,12 @@ def evaluate_run(
                         str(text_context.reference),
                         str(text_context.hypothesis),
                     )
+                    word_errors.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
                     doc_texts.observe(
                         pipeline_name,
                         document.id,
@@ -225,6 +233,9 @@ def evaluate_run(
         inter_engine_analysis = inter_engine.build(view.name, taxonomy_analysis)
         if inter_engine_analysis is not None:
             analyses.append(inter_engine_analysis)
+        word_errors_analysis = word_errors.build(view.name)
+        if word_errors_analysis is not None:
+            analyses.append(word_errors_analysis)
         structured_analysis = structured.build(view.name)
         if structured_analysis is not None:
             analyses.append(structured_analysis)

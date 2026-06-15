@@ -18,7 +18,7 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.text_diff import char_diff
@@ -75,7 +75,14 @@ class DocumentDetailSection:
         )
         panels = "".join(
             self._panel(
-                result, view, doc_id, idx, doc_ids, order, ctx.facsimiles.get(doc_id)
+                result,
+                view,
+                doc_id,
+                idx,
+                doc_ids,
+                order,
+                ctx.facsimiles.get(doc_id),
+                ctx.lang,
             )
             for idx, doc_id in enumerate(doc_ids)
         )
@@ -90,6 +97,7 @@ class DocumentDetailSection:
         doc_ids: list[str],
         order: dict[str, int],
         facsimile: str | None,
+        lang: str,
     ) -> str:
         total = len(doc_ids)
         prev_i = (idx - 1) % total
@@ -108,47 +116,62 @@ class DocumentDetailSection:
         # textes porte ce doc (top-N pires) ; sinon **pires lignes** (toujours là).
         full = _doc_texts(result, view, doc_id)
         if full is not None and full.hypotheses:
-            diffs = self._full_diff(full, order)
+            diffs = self._full_diff(full, order, lang)
         else:
             worst = _worst_lines(result, doc_id, view)
             diffs = ""
             if worst:
-                items = "".join(self._diff_line(w, order) for w in worst)
+                items = "".join(self._diff_line(w, order, lang) for w in worst)
+                worst_title = localized(
+                    lang,
+                    "Pires lignes (diff vérité-terrain ↔ sortie)",
+                    "Worst lines (diff ground truth ↔ output)",
+                )
                 diffs = (
-                    '<div class="dd-diffs"><div class="prof-chart-title">Pires lignes '
-                    f"(diff vérité-terrain ↔ sortie)</div>{items}</div>"
+                    '<div class="dd-diffs"><div class="prof-chart-title">'
+                    f"{worst_title}</div>{items}</div>"
                 )
         # Fac-similé medium à gauche (si résolu), CER + diff à droite ; sinon
         # CER + diff en pleine largeur (dégradé propre, pas d'image vide).
+        cer_title = localized(lang, "CER par moteur", "CER per engine")
         inner = (
-            '<div class="prof-chart-title">CER par moteur</div>'
+            f'<div class="prof-chart-title">{cer_title}</div>'
             f'<div class="dd-cers">{cer_rows}</div>{diffs}'
         )
         if facsimile:
+            fac_title = localized(lang, "Fac-similé", "Facsimile")
             body = (
                 '<div class="dd-cols"><div class="dd-fac">'
-                '<div class="prof-chart-title">Fac-similé</div>'
+                f'<div class="prof-chart-title">{fac_title}</div>'
                 f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
                 'loading="lazy" decoding="async"></div>'
                 f'<div class="dd-right">{inner}</div></div>'
             )
         else:
             body = inner
+        back = localized(lang, "← retour à la galerie", "← back to gallery")
+        prev_label = localized(lang, "← précédent", "← previous")
+        next_label = localized(lang, "suivant →", "next →")
+        pos = localized(
+            lang,
+            f"document {idx + 1} sur {total}",
+            f"document {idx + 1} of {total}",
+        )
         return (
             f'<div class="drill-panel doc-detail" id="doc-{idx}" hidden '
             f'role="region" aria-label="{escape(doc_id)}">'
             '<div class="prof-head">'
-            '<a class="drill-back" href="#">← retour à la galerie</a>'
+            f'<a class="drill-back" href="#">{back}</a>'
             '<div class="prof-nav">'
-            f'<a class="btn-sm" href="#doc-{prev_i}">← précédent</a>'
-            f'<a class="btn-sm" href="#doc-{next_i}">suivant →</a></div></div>'
+            f'<a class="btn-sm" href="#doc-{prev_i}">{prev_label}</a>'
+            f'<a class="btn-sm" href="#doc-{next_i}">{next_label}</a></div></div>'
             f'<div class="prof-title"><span>{escape(doc_id)}</span>'
-            f'<span class="muted prof-pos">document {idx + 1} sur {total}</span></div>'
+            f'<span class="muted prof-pos">{pos}</span></div>'
             f"{body}</div>"
         )
 
     @staticmethod
-    def _full_diff(texts: DocumentTexts, order: dict[str, int]) -> str:
+    def _full_diff(texts: DocumentTexts, order: dict[str, int], lang: str) -> str:
         """Diff **pleine page** : vérité-terrain ↔ sortie, **sélecteur de moteur**.
 
         Un bloc par moteur (révélé par ``report.js`` ; sans JS, empilés). Le diff
@@ -161,30 +184,39 @@ class DocumentDetailSection:
             f"{engine_letter(order.get(p, 0))}</span>{escape(p)}</button>"
             for i, (p, _) in enumerate(hyps)
         )
+        ref_label = localized(lang, "Vérité terrain", "Ground truth")
+        out_label = localized(lang, "Sortie", "Output")
         blocks = ""
         for i, (p, hyp) in enumerate(hyps):
             ref_html, hyp_html = char_diff(texts.reference, hyp)
             hidden = "" if i == 0 else " hidden"
             blocks += (
                 f'<div class="dd-fulldiff" data-engine="{escape(p)}"{hidden}>'
-                '<div class="dd-diff-head mono">Vérité terrain</div>'
+                f'<div class="dd-diff-head mono">{ref_label}</div>'
                 f'<div class="diff">{ref_html}</div>'
-                f'<div class="dd-diff-head mono">Sortie · {escape(p)}</div>'
+                f'<div class="dd-diff-head mono">{out_label} · {escape(p)}</div>'
                 f'<div class="diff">{hyp_html}</div></div>'
             )
+        full_title = localized(
+            lang,
+            "Diff vérité-terrain ↔ sortie (page complète)",
+            "Diff ground truth ↔ output (full page)",
+        )
         return (
-            '<div class="dd-fullwrap"><div class="prof-chart-title">Diff '
-            "vérité-terrain ↔ sortie (page complète)</div>"
+            f'<div class="dd-fullwrap"><div class="prof-chart-title">{full_title}'
+            "</div>"
             f'<div class="dd-engine-tabs segmented" role="tablist">{tabs}</div>'
             f"{blocks}</div>"
         )
 
     @staticmethod
-    def _diff_line(w: WorstLine, order: dict[str, int]) -> str:
+    def _diff_line(w: WorstLine, order: dict[str, int], lang: str) -> str:
         ref_html, hyp_html = char_diff(w.reference, w.hypothesis)
         idx = order.get(w.pipeline, 0)
-        head = (
-            f"{escape(w.pipeline)} · ligne {w.line_index} · CER {w.cer * 100:.0f} %"
+        head = localized(
+            lang,
+            f"{escape(w.pipeline)} · ligne {w.line_index} · CER {w.cer * 100:.0f} %",
+            f"{escape(w.pipeline)} · line {w.line_index} · CER {w.cer * 100:.0f} %",
         )
         return (
             '<div class="dd-diff">'

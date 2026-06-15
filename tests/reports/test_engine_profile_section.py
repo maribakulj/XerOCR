@@ -138,3 +138,18 @@ def test_deterministic() -> None:
     a = EngineProfileSection().render(r, SectionContext())
     b = EngineProfileSection().render(r, SectionContext())
     assert a == b
+
+
+def test_renders_english_labels() -> None:
+    html = EngineProfileSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    # libellés EN introduits…
+    assert "Engine profile" in html
+    assert "← back to table" in html
+    assert "CER per document " in html
+    assert "engine 1 of 2" in html
+    # … et leurs équivalents FR absents
+    assert "Profil moteur" not in html
+    assert "← retour au tableau" not in html
+    assert "CER par document " not in html
+    assert "moteur 1 sur 2" not in html

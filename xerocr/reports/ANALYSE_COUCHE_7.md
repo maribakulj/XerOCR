@@ -289,6 +289,31 @@ xerocr/reports/
 
 - [~] **Supprimé** : `narrative/` (D2) · `generator` legacy + `html/data/` + i18n/glossary d'office + Chart.js + SPA. **Différé** : 1 section/métrique à sa tranche (jamais en avance). **Interactivité what-if** = question ouverte (sélection, jamais re-mesure ; cf. §2.7).
 
+### i18n FR/EN du rapport (D-136) — **R7 honorée : inline, sur demande réelle**
+
+Mécanisme retenu = `html.localized(lang, fr, en)` (deux formulations adjacentes,
+sélection `SectionContext.lang`, repli FR). **Pas** de registre/catalogue (le
+« i18n d'office » de Picarones reste supprimé). Consommateur réel : route web
+`?lang=en` → `renderer.render(lang="en")`. Conversion **par onglet, incrémentale** :
+
+- [x] **Vue d'ensemble** : `overview` · `corpus_composition` · `synthesis` (D-136).
+- [x] **Déjà bilingues** (dicts `_TEXT`, équivalents) : `word_errors` · `taxonomy`
+  (profil) · `diagnostics` (flux). Migration vers `localized` opportuniste.
+- [x] **Par moteur** : `dispersion`·`calibration`·`conformity` (D-138) ·
+  `structured_data`·`lines`·`ner`·`economics` (D-139) ·
+  `engine_profile`·`philology` (D-140) ·
+  `by_engine`·`correction`·`textual_fidelity`·`taxonomy` (D-141) — **onglet clos (13/13)**.
+- [x] **Par document** : `documents` · `gallery` · `by_document` · `image_quality`
+  (D-137) · `document_detail` (D-138) — **onglet clos**.
+- [x] **Croisements** : `cross_engine` (significativité/oracle/divergence) ✅ (D-142).
+- [x] **Renderer** : `_SECTION_LABELS_EN` + aria-label des blocs bilingue ✅ (D-142).
+
+**✅ Chantier i18n CLOS (D-142)** : tout le rapport (chrome + héros + 4 onglets +
+toutes les sections + aria) est bilingue FR/EN via `SectionContext.lang` (route
+web `?lang=en`), mécanisme unique `html.localized` inline (R7 honorée).
+
+Convention : FR = défaut (tests FR inchangés) ; **+1 test EN par section convertie**.
+
 ---
 
 *Tous les verdicts de la Partie 1.5 sont **PROVISOIRE — à confirmer au build** : le contact du code amont (evaluation/app non encore implémentés) prévaut.*

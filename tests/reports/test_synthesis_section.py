@@ -74,6 +74,20 @@ def test_best_pipeline_delta_and_significance() -> None:
     assert 'class="sig-badge sig-yes"' in html  # qualification = badge prominent
 
 
+def test_renders_english_verdict() -> None:
+    result = _result(
+        (_pipeline("tess", "text", 0.25), _pipeline("ollama", "text", 0.10)),
+        cross_engine=(
+            MetricScore(metric="text:cer:significance_p", value=0.03, support=2),
+        ),
+    )
+    html = SynthesisSection().render(result, SectionContext(lang="en"))
+    assert html is not None
+    assert "Synthesis" in html and "Best pipeline" in html
+    assert "significant gap (p=0.0300)" in html  # verdict + nombre auditable
+    assert "écart significatif" not in html
+
+
 def test_non_significant_gap() -> None:
     result = _result(
         (_pipeline("a", "text", 0.10), _pipeline("b", "text", 0.20)),

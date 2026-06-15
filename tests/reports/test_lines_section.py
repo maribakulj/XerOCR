@@ -72,6 +72,17 @@ def test_distribution_and_heatmap_render() -> None:
     assert html == LinesSection().render(_result(), SectionContext())
 
 
+def test_renders_english_labels() -> None:
+    html = LinesSection().render(_result(), SectionContext(lang="en"))
+    assert html is not None
+    assert "Per-line error distribution" in html
+    assert "Distribution des erreurs par ligne" not in html
+    assert "per-line CER distribution" in html
+    assert "distribution du CER par ligne" not in html
+    assert "mean CER" in html and "CER moyen" not in html
+    assert "catastrophic" in html and "catastrophiques" not in html
+
+
 def test_no_payload_returns_none() -> None:
     section = LinesSection()
     assert section.render(RunResult(manifest=_manifest()), SectionContext()) is None

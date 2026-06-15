@@ -280,6 +280,46 @@ _CSS = (
     ".comp-label{color:var(--g-700);}"
     ".comp-share{color:var(--ink);font-variant-numeric:tabular-nums;}"
     ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
+    # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
+    # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
+    ".wmap-svg{max-width:100%;height:auto;display:block;background:var(--surface);"
+    "border-radius:var(--r-md);margin:.4rem 0 0;}"
+    ".wmap-word{font-family:var(--mono);font-size:11px;fill:var(--ink);}"
+    ".wmap-head{font-family:var(--mono);font-size:10px;fill:var(--g-400);"
+    "letter-spacing:0.04em;}"
+    ".wmap-count{font-family:var(--mono);font-size:10px;"
+    "font-variant-numeric:tabular-nums;}"
+    ".wmap-cell{stroke:var(--surface);stroke-width:1;}"
+    # Flux de confusion de caractères (#8) : glyphe attendu → produit, prominents
+    # (« voir les symboles » ; le slot bordé rend une espace visible) + barre de
+    # fréquence. Direction lisible (ſ→f ≠ f→ſ).
+    ".cf-engine{margin:.4rem 0 1rem;}"
+    ".cf-eng-name{font-family:var(--mono);font-size:12px;color:var(--g-500);}"
+    ".cf-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}"
+    ".cf-pair{display:flex;align-items:center;gap:7px;background:var(--surface);"
+    "border-radius:var(--r-md);padding:7px 11px;}"
+    ".cf-glyph{font-family:var(--mono);font-size:17px;line-height:1;min-width:1.3em;"
+    "text-align:center;background:var(--raised);border:1px solid var(--g-50);"
+    "border-radius:6px;padding:3px 5px;color:var(--ink);}"
+    ".cf-arrow{color:var(--g-400);font-size:12px;}"
+    ".cf-bar{height:6px;border-radius:var(--r-pill);background:var(--fern);"
+    "opacity:0.55;min-width:2px;}"
+    ".cf-count{font-family:var(--mono);font-size:11px;color:var(--g-500);"
+    "font-variant-numeric:tabular-nums;}"
+    # Flux mot→forme(s) (#16 sur-normalisation, #17 modernisation) : le mot source
+    # (prominent) → la/les forme(s) produite(s) ; chip(s) ± barre (taille = compte).
+    ".wflow{display:flex;flex-direction:column;gap:7px;margin:.4rem 0 1rem;}"
+    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
+    ".wf-word{font-family:var(--mono);font-size:13px;background:var(--surface);"
+    "border:1px solid var(--g-50);border-radius:6px;padding:3px 8px;color:var(--ink);}"
+    ".wf-src{background:var(--raised);font-weight:600;}"
+    ".wf-arrow{color:var(--g-400);font-size:12px;}"
+    ".wf-dst{display:inline-flex;align-items:center;gap:5px;}"
+    ".wf-bar{height:5px;border-radius:var(--r-pill);background:var(--fern);"
+    "opacity:0.5;min-width:2px;}"
+    ".wf-count{font-family:var(--mono);font-size:10.5px;color:var(--g-500);"
+    "font-variant-numeric:tabular-nums;}"
+    ".wf-meta{font-family:var(--mono);font-size:10.5px;color:var(--g-400);}"
     # Glossaire pédagogique : disclosure natif (<details>), monochrome, charte.
     ".glossary{display:flex;flex-direction:column;gap:8px;margin:12px 0 4px;}"
     ".gl-item{background:var(--surface);border-radius:var(--r-md);"
@@ -385,6 +425,17 @@ def escape(text: str) -> str:
     return _html.escape(text, quote=True)
 
 
+def localized(lang: str, fr: str, en: str) -> str:
+    """Choisit la chaîne selon la langue du rapport (``en`` si ``"en"``, sinon ``fr``).
+
+    Mécanisme i18n **minimal** : les sections gardent leurs deux formulations
+    **adjacentes** au point d'usage (revue/maintenance faciles), sélectionnées via
+    ``SectionContext.lang`` — **pas de catalogue ni de registre** de chaînes. Repli
+    sur le français pour toute langue non gérée (déterminisme : même langue →
+    mêmes octets)."""
+    return en if lang == "en" else fr
+
+
 def render_document(
     title: str,
     body: Html,
@@ -429,4 +480,4 @@ def render_document(
     )
 
 
-__all__ = ["escape", "render_document"]
+__all__ = ["escape", "localized", "render_document"]

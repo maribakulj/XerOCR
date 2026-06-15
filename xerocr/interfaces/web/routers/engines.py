@@ -16,6 +16,7 @@ from xerocr.app.normalization_preview import (
     NormalizationPreviewError,
     preview_normalization,
 )
+from xerocr.app.run_planning import metric_profile_catalog
 from xerocr.interfaces.web.security.csrf import csrf_protect
 
 
@@ -67,6 +68,14 @@ def build_engines_router(provider: StatusProvider) -> APIRouter:
     @router.get("/api/engines")
     def list_engines() -> dict[str, list[dict[str, object]]]:
         return {"engines": [status.model_dump() for status in provider()]}
+
+    @router.get("/api/metric-profiles")
+    def list_metric_profiles() -> dict[str, list[dict[str, object]]]:
+        """Profils de métriques proposables au lanceur (source unique, couche 6).
+
+        Lecture seule (pas de CSRF) ; ``standard`` d'abord. Le profil choisi
+        atterrit sur ``LaunchRequest.metric_profile`` (résolu au plan)."""
+        return {"profiles": list(metric_profile_catalog())}
 
     return router
 

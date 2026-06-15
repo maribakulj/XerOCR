@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import InferencePayload
 from xerocr.evaluation.result import MetricScore, RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 
@@ -60,13 +60,23 @@ def _significance_p(result: RunResult, view: str) -> float | None:
     return None
 
 
-def _verdict(p_value: float | None) -> tuple[str, str]:
+def _verdict(p_value: float | None, lang: str) -> tuple[str, str]:
     """(libellé, état) — ``yes`` si p < 0,05, ``no`` sinon, ``none`` si absent."""
     if p_value is None:
         return "—", "none"
     if p_value < 0.05:
-        return f"écart significatif (p={p_value:.4f})", "yes"
-    return f"non séparable (p={p_value:.4f})", "no"
+        label = localized(
+            lang,
+            f"écart significatif (p={p_value:.4f})",
+            f"significant gap (p={p_value:.4f})",
+        )
+        return label, "yes"
+    label = localized(
+        lang,
+        f"non séparable (p={p_value:.4f})",
+        f"not separable (p={p_value:.4f})",
+    )
+    return label, "no"
 
 
 def _inference_for(result: RunResult, view: str) -> InferencePayload | None:
@@ -93,7 +103,7 @@ def _same_tied_group(payload: InferencePayload, a: str, b: str) -> bool | None:
 
 
 def _corrected_verdict(
-    result: RunResult, view: str, best: str, runner: str
+    result: RunResult, view: str, best: str, runner: str, lang: str
 ) -> tuple[str, str]:
     """Verdict : Nemenyi corrigé s'il existe, sinon p-value brute.
 
@@ -103,12 +113,17 @@ def _corrected_verdict(
     payload = _inference_for(result, view)
     if payload is not None and payload.critical_distance is not None:
         if _same_tied_group(payload, best, runner):
-            return "égalité statistique (Nemenyi)", "tie"
-        return (
+            tie = localized(
+                lang, "égalité statistique (Nemenyi)", "statistical tie (Nemenyi)"
+            )
+            return tie, "tie"
+        confirmed = localized(
+            lang,
             f"écart confirmé (Nemenyi, CD={payload.critical_distance:.3f})",
-            "yes",
+            f"gap confirmed (Nemenyi, CD={payload.critical_distance:.3f})",
         )
-    return _verdict(_significance_p(result, view))
+        return confirmed, "yes"
+    return _verdict(_significance_p(result, view), lang)
 
 
 class SynthesisSection:
@@ -128,7 +143,9 @@ class SynthesisSection:
                 runner_cer, runner = ranked[1]
                 delta = f"{runner_cer - best_cer:.4f}"
                 runner_label = escape(runner)
-                label, state = _corrected_verdict(result, view, best, runner)
+                label, state = _corrected_verdict(
+                    result, view, best, runner, ctx.lang
+                )
             else:
                 delta, runner_label, label, state = "—", "—", "—", "none"
             badge = (
@@ -146,15 +163,25 @@ class SynthesisSection:
             )
         if not rows:
             return None
+        lang = ctx.lang
+        caption = localized(
+            lang,
+            "Meilleur pipeline par vue selon le CER (plus bas = meilleur) ; écart "
+            "Δ CER au pipeline suivant et significativité de la différence "
+            "inter-moteurs (p &lt; 0,05).",
+            "Best pipeline per view by CER (lower = better); Δ CER gap to the next "
+            "pipeline and significance of the inter-engine difference (p &lt; 0.05).",
+        )
         return Html(
-            "<h2>Synthèse</h2>\n"
-            '<p class="muted">Meilleur pipeline par vue selon le CER '
-            "(plus bas = meilleur) ; écart Δ CER au pipeline suivant et "
-            "significativité de la différence inter-moteurs (p &lt; 0,05).</p>\n"
+            f"<h2>{localized(lang, 'Synthèse', 'Synthesis')}</h2>\n"
+            f'<p class="muted">{caption}</p>\n'
             '<table class="data">\n'
-            "<thead><tr><th>Vue</th><th>Meilleur pipeline</th>"
-            '<th class="num-cell">CER</th><th>2ᵉ</th>'
-            '<th class="num-cell">Δ CER</th><th>écart</th></tr></thead>\n'
+            f"<thead><tr><th>{localized(lang, 'Vue', 'View')}</th>"
+            f"<th>{localized(lang, 'Meilleur pipeline', 'Best pipeline')}</th>"
+            '<th class="num-cell">CER</th>'
+            f"<th>{localized(lang, '2ᵉ', '2nd')}</th>"
+            '<th class="num-cell">Δ CER</th>'
+            f"<th>{localized(lang, 'écart', 'gap')}</th></tr></thead>\n"
             f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
         )
 

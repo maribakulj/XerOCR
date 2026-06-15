@@ -14,7 +14,7 @@ from statistics import median
 
 from xerocr.evaluation.result import PipelineResult, RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import (
     bar_cell,
@@ -63,6 +63,7 @@ class EngineSection:
         # ordre canonique = première apparition dans le run (partagé entre sections).
         order = engine_order(p.pipeline for p in result.pipelines)
         maxes = [col_max([p.aggregate for p in rows], i) for i in range(len(metrics))]
+        profil_title = localized(ctx.lang, "Profil", "Profile")
         body: list[str] = []
         for position, pipeline in enumerate(ordered, start=1):
             cells = "".join(
@@ -82,18 +83,33 @@ class EngineSection:
                 f'<td class="eng-cell">{badge}</td>{cells}'
                 f'<td class="disp">{disp}</td>'
                 f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
-                'title="Profil">→</a></td></tr>'
+                f'title="{profil_title}">→</a></td></tr>'
             )
         header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
-        return Html(
-            f"<h2>Classement (vue : {escape(view)})</h2>\n"
+        heading = localized(
+            ctx.lang,
+            f"Classement (vue : {escape(view)})",
+            f"Ranking (view: {escape(view)})",
+        )
+        prose = localized(
+            ctx.lang,
             f'<p class="muted">Trié par {escape(rank)} ↑ · dispersion = '
             f"{escape(rank)} min · médiane · max par document. "
             "Cliquer un en-tête de métrique pour trier ; survoler pour la "
-            "définition.</p>\n"
-            f'<table class="data sortable">\n'
-            f'<thead><tr><th>#</th><th>Moteur</th>{header}'
-            f'<th class="num-cell">dispersion</th><th></th></tr></thead>\n'
+            "définition.</p>\n",
+            f'<p class="muted">Sorted by {escape(rank)} ↑ · dispersion = '
+            f"{escape(rank)} min · median · max per document. "
+            "Click a metric header to sort; hover for the "
+            "definition.</p>\n",
+        )
+        th_engine = localized(ctx.lang, "Moteur", "Engine")
+        th_dispersion = localized(ctx.lang, "dispersion", "dispersion")
+        return Html(
+            f"<h2>{heading}</h2>\n"
+            + prose
+            + '<table class="data sortable">\n'
+            f"<thead><tr><th>#</th><th>{th_engine}</th>{header}"
+            f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table>\n"
         )
 
