@@ -82,6 +82,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_char_exclude_ph": "ex : ,.;:!? — exclus des deux côtés",
         "bench_char_exclude_hint": "Filtrés de la GT ET de l'hypothèse avant le "
         "calcul (ne mesure plus ces caractères).",
+        "bench_metric_profile": "Profil de métriques",
+        "bench_metric_profile_hint": "Choisit les colonnes de classement du "
+        "rapport ; n'allège pas la donnée collectée (sections inchangées).",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
         "vue de segmentation.",
@@ -276,6 +279,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_char_exclude_ph": "e.g. ,.;:!? — excluded on both sides",
         "bench_char_exclude_hint": "Filtered from GT AND hypothesis before scoring "
         "(those characters are no longer measured).",
+        "bench_metric_profile": "Metric profile",
+        "bench_metric_profile_hint": "Picks the report's ranking columns; does not "
+        "drop collected data (sections unchanged).",
         "bench_options": "Options",
         "bench_execute_desc": "Launch the run, then open the final report or "
         "segmentation view.",

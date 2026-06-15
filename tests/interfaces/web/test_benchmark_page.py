@@ -59,6 +59,16 @@ def test_char_exclude_field_present_and_sent(tmp_path: Path) -> None:
     assert "payload.char_exclude" in _JS.read_text(encoding="utf-8")
 
 
+def test_metric_profile_selector_present_and_sent(tmp_path: Path) -> None:
+    # 3c : sélecteur de profil de métriques rendu **serveur** (options du
+    # catalogue, standard pré-sélectionné) + le JS le met dans le payload du run.
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="metric-profile"' in body
+    assert 'value="standard" selected' in body  # défaut historique coché
+    assert 'value="philologie"' in body  # profil alternatif proposé
+    assert "payload.metric_profile" in _JS.read_text(encoding="utf-8")
+
+
 def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
     # 3c : aperçu de normalisation (échantillon + config custom) + le JS poste à l'API.
     body = _client(tmp_path).get("/benchmark").text

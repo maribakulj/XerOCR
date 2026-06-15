@@ -30,7 +30,7 @@ from xerocr.app.engines import (
     installed_ollama_models,
 )
 from xerocr.app.history import series_insight
-from xerocr.app.run_planning import benchmark_engine_catalog
+from xerocr.app.run_planning import benchmark_engine_catalog, metric_profile_catalog
 from xerocr.app.segmentation import SegmentationStore
 from xerocr.formats.text import NORMALIZATION_PROFILES
 from xerocr.interfaces.web._cache import TTLCache
@@ -232,6 +232,9 @@ def build_home_router(
             {"name": p.name, "description": p.description}
             for p in NORMALIZATION_PROFILES.values()
         ]
+        # Profils de métriques (colonnes de classement de la vue ``text``) :
+        # même source que le plan (anti-vide) ; libellé self-documenté côté form.
+        context["metric_profiles"] = metric_profile_catalog()
         # Prompts curés par période (lus dynamiquement) → menu déroulant ; le
         # texte libre du formulaire reste prioritaire (résolu au plan).
         context["curated_prompts"] = list(curated_prompts())

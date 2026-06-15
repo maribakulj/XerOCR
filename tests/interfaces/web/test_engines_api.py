@@ -43,6 +43,18 @@ def test_cloud_unavailable_reason_is_key_not_mode(tmp_path: Path) -> None:
     assert "public" not in openai["detail"]
 
 
+def test_metric_profiles_endpoint_lists_standard_first(tmp_path: Path) -> None:
+    # Source unique pour le sélecteur du lanceur (read-only, pas de CSRF).
+    body = _client(tmp_path).get("/api/metric-profiles").json()
+    profiles = body["profiles"]
+    assert profiles[0]["name"] == "standard"  # défaut historique d'abord
+    names = {p["name"] for p in profiles}
+    assert {"standard", "essentiel", "philologie"} <= names
+    # chaque entrée porte la liste ordonnée de ses métriques (libellé self-doc)
+    standard = next(p for p in profiles if p["name"] == "standard")
+    assert standard["metrics"][0] == "cer"
+
+
 def test_normalization_profiles_are_read_dynamically(tmp_path: Path) -> None:
     from xerocr.formats.text.normalization import NORMALIZATION_PROFILES
 

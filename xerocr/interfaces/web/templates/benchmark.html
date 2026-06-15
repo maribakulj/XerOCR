@@ -186,6 +186,17 @@
              placeholder="{{ t.bench_char_exclude_ph }}">
       <span class="dropzone-meta">{{ t.bench_char_exclude_hint }}</span>
     </div>
+    <div class="panel stack-panel">
+      <label class="label" for="metric-profile">{{ t.bench_metric_profile }}</label>
+      <select id="metric-profile" class="select">
+        {% for mp in metric_profiles %}
+        <option value="{{ mp.name }}"{% if mp.name == 'standard' %} selected{% endif %}>
+          {{ mp.name }} — {{ mp.metrics|join(' · ') }}
+        </option>
+        {% endfor %}
+      </select>
+      <span class="dropzone-meta">{{ t.bench_metric_profile_hint }}</span>
+    </div>
   </div>
 </section>
 

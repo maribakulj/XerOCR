@@ -45,6 +45,13 @@ def test_launch_request_accepts_char_exclude() -> None:
     assert req.char_exclude == ",.;"
 
 
+def test_launch_request_accepts_metric_profile() -> None:
+    # 3c : le DTO accepte metric_profile (le plan le résout ; inconnu → 422).
+    req = LaunchRequest(metric_profile="philologie")
+    assert req.metric_profile == "philologie"
+    assert LaunchRequest().metric_profile is None  # absent par défaut (= standard)
+
+
 def test_post_without_csrf_is_403(tmp_path: Path) -> None:
     resp = _client(tmp_path).post("/api/runs")
     assert resp.status_code == 403
