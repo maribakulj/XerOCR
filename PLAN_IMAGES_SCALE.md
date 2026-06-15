@@ -56,7 +56,7 @@ partagent **le même seam** → l'évolution IIIF est **additive**, pas une ré�
 | Saveur | `image_ref` | Produit | Hors-ligne | État |
 |---|---|---|---|---|
 | **Embedded** (fichier unique) | chemin local | data-URI base64 (plafonné) | ✅ | ✅ existe |
-| **Sidecar / Dossier** | chemin local | dérivé dans `report-assets/`, href **relatif** | ✅ | 🆕 |
+| **Sidecar / Dossier** | chemin local | dérivé dans `report-assets/`, href **relatif** | ✅ | ✅ (D-149) |
 | **IIIF** | URL IIIF | `…/full/400,/0/default.jpg` (0 download) | ❌ | 🔮 additif |
 | **Remote / HF** | URL directe | `<img src>` distant | ❌ | 🔮 additif |
 
@@ -74,15 +74,15 @@ séquentiel (prouvé par test N=1 vs N=4). `max_workers` paramétrable
 coopératifs conservés (`RunControl`/`Deadline`) ; isolation d'erreur par unité ;
 `ResumeStore` accédé **main-thread** (pas de souci de concurrence).
 
-### I0 — Poser le seam image (couche 5/6), **no-op**
-Factoriser le cœur Pillow (`_render_jpeg`) ; exprimer l'existant comme
-`resolve_facsimiles(result, strategy="embedded", …)`. Sortie inchangée → goldens
-stables.
+### I0 — Poser le seam image (couche 5/6), **no-op** — *livré (D-149)*
+Factoriser le cœur Pillow (`_render_jpeg`) ; partager la sélection pires-d'abord
+(`_ordered_refs`). Sortie inchangée → goldens stables.
 
-### I1 — Saveur Dossier + CLI `--report-dir` (couche 5/6/8)
-`thumbnail_to_file(...)` (écrit le dérivé, href relatif) ; `strategy="sidecar"`
-(caps relâchés — octets sur disque) ; `write_report_bundle(result, out_dir)` →
-`report.html` + `report-assets/`. Renderer **inchangé**.
+### I1 — Saveur Dossier + CLI `--report-dir` (couche 5/6/8) — *livré (D-149)*
+`thumbnail_to_file(...)` (écrit le dérivé, href relatif) ; `build_sidecar_*`
+(caps relâchés — octets sur disque) ; `write_report_bundle(result, out_dir,
+*, render)` → `report.html` + `report-assets/` (renderer **injecté** : `app`↛
+`reports`). CLI `run --report-dir DIR`. Renderer **inchangé**.
 
 ### I3 — Caps d'ingestion liés au déploiement (couche 6/8)
 Transformer les caps d'upload en **paramètres résolus selon `public_mode`** :

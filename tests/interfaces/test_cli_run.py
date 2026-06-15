@@ -66,6 +66,28 @@ def test_run_command_writes_json(tmp_path: Path) -> None:
     assert load_run_result(json_out).pipelines[0].aggregate[0].value == 0.25
 
 
+def test_run_command_report_dir_writes_bundle(tmp_path: Path) -> None:
+    pytest.importorskip("PIL")
+    from PIL import Image
+
+    (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
+    (tmp_path / "doc1.eng.txt").write_text("abxd", encoding="utf-8")
+    Image.new("RGB", (200, 150), (210, 200, 180)).save(tmp_path / "doc1.png")
+    config = tmp_path / "run.yaml"
+    config.write_text(_YAML, encoding="utf-8")
+    bundle = tmp_path / "out"
+
+    code = main(["run", str(config), "--report-dir", str(bundle)])
+
+    assert code == 0
+    report = bundle / "report.html"
+    assert report.is_file()
+    html = report.read_text(encoding="utf-8")
+    assert 'src="report-assets/' in html  # liens relatifs, pas de data-URI
+    assert "data:image/jpeg" not in html
+    assert list((bundle / "report-assets").glob("*.jpg"))  # dérivés réels écrits
+
+
 def test_run_command_reports_errors_cleanly(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
