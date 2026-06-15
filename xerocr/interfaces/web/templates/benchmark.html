@@ -197,6 +197,18 @@
       </select>
       <span class="dropzone-meta">{{ t.bench_metric_profile_hint }}</span>
     </div>
+    <div class="panel stack-panel">
+      <label class="label">{{ t.bench_config_io }}</label>
+      <div class="config-io">
+        <button id="config-export" class="btn btn-sm" type="button">{{ t.bench_config_export }}</button>
+        <label class="btn btn-sm" for="config-import">{{ t.bench_config_import }}</label>
+        <input id="config-import" type="file" accept="application/json,.json" hidden>
+      </div>
+      <span id="config-feedback" class="dropzone-meta" aria-live="polite"
+            data-loaded="{{ t.bench_config_loaded }}"
+            data-invalid="{{ t.bench_config_invalid }}"></span>
+      <span class="dropzone-meta">{{ t.bench_config_hint }}</span>
+    </div>
   </div>
 </section>
 

@@ -6,14 +6,21 @@ l'exécuteur (couche 4) par document, passe les artefacts au runner d'évaluatio
 lui-même** (l'assemblage métrique vit en ``evaluation``) et **n'exécute aucun
 moteur** (les modules le font).
 
-Mono-thread, séquentiel par choix : le parallélisme viendrait avec un
-consommateur réel (gros corpus), pas avant.
+Exécution **parallèle** des unités ``(pipeline × document)`` sur un pool de
+threads borné (gros corpus) : chaque unité est indépendante (sous-dossier
+workspace par pipeline + fichiers nommés par ``document_id`` → aucune collision).
+Le **déterminisme** est garanti par construction : l'exécution est concurrente,
+mais l'assemblage du ``RunResult`` se fait **dans l'ordre du spec**, pas dans
+l'ordre d'achèvement → sortie byte-identique au séquentiel (``max_workers=1``).
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import threading
 from collections.abc import Callable, Mapping
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -23,9 +30,11 @@ from xerocr.app.resume import ResumeStore, unit_key
 from xerocr.domain.artifacts import Artifact, ArtifactType
 from xerocr.domain.deadline import Deadline
 from xerocr.domain.documents import DocumentRef
-from xerocr.domain.errors import AdapterStepError, XerOCRError
+from xerocr.domain.errors import AdapterStepError, RunCancelledError, XerOCRError
+from xerocr.domain.pipeline import PipelineSpec
 from xerocr.domain.run import RunManifest, utcnow
 from xerocr.domain.run_spec import RunSpec
+from xerocr.domain.usage import ResourceUsage
 from xerocr.evaluation.archaic import resolve_archaic_list
 from xerocr.evaluation.metrics.archaic import make_air_metric, make_hcpr_metric
 from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
@@ -53,6 +62,49 @@ ArtifactSink = Callable[[PipelineOutputs, RunManifest], None]
 ProgressCallback = Callable[[int, int], None]
 
 
+#: Variable d'environnement (ops) : nombre de threads d'exécution par défaut.
+_WORKERS_ENV = "XEROCR_MAX_WORKERS"
+
+
+def _resolve_workers(max_workers: int | None, n_pending: int) -> int:
+    """Nombre de threads effectif : argument > ``XEROCR_MAX_WORKERS`` > CPU.
+
+    Borné à ``[1, n_pending]`` — inutile de dépasser le nombre d'unités à exécuter.
+    Une valeur invalide d'environnement est ignorée (dégradé sur le défaut CPU).
+    """
+    chosen = max_workers
+    if chosen is None:
+        raw = os.environ.get(_WORKERS_ENV)
+        if raw is not None:
+            try:
+                chosen = int(raw)
+            except ValueError:
+                logger.warning(
+                    "[orchestrator] %s=%r ignoré (entier attendu).", _WORKERS_ENV, raw
+                )
+    if chosen is None or chosen < 1:
+        chosen = os.cpu_count() or 1
+    return max(1, min(chosen, n_pending))
+
+
+class _ProgressCounter:
+    """Compteur d'unités traitées, thread-safe (pool d'exécution concurrent)."""
+
+    def __init__(self, total: int, callback: ProgressCallback | None) -> None:
+        self._total = total
+        self._callback = callback
+        self._done = 0
+        self._lock = threading.Lock()
+
+    def tick(self) -> None:
+        if self._callback is None:
+            return
+        with self._lock:
+            self._done += 1
+            done = self._done
+        self._callback(done, self._total)
+
+
 def run(
     spec: RunSpec,
     *,
@@ -63,6 +115,7 @@ def run(
     artifact_sink: ArtifactSink | None = None,
     on_progress: ProgressCallback | None = None,
     resume_store: ResumeStore | None = None,
+    max_workers: int | None = None,
 ) -> RunResult:
     """Exécute ``spec`` et renvoie le ``RunResult`` (manifeste + métriques).
 
@@ -78,7 +131,14 @@ def run(
     ``resume_store`` (optionnel) : cache d'**exécution** adressé par empreinte
     (``app.resume``) — une unité (pipeline × document) déjà produite à
     l'identique est rechargée au lieu d'être ré-exécutée ; l'évaluation, elle,
-    est toujours recalculée.
+    est toujours recalculée. Accédé **uniquement en thread principal** (chargement
+    avant le pool, persistance après) → aucune contrainte de concurrence sur lui.
+
+    ``max_workers`` (optionnel) : taille du pool de threads d'exécution. ``None``
+    → ``XEROCR_MAX_WORKERS`` puis ``os.cpu_count()``. ``1`` = séquentiel strict
+    (référence de déterminisme). Les unités sont indépendantes ; l'assemblage
+    final est **ordonné par le spec**, donc le résultat ne dépend pas du nombre de
+    threads.
     """
     started_at = utcnow()
     needed = sorted(
@@ -93,24 +153,28 @@ def run(
     register_default_metrics(metric_registry)
     _bind_archaic_metrics(metric_registry, spec)
 
-    # Workspace temporaire par run : les modules qui produisent des artefacts
-    # (tesseract, LLM…) y écrivent ; le runner lit ces sorties avant le nettoyage.
-    # Chaque pipeline écrit dans son **propre sous-dossier** : deux pipelines qui
-    # partagent un même `adapter_name` (ex. `openai:gpt` corrigeant deux OCR
-    # différents) écriraient sinon le même fichier de sortie, et le second
-    # écraserait le premier → évaluation contaminée. L'isolation par pipeline
-    # tue cette collision sans que les adapters aient à connaître la topologie.
-    total_units = len(spec.pipelines) * len(spec.corpus.documents)
-    done_units = 0
+    documents = spec.corpus.documents
+    total_units = len(spec.pipelines) * len(documents)
+    progress = _ProgressCounter(total_units, on_progress)
     with TemporaryDirectory(prefix="xerocr-run-") as workspace:
-        pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
-        usage_records: list[DocumentUsage] = []
+        # Un sous-dossier de workspace **par pipeline** : deux pipelines qui
+        # partagent un `adapter_name` écriraient sinon le même fichier de sortie.
+        # Au sein d'un pipeline, chaque document écrit un fichier nommé par son id
+        # (`workspace_artifact_path`, stem injectif) → deux documents concurrents
+        # ne se marchent jamais dessus, l'exécution parallèle est sûre.
+        workspaces: dict[str, Path] = {}
         for index, pipeline in enumerate(spec.pipelines):
             pipeline_workspace = Path(workspace) / f"pipeline{index}"
             pipeline_workspace.mkdir()
-            per_document: dict[str, dict[ArtifactType, Artifact]] = {}
-            for document in spec.corpus.documents:
-                inputs = _initial_inputs(document)
+            workspaces[pipeline.name] = pipeline_workspace
+
+        # 1) Reprise (thread principal) : les unités déjà produites à l'identique
+        #    sont rechargées ; les autres sont mises en file d'exécution.
+        results: dict[tuple[str, str], dict[ArtifactType, Artifact]] = {}
+        usage_by_unit: dict[tuple[str, str], ResourceUsage] = {}
+        pending: list[tuple[PipelineSpec, DocumentRef, str | None]] = []
+        for pipeline in spec.pipelines:
+            for document in documents:
                 key = (
                     unit_key(
                         code_version=code_version,
@@ -124,57 +188,84 @@ def run(
                 cached = resume_store.load(key) if resume_store and key else None
                 if cached is not None:
                     artifacts, cached_usage = cached
-                    per_document[document.id] = dict(artifacts)
-                    usage_records.append(
-                        DocumentUsage(
-                            document_id=document.id,
-                            pipeline=pipeline.name,
-                            usage=cached_usage,
-                        )
-                    )
-                    done_units += 1
-                    if on_progress is not None:
-                        on_progress(done_units, total_units)
-                    continue
-                try:
-                    execution = executor.execute_document(
+                    results[(pipeline.name, document.id)] = dict(artifacts)
+                    usage_by_unit[(pipeline.name, document.id)] = cached_usage
+                    progress.tick()
+                else:
+                    pending.append((pipeline, document, key))
+
+        # 2) Exécution **parallèle** des unités non-cachées. OCR (sous-processus)
+        #    et LLM/cloud (I/O HTTP) libèrent le GIL → les threads donnent un
+        #    speedup réel sans sérialiser les artefacts. Un échec isolé d'unité
+        #    (`AdapterStepError`/`PipelineStepError`) n'abat pas le banc ; seule
+        #    l'annulation (`RunCancelledError`) arrête tout le run.
+        saves: list[tuple[str, Mapping[ArtifactType, Artifact], ResourceUsage]] = []
+        if pending:
+            workers = _resolve_workers(max_workers, len(pending))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                future_to_unit = {
+                    pool.submit(
+                        executor.execute_document,
                         pipeline,
                         modules,
-                        inputs,
+                        _initial_inputs(document),
                         document_id=document.id,
                         deadline=deadline,
                         control=control,
-                        workspace_uri=str(pipeline_workspace),
-                    )
-                    per_document[document.id] = dict(execution.artifacts)
+                        workspace_uri=str(workspaces[pipeline.name]),
+                    ): (pipeline, document, key)
+                    for pipeline, document, key in pending
+                }
+                try:
+                    for future in as_completed(future_to_unit):
+                        pipeline, document, key = future_to_unit[future]
+                        unit = (pipeline.name, document.id)
+                        try:
+                            execution = future.result()
+                        except (AdapterStepError, PipelineStepError) as exc:
+                            logger.warning(
+                                "[orchestrator] concurrent %r · document %r "
+                                "échoué : %s",
+                                pipeline.name,
+                                document.id,
+                                exc,
+                            )
+                            results[unit] = {}
+                            progress.tick()
+                            continue
+                        results[unit] = dict(execution.artifacts)
+                        usage_by_unit[unit] = execution.usage
+                        if key is not None:
+                            saves.append((key, execution.artifacts, execution.usage))
+                        progress.tick()
+                except RunCancelledError:
+                    # Annulation coopérative : on cesse de planifier (les unités
+                    # non démarrées sont annulées) et on propage — le run s'arrête.
+                    pool.shutdown(wait=False, cancel_futures=True)
+                    raise
+
+        # 3) Reprise : persistance des unités exécutées (thread principal, post-pool).
+        if resume_store is not None:
+            for saved_key, saved_artifacts, saved_usage in saves:
+                resume_store.save(saved_key, saved_artifacts, saved_usage)
+
+        # 4) Assemblage **déterministe** : ordre du spec, indépendant de l'ordre
+        #    d'achèvement des threads → `RunResult` byte-identique au séquentiel.
+        pipeline_outputs: dict[str, dict[str, dict[ArtifactType, Artifact]]] = {}
+        usage_records: list[DocumentUsage] = []
+        for pipeline in spec.pipelines:
+            per_document: dict[str, dict[ArtifactType, Artifact]] = {}
+            for document in documents:
+                unit = (pipeline.name, document.id)
+                per_document[document.id] = results[unit]
+                if unit in usage_by_unit:
                     usage_records.append(
                         DocumentUsage(
                             document_id=document.id,
                             pipeline=pipeline.name,
-                            usage=execution.usage,
+                            usage=usage_by_unit[unit],
                         )
                     )
-                    if resume_store is not None and key is not None:
-                        resume_store.save(key, execution.artifacts, execution.usage)
-                except (AdapterStepError, PipelineStepError) as exc:
-                    # Un concurrent qui échoue (clé d'API absente, moteur
-                    # indisponible, sortie invalide) ne doit PAS abattre tout le
-                    # banc d'essai : on **isole** l'échec à ce (concurrent,
-                    # document), on journalise, et les autres concurrents restent
-                    # exécutés et scorés. Le document non produit n'a pas de
-                    # candidat → l'évaluation le laisse simplement non scoré.
-                    # L'annulation (`RunCancelledError`, hors de ces classes)
-                    # n'est PAS rattrapée : elle arrête bien tout le run.
-                    logger.warning(
-                        "[orchestrator] concurrent %r · document %r échoué : %s",
-                        pipeline.name,
-                        document.id,
-                        exc,
-                    )
-                    per_document[document.id] = {}
-                done_units += 1
-                if on_progress is not None:
-                    on_progress(done_units, total_units)
             pipeline_outputs[pipeline.name] = per_document
 
         completed_at = utcnow()

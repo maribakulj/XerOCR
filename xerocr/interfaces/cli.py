@@ -129,6 +129,7 @@ def _run_config(
     resume_dir: str | None = None,
     csv_output: str | None = None,
     hipe_jsonl: str | None = None,
+    max_workers: int | None = None,
 ) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
@@ -148,6 +149,7 @@ def _run_config(
         code_version=resolve_code_version(),
         resume_store=resume_store,
         artifact_sink=artifact_sink,
+        max_workers=max_workers,
     )
     Path(output).write_text(
         default_report_renderer().render(
@@ -282,6 +284,14 @@ def main(argv: list[str] | None = None) -> int:
         help="Exporte les sorties au format JSONL HIPE-OCRepair "
         "(un fichier par pipeline — soumission leaderboard).",
     )
+    run_cmd.add_argument(
+        "--workers",
+        type=int,
+        default=None,
+        help="Threads d'exécution (gros corpus). Défaut : XEROCR_MAX_WORKERS "
+        "puis le nombre de CPU. 1 = séquentiel. Résultat identique quel que "
+        "soit le nombre (assemblage ordonné par le spec).",
+    )
     history_cmd = subparsers.add_parser(
         "history",
         help="Historique longitudinal : série d'un pipeline ou régressions.",
@@ -332,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.resume_dir,
                 args.csv_output,
                 args.hipe_jsonl,
+                args.workers,
             )
         if args.command == "history":
             return _run_history(

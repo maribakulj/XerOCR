@@ -85,6 +85,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_metric_profile": "Profil de métriques",
         "bench_metric_profile_hint": "Choisit les colonnes de classement du "
         "rapport ; n'allège pas la donnée collectée (sections inchangées).",
+        "bench_config_io": "Configuration",
+        "bench_config_export": "Exporter (JSON)",
+        "bench_config_import": "Importer…",
+        "bench_config_loaded": "Configuration chargée.",
+        "bench_config_invalid": "Fichier de configuration invalide.",
+        "bench_config_hint": "Sauvegarde l'état du formulaire (concurrents + "
+        "options) en JSON ; rechargeable plus tard. Aucune persistance serveur.",
         "bench_options": "Options",
         "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
         "vue de segmentation.",
@@ -279,6 +286,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_char_exclude_ph": "e.g. ,.;:!? — excluded on both sides",
         "bench_char_exclude_hint": "Filtered from GT AND hypothesis before scoring "
         "(those characters are no longer measured).",
+        "bench_config_io": "Configuration",
+        "bench_config_export": "Export (JSON)",
+        "bench_config_import": "Import…",
+        "bench_config_loaded": "Configuration loaded.",
+        "bench_config_invalid": "Invalid configuration file.",
+        "bench_config_hint": "Saves the form state (competitors + options) as "
+        "JSON; reloadable later. No server persistence.",
         "bench_metric_profile": "Metric profile",
         "bench_metric_profile_hint": "Picks the report's ranking columns; does not "
         "drop collected data (sections unchanged).",

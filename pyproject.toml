@@ -85,7 +85,9 @@ plugins = ["pydantic.mypy"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "--cov=xerocr --cov-report=term-missing --cov-fail-under=85"
+# Coverage = concern du GATE, pas de la boucle locale : pas dans addopts (sinon
+# chaque `pytest`, même un sous-ensemble, paierait ×3,4 le tracing). Elle est
+# injectée explicitement par `make cov`/`make ci` et la CI (cf. Makefile/ci.yml).
 markers = [
     "slow: tests lents (opt-in)",
     "network: tests qui touchent le réseau (opt-in)",

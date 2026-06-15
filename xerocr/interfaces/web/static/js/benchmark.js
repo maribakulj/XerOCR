@@ -289,6 +289,80 @@
       return out;
     }
 
+    // Config save/load — l'« état du formulaire » EST un LaunchRequest (même
+    // schéma que le POST /api/runs). Export = blob JSON téléchargé (état courant,
+    // 0 réseau) ; import = validé côté serveur (POST /api/runs/config) AVANT de
+    // repeupler — un fichier malformé est rejeté net, jamais appliqué en silence.
+    function collectConfig() {
+      var cfg = { competitors: payloadCompetitors() };
+      var corpusId = currentCorpusId();
+      if (corpusId) cfg.corpus_id = corpusId;
+      if (normalization && normalization.value) cfg.normalization = normalization.value;
+      if (charExclude && charExclude.value) cfg.char_exclude = charExclude.value;
+      if (metricProfile && metricProfile.value) cfg.metric_profile = metricProfile.value;
+      return cfg;
+    }
+
+    function exportConfig() {
+      var text = JSON.stringify(collectConfig(), null, 2);
+      var uri = "data:application/json;charset=utf-8," + encodeURIComponent(text);
+      var a = document.createElement("a");
+      a.href = uri;
+      a.download = "xerocr-config.json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    function applyConfig(cfg) {
+      queue = [];
+      var comps = cfg.competitors || [];
+      for (var i = 0; i < comps.length; i++) {
+        var c = comps[i];
+        queue.push({
+          engine: c.engine,
+          mode: c.mode || "ocr_only",
+          llm: c.llm || "",
+          model: c.model || "",
+          prompt: c.prompt || "",
+          promptName: c.prompt_name || "",
+        });
+      }
+      renderQueue();
+      if (corpusSelect) corpusSelect.value = cfg.corpus_id || "";
+      if (normalization) normalization.value = cfg.normalization || "";
+      if (charExclude) charExclude.value = cfg.char_exclude || "";
+      if (metricProfile && cfg.metric_profile) metricProfile.value = cfg.metric_profile;
+    }
+
+    function importConfig(file, feedback) {
+      var reader = new FileReader();
+      reader.onload = function () {
+        var parsed;
+        try {
+          parsed = JSON.parse(reader.result);
+        } catch (e) {
+          feedback.textContent = feedback.dataset.invalid || "invalid";
+          return;
+        }
+        var headers = { "Content-Type": "application/json" };
+        headers[CSRF] = "1";
+        fetchJson("/api/runs/config", {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(parsed),
+        }).then(function (r) {
+          if (!r.ok) {
+            feedback.textContent = feedback.dataset.invalid || "invalid";
+            return;
+          }
+          applyConfig(r.body.config || {});
+          feedback.textContent = feedback.dataset.loaded || "loaded";
+        });
+      };
+      reader.readAsText(file);
+    }
+
     function errorText(response) {
       var detail = response && response.body && response.body.detail;
       if (typeof detail === "string" && detail.trim()) return detail;
@@ -390,6 +464,18 @@
     renderQueue();
 
     applyQueryCorpus();
+
+    var exportBtn = document.getElementById("config-export");
+    var importInput = document.getElementById("config-import");
+    var configFeedback = document.getElementById("config-feedback");
+    if (exportBtn) exportBtn.addEventListener("click", exportConfig);
+    if (importInput && configFeedback) {
+      importInput.addEventListener("change", function () {
+        if (importInput.files && importInput.files[0]) {
+          importConfig(importInput.files[0], configFeedback);
+        }
+      });
+    }
 
     launchBtn.addEventListener("click", function () {
       launchBtn.disabled = true;

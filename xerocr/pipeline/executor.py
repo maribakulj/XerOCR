@@ -9,8 +9,9 @@ ces concerns. L'annulation coopérative est vérifiée avant chaque étape.
 Une étape ``fanout=True`` (reconnaissance par région) exécute son module **une
 fois par région** du ``LAYOUT`` d'entrée et réassemble un ``LAYOUT`` rempli
 (délégué à ``execute_region_fanout``) ; l'estampillage de provenance reste
-identique. L'orchestration multi-documents (threads, timeout, backpressure) est
-une tranche ultérieure — pas ici.
+identique. L'orchestration multi-documents (threads, timeout, backpressure) vit
+dans l'orchestrateur (couche 6) ; l'exécuteur reste **mono-document** — il est
+sans état mutable partagé, donc sûr à appeler depuis plusieurs threads.
 """
 
 from __future__ import annotations
