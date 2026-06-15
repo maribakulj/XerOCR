@@ -32,6 +32,12 @@
   (un **URI générique** : chemin local **ou** URL) via `app/report_images.py` →
   vignettes **data-URI base64 inline**, plafonnées (300 vignettes / 60 fac-similés).
   Le **renderer est agnostique** de la provenance du href (`<img src="{href}">`).
+- **Résilience réseau (D-150)** : les appels d'un moteur cloud sont **capés par
+  fournisseur** (`network_slot`, `XEROCR_NETWORK_CONCURRENCY` défaut 3) + **retry
+  borné 429/5xx** (`Retry-After` respecté), **par défaut** sur web et CLI — le pool
+  du runner peut rester à `cpu_count` (Pero local plein débit), seuls les appels
+  réseau sont plafonnés. Câblé Mistral ; le helper est générique (openai/anthropic
+  = adoption en une ligne).
 - **Runner** : `orchestrator.run` est **séquentiel mono-thread**
   (`for pipeline: for document:`). Chaque unité `(pipeline, document)` est
   **indépendante** : sous-dossier workspace par pipeline + fichiers de sortie
@@ -56,7 +62,7 @@ partagent **le même seam** → l'évolution IIIF est **additive**, pas une ré�
 | Saveur | `image_ref` | Produit | Hors-ligne | État |
 |---|---|---|---|---|
 | **Embedded** (fichier unique) | chemin local | data-URI base64 (plafonné) | ✅ | ✅ existe |
-| **Sidecar / Dossier** | chemin local | dérivé dans `report-assets/`, href **relatif** | ✅ | 🆕 |
+| **Sidecar / Dossier** | chemin local | dérivé dans `report-assets/`, href **relatif** | ✅ | ✅ (D-149) |
 | **IIIF** | URL IIIF | `…/full/400,/0/default.jpg` (0 download) | ❌ | 🔮 additif |
 | **Remote / HF** | URL directe | `<img src>` distant | ❌ | 🔮 additif |
 
@@ -74,15 +80,15 @@ séquentiel (prouvé par test N=1 vs N=4). `max_workers` paramétrable
 coopératifs conservés (`RunControl`/`Deadline`) ; isolation d'erreur par unité ;
 `ResumeStore` accédé **main-thread** (pas de souci de concurrence).
 
-### I0 — Poser le seam image (couche 5/6), **no-op**
-Factoriser le cœur Pillow (`_render_jpeg`) ; exprimer l'existant comme
-`resolve_facsimiles(result, strategy="embedded", …)`. Sortie inchangée → goldens
-stables.
+### I0 — Poser le seam image (couche 5/6), **no-op** — *livré (D-149)*
+Factoriser le cœur Pillow (`_render_jpeg`) ; partager la sélection pires-d'abord
+(`_ordered_refs`). Sortie inchangée → goldens stables.
 
-### I1 — Saveur Dossier + CLI `--report-dir` (couche 5/6/8)
-`thumbnail_to_file(...)` (écrit le dérivé, href relatif) ; `strategy="sidecar"`
-(caps relâchés — octets sur disque) ; `write_report_bundle(result, out_dir)` →
-`report.html` + `report-assets/`. Renderer **inchangé**.
+### I1 — Saveur Dossier + CLI `--report-dir` (couche 5/6/8) — *livré (D-149)*
+`thumbnail_to_file(...)` (écrit le dérivé, href relatif) ; `build_sidecar_*`
+(caps relâchés — octets sur disque) ; `write_report_bundle(result, out_dir,
+*, render)` → `report.html` + `report-assets/` (renderer **injecté** : `app`↛
+`reports`). CLI `run --report-dir DIR`. Renderer **inchangé**.
 
 ### I3 — Caps d'ingestion liés au déploiement (couche 6/8)
 Transformer les caps d'upload en **paramètres résolus selon `public_mode`** :

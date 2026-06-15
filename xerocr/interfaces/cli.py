@@ -26,7 +26,11 @@ from xerocr.app.modules import (
     discover_plugins,
     register_default_modules,
 )
-from xerocr.app.report_images import build_facsimiles, build_thumbnails
+from xerocr.app.report_images import (
+    build_facsimiles,
+    build_thumbnails,
+    write_report_bundle,
+)
 from xerocr.app.resume import ResumeStore
 from xerocr.domain.errors import XerOCRError
 from xerocr.evaluation.analysis import EconomicsPayload
@@ -130,6 +134,7 @@ def _run_config(
     csv_output: str | None = None,
     hipe_jsonl: str | None = None,
     max_workers: int | None = None,
+    report_dir: str | None = None,
 ) -> int:
     registry = ModuleRegistry()
     register_default_modules(registry)
@@ -151,20 +156,31 @@ def _run_config(
         artifact_sink=artifact_sink,
         max_workers=max_workers,
     )
-    Path(output).write_text(
-        default_report_renderer().render(
-            result,
-            title=f"XerOCR — {spec.corpus.name}",
-            images=build_thumbnails(result),
-            facsimiles=build_facsimiles(result),
-        ),
-        encoding="utf-8",
-    )
+    title = f"XerOCR — {spec.corpus.name}"
+    if report_dir is not None:
+        # Saveur dossier : images réelles dans report-assets/, HTML à liens
+        # relatifs. Le renderer (couche 7) est injecté — app n'importe pas reports.
+        report = write_report_bundle(
+            result, report_dir, render=default_report_renderer().render, title=title
+        )
+        written = str(report)
+    else:
+        # Saveur fichier unique : vignettes data-URI inlinées dans le HTML.
+        Path(output).write_text(
+            default_report_renderer().render(
+                result,
+                title=title,
+                images=build_thumbnails(result),
+                facsimiles=build_facsimiles(result),
+            ),
+            encoding="utf-8",
+        )
+        written = output
     if json_output is not None:
         dump_run_result(result, json_output)
     if csv_output is not None:
         Path(csv_output).write_text(run_result_csv(result), encoding="utf-8")
-    print(f"Rapport écrit : {output}")
+    print(f"Rapport écrit : {written}")
     return 0
 
 
@@ -272,6 +288,14 @@ def main(argv: list[str] | None = None) -> int:
         "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
     )
     run_cmd.add_argument(
+        "--report-dir",
+        dest="report_dir",
+        default=None,
+        help="Écrit un bundle dossier (report.html + report-assets/ d'images "
+        "réelles, liens relatifs) au lieu du HTML autonome de -o. Recommandé pour "
+        "les gros corpus à images.",
+    )
+    run_cmd.add_argument(
         "--json",
         dest="json_output",
         default=None,
@@ -343,6 +367,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.csv_output,
                 args.hipe_jsonl,
                 args.workers,
+                args.report_dir,
             )
         if args.command == "history":
             return _run_history(

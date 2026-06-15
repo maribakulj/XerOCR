@@ -1,10 +1,16 @@
-"""Vignettes du rapport : image → data-URI redimensionné (couche 5, adapter).
+"""Vignettes du rapport : image → dérivé JPEG redimensionné (couche 5, adapter).
 
 Le redimensionnement utilise **Pillow** (interdit en ``reports`` — couche 7) ; il
-vit donc ici et produit un **data-URI** que le rapport embarque tel quel (les
-octets ne touchent jamais le ``RunResult``). **Dégradé gracieux** : si Pillow
-n'est pas installé (extra ``[images]``), si le fichier manque ou est illisible →
-``None`` (le rapport retombe sur l'aperçu synthétique). Aucune exception large.
+vit donc ici. Deux saveurs partagent le **même cœur** ``_render_jpeg`` :
+
+- ``thumbnail_data_uri`` → **data-URI** embarqué dans le HTML (saveur fichier
+  unique) ; les octets ne touchent jamais le ``RunResult``.
+- ``thumbnail_to_file`` → écrit le dérivé dans un dossier d'assets et renvoie un
+  **href relatif** (saveur dossier : HTML léger à liens relatifs).
+
+**Dégradé gracieux** : si Pillow n'est pas installé (extra ``[images]``), si le
+fichier manque ou est illisible → ``None`` (le rapport retombe sur l'aperçu
+synthétique). Aucune exception large.
 """
 
 from __future__ import annotations
@@ -17,12 +23,13 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def thumbnail_data_uri(source: str | Path, *, max_px: int = 280) -> str | None:
-    """Vignette JPEG **data-URI** d'une image locale ; ``None`` si indisponible.
+def _render_jpeg(source: str | Path, max_px: int) -> bytes | None:
+    """Octets JPEG d'une image locale redimensionnée ; ``None`` si indisponible.
 
-    Redimensionne pour que le plus grand côté ≤ ``max_px`` (jamais agrandi),
-    convertit en RGB, encode JPEG. ``None`` (avec ``logger.warning``) si Pillow
-    absent, fichier introuvable, ou image illisible — le rendu reste fonctionnel."""
+    Cœur partagé des deux saveurs (data-URI / fichier) : redimensionne pour que le
+    plus grand côté ≤ ``max_px`` (jamais agrandi), convertit en RGB, encode JPEG.
+    ``None`` (avec ``logger.warning``) si Pillow absent, fichier introuvable, ou
+    image illisible — le rendu reste fonctionnel (aperçu synthétique)."""
     path = Path(source)
     if not path.is_file():
         return None
@@ -44,8 +51,39 @@ def thumbnail_data_uri(source: str | Path, *, max_px: int = 280) -> str | None:
     except (UnidentifiedImageError, OSError) as exc:
         logger.warning("[images] image illisible %s : %s — vignette omise.", path, exc)
         return None
-    payload = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return buffer.getvalue()
+
+
+def thumbnail_data_uri(source: str | Path, *, max_px: int = 280) -> str | None:
+    """Vignette JPEG **data-URI** d'une image locale ; ``None`` si indisponible.
+
+    Saveur fichier unique : les octets sont inlinés dans le HTML. ``None`` si le
+    dérivé n'a pu être produit (Pillow absent, fichier manquant/illisible)."""
+    raw = _render_jpeg(source, max_px)
+    if raw is None:
+        return None
+    payload = base64.b64encode(raw).decode("ascii")
     return f"data:image/jpeg;base64,{payload}"
 
 
-__all__ = ["thumbnail_data_uri"]
+def thumbnail_to_file(
+    source: str | Path, dest_dir: str | Path, stem: str, *, max_px: int = 280
+) -> str | None:
+    """Écrit la vignette JPEG dans ``dest_dir/<stem>.jpg`` ; renvoie un href relatif.
+
+    Saveur dossier : le dérivé est **un fichier sur disque** (pas inliné), le HTML
+    n'en porte qu'une **référence relative**. L'href renvoyé est relatif au
+    **parent** de ``dest_dir`` (``f"{dest_dir.name}/{stem}.jpg"``, séparateur ``/``
+    portable) : l'appelant garantit que le HTML est un voisin de ``dest_dir`` (cf.
+    ``app.report_images.write_report_bundle``). ``None`` si le dérivé n'a pu être
+    produit (dégradé gracieux, aucun fichier écrit, aucun dossier créé)."""
+    raw = _render_jpeg(source, max_px)
+    if raw is None:
+        return None
+    folder = Path(dest_dir)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{stem}.jpg").write_bytes(raw)
+    return f"{folder.name}/{stem}.jpg"
+
+
+__all__ = ["thumbnail_data_uri", "thumbnail_to_file"]
