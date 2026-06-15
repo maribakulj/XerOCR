@@ -34,7 +34,9 @@ jobs:
           # sur Python 3.12+ (≈ ×3 plus rapide, MÊME couverture mesurée → gate
           # intact). 3.11 garde le traceur C (`ctrace`).
           COVERAGE_CORE: ${{ matrix.python == '3.11' && 'ctrace' || 'sysmon' }}
-        run: python -m pytest -q
+        # Le gate (coverage + seuil 85 %) est injecté ICI, pas dans addopts —
+        # ainsi les runs locaux restent rapides par défaut (cf. Makefile/pyproject).
+        run: python -m pytest -q --cov=xerocr --cov-report=term-missing --cov-fail-under=85
 
   # Construit l'image de la vitrine (ce que le sandbox ne pouvait pas vérifier)
   # et la sonde RÉELLEMENT : conteneur lancé → /health + /api/reports via curl.
