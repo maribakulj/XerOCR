@@ -32,6 +32,12 @@
   (un **URI générique** : chemin local **ou** URL) via `app/report_images.py` →
   vignettes **data-URI base64 inline**, plafonnées (300 vignettes / 60 fac-similés).
   Le **renderer est agnostique** de la provenance du href (`<img src="{href}">`).
+- **Résilience réseau (D-150)** : les appels d'un moteur cloud sont **capés par
+  fournisseur** (`network_slot`, `XEROCR_NETWORK_CONCURRENCY` défaut 3) + **retry
+  borné 429/5xx** (`Retry-After` respecté), **par défaut** sur web et CLI — le pool
+  du runner peut rester à `cpu_count` (Pero local plein débit), seuls les appels
+  réseau sont plafonnés. Câblé Mistral ; le helper est générique (openai/anthropic
+  = adoption en une ligne).
 - **Runner** : `orchestrator.run` est **séquentiel mono-thread**
   (`for pipeline: for document:`). Chaque unité `(pipeline, document)` est
   **indépendante** : sous-dossier workspace par pipeline + fichiers de sortie

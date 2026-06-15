@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from xerocr.adapters._resilience import call_resilient
 from xerocr.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -77,11 +78,17 @@ def _mistral_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'li
         # Le SDK mistralai 1.x type strictement ses kwargs/messages ; on lui
         # passe des dicts valides à l'exécution (cf. tests live). ``ignore`` ciblé.
         client = Mistral(**client_kwargs)  # type: ignore[arg-type]
-        response = client.chat.complete(
-            model=model,
-            messages=[{"role": "user", "content": content}],  # type: ignore[arg-type]
-            temperature=0.0,
-        )
+
+        def _complete() -> Any:
+            return client.chat.complete(
+                model=model,
+                messages=[{"role": "user", "content": content}],  # type: ignore[arg-type]
+                temperature=0.0,
+            )
+
+        # Cap de concurrence (≤ N appels Mistral simultanés) + retry borné sur
+        # 429/5xx (Retry-After respecté) — par défaut, sans configuration UI.
+        response = call_resilient("mistral", _complete)
     except Exception as exc:  # le SDK lève des erreurs HTTP/SDK variées
         raise AdapterStepError(
             f"mistral a échoué ({model}) : {type(exc).__name__}: {exc}"
