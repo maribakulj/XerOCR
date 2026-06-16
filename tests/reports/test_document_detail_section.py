@@ -99,7 +99,9 @@ def test_facsimile_shown_when_provided() -> None:
     html = DocumentDetailSection().render(_result(), ctx)
     assert html is not None
     assert 'class="dd-fac-top"' in html  # fac-similé en haut (pleine largeur)
+    assert 'class="dd-fac-zoom"' in html  # conteneur zoomable/pan
     assert 'class="dd-fac-img" src="data:image/jpeg;base64,ZZZ"' in html
+    assert 'data-zoom="in"' in html and 'data-zoom="reset"' in html  # contrôles zoom
     # un doc sans fac-similé reste en pleine largeur (pas d'image vide)
     plain = DocumentDetailSection().render(_result(), SectionContext())
     assert plain is not None and "dd-fac-img" not in plain

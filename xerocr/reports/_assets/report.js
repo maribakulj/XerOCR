@@ -282,4 +282,75 @@
       });
     },
   );
+
+  /* 9) Fac-similé zoomable/pan (détail document) : molette = zoom, glisser =
+   *    déplacer, boutons +/−/⤢. Chaque image garde son propre état (zoom z,
+   *    décalage ox/oy). Sans JS, l'image s'affiche à taille medium, statique. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".dd-fac-zoom"),
+    function (box) {
+      var img = box.querySelector(".dd-fac-img");
+      if (!img) return;
+      var z = 1,
+        ox = 0,
+        oy = 0,
+        drag = null;
+      function apply() {
+        img.style.transform =
+          "scale(" + z + ") translate(" + ox + "px," + oy + "px)";
+        box.style.cursor = z > 1 ? "grab" : "zoom-in";
+      }
+      function zoom(factor) {
+        z = Math.max(1, Math.min(5, z * factor));
+        if (z === 1) {
+          ox = 0;
+          oy = 0;
+        }
+        apply();
+      }
+      box.addEventListener(
+        "wheel",
+        function (e) {
+          e.preventDefault();
+          zoom(e.deltaY < 0 ? 1.15 : 0.87);
+        },
+        { passive: false },
+      );
+      box.addEventListener("mousedown", function (e) {
+        if (z <= 1 || (e.target.closest && e.target.closest("[data-zoom]"))) return;
+        e.preventDefault();
+        drag = { x: e.clientX - ox * z, y: e.clientY - oy * z };
+        box.style.cursor = "grabbing";
+      });
+      document.addEventListener("mousemove", function (e) {
+        if (!drag) return;
+        ox = (e.clientX - drag.x) / z;
+        oy = (e.clientY - drag.y) / z;
+        apply();
+      });
+      document.addEventListener("mouseup", function () {
+        if (drag) {
+          drag = null;
+          apply();
+        }
+      });
+      Array.prototype.forEach.call(
+        box.querySelectorAll("[data-zoom]"),
+        function (btn) {
+          btn.addEventListener("click", function () {
+            var k = btn.getAttribute("data-zoom");
+            if (k === "in") zoom(1.25);
+            else if (k === "out") zoom(0.8);
+            else {
+              z = 1;
+              ox = 0;
+              oy = 0;
+              apply();
+            }
+          });
+        },
+      );
+      apply();
+    },
+  );
 })();

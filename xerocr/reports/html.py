@@ -147,10 +147,17 @@ _CSS = (
     ".dd-diff{background:var(--surface);border-radius:var(--r-md);padding:10px 12px;}"
     ".dd-diff-head{font-size:11px;color:var(--g-500);margin-bottom:6px;"
     "display:flex;align-items:center;gap:6px;}"
-    # Détail document : fac-similé medium EN HAUT (pleine largeur), puis le reste.
+    # Détail document : fac-similé medium EN HAUT, zoomable/pan (molette + glisser).
     ".dd-fac-top{margin-bottom:14px;}"
-    ".dd-fac-img{max-width:100%;max-height:460px;width:auto;display:block;"
-    "margin:0 auto;border-radius:var(--r-md);border:1px solid var(--g-50);}"
+    ".dd-fac-zoom{position:relative;overflow:hidden;max-height:480px;display:flex;"
+    "justify-content:center;background:var(--surface);border-radius:var(--r-md);"
+    "border:1px solid var(--g-50);cursor:zoom-in;}"
+    ".dd-fac-img{max-width:100%;max-height:480px;width:auto;display:block;"
+    "transform-origin:center center;will-change:transform;}"
+    ".dd-zoom-ctl{position:absolute;top:8px;right:8px;display:flex;gap:4px;}"
+    ".dd-zoom-ctl button{width:26px;height:26px;border:none;border-radius:6px;"
+    "background:rgba(26,25,23,0.72);color:var(--paper);cursor:pointer;font-size:14px;"
+    "line-height:1;display:flex;align-items:center;justify-content:center;}"
     # Diff côte à côte : vérité-terrain (gauche) | sortie moteur (droite).
     ".dd-sbs{display:flex;gap:16px;align-items:flex-start;}"
     ".dd-sbs-col{flex:1;min-width:0;}"

@@ -338,10 +338,20 @@ class DocumentDetailSection:
         fac_block = ""
         if facsimile:
             fac_title = localized(lang, "Fac-similé", "Facsimile")
+            zin = localized(lang, "Zoom avant", "Zoom in")
+            zout = localized(lang, "Zoom arrière", "Zoom out")
+            zreset = localized(lang, "Réinitialiser le zoom", "Reset zoom")
             fac_block = (
                 f'<div class="dd-fac-top"><div class="prof-chart-title">{fac_title}'
-                f'</div><img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
-                'loading="lazy" decoding="async"></div>'
+                '</div><div class="dd-fac-zoom">'
+                f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
+                'loading="lazy" decoding="async">'
+                '<div class="dd-zoom-ctl">'
+                f'<button type="button" data-zoom="out" aria-label="{zout}">−</button>'
+                f'<button type="button" data-zoom="reset" aria-label="{zreset}">⤢'
+                "</button>"
+                f'<button type="button" data-zoom="in" aria-label="{zin}">+</button>'
+                "</div></div></div>"
             )
         # Graphiques recentrés sur CE doc : heatmap CER par ligne, puis qualité
         # d'image **en dernier** (demande utilisateur).
