@@ -171,10 +171,12 @@ def test_line_heatmap_recentred_on_document() -> None:
     )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
-    assert 'class="dd-lh"' in html  # histogramme CER par ligne du doc
-    assert "dd-lh-bar lh-g" in html and "dd-lh-bar lh-b" in html  # barres colorées
+    assert 'class="dd-lh"' in html  # distribution par ligne du doc
+    assert "dd-lh-bar lh-g" in html and "dd-lh-bar lh-b" in html  # carte thermique
     assert "height:4px" in html and "height:22px" in html  # hauteur ∝ CER (0.0 / 0.5)
-    assert html.count('class="dd-lh-row"') == 2  # un histogramme par moteur
+    assert html.count('class="dd-ld-row"') == 2  # une distribution par moteur
+    assert 'class="dd-pct-row"' in html and "p99" in html  # percentiles CER
+    assert "Gini" in html and "CER≥30 %" in html  # badges de distribution
 
 
 def test_image_quality_stays_last_below_line_heatmap() -> None:

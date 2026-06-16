@@ -22,6 +22,7 @@ from xerocr.evaluation.analysis import (
     ImageQualityPayload,
     WorstLine,
 )
+from xerocr.evaluation.lines import gini, percentile
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized
@@ -68,47 +69,72 @@ def _cer_bucket(value: float) -> str:
     return "b"
 
 
-def _line_heatmap(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
-    """CER **ligne par ligne** du document : un mini histogramme par moteur.
+_PCTS = (("p50", 50.0), ("p75", 75.0), ("p90", 90.0), ("p95", 95.0), ("p99", 99.0))
 
-    Une barre = une ligne GT (gauche→droite = haut→bas de la page) ; **hauteur ∝
-    CER** et couleur par palier (vert→rouge) → on repère d'un coup les lignes
-    fautives et *où* elles sont dans la page. Recentré sur le doc, lecture seule."""
+
+def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
+    """Distribution des erreurs **par ligne** du document, par moteur.
+
+    Trois lectures complémentaires, dérivées des CER de ligne (fonctions pures
+    partagées ``percentile``/``gini``) : (1) **carte thermique de position** (une
+    barre = une ligne, gauche→droite = haut→bas, hauteur ∝ CER) → *où* ; (2)
+    **percentiles CER** (p50→p99) → *l'étalement* (un p50 bas + p99 haut = quelques
+    lignes catastrophiques que le CER moyen masque) ; (3) **badges** (CER moyen,
+    Gini de concentration, n lignes, % de lignes au-dessus de seuils). Lecture seule."""
     start = localized(lang, "début", "start")
     end = localized(lang, "fin", "end")
+    heat_l = localized(lang, "carte thermique (position)", "heatmap (position)")
+    pct_l = localized(lang, "percentiles CER", "CER percentiles")
+    lines_l = localized(lang, "lignes", "lines")
     rows = ""
     for pipeline, cers in dl.pipelines:
         idx = order.get(pipeline, 0)
+        n = len(cers)
+        ordered = sorted(cers)
+        mean_cer = sum(cers) / n
+        chips = (
+            f'<span class="dd-hl-chip">CER {mean_cer * 100:.1f} %</span>'
+            f'<span class="dd-hl-chip">Gini {gini(cers):.2f}</span>'
+            f'<span class="dd-hl-chip">{n} {lines_l}</span>'
+        )
+        for thr in (0.30, 0.50, 1.0):
+            rate = sum(1 for c in cers if c >= thr) / n
+            chips += (
+                f'<span class="dd-hl-chip">{rate * 100:.0f} % {lines_l} '
+                f"CER≥{thr * 100:.0f} %</span>"
+            )
         bars = "".join(
             f'<i class="dd-lh-bar lh-{_cer_bucket(c)}" '
             f'style="height:{4 + round(36 * min(c, 1.0))}px" '
             f'title="ligne {i + 1} · CER {c * 100:.0f} %"></i>'
             for i, c in enumerate(cers)
         )
-        n = len(cers)
+        pcts = "".join(
+            f'<div class="dd-pct-row"><span class="dd-pct-lbl">{label}</span>'
+            f'<span class="dd-pct-track"><i class="lh-{_cer_bucket(v)}" '
+            f'style="width:{min(100.0, v * 200):.0f}%"></i></span>'
+            f'<span class="dd-pct-val">{v * 100:.1f} %</span></div>'
+            for label, v in (
+                (lbl, percentile(ordered, q)) for lbl, q in _PCTS
+            )
+        )
         rows += (
-            '<div class="dd-lh-row"><span class="eng-badge" '
+            '<div class="dd-ld-row"><div class="dd-ld-head"><span class="eng-badge" '
             f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
-            f'<span class="dd-name">{escape(pipeline)}</span>'
-            f'<span class="dd-lh-plot"><span class="dd-lh-bars">{bars}</span>'
-            f'<span class="dd-lh-axis"><span>{start}</span>'
-            f"<span>{n} {localized(lang, 'lignes', 'lines')}</span>"
-            f"<span>{end}</span></span></span></div>"
+            f'<span class="dd-name">{escape(pipeline)}</span>{chips}</div>'
+            '<div class="dd-ld-grid"><div class="dd-ld-cell">'
+            f'<div class="dd-ld-sub">{heat_l}</div>'
+            f'<div class="dd-lh-bars">{bars}</div>'
+            f'<div class="dd-lh-axis"><span>{start}</span><span>{end}</span></div>'
+            '</div><div class="dd-ld-cell">'
+            f'<div class="dd-ld-sub">{pct_l}</div>{pcts}</div></div></div>'
         )
     title = localized(
-        lang,
-        "CER ligne par ligne (hauteur = erreur)",
-        "CER line by line (height = error)",
-    )
-    legend = localized(
-        lang,
-        "barre haute/rouge = ligne très fautive · vert &lt; 5 % · orange &lt; 30 %",
-        "tall/red bar = badly recognised line · green &lt; 5% · orange &lt; 30%",
+        lang, "Distribution des erreurs par ligne", "Per-line error distribution"
     )
     return (
         f'<div class="dd-lh"><div class="prof-chart-title">{title}</div>'
-        f'<div class="dd-lh-rows">{rows}</div>'
-        f'<div class="muted dd-iq-meta">{legend}</div></div>'
+        f'<div class="dd-ld-rows">{rows}</div></div>'
     )
 
 
@@ -343,7 +369,7 @@ class DocumentDetailSection:
         # Graphiques recentrés sur CE doc : heatmap CER par ligne, puis qualité
         # d'image **en dernier** (demande utilisateur).
         dl = _doc_lines(result, doc_id)
-        lh_block = _line_heatmap(dl, order, lang) if dl is not None else ""
+        lh_block = _line_distribution(dl, order, lang) if dl is not None else ""
         dh = _doc_hallucination(result, doc_id)
         hl_block = _hallucination_block(dh, order, lang) if dh is not None else ""
         iq = _doc_image_quality(result, doc_id)
