@@ -1,4 +1,4 @@
-"""Détection d'hallucinations par document : ancrage, blocs inventés, déterminisme."""
+"""Hallucination par document : passages **insérés** (≠ mots mal lus), déterminisme."""
 
 from __future__ import annotations
 
@@ -9,47 +9,52 @@ def test_none_when_nothing_observed() -> None:
     assert DocumentHallucinationCollector().build("text") is None
 
 
-def test_anchored_output_is_not_flagged() -> None:
+def test_correct_output_has_no_insertion() -> None:
     c = DocumentHallucinationCollector()
-    # sortie = GT → ancrage parfait, pas d'hallucination, aucun bloc
-    text = "le chat noir dort sur le mur"
-    c.observe("tess", "d1", text, text)  # sortie = GT
-    payload = c.build("text").payload  # type: ignore[union-attr]
-    ph = payload.documents[0].pipelines[0]
-    assert ph.anchor_score == 1.0
-    assert not ph.is_hallucinating
-    assert ph.blocks == ()
+    text = "le budget de la ville pour l année"
+    c.observe("tess", "d1", text, text)  # sortie = GT → aucun insert
+    assert c.build("text") is None
 
 
-def test_invented_block_detected_and_flagged() -> None:
+def test_misread_is_not_a_hallucination() -> None:
+    c = DocumentHallucinationCollector()
+    # mots mal lus = substitutions (alignées face au GT), PAS des insertions
+    c.observe("tess", "d1", "le budget de la ville", "le budjet de la villle")
+    assert c.build("text") is None
+
+
+def test_inserted_passage_is_flagged() -> None:
     c = DocumentHallucinationCollector()
     gt = "le budget de la ville"
-    # sortie : mots inventés contigus absents du GT → bloc halluciné + ancrage bas
-    hyp = "durch beflhuß vom san lethin haben veröffentlihung budgetd kabr beichlofien"
-    c.observe("tess", "d1", gt, hyp)
+    # une phrase ajoutée (≥ 4 mots contigus absents du GT) entre du texte ancré
+    hyp = "le budget puis vint la grande inondation imprévue de la ville"
+    c.observe("llm", "d1", gt, hyp)
     payload = c.build("text").payload  # type: ignore[union-attr]
     ph = payload.documents[0].pipelines[0]
-    assert ph.is_hallucinating  # ancrage faible
-    assert ph.blocks  # au moins un bloc sans ancrage
-    assert ph.net_insertion_rate > 0.5
-    assert ph.gt_words == 5
+    assert ph.is_hallucinating and ph.blocks
+    assert "grande inondation imprévue" in ph.blocks[0].text
+    assert ph.net_insertion_rate > 0.0
 
 
-def test_per_document_per_pipeline_sorted() -> None:
+def test_short_spurious_word_below_threshold_not_flagged() -> None:
     c = DocumentHallucinationCollector()
-    c.observe("tess", "d2", "a b", "a b")
-    c.observe("pero", "d1", "a b", "a b")
-    c.observe("tess", "d1", "a b", "a b")
+    # un seul mot parasite inséré (< _MIN_INSERT) → pas signalé comme passage
+    c.observe("tess", "d1", "le budget de la ville", "le budget de la xyz ville")
+    assert c.build("text") is None
+
+
+def test_only_documents_with_insertion_kept_and_sorted() -> None:
+    c = DocumentHallucinationCollector()
+    c.observe("tess", "clean", "a b c d e", "a b c d e")  # rien → omis
+    c.observe("llm", "halluc", "a b", "a b puis une longue invention ajoutee ici")
     payload = c.build("text").payload  # type: ignore[union-attr]
-    docs = [d.document_id for d in payload.documents]
-    assert docs == ["d1", "d2"]  # docs triés
-    assert [p.pipeline for p in payload.documents[0].pipelines] == ["pero", "tess"]
+    assert [d.document_id for d in payload.documents] == ["halluc"]
 
 
 def test_deterministic() -> None:
     def run() -> object:
         c = DocumentHallucinationCollector()
-        c.observe("a", "d1", "le chat", "le chien xyz abcd efgh ijkl")
+        c.observe("a", "d1", "le chat", "le chat puis une longue phrase inventee ici")
         return c.build("text")
 
     assert run() == run()
