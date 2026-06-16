@@ -155,6 +155,18 @@ _CSS = (
     ".dd-sbs{display:flex;gap:16px;align-items:flex-start;}"
     ".dd-sbs-col{flex:1;min-width:0;}"
     "@media (max-width:720px){.dd-sbs{flex-direction:column;}}"
+    # Qualité d'image du document : mini-barres mesurées (recentrées sur le doc).
+    ".dd-iq{margin-bottom:14px;}"
+    ".dd-iq-bars{display:flex;flex-direction:column;gap:5px;}"
+    ".dd-iq-row{display:flex;align-items:center;gap:8px;font-size:12px;"
+    "color:var(--g-700);}"
+    ".dd-iq-lbl{flex:0 0 150px;}"
+    ".dd-iq-bar{flex:1;height:8px;background:var(--surface);border-radius:var(--r-pill);"
+    "overflow:hidden;}"
+    ".dd-iq-bar i{display:block;height:100%;background:var(--ink);"
+    "border-radius:inherit;}"
+    ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
+    ".dd-iq-meta{font-size:11px;margin-top:6px;}"
     # Diff pleine page : sélecteur de moteur (segmenté) + blocs diff (un visible).
     ".dd-fullwrap{margin-top:6px;}"
     ".dd-engine-tabs{display:inline-flex;gap:2px;padding:3px;margin-bottom:10px;"

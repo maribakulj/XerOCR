@@ -8,8 +8,10 @@ from xerocr.domain.run import RunManifest
 from xerocr.evaluation.analysis import (
     Analysis,
     DiagnosticsPayload,
+    DocumentImageQuality,
     DocumentTexts,
     DocumentTextsPayload,
+    ImageQualityPayload,
     WorstLine,
 )
 from xerocr.evaluation.result import (
@@ -120,6 +122,30 @@ def test_full_page_diff_with_engine_selector() -> None:
     assert "Vérité terrain" in html and "Sortie ·" in html
     # le diff caractère est marqué (insertion/suppression)
     assert 'class="d-ins"' in html or 'class="d-del"' in html
+
+
+def test_image_quality_block_recentred_on_document() -> None:
+    base = _result()
+    iq = ImageQualityPayload(
+        documents=(
+            DocumentImageQuality(
+                document_id="folio_1", sharpness=0.72, noise=0.10, contrast=0.60,
+                rotation_degrees=-1.3, quality_score=0.68, tier="medium",
+            ),
+        ),
+        mean_quality=0.68, mean_sharpness=0.72, mean_noise=0.10, mean_contrast=0.60,
+        n_good=0, n_medium=1, n_poor=0,
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=iq),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-iq"' in html  # bloc qualité d'image du doc
+    assert "Netteté" in html and "dd-iq-bar" in html  # barres mesurées
+    assert "-1.3°" in html  # inclinaison de CE doc
+    # un doc sans mesure (folio_2) ne porte pas le bloc (dégradé propre)
+    assert html.count('class="dd-iq"') == 1
 
 
 def test_none_without_documents() -> None:

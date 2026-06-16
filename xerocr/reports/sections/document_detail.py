@@ -12,8 +12,10 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
+    DocumentImageQuality,
     DocumentTexts,
     DocumentTextsPayload,
+    ImageQualityPayload,
     WorstLine,
 )
 from xerocr.evaluation.result import RunResult
@@ -24,6 +26,56 @@ from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.text_diff import char_diff
 
 _METRIC = "cer"
+#: Paliers de qualité d'image (clés payload anglaises — contrat).
+_TIER_FR = {"good": "bonne", "medium": "moyenne", "poor": "faible"}
+_TIER_EN = {"good": "good", "medium": "medium", "poor": "poor"}
+
+
+def _doc_image_quality(result: RunResult, doc_id: str) -> DocumentImageQuality | None:
+    """Qualité d'image **de ce document** (scope corpus), ``None`` si non mesurée."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if isinstance(payload, ImageQualityPayload):
+            for row in payload.documents:
+                if row.document_id == doc_id:
+                    return row
+    return None
+
+
+def _iq_bar(label: str, value: float) -> str:
+    """Mini-barre [0,1] d'une feature de qualité d'image (largeur = valeur)."""
+    pct = max(0.0, min(1.0, value)) * 100
+    return (
+        f'<div class="dd-iq-row"><span class="dd-iq-lbl">{label}</span>'
+        f'<span class="dd-iq-bar"><i style="width:{pct:.0f}%"></i></span>'
+        f'<span class="dd-iq-val">{value:.2f}</span></div>'
+    )
+
+
+def _iq_block(iq: DocumentImageQuality, lang: str) -> str:
+    """Bloc qualité d'image **du document** : barres mesurées + palier + inclinaison.
+
+    Recentré sur CE doc (les features expliquent un CER élevé : image dégradée vs
+    moteur faible). Lecture seule du payload — aucun recalcul (anti-hallucination)."""
+    tier = (_TIER_FR if lang == "fr" else _TIER_EN).get(iq.tier, iq.tier)
+    title = localized(lang, "Qualité de l'image", "Image quality")
+    bars = (
+        _iq_bar(localized(lang, "Netteté", "Sharpness"), iq.sharpness)
+        + _iq_bar(localized(lang, "Contraste", "Contrast"), iq.contrast)
+        + _iq_bar(localized(lang, "Propreté (1−bruit)", "Cleanliness (1−noise)"),
+                  1.0 - iq.noise)
+        + _iq_bar(localized(lang, "Score global", "Overall score"), iq.quality_score)
+    )
+    skew = localized(
+        lang,
+        f"palier : {tier} · inclinaison {iq.rotation_degrees:+.1f}°",
+        f"tier: {tier} · skew {iq.rotation_degrees:+.1f}°",
+    )
+    return (
+        f'<div class="dd-iq"><div class="prof-chart-title">{title}</div>'
+        f'<div class="dd-iq-bars">{bars}</div>'
+        f'<div class="muted dd-iq-meta">{skew}</div></div>'
+    )
 
 
 def _doc_cer(result: RunResult, doc_id: str, view: str) -> list[tuple[str, float]]:
@@ -142,8 +194,11 @@ class DocumentDetailSection:
                 f'</div><img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
                 'loading="lazy" decoding="async"></div>'
             )
+        # Qualité d'image de CE doc (si mesurée) : graphique recentré sur le doc.
+        iq = _doc_image_quality(result, doc_id)
+        iq_block = _iq_block(iq, lang) if iq is not None else ""
         body = (
-            f"{fac_block}"
+            f"{fac_block}{iq_block}"
             f'<div class="prof-chart-title">{cer_title}</div>'
             f'<div class="dd-cers">{cer_rows}</div>{diffs}'
         )

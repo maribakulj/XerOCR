@@ -168,18 +168,45 @@
     document.querySelectorAll(".drill-panel"),
   );
   if (drillPanels.length) {
+    /* Vue document focalisée : quand un détail document s'ouvre, on masque les
+       autres blocs de son onglet (galerie, par-document, qualité d'image) pour
+       ne montrer QUE le document cliqué. restoreFocus() rétablit tout. */
+    function restoreFocus() {
+      Array.prototype.forEach.call(
+        document.querySelectorAll(".r-block.doc-focus-host"),
+        function (host) {
+          Array.prototype.forEach.call(host.parentNode.children, function (c) {
+            if (c.classList && c.classList.contains("r-block")) c.hidden = false;
+          });
+          host.classList.remove("doc-focus-host");
+        },
+      );
+    }
     function showDrill(id) {
       drillPanels.forEach(function (p) {
         p.hidden = p.id !== id;
       });
       var open = document.getElementById(id);
-      if (open) open.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (!open) return;
+      restoreFocus();
+      if (open.closest(".doc-details")) {
+        var block = open.closest(".r-block");
+        if (block && block.parentNode) {
+          Array.prototype.forEach.call(block.parentNode.children, function (c) {
+            if (c.classList && c.classList.contains("r-block") && c !== block)
+              c.hidden = true;
+          });
+          block.classList.add("doc-focus-host");
+        }
+      }
+      open.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     document.addEventListener("click", function (e) {
       var link = e.target.closest && e.target.closest("a");
       if (!link) return;
       if (link.classList.contains("drill-back")) {
         e.preventDefault();
+        restoreFocus();
         drillPanels.forEach(function (p) {
           p.hidden = true;
         });
