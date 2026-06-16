@@ -11,9 +11,13 @@ from xerocr.evaluation.analysis import (
     DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
+    DocumentTaxonomy,
+    DocumentTaxonomyPayload,
     DocumentTexts,
     DocumentTextsPayload,
     ImageQualityPayload,
+    PipelineTaxonomy,
+    TaxonomyCount,
     WorstLine,
 )
 from xerocr.evaluation.result import (
@@ -200,6 +204,36 @@ def test_image_quality_stays_last_below_line_heatmap() -> None:
     assert html is not None
     # qualité d'image (dd-iq) APRÈS la heatmap (dd-lh) — graphique image en dernier
     assert html.index('class="dd-lh"') < html.index('class="dd-iq"')
+
+
+def test_error_profile_recentred_on_document() -> None:
+    base = _result()
+    dt = DocumentTaxonomyPayload(
+        classes=("diacritic", "case"),
+        documents=(
+            DocumentTaxonomy(
+                document_id="folio_1",
+                pipelines=(
+                    PipelineTaxonomy(
+                        pipeline="tesseract",
+                        total_errors=5,
+                        counts=(
+                            TaxonomyCount(label="diacritic", count=3),
+                            TaxonomyCount(label="case", count=2),
+                        ),
+                    ),
+                ),
+            ),
+        ),
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dt),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-tx"' in html  # profil d'erreurs du doc
+    assert 'class="dd-tx-bar"' in html and "width:60.0%" in html  # diacritic 3/5
+    assert "diacritiques" in html  # libellé FR de la classe
 
 
 def test_none_without_documents() -> None:

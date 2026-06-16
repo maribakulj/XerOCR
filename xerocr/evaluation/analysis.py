@@ -275,6 +275,25 @@ class TaxonomyPayload(BaseModel):
     pipelines: tuple[PipelineTaxonomy, ...] = ()
 
 
+class DocumentTaxonomy(BaseModel):
+    """Profil d'erreurs **d'un document**, par pipeline (réutilise PipelineTaxonomy)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    pipelines: tuple[PipelineTaxonomy, ...] = ()
+
+
+class DocumentTaxonomyPayload(BaseModel):
+    """Taxonomie d'erreurs **par document** : profil d'erreurs du détail document."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["document_taxonomy"] = "document_taxonomy"
+    classes: tuple[str, ...] = ()
+    documents: tuple[DocumentTaxonomy, ...] = ()
+
+
 #: Plafond de caractères par texte embarqué (borne de sûreté ; une page dense
 #: tient largement dessous — au-delà, tronqué). Le payload porte **tous** les
 #: documents scorés (cf. ``DocumentTextsCollector``), pas seulement les pires.
@@ -992,6 +1011,7 @@ AnalysisPayload = Annotated[
     | DiagnosticsPayload
     | CalibrationPayload
     | TaxonomyPayload
+    | DocumentTaxonomyPayload
     | DocumentTextsPayload
     | DocumentLinesPayload
     | ConformityPayload

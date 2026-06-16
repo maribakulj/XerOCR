@@ -181,6 +181,18 @@ _CSS = (
     "color:var(--g-400);margin-top:3px;}"
     ".lh-g{background:var(--fern);}.lh-m{background:#c9a227;}"
     ".lh-o{background:#c2702f;}.lh-b{background:#a23b3b;}"
+    # Profil d'erreurs du document : barre empilée par moteur (classes colorées).
+    ".dd-tx{margin-bottom:14px;}"
+    ".dd-tx-rows{display:flex;flex-direction:column;gap:6px;}"
+    ".dd-tx-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);}"
+    ".dd-tx-bar{flex:1;display:flex;height:14px;border-radius:4px;overflow:hidden;"
+    "background:var(--surface);}"
+    ".dd-tx-bar i{display:block;height:100%;}"
+    ".dd-tx-tot{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
+    ".dd-tx-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;margin-top:6px;}"
+    ".dd-tx-sw{display:inline-flex;align-items:center;gap:4px;}"
+    ".dd-tx-sw i{width:10px;height:10px;border-radius:2px;display:inline-block;}"
     # Diff pleine page : sélecteur de moteur (segmenté) + blocs diff (un visible).
     ".dd-fullwrap{margin-top:6px;}"
     ".dd-engine-tabs{display:inline-flex;gap:2px;padding:3px;margin-bottom:10px;"

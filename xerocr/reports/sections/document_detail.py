@@ -15,6 +15,8 @@ from xerocr.evaluation.analysis import (
     DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
+    DocumentTaxonomy,
+    DocumentTaxonomyPayload,
     DocumentTexts,
     DocumentTextsPayload,
     ImageQualityPayload,
@@ -107,6 +109,85 @@ def _line_heatmap(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
         f'<div class="dd-lh"><div class="prof-chart-title">{title}</div>'
         f'<div class="dd-lh-rows">{rows}</div>'
         f'<div class="muted dd-iq-meta">{legend}</div></div>'
+    )
+
+
+#: Couleur par classe d'erreur (palette fixe, distinguable, sur la charte).
+_CLASS_COLOR = {
+    "segmentation": "#6F6B60",
+    "case": "#c9a227",
+    "diacritic": "#4a7ba6",
+    "ligature": "#8a6db0",
+    "visual": "#c2702f",
+    "lacuna": "#a23b3b",
+    "insertion": "#5a9b5a",
+    "other": "#8D8879",
+}
+#: Libellés FR des classes (clés payload anglaises — contrat inchangé).
+_CLASS_FR = {
+    "segmentation": "segmentation",
+    "case": "casse",
+    "diacritic": "diacritiques",
+    "ligature": "ligatures",
+    "visual": "visuel",
+    "lacuna": "lacune",
+    "insertion": "insertion",
+    "other": "autre",
+}
+
+
+def _doc_taxonomy(result: RunResult, doc_id: str) -> DocumentTaxonomy | None:
+    """Profil d'erreurs **de ce document** (scope corpus), ``None`` si absent."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if isinstance(payload, DocumentTaxonomyPayload):
+            for row in payload.documents:
+                if row.document_id == doc_id:
+                    return row
+    return None
+
+
+def _taxonomy_block(dt: DocumentTaxonomy, order: dict[str, int], lang: str) -> str:
+    """Profil d'erreurs du document : barre empilée par moteur (classes colorées).
+
+    Montre **de quoi** sont faites les erreurs du doc (casse, diacritiques, lacune,
+    insertion…) par moteur → complète le CER d'un « pourquoi ». Lecture seule."""
+    labels = _CLASS_FR if lang == "fr" else None
+    seen: list[str] = []
+    rows = ""
+    for pt in dt.pipelines:
+        idx = order.get(pt.pipeline, 0)
+        segs = ""
+        for c in pt.counts:
+            if c.label not in seen:
+                seen.append(c.label)
+            width = c.count / pt.total_errors * 100
+            color = _CLASS_COLOR.get(c.label, "#8D8879")
+            name = labels.get(c.label, c.label) if labels else c.label
+            segs += (
+                f'<i style="width:{width:.1f}%;background:{color}" '
+                f'title="{name} : {c.count}"></i>'
+            )
+        rows += (
+            '<div class="dd-tx-row"><span class="eng-badge" '
+            f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
+            f'<span class="dd-name">{escape(pt.pipeline)}</span>'
+            f'<span class="dd-tx-bar">{segs}</span>'
+            f'<span class="dd-tx-tot">{pt.total_errors}</span></div>'
+        )
+    legend = "".join(
+        f'<span class="dd-tx-sw"><i style="background:'
+        f'{_CLASS_COLOR.get(c, "#8D8879")}"></i>'
+        f"{(labels.get(c, c) if labels else c)}</span>"
+        for c in seen
+    )
+    title = localized(
+        lang, "Profil d'erreurs (par moteur)", "Error profile (per engine)"
+    )
+    return (
+        f'<div class="dd-tx"><div class="prof-chart-title">{title}</div>'
+        f'<div class="dd-tx-rows">{rows}</div>'
+        f'<div class="dd-tx-legend muted">{legend}</div></div>'
     )
 
 
@@ -266,14 +347,16 @@ class DocumentDetailSection:
         # d'image **en dernier** (demande utilisateur).
         dl = _doc_lines(result, doc_id)
         lh_block = _line_heatmap(dl, order, lang) if dl is not None else ""
+        dt = _doc_taxonomy(result, doc_id)
+        tx_block = _taxonomy_block(dt, order, lang) if dt is not None else ""
         iq = _doc_image_quality(result, doc_id)
         iq_block = _iq_block(iq, lang) if iq is not None else ""
         # Ordre : fac-similé en haut → **texte** (diff GT/sortie) juste dessous →
-        # CER par moteur → heatmap par ligne → qualité d'image **en bas**.
+        # CER → heatmap ligne → profil d'erreurs → qualité d'image **en dernier**.
         body = (
             f"{fac_block}{diffs}"
             f'<div class="prof-chart-title">{cer_title}</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{iq_block}'
+            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{tx_block}{iq_block}'
         )
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")

@@ -284,6 +284,7 @@ def test_inference_analyses_through_evaluate_run(tmp_path: Path) -> None:
         "inference",
         "diagnostics",
         "taxonomy",
+        "document_taxonomy",
         "document_texts",
         "document_lines",
         "textual_fidelity",
