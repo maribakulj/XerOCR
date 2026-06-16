@@ -163,7 +163,7 @@ _CSS = (
     ".dd-iq-lbl{flex:0 0 150px;}"
     ".dd-iq-bar{flex:1;height:8px;background:var(--surface);border-radius:var(--r-pill);"
     "overflow:hidden;}"
-    ".dd-iq-bar i{display:block;height:100%;background:var(--ink);"
+    ".dd-iq-bar i{display:block;height:100%;background:var(--g-300);"
     "border-radius:inherit;}"
     ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
     ".dd-iq-meta{font-size:11px;margin-top:6px;}"

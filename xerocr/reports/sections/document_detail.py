@@ -197,10 +197,12 @@ class DocumentDetailSection:
         # Qualité d'image de CE doc (si mesurée) : graphique recentré sur le doc.
         iq = _doc_image_quality(result, doc_id)
         iq_block = _iq_block(iq, lang) if iq is not None else ""
+        # Ordre : fac-similé en haut → **texte** (diff GT/sortie) juste dessous →
+        # CER par moteur → qualité d'image en bas (≠ collée sous l'image).
         body = (
-            f"{fac_block}{iq_block}"
+            f"{fac_block}{diffs}"
             f'<div class="prof-chart-title">{cer_title}</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{diffs}'
+            f'<div class="dd-cers">{cer_rows}</div>{iq_block}'
         )
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")
