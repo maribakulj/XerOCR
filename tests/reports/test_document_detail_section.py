@@ -90,7 +90,7 @@ def test_facsimile_shown_when_provided() -> None:
     ctx = SectionContext(facsimiles={"folio_1": "data:image/jpeg;base64,ZZZ"})
     html = DocumentDetailSection().render(_result(), ctx)
     assert html is not None
-    assert 'class="dd-cols"' in html  # 2 colonnes (fac-similé | CER/diff)
+    assert 'class="dd-fac-top"' in html  # fac-similé en haut (pleine largeur)
     assert 'class="dd-fac-img" src="data:image/jpeg;base64,ZZZ"' in html
     # un doc sans fac-similé reste en pleine largeur (pas d'image vide)
     plain = DocumentDetailSection().render(_result(), SectionContext())
@@ -116,6 +116,7 @@ def test_full_page_diff_with_engine_selector() -> None:
     assert "page complète" in html  # diff pleine page (≠ pires lignes)
     assert 'class="dd-engine-tabs' in html  # sélecteur de moteur
     assert html.count('class="dd-fulldiff"') == 2  # un bloc par moteur
+    assert html.count('class="dd-sbs"') == 2  # GT | sortie côte à côte par moteur
     assert "Vérité terrain" in html and "Sortie ·" in html
     # le diff caractère est marqué (insertion/suppression)
     assert 'class="d-ins"' in html or 'class="d-del"' in html

@@ -131,24 +131,22 @@ class DocumentDetailSection:
                     '<div class="dd-diffs"><div class="prof-chart-title">'
                     f"{worst_title}</div>{items}</div>"
                 )
-        # Fac-similé medium à gauche (si résolu), CER + diff à droite ; sinon
-        # CER + diff en pleine largeur (dégradé propre, pas d'image vide).
+        # Fac-similé medium EN HAUT (pleine largeur, si résolu), puis CER par
+        # moteur + diff côte à côte. Sans image : on saute le bloc (pas de vide).
         cer_title = localized(lang, "CER par moteur", "CER per engine")
-        inner = (
+        fac_block = ""
+        if facsimile:
+            fac_title = localized(lang, "Fac-similé", "Facsimile")
+            fac_block = (
+                f'<div class="dd-fac-top"><div class="prof-chart-title">{fac_title}'
+                f'</div><img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
+                'loading="lazy" decoding="async"></div>'
+            )
+        body = (
+            f"{fac_block}"
             f'<div class="prof-chart-title">{cer_title}</div>'
             f'<div class="dd-cers">{cer_rows}</div>{diffs}'
         )
-        if facsimile:
-            fac_title = localized(lang, "Fac-similé", "Facsimile")
-            body = (
-                '<div class="dd-cols"><div class="dd-fac">'
-                f'<div class="prof-chart-title">{fac_title}</div>'
-                f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
-                'loading="lazy" decoding="async"></div>'
-                f'<div class="dd-right">{inner}</div></div>'
-            )
-        else:
-            body = inner
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
@@ -192,10 +190,13 @@ class DocumentDetailSection:
             hidden = "" if i == 0 else " hidden"
             blocks += (
                 f'<div class="dd-fulldiff" data-engine="{escape(p)}"{hidden}>'
-                f'<div class="dd-diff-head mono">{ref_label}</div>'
-                f'<div class="diff">{ref_html}</div>'
-                f'<div class="dd-diff-head mono">{out_label} · {escape(p)}</div>'
+                '<div class="dd-sbs">'
+                f'<div class="dd-sbs-col"><div class="dd-diff-head mono">{ref_label}'
+                f'</div><div class="diff">{ref_html}</div></div>'
+                '<div class="dd-sbs-col"><div class="dd-diff-head mono">'
+                f"{out_label} · {escape(p)}</div>"
                 f'<div class="diff">{hyp_html}</div></div>'
+                "</div></div>"
             )
         full_title = localized(
             lang,

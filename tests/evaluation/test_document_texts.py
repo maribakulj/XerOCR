@@ -1,8 +1,8 @@
-"""Collecteur de textes complets : top-N pires, troncature, déterminisme."""
+"""Collecteur de textes complets : tous les docs, pires-d'abord, déterminisme."""
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import DocumentTextsPayload
+from xerocr.evaluation.analysis import _MAX_TEXT_CHARS, DocumentTextsPayload
 from xerocr.evaluation.document_texts import DocumentTextsCollector
 
 
@@ -26,13 +26,26 @@ def test_keeps_worst_first_and_orders_hypotheses() -> None:
     assert [p for p, _ in payload.documents[0].hypotheses] == ["pero", "tesseract"]
 
 
-def test_truncates_long_texts() -> None:
+def test_keeps_all_documents_not_just_worst() -> None:
+    # Tous les documents scorés sont embarqués (la vue document montre chacun en
+    # entier, pas seulement les pires) — pires-d'abord conservé pour l'ordre.
     c = DocumentTextsCollector()
-    c.observe("t", "d", "x" * 20000, "y" * 20000, 0.5)
+    for i in range(30):
+        c.observe("t", f"d{i:02d}", "ref", "rxf", i / 100)
     payload = c.build("text").payload  # type: ignore[union-attr]
     assert isinstance(payload, DocumentTextsPayload)
-    assert len(payload.documents[0].reference) == 8000  # tronqué au plafond
-    assert len(payload.documents[0].hypotheses[0][1]) == 8000
+    assert len(payload.documents) == 30  # aucun plafond de documents
+    assert payload.documents[0].document_id == "d29"  # pire (CER 0.29) d'abord
+
+
+def test_truncates_at_safety_bound() -> None:
+    c = DocumentTextsCollector()
+    big = _MAX_TEXT_CHARS + 5000
+    c.observe("t", "d", "x" * big, "y" * big, 0.5)
+    payload = c.build("text").payload  # type: ignore[union-attr]
+    assert isinstance(payload, DocumentTextsPayload)
+    assert len(payload.documents[0].reference) == _MAX_TEXT_CHARS  # borne de sûreté
+    assert len(payload.documents[0].hypotheses[0][1]) == _MAX_TEXT_CHARS
 
 
 def test_deterministic() -> None:

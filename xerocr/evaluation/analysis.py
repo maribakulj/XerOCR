@@ -275,16 +275,18 @@ class TaxonomyPayload(BaseModel):
     pipelines: tuple[PipelineTaxonomy, ...] = ()
 
 
-#: Plafond de caractères des textes embarqués (borne le payload ; au-delà, tronqué).
-_MAX_TEXT_CHARS = 8000
+#: Plafond de caractères par texte embarqué (borne de sûreté ; une page dense
+#: tient largement dessous — au-delà, tronqué). Le payload porte **tous** les
+#: documents scorés (cf. ``DocumentTextsCollector``), pas seulement les pires.
+_MAX_TEXT_CHARS = 40000
 
 
 class DocumentTexts(BaseModel):
     """Textes complets d'**un** document (vérité-terrain + sortie par moteur).
 
-    Bornés : seuls les **top-N pires documents** sont embarqués, chaque texte
-    tronqué à ``_MAX_TEXT_CHARS``. Normalisés (mêmes représentations que le
-    scoring) → le diff pleine page reflète ce qui est mesuré.
+    Embarqués pour **tous les documents scorés** (ordre pires-d'abord), chaque
+    texte borné à ``_MAX_TEXT_CHARS`` (sûreté). Normalisés (mêmes représentations
+    que le scoring) → le diff côte à côte reflète ce qui est mesuré.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
