@@ -168,17 +168,24 @@
     document.querySelectorAll(".drill-panel"),
   );
   if (drillPanels.length) {
-    /* Vue document focalisée : quand un détail document s'ouvre, on masque les
-       autres blocs de son onglet (galerie, par-document, qualité d'image) pour
-       ne montrer QUE le document cliqué. restoreFocus() rétablit tout. */
+    /* Vue document focalisée : quand un détail document s'ouvre, on masque tout
+       SAUF ce document — la galerie/liste/bascule (mêmes parents que les
+       panneaux) ET les autres blocs de l'onglet (par-document, qualité d'image).
+       restoreFocus() rétablit exactement ce qu'on avait masqué. */
+    function hideExcept(parent, keep) {
+      Array.prototype.forEach.call(parent.children, function (c) {
+        if (c !== keep && !c.hidden) {
+          c.hidden = true;
+          c.classList.add("doc-focus-hidden");
+        }
+      });
+    }
     function restoreFocus() {
       Array.prototype.forEach.call(
-        document.querySelectorAll(".r-block.doc-focus-host"),
-        function (host) {
-          Array.prototype.forEach.call(host.parentNode.children, function (c) {
-            if (c.classList && c.classList.contains("r-block")) c.hidden = false;
-          });
-          host.classList.remove("doc-focus-host");
+        document.querySelectorAll(".doc-focus-hidden"),
+        function (el) {
+          el.hidden = false;
+          el.classList.remove("doc-focus-hidden");
         },
       );
     }
@@ -189,15 +196,15 @@
       var open = document.getElementById(id);
       if (!open) return;
       restoreFocus();
-      if (open.closest(".doc-details")) {
-        var block = open.closest(".r-block");
-        if (block && block.parentNode) {
-          Array.prototype.forEach.call(block.parentNode.children, function (c) {
-            if (c.classList && c.classList.contains("r-block") && c !== block)
-              c.hidden = true;
-          });
-          block.classList.add("doc-focus-host");
-        }
+      var details = open.closest(".doc-details");
+      if (details && details.parentNode) {
+        /* 1) dans la section documents : ne garder que le conteneur des
+           panneaux (cache la galerie, la liste, la bascule). */
+        hideExcept(details.parentNode, details);
+        /* 2) dans l'onglet : ne garder que la section documents (cache les
+           sections voisines : par-document, qualité d'image, héros). */
+        var block = details.parentNode.closest(".r-block");
+        if (block && block.parentNode) hideExcept(block.parentNode, block);
       }
       open.scrollIntoView({ behavior: "smooth", block: "start" });
     }

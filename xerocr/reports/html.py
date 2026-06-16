@@ -230,7 +230,7 @@ _CSS = (
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
     "word-break:break-word;vertical-align:top;}"
-    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:line-through;"
+    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:none;"
     "color:var(--ink);}"
     "ins.d-ins{background:rgba(159,195,160,0.38);text-decoration:none;"
     "color:var(--ink);}"
