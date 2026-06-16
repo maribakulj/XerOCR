@@ -165,9 +165,10 @@ def test_line_heatmap_recentred_on_document() -> None:
     )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
-    assert 'class="dd-lh"' in html  # heatmap CER par ligne du doc
-    assert "lh-cell lh-g" in html and "lh-cell lh-b" in html  # cases colorées
-    assert html.count('class="dd-lh-row"') == 2  # une rangée par moteur
+    assert 'class="dd-lh"' in html  # histogramme CER par ligne du doc
+    assert "dd-lh-bar lh-g" in html and "dd-lh-bar lh-b" in html  # barres colorées
+    assert "height:4px" in html and "height:22px" in html  # hauteur ∝ CER (0.0 / 0.5)
+    assert html.count('class="dd-lh-row"') == 2  # un histogramme par moteur
 
 
 def test_image_quality_stays_last_below_line_heatmap() -> None:

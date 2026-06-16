@@ -167,13 +167,18 @@ _CSS = (
     "border-radius:inherit;}"
     ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
     ".dd-iq-meta{font-size:11px;margin-top:6px;}"
-    # Heatmap CER par ligne du document : une rangée de cases par moteur.
+    # CER ligne par ligne du document : un mini histogramme par moteur (hauteur
+    # ∝ CER), repères début→fin. Une barre = une ligne GT.
     ".dd-lh{margin-bottom:14px;}"
-    ".dd-lh-rows{display:flex;flex-direction:column;gap:6px;}"
-    ".dd-lh-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
+    ".dd-lh-rows{display:flex;flex-direction:column;gap:12px;}"
+    ".dd-lh-row{display:flex;align-items:flex-start;gap:8px;font-family:var(--mono);"
     "font-size:12px;color:var(--g-700);}"
-    ".dd-lh-cells{display:flex;flex-wrap:wrap;gap:2px;flex:1;}"
-    ".lh-cell{width:11px;height:11px;border-radius:2px;}"
+    ".dd-lh-plot{flex:1;min-width:0;}"
+    ".dd-lh-bars{display:flex;align-items:flex-end;gap:2px;height:40px;"
+    "overflow-x:auto;padding-bottom:2px;}"
+    ".dd-lh-bar{flex:0 0 8px;border-radius:2px 2px 0 0;}"
+    ".dd-lh-axis{display:flex;justify-content:space-between;font-size:10px;"
+    "color:var(--g-400);margin-top:3px;}"
     ".lh-g{background:var(--fern);}.lh-m{background:#c9a227;}"
     ".lh-o{background:#c2702f;}.lh-b{background:#a23b3b;}"
     # Diff pleine page : sélecteur de moteur (segmenté) + blocs diff (un visible).
@@ -186,7 +191,8 @@ _CSS = (
     ".dd-eng-btn .eng-badge{margin-right:0;}"
     ".dd-eng-btn.on{background:var(--ink);color:var(--paper);}"
     ".dd-fulldiff[hidden]{display:none;}"
-    ".dd-fulldiff .diff{max-height:380px;overflow:auto;}"
+    ".dd-fulldiff .diff{max-height:380px;overflow:auto;white-space:pre-wrap;"
+    "word-break:break-word;font-family:var(--mono);font-size:12px;line-height:1.5;}"
     ".prof-head{display:flex;justify-content:space-between;align-items:center;"
     "gap:12px;flex-wrap:wrap;margin-bottom:10px;}"
     ".eng-back{font-family:var(--mono);font-size:12px;text-decoration:none;"

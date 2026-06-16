@@ -67,29 +67,41 @@ def _cer_bucket(value: float) -> str:
 
 
 def _line_heatmap(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
-    """Heatmap CER **par ligne** du document : une rangée de cases par moteur.
+    """CER **ligne par ligne** du document : un mini histogramme par moteur.
 
-    Chaque case = une ligne GT, colorée par son CER (vert→rouge) ; **recentrée sur
-    le doc** (où, dans la page, les erreurs se concentrent). Lecture seule."""
+    Une barre = une ligne GT (gauche→droite = haut→bas de la page) ; **hauteur ∝
+    CER** et couleur par palier (vert→rouge) → on repère d'un coup les lignes
+    fautives et *où* elles sont dans la page. Recentré sur le doc, lecture seule."""
+    start = localized(lang, "début", "start")
+    end = localized(lang, "fin", "end")
     rows = ""
     for pipeline, cers in dl.pipelines:
         idx = order.get(pipeline, 0)
-        cells = "".join(
-            f'<i class="lh-cell lh-{_cer_bucket(c)}" '
+        bars = "".join(
+            f'<i class="dd-lh-bar lh-{_cer_bucket(c)}" '
+            f'style="height:{4 + round(36 * min(c, 1.0))}px" '
             f'title="ligne {i + 1} · CER {c * 100:.0f} %"></i>'
             for i, c in enumerate(cers)
         )
+        n = len(cers)
         rows += (
             '<div class="dd-lh-row"><span class="eng-badge" '
             f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
             f'<span class="dd-name">{escape(pipeline)}</span>'
-            f'<span class="dd-lh-cells">{cells}</span></div>'
+            f'<span class="dd-lh-plot"><span class="dd-lh-bars">{bars}</span>'
+            f'<span class="dd-lh-axis"><span>{start}</span>'
+            f"<span>{n} {localized(lang, 'lignes', 'lines')}</span>"
+            f"<span>{end}</span></span></span></div>"
         )
-    title = localized(lang, "Erreurs par ligne (CER)", "Errors per line (CER)")
+    title = localized(
+        lang,
+        "CER ligne par ligne (hauteur = erreur)",
+        "CER line by line (height = error)",
+    )
     legend = localized(
         lang,
-        "vert &lt; 5 % · jaune &lt; 15 % · orange &lt; 30 % · rouge ≥ 30 %",
-        "green &lt; 5% · yellow &lt; 15% · orange &lt; 30% · red ≥ 30%",
+        "barre haute/rouge = ligne très fautive · vert &lt; 5 % · orange &lt; 30 %",
+        "tall/red bar = badly recognised line · green &lt; 5% · orange &lt; 30%",
     )
     return (
         f'<div class="dd-lh"><div class="prof-chart-title">{title}</div>'
