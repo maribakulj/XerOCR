@@ -306,6 +306,29 @@ class DocumentTextsPayload(BaseModel):
     documents: tuple[DocumentTexts, ...] = ()
 
 
+class DocumentLines(BaseModel):
+    """CER **par ligne** d'un document, par pipeline (heatmap recentrée sur le doc).
+
+    ``pipelines`` = ``(pipeline, CER de chaque ligne GT)`` ordonnés par pipeline
+    (déterminisme). Les CER par ligne viennent de l'alignement Levenshtein des
+    lignes (``aligned_line_cers``) — mêmes lignes que le scoring.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    pipelines: tuple[tuple[str, tuple[float, ...]], ...] = ()
+
+
+class DocumentLinesPayload(BaseModel):
+    """CER par ligne **par document** : heatmap positionnelle du détail document."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["document_lines"] = "document_lines"
+    documents: tuple[DocumentLines, ...] = ()
+
+
 class PipelineConformity(BaseModel):
     """Scores de conformité HIPE d'un pipeline (vue ``hipe``).
 
@@ -970,6 +993,7 @@ AnalysisPayload = Annotated[
     | CalibrationPayload
     | TaxonomyPayload
     | DocumentTextsPayload
+    | DocumentLinesPayload
     | ConformityPayload
     | CorrectionPayload
     | StructuredDataPayload

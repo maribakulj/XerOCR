@@ -9,6 +9,8 @@ from xerocr.evaluation.analysis import (
     Analysis,
     DiagnosticsPayload,
     DocumentImageQuality,
+    DocumentLines,
+    DocumentLinesPayload,
     DocumentTexts,
     DocumentTextsPayload,
     ImageQualityPayload,
@@ -146,6 +148,57 @@ def test_image_quality_block_recentred_on_document() -> None:
     assert "-1.3°" in html  # inclinaison de CE doc
     # un doc sans mesure (folio_2) ne porte pas le bloc (dégradé propre)
     assert html.count('class="dd-iq"') == 1
+
+
+def test_line_heatmap_recentred_on_document() -> None:
+    base = _result()
+    dl = DocumentLinesPayload(
+        documents=(
+            DocumentLines(
+                document_id="folio_1",
+                pipelines=(("tesseract", (0.0, 0.20, 0.5)), ("pero", (0.0, 0.0, 0.1))),
+            ),
+        )
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dl),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-lh"' in html  # heatmap CER par ligne du doc
+    assert "lh-cell lh-g" in html and "lh-cell lh-b" in html  # cases colorées
+    assert html.count('class="dd-lh-row"') == 2  # une rangée par moteur
+
+
+def test_image_quality_stays_last_below_line_heatmap() -> None:
+    base = _result()
+    dl = DocumentLinesPayload(
+        documents=(
+            DocumentLines(document_id="folio_1", pipelines=(("tesseract", (0.1,)),)),
+        )
+    )
+    iq = ImageQualityPayload(
+        documents=(
+            DocumentImageQuality(
+                document_id="folio_1", sharpness=0.7, noise=0.1, contrast=0.6,
+                rotation_degrees=0.0, quality_score=0.6, tier="medium",
+            ),
+        ),
+        mean_quality=0.6, mean_sharpness=0.7, mean_noise=0.1, mean_contrast=0.6,
+        n_good=0, n_medium=1, n_poor=0,
+    )
+    result = base.model_copy(
+        update={
+            "analyses": (
+                Analysis(scope="corpus", view="text", payload=dl),
+                Analysis(scope="corpus", view="text", payload=iq),
+            )
+        }
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    # qualité d'image (dd-iq) APRÈS la heatmap (dd-lh) — graphique image en dernier
+    assert html.index('class="dd-lh"') < html.index('class="dd-iq"')
 
 
 def test_none_without_documents() -> None:

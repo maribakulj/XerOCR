@@ -13,6 +13,8 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
     DocumentImageQuality,
+    DocumentLines,
+    DocumentLinesPayload,
     DocumentTexts,
     DocumentTextsPayload,
     ImageQualityPayload,
@@ -40,6 +42,60 @@ def _doc_image_quality(result: RunResult, doc_id: str) -> DocumentImageQuality |
                 if row.document_id == doc_id:
                     return row
     return None
+
+
+def _doc_lines(result: RunResult, doc_id: str) -> DocumentLines | None:
+    """CER par ligne **de ce document** (scope corpus), ``None`` si non applicable."""
+    for analysis in result.analyses:
+        payload = analysis.payload
+        if isinstance(payload, DocumentLinesPayload):
+            for row in payload.documents:
+                if row.document_id == doc_id:
+                    return row
+    return None
+
+
+def _cer_bucket(value: float) -> str:
+    """Palier de couleur d'une ligne : g(<5%) · m(<15%) · o(<30%) · b(≥30%)."""
+    if value < 0.05:
+        return "g"
+    if value < 0.15:
+        return "m"
+    if value < 0.30:
+        return "o"
+    return "b"
+
+
+def _line_heatmap(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
+    """Heatmap CER **par ligne** du document : une rangée de cases par moteur.
+
+    Chaque case = une ligne GT, colorée par son CER (vert→rouge) ; **recentrée sur
+    le doc** (où, dans la page, les erreurs se concentrent). Lecture seule."""
+    rows = ""
+    for pipeline, cers in dl.pipelines:
+        idx = order.get(pipeline, 0)
+        cells = "".join(
+            f'<i class="lh-cell lh-{_cer_bucket(c)}" '
+            f'title="ligne {i + 1} · CER {c * 100:.0f} %"></i>'
+            for i, c in enumerate(cers)
+        )
+        rows += (
+            '<div class="dd-lh-row"><span class="eng-badge" '
+            f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
+            f'<span class="dd-name">{escape(pipeline)}</span>'
+            f'<span class="dd-lh-cells">{cells}</span></div>'
+        )
+    title = localized(lang, "Erreurs par ligne (CER)", "Errors per line (CER)")
+    legend = localized(
+        lang,
+        "vert &lt; 5 % · jaune &lt; 15 % · orange &lt; 30 % · rouge ≥ 30 %",
+        "green &lt; 5% · yellow &lt; 15% · orange &lt; 30% · red ≥ 30%",
+    )
+    return (
+        f'<div class="dd-lh"><div class="prof-chart-title">{title}</div>'
+        f'<div class="dd-lh-rows">{rows}</div>'
+        f'<div class="muted dd-iq-meta">{legend}</div></div>'
+    )
 
 
 def _iq_bar(label: str, value: float) -> str:
@@ -194,15 +250,18 @@ class DocumentDetailSection:
                 f'</div><img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
                 'loading="lazy" decoding="async"></div>'
             )
-        # Qualité d'image de CE doc (si mesurée) : graphique recentré sur le doc.
+        # Graphiques recentrés sur CE doc : heatmap CER par ligne, puis qualité
+        # d'image **en dernier** (demande utilisateur).
+        dl = _doc_lines(result, doc_id)
+        lh_block = _line_heatmap(dl, order, lang) if dl is not None else ""
         iq = _doc_image_quality(result, doc_id)
         iq_block = _iq_block(iq, lang) if iq is not None else ""
         # Ordre : fac-similé en haut → **texte** (diff GT/sortie) juste dessous →
-        # CER par moteur → qualité d'image en bas (≠ collée sous l'image).
+        # CER par moteur → heatmap par ligne → qualité d'image **en bas**.
         body = (
             f"{fac_block}{diffs}"
             f'<div class="prof-chart-title">{cer_title}</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{iq_block}'
+            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{iq_block}'
         )
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")

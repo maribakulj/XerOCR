@@ -167,6 +167,15 @@ _CSS = (
     "border-radius:inherit;}"
     ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
     ".dd-iq-meta{font-size:11px;margin-top:6px;}"
+    # Heatmap CER par ligne du document : une rangée de cases par moteur.
+    ".dd-lh{margin-bottom:14px;}"
+    ".dd-lh-rows{display:flex;flex-direction:column;gap:6px;}"
+    ".dd-lh-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);}"
+    ".dd-lh-cells{display:flex;flex-wrap:wrap;gap:2px;flex:1;}"
+    ".lh-cell{width:11px;height:11px;border-radius:2px;}"
+    ".lh-g{background:var(--fern);}.lh-m{background:#c9a227;}"
+    ".lh-o{background:#c2702f;}.lh-b{background:#a23b3b;}"
     # Diff pleine page : sélecteur de moteur (segmenté) + blocs diff (un visible).
     ".dd-fullwrap{margin-top:6px;}"
     ".dd-engine-tabs{display:inline-flex;gap:2px;padding:3px;margin-bottom:10px;"
