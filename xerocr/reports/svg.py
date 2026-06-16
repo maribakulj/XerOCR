@@ -230,6 +230,7 @@ def word_engine_heatmap(
                 f'text-anchor="middle" style="fill:{ink}">{count}</text>'
             )
     return (
-        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="wmap-svg" '
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" '
+        f'width="{num(width)}" height="{num(height)}" class="wmap-svg" '
         f'aria-hidden="true">{"".join(parts)}</svg>'
     )

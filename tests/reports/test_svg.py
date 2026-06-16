@@ -97,6 +97,9 @@ def test_word_engine_heatmap_words_headers_counts_and_teint() -> None:
     )
     assert svg.startswith("<svg") and svg.endswith("</svg>")
     assert 'class="wmap-svg"' in svg and 'aria-hidden="true"' in svg
+    # taille **intrinsèque** posée (width/height) → pas d'étirement à 100 % du
+    # conteneur (2 colonnes : 156 + 30×2 = 216 de large, 18 + 22×2 = 62 de haut).
+    assert 'width="216.00"' in svg and 'height="62.00"' in svg
     assert "prologve" in svg and "roi" in svg  # mots verbatim (lignes)
     assert ">A<" in svg and ">B<" in svg  # en-têtes moteur
     assert ">3<" in svg and ">2<" in svg  # comptes inscrits
