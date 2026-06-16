@@ -275,23 +275,54 @@ class TaxonomyPayload(BaseModel):
     pipelines: tuple[PipelineTaxonomy, ...] = ()
 
 
-class DocumentTaxonomy(BaseModel):
-    """Profil d'erreurs **d'un document**, par pipeline (réutilise PipelineTaxonomy)."""
+class HallucinatedBlock(BaseModel):
+    """Segment contigu de la sortie sans correspondance dans le GT (mots ajoutés)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    start_token: int = Field(ge=0)
+    end_token: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class PipelineHallucination(BaseModel):
+    """Détection d'hallucination d'un pipeline sur **un document**.
+
+    ``anchor_score`` = part des trigrammes de la sortie présents dans le GT (haut
+    = ancré) ; ``length_ratio`` = caractères sortie / GT (>1,2 = signal) ;
+    ``net_insertion_rate`` = mots de la sortie absents du GT / mots sortie ;
+    ``blocks`` = segments inventés affichés. ``is_hallucinating`` = ancrage faible
+    **ou** longueur anormale (seuils = conventions, cf. ``document_hallucination``).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    anchor_score: float = Field(ge=0, le=1)
+    length_ratio: float = Field(ge=0)
+    net_insertion_rate: float = Field(ge=0, le=1)
+    gt_words: int = Field(ge=0)
+    hyp_words: int = Field(ge=0)
+    is_hallucinating: bool
+    blocks: tuple[HallucinatedBlock, ...] = ()
+
+
+class DocumentHallucination(BaseModel):
+    """Analyse d'hallucination **d'un document**, par pipeline."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     document_id: str = Field(min_length=1, max_length=256)
-    pipelines: tuple[PipelineTaxonomy, ...] = ()
+    pipelines: tuple[PipelineHallucination, ...] = ()
 
 
-class DocumentTaxonomyPayload(BaseModel):
-    """Taxonomie d'erreurs **par document** : profil d'erreurs du détail document."""
+class DocumentHallucinationPayload(BaseModel):
+    """Hallucinations **par document** : ancrage + blocs inventés du détail document."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    kind: Literal["document_taxonomy"] = "document_taxonomy"
-    classes: tuple[str, ...] = ()
-    documents: tuple[DocumentTaxonomy, ...] = ()
+    kind: Literal["document_hallucination"] = "document_hallucination"
+    documents: tuple[DocumentHallucination, ...] = ()
 
 
 #: Plafond de caractères par texte embarqué (borne de sûreté ; une page dense
@@ -1011,7 +1042,7 @@ AnalysisPayload = Annotated[
     | DiagnosticsPayload
     | CalibrationPayload
     | TaxonomyPayload
-    | DocumentTaxonomyPayload
+    | DocumentHallucinationPayload
     | DocumentTextsPayload
     | DocumentLinesPayload
     | ConformityPayload

@@ -12,11 +12,11 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
+    DocumentHallucination,
+    DocumentHallucinationPayload,
     DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
-    DocumentTaxonomy,
-    DocumentTaxonomyPayload,
     DocumentTexts,
     DocumentTextsPayload,
     ImageQualityPayload,
@@ -112,82 +112,69 @@ def _line_heatmap(dl: DocumentLines, order: dict[str, int], lang: str) -> str:
     )
 
 
-#: Couleur par classe d'erreur (palette fixe, distinguable, sur la charte).
-_CLASS_COLOR = {
-    "segmentation": "#6F6B60",
-    "case": "#c9a227",
-    "diacritic": "#4a7ba6",
-    "ligature": "#8a6db0",
-    "visual": "#c2702f",
-    "lacuna": "#a23b3b",
-    "insertion": "#5a9b5a",
-    "other": "#8D8879",
-}
-#: Libellés FR des classes (clés payload anglaises — contrat inchangé).
-_CLASS_FR = {
-    "segmentation": "segmentation",
-    "case": "casse",
-    "diacritic": "diacritiques",
-    "ligature": "ligatures",
-    "visual": "visuel",
-    "lacuna": "lacune",
-    "insertion": "insertion",
-    "other": "autre",
-}
-
-
-def _doc_taxonomy(result: RunResult, doc_id: str) -> DocumentTaxonomy | None:
-    """Profil d'erreurs **de ce document** (scope corpus), ``None`` si absent."""
+def _doc_hallucination(
+    result: RunResult, doc_id: str
+) -> DocumentHallucination | None:
+    """Analyse d'hallucination **de ce document** (scope corpus), ``None`` si absent."""
     for analysis in result.analyses:
         payload = analysis.payload
-        if isinstance(payload, DocumentTaxonomyPayload):
+        if isinstance(payload, DocumentHallucinationPayload):
             for row in payload.documents:
                 if row.document_id == doc_id:
                     return row
     return None
 
 
-def _taxonomy_block(dt: DocumentTaxonomy, order: dict[str, int], lang: str) -> str:
-    """Profil d'erreurs du document : barre empilée par moteur (classes colorées).
+def _hallucination_block(
+    dh: DocumentHallucination, order: dict[str, int], lang: str
+) -> str:
+    """Analyse d'hallucination du document : par moteur, indicateurs + blocs inventés.
 
-    Montre **de quoi** sont faites les erreurs du doc (casse, diacritiques, lacune,
-    insertion…) par moteur → complète le CER d'un « pourquoi ». Lecture seule."""
-    labels = _CLASS_FR if lang == "fr" else None
-    seen: list[str] = []
+    Le plus parlant quand un moteur **invente** du texte (mauvaise langue, VLM/LLM) :
+    ancrage faible / insertion nette élevée + les **blocs hallucinés affichés**.
+    Lecture seule du payload (aucun recalcul)."""
+    title = localized(lang, "Analyse des hallucinations", "Hallucination analysis")
+    flag = localized(lang, "⚠ hallucination détectée", "⚠ hallucination detected")
+    anchor_l = localized(lang, "Ancrage", "Anchoring")
+    ratio_l = localized(lang, "Ratio longueur", "Length ratio")
+    netins_l = localized(lang, "Insertion nette", "Net insertion")
+    words_l = localized(lang, "mots GT / sortie", "GT / output words")
+    blocks_l = localized(
+        lang, "Blocs sans ancrage dans le GT", "Blocks unanchored in GT"
+    )
     rows = ""
-    for pt in dt.pipelines:
-        idx = order.get(pt.pipeline, 0)
-        segs = ""
-        for c in pt.counts:
-            if c.label not in seen:
-                seen.append(c.label)
-            width = c.count / pt.total_errors * 100
-            color = _CLASS_COLOR.get(c.label, "#8D8879")
-            name = labels.get(c.label, c.label) if labels else c.label
-            segs += (
-                f'<i style="width:{width:.1f}%;background:{color}" '
-                f'title="{name} : {c.count}"></i>'
+    for ph in dh.pipelines:
+        idx = order.get(ph.pipeline, 0)
+        badge = (
+            f'<span class="eng-badge" style="--badge:{engine_accent(idx)}">'
+            f"{engine_letter(idx)}</span>"
+        )
+        chips = (
+            f'<span class="dd-hl-chip">{anchor_l} {ph.anchor_score * 100:.0f} %</span>'
+            f'<span class="dd-hl-chip">{ratio_l} {ph.length_ratio:.2f}</span>'
+            f'<span class="dd-hl-chip">{netins_l} {ph.net_insertion_rate * 100:.0f} %'
+            "</span>"
+            f'<span class="dd-hl-chip">{ph.gt_words} / {ph.hyp_words} {words_l}</span>'
+        )
+        warn = f'<span class="dd-hl-flag">{flag}</span>' if ph.is_hallucinating else ""
+        blocks = ""
+        if ph.blocks:
+            items = "".join(
+                f'<div class="dd-hl-block"><span class="muted">'
+                f"mots {b.start_token}–{b.end_token}</span> {escape(b.text)}</div>"
+                for b in ph.blocks
+            )
+            blocks = (
+                f'<div class="dd-hl-blocks"><div class="muted">{blocks_l} :</div>'
+                f"{items}</div>"
             )
         rows += (
-            '<div class="dd-tx-row"><span class="eng-badge" '
-            f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
-            f'<span class="dd-name">{escape(pt.pipeline)}</span>'
-            f'<span class="dd-tx-bar">{segs}</span>'
-            f'<span class="dd-tx-tot">{pt.total_errors}</span></div>'
+            f'<div class="dd-hl-row"><div class="dd-hl-head">{badge}'
+            f'<span class="dd-name">{escape(ph.pipeline)}</span>{warn}</div>'
+            f'<div class="dd-hl-chips">{chips}</div>{blocks}</div>'
         )
-    legend = "".join(
-        f'<span class="dd-tx-sw"><i style="background:'
-        f'{_CLASS_COLOR.get(c, "#8D8879")}"></i>'
-        f"{(labels.get(c, c) if labels else c)}</span>"
-        for c in seen
-    )
-    title = localized(
-        lang, "Profil d'erreurs (par moteur)", "Error profile (per engine)"
-    )
     return (
-        f'<div class="dd-tx"><div class="prof-chart-title">{title}</div>'
-        f'<div class="dd-tx-rows">{rows}</div>'
-        f'<div class="dd-tx-legend muted">{legend}</div></div>'
+        f'<div class="dd-hl"><div class="prof-chart-title">{title}</div>{rows}</div>'
     )
 
 
@@ -357,16 +344,16 @@ class DocumentDetailSection:
         # d'image **en dernier** (demande utilisateur).
         dl = _doc_lines(result, doc_id)
         lh_block = _line_heatmap(dl, order, lang) if dl is not None else ""
-        dt = _doc_taxonomy(result, doc_id)
-        tx_block = _taxonomy_block(dt, order, lang) if dt is not None else ""
+        dh = _doc_hallucination(result, doc_id)
+        hl_block = _hallucination_block(dh, order, lang) if dh is not None else ""
         iq = _doc_image_quality(result, doc_id)
         iq_block = _iq_block(iq, lang) if iq is not None else ""
         # Ordre : fac-similé en haut → **texte** (diff GT/sortie) juste dessous →
-        # CER → heatmap ligne → profil d'erreurs → qualité d'image **en dernier**.
+        # CER → heatmap ligne → hallucinations → qualité d'image **en dernier**.
         body = (
             f"{fac_block}{diffs}"
             f'<div class="prof-chart-title">{cer_title}</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{tx_block}{iq_block}'
+            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{hl_block}{iq_block}'
         )
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")

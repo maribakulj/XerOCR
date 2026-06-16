@@ -8,16 +8,16 @@ from xerocr.domain.run import RunManifest
 from xerocr.evaluation.analysis import (
     Analysis,
     DiagnosticsPayload,
+    DocumentHallucination,
+    DocumentHallucinationPayload,
     DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
-    DocumentTaxonomy,
-    DocumentTaxonomyPayload,
     DocumentTexts,
     DocumentTextsPayload,
+    HallucinatedBlock,
     ImageQualityPayload,
-    PipelineTaxonomy,
-    TaxonomyCount,
+    PipelineHallucination,
     WorstLine,
 )
 from xerocr.evaluation.result import (
@@ -208,34 +208,40 @@ def test_image_quality_stays_last_below_line_heatmap() -> None:
     assert html.index('class="dd-lh"') < html.index('class="dd-iq"')
 
 
-def test_error_profile_recentred_on_document() -> None:
+def test_hallucination_block_recentred_on_document() -> None:
     base = _result()
-    dt = DocumentTaxonomyPayload(
-        classes=("diacritic", "case"),
+    dh = DocumentHallucinationPayload(
         documents=(
-            DocumentTaxonomy(
+            DocumentHallucination(
                 document_id="folio_1",
                 pipelines=(
-                    PipelineTaxonomy(
+                    PipelineHallucination(
                         pipeline="tesseract",
-                        total_errors=5,
-                        counts=(
-                            TaxonomyCount(label="diacritic", count=3),
-                            TaxonomyCount(label="case", count=2),
+                        anchor_score=0.20,
+                        length_ratio=1.35,
+                        net_insertion_rate=0.45,
+                        gt_words=36,
+                        hyp_words=42,
+                        is_hallucinating=True,
+                        blocks=(
+                            HallucinatedBlock(
+                                start_token=0, end_token=5, text="durch beflhuß vom san"
+                            ),
                         ),
                     ),
                 ),
             ),
-        ),
+        )
     )
     result = base.model_copy(
-        update={"analyses": (Analysis(scope="corpus", view="text", payload=dt),)}
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dh),)}
     )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
-    assert 'class="dd-tx"' in html  # profil d'erreurs du doc
-    assert 'class="dd-tx-bar"' in html and "width:60.0%" in html  # diacritic 3/5
-    assert "diacritiques" in html  # libellé FR de la classe
+    assert 'class="dd-hl"' in html  # analyse hallucination du doc
+    assert "Ancrage 20 %" in html and "Insertion nette 45 %" in html  # indicateurs
+    assert 'class="dd-hl-flag"' in html  # drapeau hallucination détectée
+    assert "durch beflhuß vom san" in html  # bloc halluciné affiché
 
 
 def test_none_without_documents() -> None:
