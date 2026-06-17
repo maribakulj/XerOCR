@@ -97,6 +97,8 @@ _CSS = (
     "@media (max-width:760px){.tcols{grid-template-columns:1fr;}}"
     ".table-scroll{overflow-x:auto;}"
     ".table-scroll table.data{min-width:max-content;}"
+    "table.data.compact{width:auto;max-width:540px;}"
+    "table.data td.lbl{text-align:left;color:var(--g-700);}"
     "table.data{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0 0;}"
     "table.data th{text-align:left;font-size:10.5px;letter-spacing:0.04em;"
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"
@@ -375,13 +377,13 @@ _CSS = (
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par
     # moteur (faible opacité), compte par région inscrit.
-    ".venn-svg{max-width:340px;height:auto;display:block;margin:.4rem 0 .2rem;}"
+    ".venn-svg{max-width:340px;height:auto;display:block;margin:.4rem auto .2rem;}"
     ".venn-circle{fill-opacity:0.13;stroke-width:1.5;}"
     ".venn-count{font-family:var(--mono);font-size:15px;fill:var(--ink);"
     "font-variant-numeric:tabular-nums;}"
     ".venn-label{font-family:var(--mono);font-size:11px;fill:var(--g-500);}"
     ".wmap-svg{max-width:100%;height:auto;display:block;background:var(--surface);"
-    "border-radius:var(--r-md);margin:.4rem 0 0;}"
+    "border-radius:var(--r-md);margin:.4rem auto 0;}"
     ".wmap-word{font-family:var(--mono);font-size:11px;fill:var(--ink);}"
     ".wmap-head{font-family:var(--mono);font-size:10px;fill:var(--g-400);"
     "letter-spacing:0.04em;}"
