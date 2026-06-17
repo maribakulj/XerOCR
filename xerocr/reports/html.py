@@ -89,6 +89,12 @@ _CSS = (
     "font-weight:800;font-optical-sizing:auto;letter-spacing:0;"
     "font-variant-numeric:tabular-nums;"
     "line-height:1;color:var(--ink);}"
+    # Grille de tables **côte à côte** : une longue liste est découpée en N
+    # colonnes pour **utiliser la largeur** au lieu de descendre tout en bas
+    # (`--n` posé en inline) ; replie en 1 colonne sur écran étroit.
+    ".tcols{display:grid;grid-template-columns:repeat(var(--n,2),1fr);"
+    "gap:0 26px;align-items:start;}"
+    "@media (max-width:760px){.tcols{grid-template-columns:1fr;}}"
     "table.data{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0 0;}"
     "table.data th{text-align:left;font-size:10.5px;letter-spacing:0.04em;"
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"
@@ -386,8 +392,11 @@ _CSS = (
     "font-variant-numeric:tabular-nums;}"
     # Flux mot→forme(s) (#16 sur-normalisation, #17 modernisation) : le mot source
     # (prominent) → la/les forme(s) produite(s) ; chip(s) ± barre (taille = compte).
-    ".wflow{display:flex;flex-direction:column;gap:7px;margin:.4rem 0 1rem;}"
-    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
+    # Flux de modernisation en **colonnes journal** (≥ ~23em) au lieu d'une seule
+    # colonne qui descend tout en bas ; chaque ligne reste insécable.
+    ".wflow{columns:23em;column-gap:26px;margin:.4rem 0 1rem;}"
+    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;"
+    "break-inside:avoid;margin-bottom:7px;}"
     ".wf-word{font-family:var(--mono);font-size:13px;background:var(--surface);"
     "border:1px solid var(--g-50);border-radius:6px;padding:3px 8px;color:var(--ink);}"
     ".wf-src{background:var(--raised);font-weight:600;}"

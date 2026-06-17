@@ -182,9 +182,10 @@ intégration ultérieure, pas bloquante.
      CER, MER caractère borné [0,1] — ≠ réservé HIPE) ; **MUFI** reste au seul
      profil `philologie` (médiéval). Exemple BNL régénéré en `standard` → CMER
      visible, MUFI absent (presse XIXe).
-3. **R3 — organisation multi-colonnes (D2)** : remplir l'horizontale — grille de
-   sous-tables côte à côte (« mots ratés »), `columns` journal (« modernisation
-   lexicale »).
+3. **R3 — organisation multi-colonnes (D2)** ✅ : remplir l'horizontale — « mots
+   ratés » en **N tables côte à côte** (`_matrix_grid`, ~16 lignes/col, plafond 3,
+   `.tcols`) ; « modernisation lexicale » en **colonnes journal** (`.wflow` →
+   `columns:23em`, lignes insécables). Repli 1 colonne sur écran étroit.
 4. **R4 — vue « Par document » deux colonnes (canon)** : fac-similé | diff côte à
    côte, sélecteur moteur + « CER/moteur » en badges colorés (meilleur surligné).
 5. **R5 — titres (D6)** : libellé de vue **une seule fois** (vue unique → pas de

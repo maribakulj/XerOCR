@@ -89,6 +89,8 @@ def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     assert "tous" in html and "un seul" in html
     # Comptes de la matrice (total + par moteur).
     assert ">3<" in html and ">2<" in html
+    # Matrice en grille de tables côte à côte (utilise la largeur, R3).
+    assert 'class="tcols"' in html
     # Échappement défensif du mot porteur de « & ».
     assert "m&amp;t" in html
     # Déterminisme bit-à-bit du markup.

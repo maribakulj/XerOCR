@@ -148,6 +148,30 @@ def _matrix_row(
     )
 
 
+def _matrix_grid(
+    words: tuple[WordError, ...],
+    header_cells: str,
+    columns: list[str],
+    text: Mapping[str, str],
+) -> str:
+    """Matrice mots × moteurs en **N tables côte à côte** (utilise la largeur).
+
+    La liste (triée par sévérité) est découpée en colonnes journal (~16 lignes /
+    colonne, plafond 3) au lieu d'un seul tableau qui descend tout en bas pendant
+    que la droite reste vide. Replie en 1 colonne sur écran étroit (CSS)."""
+    n = min(3, max(1, -(-len(words) // 16)))
+    size = -(-len(words) // n)  # lignes par colonne (ceil)
+    head = f"<thead><tr>{header_cells}</tr></thead>"
+    tables: list[str] = []
+    for c in range(n):
+        chunk = words[c * size : (c + 1) * size]
+        if not chunk:
+            continue
+        rows = "".join(_matrix_row(word, columns, text) for word in chunk)
+        tables.append(f'<table class="data">\n{head}\n<tbody>{rows}</tbody>\n</table>')
+    return f'<div class="tcols" style="--n:{len(tables)}">{"".join(tables)}</div>\n'
+
+
 def _overlap_block(
     view: str,
     payload: WordErrorPayload,
@@ -259,7 +283,11 @@ def _block(
         f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
         for name in columns
     )
-    body = "".join(_matrix_row(word, columns, text) for word in payload.words)
+    header_cells = (
+        f'<th>{text["th_word"]}</th>{headers}'
+        f'<th class="num-cell">{text["th_total"]}</th>'
+        f'<th>{text["th_group"]}</th>'
+    )
     graph_note = text["graph_note"].format(n=min(_HEATMAP_ROWS, len(payload.words)))
     return (
         f"<h3>{escape(view)} — {text['subtitle']}</h3>\n"
@@ -267,11 +295,7 @@ def _block(
         f'<p class="muted">{text["legend"]} : {legend}</p>\n'
         f"{svg}\n"
         f'<p class="muted">{graph_note}</p>\n'
-        '<table class="data">\n'
-        f'<thead><tr><th>{text["th_word"]}</th>{headers}'
-        f'<th class="num-cell">{text["th_total"]}</th>'
-        f'<th>{text["th_group"]}</th></tr></thead>\n'
-        f"<tbody>{body}</tbody>\n</table>\n"
+        + _matrix_grid(payload.words, header_cells, columns, text)
         + _overlap_block(view, payload, order, text)
         + _variant_block(view, payload, columns, order, text)
         + f'<p class="muted">{text["caveats"]}</p>\n'
