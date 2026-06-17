@@ -88,38 +88,94 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
   section* uniforme (titre + how-to-read homogène).
 - **S1.4 — garde-fou** anti-prolifération de classes.
 
-## S2 — largeur, densité, hiérarchie (analyse, juin 2026)
+## Refonte mise en page du rapport — PLAN UNIQUE (juin 2026)
 
-Captures réelles (Playwright, viewport **1920 px**) + comparaison à la spec
-canonique `design/` (rendue **bornée à 1200 px**). Le rapport est **sain en
-structure** mais **mal calibré en largeur** : sur grand écran il s'étale et
-devient illisible. Problèmes, du plus structurant au plus local :
+> **Remise à plat.** Les essais S2.1 (cap 1200 px) / S2.2 / brouillons multi-colonnes
+> ont été soit **annulés** (le cap : l'utilisateur veut la **pleine largeur**,
+> §D1), soit **conservés s'ils sont sains** (légende de composition groupée). Ce
+> bloc **remplace** l'ancienne liste de tranches cumulées. Un seul plan, ordonné,
+> avec les décisions explicitées **avant** tout code.
 
-| # | Problème | Cause (preuve) | Correctif visé |
-|---|---|---|---|
-| **P1** | **Tout s'étire pleine fenêtre** (gouttières géantes, barres de 700 px, colonnes repoussées au bord) | `body.report-board` n'a **ni `max-width` ni centrage**. La spec canonique impose `.report-board{max-width:1200px;margin:0 auto}` (`design/render/render.js:43`) — **absent du rapport réel**. | **Caper la colonne** ~1100–1200 px, centrée. **Corrige toutes les sections d'un coup.** |
-| **P2** | **Barres de données démesurées** (`table.data` databar ∝ largeur de colonne ; légende taxonomy : nom à gauche, % au bord droit) | barre = % de la cellule, cellule = 1/n de la largeur → barre absurde quand large ; légende en `space-between` pleine largeur. | borne la barre (largeur fixe ~120 px, valeur **collée**) ; légende en grille compacte. |
-| **P3** | **Sections « verticales » trop longues** : « Carte des mots ratés » (~40 lignes), « modernisation lexicale » (~25 mots × variantes) = murs verticaux qui **gâchent l'horizontale** | listes mono-colonne. | passer ces listes en **multi-colonnes** (CSS `columns`/grid responsive) → utilise la largeur, réduit la hauteur. C'est le sens de « s'adapter à l'horizontale ». |
-| **P4** | **Titres répétitifs / qui s'enchaînent mal** : le libellé de vue est ressassé partout (« Classement (vue : Texte brut) », « Texte brut — composition… », « Vue : Texte brut ») | suffixe/préfixe de vue **systématique** par section (S1.2). Inutile quand il n'y a **qu'une vue** (cas courant). | afficher le libellé de vue **une seule fois** (bandeau d'onglet/section) ; retirer le ressassage des titres quand vue unique. Clarifier la hiérarchie h2/h3/`drill-caption`. |
-| **P5** | **Grands vides verticaux** (≈ 1/3 de page vide sous l'overview en 1920) | conséquence de P1 (contenu étroit en réalité, conteneur large). | résolu par P1 ; ajuster les gaps ensuite. |
+### Principe directeur (corrige le malentendu de départ)
 
-**Inspiration canonique** (`design/screenshots/report-by-engine.png`) : board
-**borné centré**, cartes denses, **barres courtes dans les cellules**, hiérarchie
-nette (eyebrow + titre display + sous-titre). On reproduit ce calibrage.
+Le problème n'est **pas** la largeur de la fenêtre — c'est l'**organisation des
+données dedans**. On garde la **pleine largeur** (pas de cap arbitraire) et on
+**remplit l'horizontale** : une longue liste se découpe en **plusieurs colonnes
+côte à côte** au lieu de descendre tout en bas avec la droite vide. Référence de
+calibrage : `design/screenshots/` (cartes denses, identité couleur par moteur).
 
-### Tranches S2 (disciplinées, net-négatif quand possible)
+### Problèmes (analyse complète, captures 1920 px + lecture du code)
 
-- **S2.1 — largeur max + centrage du board** ✅ : `body.report-board` passe en
-  `align-items:center` + `.report-chrome,.report-main,.compare-bar{max-width:1200px}`
-  (calage sur la spec canonique). Corrige P1 **et** P5 pour **toutes** les sections
-  d'un coup ; le fond (trame) reste pleine page. Vérifié en capture 1920 px.
-- **S2.2 — légende de composition groupée** ✅ : `.comp-row` passait le label
-  en `1fr` → valeur (`%`/compte) projetée au bord droit. Passé à
-  `14px 132px auto auto 1fr` (spacer final) → swatch·label·part·compte **groupés
-  à gauche**, lisibles. (Les data-bars de `table.data` sont redevenues correctes
-  via S2.1 — pas de plafond séparé nécessaire.)
-- **S2.3 — libellé de vue affiché une fois** (P4) : retrait du suffixe
-  systématique dans les titres (raffine S1.2 dans le bon sens : une seule
-  surface d'affichage), hiérarchie typographique clarifiée.
-- **S2.4 — sections denses en multi-colonnes** (P3) : « mots ratés » +
-  « modernisation lexicale ».
+| # | Problème | Cause (dans le code) |
+|---|---|---|
+| **D1** | Largeur : le cap 1200 px « rétrécit » et gâche l'écran | (corrigé) cap retiré → pleine largeur restaurée. Le vrai correctif est l'organisation (D2). |
+| **D2** | Listes **tout en longueur**, droite vide (« mots ratés » ~40 l., « modernisation lexicale » ~25 l.) | tables/listes **mono-colonne** `width:100%`. → découper en **N colonnes côte à côte** (grille de sous-tables ; `columns` journal pour les listes). |
+| **D3** | **Couleurs moteur absentes** là où elles devraient être | `engine_badges` (fern/slate/clay…) **n'est pas appliqué** dans `overview` (nom en texte brut, `overview.py:53`), `structured_data` (`:40`), ni partout en en-tête. Identité couleur **incohérente**. |
+| **D4** | **Barres CER/WER « n'ont aucun sens et remplissent tout »** | `td.databar .db-fill` largeur ∝ valeur/max ; pour une **métrique d'erreur** (CER bas = bon), la **pire** valeur a la **plus longue** barre → contre-intuitif, sans légende, et remplit la cellule. |
+| **D5** | **MUFI hors-sujet ; métriques ICDAR manquantes** | l'exemple a été généré avec le profil **`philologie`** (`cer_diplo, diacritic_err, mufi_err`…) — médiéval, **inadapté** à la presse XIXe. Le profil **`standard`** (`cer, wer, mer, searchability, hallucination, air`) conviendrait mieux. + colonnes **tout-`—`** (AIR/HCPR) qui encombrent. |
+| **D6** | **Titres répétitifs** (« Texte brut — … » partout, « Classement (vue : Texte brut) ») | libellé de vue ressassé par section (S1.2) ; inutile en **vue unique**. |
+
+### Cible = design canonique (captures fournies par l'utilisateur)
+
+Deux écrans `design/` font foi (l'utilisateur les a transmis ; « on n'y est pas
+encore ») :
+
+- **« Par moteur »** : **tableau de métriques GROUPÉ** par thème (super-en-têtes :
+  *Erreur · caractère* | *Erreur · mot* | *Philologique* | *Fiabilité
+  documentaire* | *Calibration · aval* | *Économique*). Chaque colonne a un
+  **indice d'échelle** (« 0→1 · ↓ erreurs », « ↑ rappel »…), une **barre subtile**
+  derrière la valeur (**échelle commune par colonne**, légende explicite), et les
+  **badges moteur colorés A→E**. Puis Dispersion + IC.
+- **« Par document »** : **deux colonnes** — *fac-similé* (zoom) à gauche, *diff
+  GT/sortie OCR* à droite (sélecteur de moteur en badges colorés, légende
+  add/del/sub), et « CER par moteur · ce document » en badges colorés (meilleur
+  surligné).
+
+**Conséquence : le tableau de métriques n'est pas « minimal » mais RICHE et
+ORGANISÉ.** Les barres **restent** (version canonique : subtiles, échelle commune,
+légendées) — ≠ les barres actuelles qui « remplissent tout » sans sens.
+
+### Métriques réellement calculables (registre)
+
+`cer, cer_diplo, cmer, wer, mer, diacritic_err, mufi_err, air, hcpr,
+searchability, hallucination, del_rate, ins_rate, numseq_*, region_*`. **CMER
+existe** (réservé HIPE aujourd'hui — à exposer). Les colonnes canoniques *WIL,
+Ligatures, Gini, ECE, F1 NER* sont **aspirationnelles** (calculées dans des
+sections dédiées — calibration/NER/lignes — pas encore en colonnes de table) →
+intégration ultérieure, pas bloquante.
+
+### Réconciliation des 2 réponses utilisateur ⇄ canon
+
+- **Barres (D4)** : réponse = « retirer ». **Mais le canon les garde** (subtiles,
+  échelle commune, légendées). ⇒ je pars sur la **version canonique** (barres
+  *correctes*, court = meilleur pour l'erreur, plafonnées, avec légende) plutôt
+  que de les retirer — c'est ce que montre le design. **À confirmer d'un mot si
+  tu préfères vraiment 0 barre.**
+- **Métriques (D5)** : réponse = « il manque CMER et d'autres ICDAR ». ⇒ pas de
+  set minimal : on vise le **tableau groupé canonique** avec les métriques **qui
+  existent** — *Erreur caractère* : CER, CER diplo, **CMER** ; *Erreur mot* :
+  WER, MER ; *Philologique* : diacritiques (MUFI **réservé** au médiéval, pas en
+  défaut presse) ; *Fiabilité* : repérabilité, hallucination, AIR/HCPR. Colonnes
+  tout-`—` **masquées**. WIL/Gini/ECE/F1 = ajout ultérieur.
+
+### Ordre d'exécution (une tranche = un correctif, vérifié + commité seul)
+
+1. **R1 — identité couleur moteur (D3)** : `engine_badges` (A→E colorés) appliqué
+   **partout** où un moteur est nommé — overview, structured_data, synthesis,
+   en-têtes. Petit, transverse, visible. *(le canon colore les moteurs partout)*
+2. **R2 — tableau de métriques groupé (D4+D5)** : refonte de la table « Par
+   moteur » au modèle canonique — super-en-têtes thématiques, indice d'échelle
+   par colonne, **barres subtiles à échelle commune + légende** (corrige les
+   barres qui « remplissent tout »), colonnes tout-`—` masquées. Métriques :
+   set canonique avec ce qui existe (CER, CER diplo, **CMER**, WER, MER,
+   diacritiques, repérabilité, hallucination…), MUFI réservé médiéval.
+3. **R3 — organisation multi-colonnes (D2)** : remplir l'horizontale — grille de
+   sous-tables côte à côte (« mots ratés »), `columns` journal (« modernisation
+   lexicale »).
+4. **R4 — vue « Par document » deux colonnes (canon)** : fac-similé | diff côte à
+   côte, sélecteur moteur + « CER/moteur » en badges colorés (meilleur surligné).
+5. **R5 — titres (D6)** : libellé de vue **une seule fois** (vue unique → pas de
+   ressassage).
+
+Chaque R# : analyse ciblée → 1 correctif → capture de vérif vs canon → `make ci`
+→ commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**
