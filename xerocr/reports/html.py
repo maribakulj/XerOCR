@@ -138,10 +138,14 @@ _CSS = (
     ".doc-card{text-decoration:none;color:inherit;cursor:pointer;}"
     ".doc-card:hover{outline:2px solid var(--fern);outline-offset:2px;}"
     # Détail document (drill-in) : CER par moteur + diff des pires lignes.
-    ".dd-cers{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}"
-    ".dd-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
-    "font-size:12px;color:var(--g-700);}"
-    ".dd-name{flex:1;}.dd-cer{font-variant-numeric:tabular-nums;}"
+    # CER par moteur : grille compacte (badge · nom · valeur) — la valeur suit le
+    # nom dans sa colonne (alignée ET proche), au lieu d'être projetée au bord.
+    ".dd-cers{display:inline-grid;grid-template-columns:auto auto auto;"
+    "gap:5px 10px;align-items:center;margin-bottom:14px;}"
+    ".dd-row{display:contents;}"
+    ".dd-name{font-family:var(--mono);font-size:12px;color:var(--g-700);}"
+    ".dd-cer{font-variant-numeric:tabular-nums;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);text-align:right;}"
     ".dd-row.best .dd-cer{color:var(--fern);font-weight:600;}"
     ".dd-diffs{display:flex;flex-direction:column;gap:12px;}"
     ".dd-diff{background:var(--surface);border-radius:var(--r-md);padding:10px 12px;}"

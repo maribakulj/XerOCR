@@ -63,7 +63,16 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
   **toutes** les sections (titres + cellules) — fin du « vue : text » brut. Le
   *cadre de section* uniforme (how-to-read homogène) est repoussé à S1.3 avec les
   primitives (mieux fait d'un coup que dispersé).
-- **S1.3 — primitives partagées** : `metric_row`/`bar`/`chip`/`stat_table`,
-  migration des sections (vue document d'abord), **suppression des `dd-*`** ;
-  fusion `prof-*`/`dd-*` en un drill-in.
+- **S1.3a — lisibilité « CER par moteur » (vue document)** ✅ : la liste CER
+  était projetée au bord du panneau (`.dd-name{flex:1}` → valeur « trop
+  éloignée »). Passée en **grille compacte** (badge · nom · valeur) : la valeur
+  suit le nom dans sa colonne (alignée ET proche). 0 classe ajoutée, suppression
+  de l'idiome `flex`.
+- **S1.3 (suite) — primitives partagées** : `metric_row`/`bar`/`chip`/`stat_table`,
+  migration des sections, **suppression des `dd-*`**, fusion `prof-*`/`dd-*` en un
+  drill-in. ⚠️ **Non-spéculatif** : une primitive n'est extraite qu'au **2ᵉ
+  consommateur** (garde-fou « pas de consommateur = supprimé ») → on migre les
+  idiomes qui ont **déjà** ≥2 instances (barres, chips), pas une API posée
+  d'avance. **Migration multi-sections = à confirmer** (ampleur). Inclut le
+  *cadre de section* uniforme (reporté de S1.2).
 - **S1.4 — garde-fou** anti-prolifération de classes.
