@@ -16,6 +16,7 @@ from xerocr.app.run_planning import (
     METRIC_PROFILES,
     Competitor,
     RunPlanningError,
+    _views_for_corpus,
     benchmark_engine_catalog,
     metric_profile_catalog,
     plan_benchmark_run,
@@ -378,3 +379,34 @@ def test_every_profiled_metric_is_registered(tmp_path: Path) -> None:
     for name, metrics in METRIC_PROFILES.items():
         unknown = set(metrics) - applicable
         assert not unknown, f"profil {name!r} : métriques non enregistrées {unknown}"
+
+
+def test_layout_ground_truth_adds_structure_view(tmp_path: Path) -> None:
+    # Une GT de mise en page (LAYOUT) doit produire une vue « structure » portant
+    # Region-F1 + CER par région (M5 — branchement de la segmentation au rapport).
+    (tmp_path / "d.layout.json").write_text("{}", encoding="utf-8")
+    corpus = CorpusSpec(
+        name="c",
+        documents=(
+            DocumentRef(
+                id="d",
+                ground_truths=(
+                    GroundTruthRef(
+                        type=ArtifactType.LAYOUT,
+                        uri=str(tmp_path / "d.layout.json"),
+                    ),
+                ),
+            ),
+        ),
+    )
+    layout_views = [
+        v for v in _views_for_corpus(corpus) if "region_detection" in v.metric_names
+    ]
+    assert len(layout_views) == 1
+    assert layout_views[0].metric_names == ("region_detection", "region_cer")
+    assert ArtifactType.LAYOUT in layout_views[0].candidate_types
+
+
+def test_text_only_corpus_has_no_structure_view(tmp_path: Path) -> None:
+    views = _views_for_corpus(_corpus(tmp_path))
+    assert all("region_detection" not in v.metric_names for v in views)

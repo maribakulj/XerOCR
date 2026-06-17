@@ -147,6 +147,19 @@ def _ocr_view(
     )
 
 
+def _layout_view() -> EvaluationView:
+    """Vue **structure / mise en page** : note les sorties ``LAYOUT``
+    (segmentation) par **Region-F1** (`region_detection`) + **CER par région**
+    (`region_cer`), sans projection — les métriques prennent le
+    ``CanonicalLayout`` directement. Normalisation/`char_exclude` N/A (géométrie
+    + texte par région). N'est ajoutée que si le corpus porte une GT ``LAYOUT``."""
+    return EvaluationView(
+        name="structure (mise en page)",
+        candidate_types=frozenset({ArtifactType.LAYOUT}),
+        metric_names=("region_detection", "region_cer"),
+    )
+
+
 def _reference_view(
     normalization: str | None, char_exclude: str | None
 ) -> EvaluationView:
@@ -200,6 +213,8 @@ def _views_for_corpus(
         )
     if ArtifactType.REFERENCE_TEXT in gt_types:
         views.append(_reference_view(normalization, char_exclude))
+    if ArtifactType.LAYOUT in gt_types:
+        views.append(_layout_view())
     if not views:
         views.append(
             _ocr_view(

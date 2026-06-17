@@ -235,8 +235,11 @@ tranche (moteur couche 3 + branchement rapport + tests + gate). Ordre conseillé
   RAW_TEXT, déterministe, insensible à l'ordre ; groupe « Recherche · sac de
   mots », profil `standard`. P/R agrègent en micro exact (poids |hyp|/|réf|) ;
   F1 = moyenne pondérée par la taille (non linéaire, documenté).
-- **M5 — brancher Region-F1 ICDAR 2015** : `layout.py` la calcule déjà ; section
-  rapport quand un run de **segmentation** existe (sinon absente).
+- **M5 — brancher Region-F1 ICDAR 2015** ✅ : `layout.py` la calculait déjà mais
+  aucune vue ne la portait. Ajout d'une **vue `structure`** (`_layout_view`,
+  `run_planning`) quand le corpus a une GT `LAYOUT` → `region_detection` (F1) +
+  `region_cer` calculés ; nouvelle **section `StructureSection`** (onglet
+  Engines) qui les rend par pipeline, **absente** si aucun run de segmentation.
 
 > ⚠️ Ce sont des tranches **moteur**, pas de la mise en page : à faire une par une
 > (axe 2 — surface incrémentale), chacune vérifiée + commitée seule. Non démarrées

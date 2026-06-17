@@ -30,6 +30,7 @@ _SECTION_LABELS = {
     "cross_engine": "Inter-moteurs",
     "word_errors": "Carte des mots",
     "conformity": "Conformité HIPE",
+    "structure": "Structure",
     "correction": "Bilan de correction",
     "structured_data": "Données structurées",
     "philology": "Philologie",
@@ -55,6 +56,7 @@ _SECTION_LABELS_EN = {
     "dispersion": "Dispersion",
     "cross_engine": "Cross-engine",
     "conformity": "HIPE conformity",
+    "structure": "Layout structure",
     "correction": "Correction balance",
     "structured_data": "Structured data",
     "philology": "Philology",
@@ -132,6 +134,7 @@ _SECTION_TAB = {
     "dispersion": "engines",
     "calibration": "engines",
     "conformity": "engines",
+    "structure": "engines",
     "correction": "engines",
     "structured_data": "engines",
     "philology": "engines",
@@ -350,6 +353,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.philology import PhilologySection
+    from xerocr.reports.sections.structure import StructureSection
     from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -369,6 +373,7 @@ def default_report_renderer() -> ReportRenderer:
             CrossEngineSection(),
             WordErrorsSection(),
             ConformitySection(),
+            StructureSection(),
             CorrectionSection(),
             StructuredDataSection(),
             PhilologySection(),
