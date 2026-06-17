@@ -38,10 +38,14 @@ class DocumentSection:
             d.pipeline for d in result.documents
         )
         # Titre de vue porté par le héros (renderer) ; ici, les tables par vue.
+        views = ordered_unique(d.view for d in result.documents)
+        multi = len(views) > 1
         parts: list[str] = []
-        for view_name in ordered_unique(d.view for d in result.documents):
+        for view_name in views:
             parts.append(
-                _table_for_view(result.documents, view_name, order, ctx.lang)
+                _table_for_view(
+                    result.documents, view_name, order, ctx.lang, multi=multi
+                )
             )
         return Html("\n".join(parts) + "\n")
 
@@ -51,6 +55,8 @@ def _table_for_view(
     view_name: str,
     order: Mapping[str, int],
     lang: str,
+    *,
+    multi: bool,
 ) -> str:
     rows = [d for d in documents if d.view == view_name]
     keep = nonempty_metric_indices([d.scores for d in rows])  # masque tout-« — »
@@ -71,9 +77,12 @@ def _table_for_view(
                 f'<tr><td class="eng-cell">{label}</td>'
                 f'<td class="eng-cell">{badge}</td>{cells}</tr>'
             )
-    view_caption = localized(lang, "Vue", "View")
+    head = ""
+    if multi:  # libellé de vue seulement s'il y a plusieurs vues à distinguer
+        view_caption = localized(lang, "Vue", "View")
+        head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
     return (
-        f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
+        f"{head}"
         f'<table class="data">\n'
         f"<thead><tr><th>Document</th><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body)}</tbody>\n</table>"

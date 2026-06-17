@@ -190,8 +190,14 @@ intégration ultérieure, pas bloquante.
    GT/sortie **à droite** (`.dd-top2` grid), on lit le texte en regardant le scan ;
    sans image, le diff prend toute la largeur ; replie en 1 col < 860 px. (Les
    badges CER/moteur colorés sont déjà là via R1.)
-5. **R5 — titres (D6)** : libellé de vue **une seule fois** (vue unique → pas de
-   ressassage).
+5. **R5 — titres (D6)** ✅ (titres de section) : libellé de vue affiché **seulement
+   si plusieurs vues** (vue unique → pas de ressassage). Fait pour overview,
+   by_document, by_engine, gallery, dispersion (les h2/sous-titres proéminents).
+   **R5-bis (reste)** : les préfixes h3 des sections analytiques (« Texte brut —
+   composition/modernisation… ») dans ~12 sections (taxonomy, ner, calibration,
+   philology, structured_data, lines, economics, textual_fidelity, correction,
+   diagnostics, word_errors, cross_engine) — même règle multi-vue, passe dédiée
+   (toucher 12 sections d'un coup = à faire proprement, pas en fin de session).
 
 Chaque R# : analyse ciblée → 1 correctif → capture de vérif vs canon → `make ci`
 → commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**

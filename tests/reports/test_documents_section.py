@@ -44,7 +44,7 @@ def test_gallery_is_entry_grid_visible_list_hidden() -> None:
     assert 'data-view="grid"' in html and 'data-view="list" hidden' in html
     # la grille porte la galerie, la liste porte la table
     assert 'class="doc-grid"' in html  # cartes de galerie (entrée)
-    assert "Vue :" in html  # table by_document (mode liste)
+    assert 'data-view="list"' in html  # table by_document (mode liste)
     # la grille précède la liste (galerie = entrée)
     assert html.index('data-view="grid"') < html.index('data-view="list"')
 

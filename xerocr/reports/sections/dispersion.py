@@ -45,7 +45,9 @@ class DispersionSection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         if not result.documents:
             return None
-        view = ordered_unique(d.view for d in result.documents)[0]
+        views = ordered_unique(d.view for d in result.documents)
+        view = views[0]
+        multi = len(views) > 1
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in result.documents
         )
@@ -60,10 +62,11 @@ class DispersionSection:
         scale_max = max(max(v) for _, v in series)
         lang = ctx.lang
         rows = "".join(self._row(p, v, order[p], scale_max, lang) for p, v in series)
+        vlbl = escape(view_label(view, lang))
         title = localized(
             lang,
-            f"Dispersion du CER (vue : {escape(view_label(view, lang))})",
-            f"CER dispersion (view: {escape(view_label(view, lang))})",
+            f"Dispersion du CER{f' (vue : {vlbl})' if multi else ''}",
+            f"CER dispersion{f' (view: {vlbl})' if multi else ''}",
         )
         intro = localized(
             lang,

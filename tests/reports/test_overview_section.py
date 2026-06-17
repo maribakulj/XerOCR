@@ -103,5 +103,6 @@ def test_data_bars_are_relative_to_column_max() -> None:
 def test_renders_english_labels() -> None:
     html = OverviewSection().render(_result(0.25), SectionContext(lang="en"))
     assert html is not None
-    assert "Metrics per view" in html and "View :" in html
+    assert "Metrics per view" in html  # titre de section EN
     assert "Métriques par vue" not in html  # bascule de langue effective
+    assert "Vue :" not in html  # vue unique → pas de sous-titre de vue ressassé

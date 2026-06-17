@@ -41,12 +41,15 @@ class OverviewSection:
             f'<p class="muted">{corpus} : '
             f"{escape(result.manifest.corpus_name)}</p>",
         ]
+        multi = len(views) > 1
         for view_name in views:
-            parts.append(_table_for_view(result, view_name, ctx.lang))
+            parts.append(_table_for_view(result, view_name, ctx.lang, multi=multi))
         return Html("\n".join(parts) + "\n")
 
 
-def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
+def _table_for_view(
+    result: RunResult, view_name: str, lang: str, *, multi: bool
+) -> str:
     pipelines = [p for p in result.pipelines if p.view == view_name]
     order = engine_order(p.pipeline for p in result.pipelines)
     rows = [p.aggregate for p in pipelines]
@@ -62,9 +65,14 @@ def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
         )
         badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
         body_rows.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')
-    view_caption = localized(lang, "Vue", "View")
+    # Libellé de vue affiché **seulement** s'il y a plusieurs vues à distinguer
+    # (sinon « Métriques par vue » + la ligne corpus suffisent — pas de ressassage).
+    head = ""
+    if multi:
+        view_caption = localized(lang, "Vue", "View")
+        head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
     return (
-        f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
+        f"{head}"
         f'<table class="data">\n<thead>{group_header_row(metrics, lang, lead=1)}'
         f"<tr><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body_rows)}</tbody>\n</table>\n"

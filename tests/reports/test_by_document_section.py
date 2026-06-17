@@ -17,11 +17,13 @@ from xerocr.reports.sections.by_document import DocumentSection
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
 
-def _doc(doc_id: str, pipeline: str, cer: float | None) -> RunDocumentResult:
+def _doc(
+    doc_id: str, pipeline: str, cer: float | None, view: str = "text"
+) -> RunDocumentResult:
     return RunDocumentResult(
         document_id=doc_id,
         pipeline=pipeline,
-        view="text",
+        view=view,
         scores=(MetricScore(metric="cer", value=cer, support=1),),
     )
 
@@ -48,7 +50,8 @@ def test_renders_per_document_rows_with_grouping() -> None:
         SectionContext(),
     )
     assert html is not None
-    assert "Vue :" in html  # tables par vue (le titre de vue est dans le héros)
+    # vue unique → pas de libellé « Vue : » (porté par le héros ; pas de ressassage)
+    assert "Vue :" not in html
     # les deux documents et les deux pipelines apparaissent
     for token in ("folio_1", "folio_2", "tesseract", "pero"):
         assert token in html
@@ -59,9 +62,13 @@ def test_renders_per_document_rows_with_grouping() -> None:
     assert 'style="width:100%"' in html
 
 
-def test_renders_english_labels() -> None:
+def test_multi_view_shows_localized_view_label() -> None:
+    # >1 vue → le libellé « Vue : » réapparaît pour distinguer les tables ; EN.
     html = DocumentSection().render(
-        _result(_doc("folio_1", "tesseract", 0.10)),
+        _result(
+            _doc("folio_1", "tesseract", 0.10),
+            _doc("folio_1", "tesseract", 0.12, view="diplomatic"),
+        ),
         SectionContext(lang="en"),
     )
     assert html is not None

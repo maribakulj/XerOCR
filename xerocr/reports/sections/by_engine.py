@@ -93,10 +93,13 @@ class EngineSection:
         header = "".join(
             metric_th(m, ctx.lang, sortable=True) for m in display_metrics
         )
+        # Suffixe de vue seulement si plusieurs vues à distinguer (sinon bruit).
+        multi = len(ordered_unique(p.view for p in result.pipelines)) > 1
+        vlbl = escape(view_label(view, ctx.lang))
         heading = localized(
             ctx.lang,
-            f"Classement (vue : {escape(view_label(view, ctx.lang))})",
-            f"Ranking (view: {escape(view_label(view, ctx.lang))})",
+            f"Classement{f' (vue : {vlbl})' if multi else ''}",
+            f"Ranking{f' (view: {vlbl})' if multi else ''}",
         )
         prose = localized(
             ctx.lang,

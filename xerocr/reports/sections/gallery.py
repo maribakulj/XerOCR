@@ -80,7 +80,9 @@ class DocumentGallerySection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         if not result.documents:
             return None
-        view = ordered_unique(d.view for d in result.documents)[0]
+        views = ordered_unique(d.view for d in result.documents)
+        view = views[0]
+        multi = len(views) > 1
         rows = [d for d in result.documents if d.view == view]
         # Ordre canonique des moteurs (badge stable, partagé avec les autres sections).
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
@@ -96,10 +98,11 @@ class DocumentGallerySection:
             )
             for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
         )
+        vlbl = escape(view_label(view, ctx.lang))
         title = localized(
             ctx.lang,
-            f"Galerie des documents (vue : {escape(view_label(view, ctx.lang))})",
-            f"Document gallery (view: {escape(view_label(view, ctx.lang))})",
+            f"Galerie des documents{f' (vue : {vlbl})' if multi else ''}",
+            f"Document gallery{f' (view: {vlbl})' if multi else ''}",
         )
         caption = localized(
             ctx.lang,
