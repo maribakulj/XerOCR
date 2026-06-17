@@ -375,10 +375,17 @@ class DocumentDetailSection:
         hl_block = _hallucination_block(dh, order, lang) if dh is not None else ""
         iq = _doc_image_quality(result, doc_id)
         iq_block = _iq_block(iq, lang) if iq is not None else ""
-        # Ordre : fac-similé en haut → **texte** (diff GT/sortie) juste dessous →
-        # CER → heatmap ligne → hallucinations → qualité d'image **en dernier**.
+        # Haut : fac-similé **à gauche**, diff GT/sortie **à droite** (côte à côte,
+        # calque « Par document » du canon) — on lit le texte en regardant le scan.
+        # Sans image : le diff prend toute la largeur. Puis CER → heatmap ligne →
+        # hallucinations → qualité d'image **en dernier**. Replie en 1 col (CSS).
+        top = (
+            f'<div class="dd-top2"><div>{fac_block}</div><div>{diffs}</div></div>'
+            if facsimile
+            else diffs
+        )
         body = (
-            f"{fac_block}{diffs}"
+            f"{top}"
             f'<div class="drill-caption">{cer_title}</div>'
             f'<div class="dd-cers">{cer_rows}</div>{lh_block}{hl_block}{iq_block}'
         )

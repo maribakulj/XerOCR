@@ -186,8 +186,10 @@ intégration ultérieure, pas bloquante.
    ratés » en **N tables côte à côte** (`_matrix_grid`, ~16 lignes/col, plafond 3,
    `.tcols`) ; « modernisation lexicale » en **colonnes journal** (`.wflow` →
    `columns:23em`, lignes insécables). Repli 1 colonne sur écran étroit.
-4. **R4 — vue « Par document » deux colonnes (canon)** : fac-similé | diff côte à
-   côte, sélecteur moteur + « CER/moteur » en badges colorés (meilleur surligné).
+4. **R4 — vue « Par document » deux colonnes** ✅ : fac-similé **à gauche** | diff
+   GT/sortie **à droite** (`.dd-top2` grid), on lit le texte en regardant le scan ;
+   sans image, le diff prend toute la largeur ; replie en 1 col < 860 px. (Les
+   badges CER/moteur colorés sont déjà là via R1.)
 5. **R5 — titres (D6)** : libellé de vue **une seule fois** (vue unique → pas de
    ressassage).
 
