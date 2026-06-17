@@ -93,14 +93,14 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
         ordered = sorted(cers)
         mean_cer = sum(cers) / n
         chips = (
-            f'<span class="dd-hl-chip">CER {mean_cer * 100:.1f} %</span>'
-            f'<span class="dd-hl-chip">Gini {gini(cers):.2f}</span>'
-            f'<span class="dd-hl-chip">{n} {lines_l}</span>'
+            f'<span class="chip">CER {mean_cer * 100:.1f} %</span>'
+            f'<span class="chip">Gini {gini(cers):.2f}</span>'
+            f'<span class="chip">{n} {lines_l}</span>'
         )
         for thr in (0.30, 0.50, 1.0):
             rate = sum(1 for c in cers if c >= thr) / n
             chips += (
-                f'<span class="dd-hl-chip">{rate * 100:.0f} % {lines_l} '
+                f'<span class="chip">{rate * 100:.0f} % {lines_l} '
                 f"CER≥{thr * 100:.0f} %</span>"
             )
         bars = "".join(
@@ -176,11 +176,11 @@ def _hallucination_block(
             f"{engine_letter(idx)}</span>"
         )
         chips = (
-            f'<span class="dd-hl-chip">{anchor_l} {ph.anchor_score * 100:.0f} %</span>'
-            f'<span class="dd-hl-chip">{ratio_l} {ph.length_ratio:.2f}</span>'
-            f'<span class="dd-hl-chip">{netins_l} {ph.net_insertion_rate * 100:.0f} %'
+            f'<span class="chip">{anchor_l} {ph.anchor_score * 100:.0f} %</span>'
+            f'<span class="chip">{ratio_l} {ph.length_ratio:.2f}</span>'
+            f'<span class="chip">{netins_l} {ph.net_insertion_rate * 100:.0f} %'
             "</span>"
-            f'<span class="dd-hl-chip">{ph.gt_words} / {ph.hyp_words} {words_l}</span>'
+            f'<span class="chip">{ph.gt_words} / {ph.hyp_words} {words_l}</span>'
         )
         warn = f'<span class="dd-hl-flag">{flag}</span>' if ph.is_hallucinating else ""
         blocks = ""
@@ -197,7 +197,7 @@ def _hallucination_block(
         rows += (
             f'<div class="dd-hl-row"><div class="dd-hl-head">{badge}'
             f'<span class="dd-name">{escape(ph.pipeline)}</span>{warn}</div>'
-            f'<div class="dd-hl-chips">{chips}</div>{blocks}</div>'
+            f'<div class="chips">{chips}</div>{blocks}</div>'
         )
     return (
         f'<div class="dd-hl"><div class="prof-chart-title">{title}</div>{rows}</div>'

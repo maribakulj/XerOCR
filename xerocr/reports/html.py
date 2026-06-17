@@ -217,8 +217,10 @@ _CSS = (
     ".dd-hl-head{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
     "font-size:12px;color:var(--g-700);margin-bottom:6px;}"
     ".dd-hl-flag{color:var(--clay,#a23b3b);font-weight:600;font-size:11px;}"
-    ".dd-hl-chips{display:flex;flex-wrap:wrap;gap:6px;}"
-    ".dd-hl-chip{font-family:var(--mono);font-size:11px;padding:3px 8px;"
+    # Primitive partagée : pastille (chip) + leur rangée (chips). Petite étiquette
+    # mono sur fond surface ; utilisée pour indicateurs et effectifs.
+    ".chips{display:flex;flex-wrap:wrap;gap:6px;}"
+    ".chip{font-family:var(--mono);font-size:11px;padding:3px 8px;"
     "background:var(--surface);border-radius:var(--r-pill);color:var(--g-700);}"
     ".dd-hl-blocks{margin-top:8px;font-size:12px;}"
     ".dd-hl-block{padding:7px 10px;margin-top:5px;border-radius:var(--r-md);"
@@ -311,8 +313,6 @@ _CSS = (
     ".strata-pct{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:22px;font-variant-numeric:tabular-nums;"
     "color:var(--ink);}"
-    ".preview-chip{font-family:var(--mono);font-size:10px;color:var(--g-500);"
-    "background:var(--surface);border-radius:var(--r-pill);padding:2px 8px;}"
     # Graphe de dispersion CER (SVG serveur, échelle commune) : badge+nom, bande,
     # labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
     ".disp-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"

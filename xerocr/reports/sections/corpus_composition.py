@@ -45,7 +45,7 @@ class CorpusCompositionSection:
         rows = "".join(
             f'<div class="strata-row"><div class="strata-head">'
             f'<span class="strata-name">{escape(name)}</span>'
-            f'<span class="preview-chip mono">n = {n}</span></div>'
+            f'<span class="chip">n = {n}</span></div>'
             f'<div class="track"><i '
             f'style="width:{round(n / total * 100)}%;background:var(--fern);'
             f'opacity:0.55"></i></div>'

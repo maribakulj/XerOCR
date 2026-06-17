@@ -73,7 +73,9 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
   fusionnées en **une** `.track` + `.track>i` (l'appelant pose largeur + couleur).
   Net −4 règles CSS, 3 consommateurs unifiés (qualité d'image, percentiles,
   strates). Non-spéculatif (3 consommateurs réels au moment de l'extraction).
-- **S1.3 (suite) — primitives restantes** : `chip` (≥2 instances : `dd-hl-chip`,
-  `preview-chip`), `metric_row`, fusion `prof-*`/`dd-*` en un drill-in, *cadre de
-  section* uniforme. Règle : extraire **au 2ᵉ consommateur**, jamais d'avance.
+- **S1.3c — primitive `chip` + `chips`** ✅ : `dd-hl-chip` (×8) et `preview-chip`
+  fusionnés en `.chip` (+ rangée `.chips`). Net −1 règle, 2 sections unifiées.
+- **S1.3 (suite) — primitives restantes** : `metric_row`, fusion `prof-*`/`dd-*`
+  en un drill-in, *cadre de section* uniforme. Règle : extraire **au 2ᵉ
+  consommateur**, jamais d'avance.
 - **S1.4 — garde-fou** anti-prolifération de classes.
