@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import CharConfusion, DiagnosticsPayload, WorstLine
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.html import escape, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.text_diff import char_diff
 
@@ -142,7 +142,8 @@ class DiagnosticsSection:
             )
             if inner:
                 blocks.append(
-                    f"<h3>{escape(analysis.view)} — où ça casse</h3>\n" + inner
+                    f"<h3>{escape(view_label(analysis.view, ctx.lang))} — "
+                    "où ça casse</h3>\n" + inner
                 )
         if not blocks:
             return None
