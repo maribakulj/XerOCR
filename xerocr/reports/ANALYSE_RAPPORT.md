@@ -160,9 +160,11 @@ intégration ultérieure, pas bloquante.
 
 ### Ordre d'exécution (une tranche = un correctif, vérifié + commité seul)
 
-1. **R1 — identité couleur moteur (D3)** : `engine_badges` (A→E colorés) appliqué
-   **partout** où un moteur est nommé — overview, structured_data, synthesis,
-   en-têtes. Petit, transverse, visible. *(le canon colore les moteurs partout)*
+1. **R1 — identité couleur moteur (D3)** ✅ : `engine_cell` (badge A→E coloré)
+   appliqué dans les 7 sections qui affichaient un nom en texte brut — overview,
+   structured_data, economics, conformity, textual_fidelity (rappel + flux),
+   synthesis (meilleur + suivant), diagnostics (confusions). Ordre moteur global
+   (`engine_order`) threadé. Couleur cohérente partout (comme le canon).
 2. **R2 — tableau de métriques groupé (D4+D5)** : refonte de la table « Par
    moteur » au modèle canonique — super-en-têtes thématiques, indice d'échelle
    par colonne, **barres subtiles à échelle commune + légende** (corrige les

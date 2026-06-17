@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import InferencePayload
 from xerocr.evaluation.result import MetricScore, RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
@@ -133,6 +134,7 @@ class SynthesisSection:
     requires: tuple[str, ...] = (_PRIMARY_METRIC,)
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
         rows: list[str] = []
         for view in ordered_unique(p.view for p in result.pipelines):
             ranked = _ranked_by_cer(result, view)
@@ -142,7 +144,7 @@ class SynthesisSection:
             if len(ranked) >= 2:
                 runner_cer, runner = ranked[1]
                 delta = f"{runner_cer - best_cer:.4f}"
-                runner_label = escape(runner)
+                runner_label = engine_cell(runner, order.get(runner, 0))
                 label, state = _corrected_verdict(
                     result, view, best, runner, ctx.lang
                 )
@@ -155,7 +157,7 @@ class SynthesisSection:
             )
             rows.append(
                 f'<tr><td class="eng-cell">{escape(view_label(view, ctx.lang))}</td>'
-                f'<td class="eng-cell">{escape(best)}</td>'
+                f'<td class="eng-cell">{engine_cell(best, order.get(best, 0))}</td>'
                 f'<td class="disp">{best_cer:.4f}</td>'
                 f'<td class="eng-cell">{runner_label}</td>'
                 f'<td class="disp">{delta}</td>'

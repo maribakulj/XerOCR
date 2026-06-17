@@ -15,11 +15,12 @@ from xerocr.evaluation.analysis import (
     TextualFidelityPayload,
 )
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 
 
-def _rare_row(row: PipelineTextualFidelity) -> str:
+def _rare_row(row: PipelineTextualFidelity, order: dict[str, int]) -> str:
     if row.n_rare_reference == 0:
         recall = "—"
         missed = "—"
@@ -30,8 +31,9 @@ def _rare_row(row: PipelineTextualFidelity) -> str:
             if row.missed
             else "—"
         )
+    badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
     return (
-        f'<tr><td class="eng-cell">{escape(row.pipeline)}</td>'
+        f'<tr><td class="eng-cell">{badge}</td>'
         f'<td class="disp">{row.n_rare_recalled}/{row.n_rare_reference}</td>'
         f'<td class="disp">{recall}</td>'
         f"<td>{missed}</td></tr>"
@@ -56,7 +58,7 @@ def _token_flow(token: ModernizedToken) -> str:
 
 
 def _modernization_block(
-    view: str, payload: TextualFidelityPayload, lang: str
+    view: str, payload: TextualFidelityPayload, lang: str, order: dict[str, int]
 ) -> str:
     """Flux de modernisation (#17) : par pipeline, forme GT → variantes produites."""
     groups: list[str] = []
@@ -64,9 +66,9 @@ def _modernization_block(
         if not row.modernization:
             continue
         flows = "".join(_token_flow(token) for token in row.modernization)
+        badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
         groups.append(
-            f'<div class="cf-engine"><span class="cf-eng-name">'
-            f"{escape(row.pipeline)}</span>"
+            f'<div class="cf-engine"><span class="cf-eng-name">{badge}</span>'
             f'<div class="wflow">{flows}</div></div>'
         )
     if not groups:
@@ -90,8 +92,10 @@ def _modernization_block(
     return f"<h3>{head}</h3>\n" + prose + "".join(groups)
 
 
-def _block(view: str, payload: TextualFidelityPayload, lang: str) -> str:
-    rare_rows = "".join(_rare_row(row) for row in payload.pipelines)
+def _block(
+    view: str, payload: TextualFidelityPayload, lang: str, order: dict[str, int]
+) -> str:
+    rare_rows = "".join(_rare_row(row, order) for row in payload.pipelines)
     head = localized(
         lang,
         f"{escape(view)} — rappel des tokens rares "
@@ -124,7 +128,7 @@ def _block(view: str, payload: TextualFidelityPayload, lang: str) -> str:
         f"<th>{th_missed}</th></tr></thead>\n"
         f"<tbody>{rare_rows}</tbody>\n</table>\n"
     )
-    return rare_table + _modernization_block(view, payload, lang)
+    return rare_table + _modernization_block(view, payload, lang, order)
 
 
 class TextualFidelitySection:
@@ -134,8 +138,11 @@ class TextualFidelitySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang)
+            _block(
+                view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang, order
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, TextualFidelityPayload)
         ]

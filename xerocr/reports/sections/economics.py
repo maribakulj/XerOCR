@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 
@@ -23,11 +24,14 @@ def _fmt_int(value: int | None) -> str:
     return "—" if value is None else f"{value}"
 
 
-def _block(view: str, payload: EconomicsPayload, lang: str) -> str:
+def _block(
+    view: str, payload: EconomicsPayload, lang: str, order: dict[str, int]
+) -> str:
     rows: list[str] = []
     for row in payload.pipelines:
+        badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
         rows.append(
-            f'<tr><td class="eng-cell">{escape(row.pipeline)}</td>'
+            f'<tr><td class="eng-cell">{badge}</td>'
             f'<td class="disp">{_fmt(row.cer)}</td>'
             f'<td class="disp">{_fmt(row.duration_seconds, "{:.1f}")}</td>'
             f'<td class="disp">{_fmt_int(row.tokens_in)}</td>'
@@ -160,8 +164,11 @@ class EconomicsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang)
+            _block(
+                view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang, order
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, EconomicsPayload)
         ]

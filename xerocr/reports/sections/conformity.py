@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import ConformityPayload
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 
@@ -21,11 +22,12 @@ def _cell(value: float | None, *, signed: bool = False) -> str:
     return f'<td class="disp">{text}</td>'
 
 
-def _block(payload: ConformityPayload, lang: str) -> str:
+def _block(payload: ConformityPayload, lang: str, order: dict[str, int]) -> str:
     raw = escape(payload.raw_view) if payload.raw_view else "—"
     heritage = escape(payload.heritage_view) if payload.heritage_view else "—"
     rows = "".join(
-        f'<tr><td class="eng-cell">{escape(row.pipeline)}</td>'
+        f'<tr><td class="eng-cell">'
+        f"{engine_cell(row.pipeline, order.get(row.pipeline, 0))}</td>"
         + _cell(row.cmer_micro)
         + _cell(row.cmer_macro)
         + _cell(row.wmer_micro)
@@ -80,8 +82,9 @@ class ConformitySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.payload, ctx.lang)
+            _block(analysis.payload, ctx.lang, order)
             for analysis in result.analyses
             if isinstance(analysis.payload, ConformityPayload)
         ]

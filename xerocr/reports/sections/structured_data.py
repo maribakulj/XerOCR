@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import StructuredDataPayload
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 
@@ -27,9 +28,12 @@ def _category_label(category: str, lang: str) -> str:
     return localized(lang, pair[0], pair[1])
 
 
-def _block(view: str, payload: StructuredDataPayload, lang: str) -> str:
+def _block(
+    view: str, payload: StructuredDataPayload, lang: str, order: dict[str, int]
+) -> str:
     rows: list[str] = []
     for pipeline in payload.pipelines:
+        badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
         for item in pipeline.categories:
             lost = (
                 f'<span class="muted">{escape(", ".join(item.lost))}</span>'
@@ -37,7 +41,7 @@ def _block(view: str, payload: StructuredDataPayload, lang: str) -> str:
                 else "—"
             )
             rows.append(
-                f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>'
+                f'<tr><td class="eng-cell">{badge}</td>'
                 f'<td class="eng-cell">'
                 f"{escape(_category_label(item.category, lang))}</td>"
                 f'<td class="disp">{item.n_total}</td>'
@@ -86,8 +90,11 @@ class StructuredDataSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang)
+            _block(
+                view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang, order
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, StructuredDataPayload)
         ]

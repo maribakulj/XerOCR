@@ -11,6 +11,7 @@ des métriques.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
+from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
@@ -40,6 +41,7 @@ class OverviewSection:
 
 def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
     pipelines = [p for p in result.pipelines if p.view == view_name]
+    order = engine_order(p.pipeline for p in result.pipelines)
     metrics = tuple(score.metric for score in pipelines[0].aggregate)
     header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
     rows = [p.aggregate for p in pipelines]
@@ -49,9 +51,8 @@ def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
         cells = "".join(
             bar_cell(score, maxes[i]) for i, score in enumerate(pipeline.aggregate)
         )
-        body_rows.append(
-            f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>{cells}</tr>'
-        )
+        badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
+        body_rows.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')
     view_caption = localized(lang, "Vue", "View")
     return (
         f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
