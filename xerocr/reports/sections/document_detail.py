@@ -133,7 +133,7 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
         lang, "Distribution des erreurs par ligne", "Per-line error distribution"
     )
     return (
-        f'<div class="dd-lh"><div class="prof-chart-title">{title}</div>'
+        f'<div class="dd-lh"><div class="drill-caption">{title}</div>'
         f'<div class="dd-ld-rows">{rows}</div></div>'
     )
 
@@ -200,7 +200,7 @@ def _hallucination_block(
             f'<div class="chips">{chips}</div>{blocks}</div>'
         )
     return (
-        f'<div class="dd-hl"><div class="prof-chart-title">{title}</div>{rows}</div>'
+        f'<div class="dd-hl"><div class="drill-caption">{title}</div>{rows}</div>'
     )
 
 
@@ -235,7 +235,7 @@ def _iq_block(iq: DocumentImageQuality, lang: str) -> str:
         f"tier: {tier} · skew {iq.rotation_degrees:+.1f}°",
     )
     return (
-        f'<div class="dd-iq"><div class="prof-chart-title">{title}</div>'
+        f'<div class="dd-iq"><div class="drill-caption">{title}</div>'
         f'<div class="dd-iq-bars">{bars}</div>'
         f'<div class="muted dd-iq-meta">{skew}</div></div>'
     )
@@ -343,7 +343,7 @@ class DocumentDetailSection:
                     "Worst lines (diff ground truth ↔ output)",
                 )
                 diffs = (
-                    '<div class="dd-diffs"><div class="prof-chart-title">'
+                    '<div class="dd-diffs"><div class="drill-caption">'
                     f"{worst_title}</div>{items}</div>"
                 )
         # Fac-similé medium EN HAUT (pleine largeur, si résolu), puis CER par
@@ -356,7 +356,7 @@ class DocumentDetailSection:
             zout = localized(lang, "Zoom arrière", "Zoom out")
             zreset = localized(lang, "Réinitialiser le zoom", "Reset zoom")
             fac_block = (
-                f'<div class="dd-fac-top"><div class="prof-chart-title">{fac_title}'
+                f'<div class="dd-fac-top"><div class="drill-caption">{fac_title}'
                 '</div><div class="dd-fac-zoom">'
                 f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
                 'loading="lazy" decoding="async">'
@@ -379,7 +379,7 @@ class DocumentDetailSection:
         # CER → heatmap ligne → hallucinations → qualité d'image **en dernier**.
         body = (
             f"{fac_block}{diffs}"
-            f'<div class="prof-chart-title">{cer_title}</div>'
+            f'<div class="drill-caption">{cer_title}</div>'
             f'<div class="dd-cers">{cer_rows}</div>{lh_block}{hl_block}{iq_block}'
         )
         back = localized(lang, "← retour à la galerie", "← back to gallery")
@@ -393,13 +393,13 @@ class DocumentDetailSection:
         return (
             f'<div class="drill-panel doc-detail" id="doc-{idx}" hidden '
             f'role="region" aria-label="{escape(doc_id)}">'
-            '<div class="prof-head">'
+            '<div class="drill-head">'
             f'<a class="drill-back" href="#">{back}</a>'
-            '<div class="prof-nav">'
+            '<div class="drill-nav">'
             f'<a class="btn-sm" href="#doc-{prev_i}">{prev_label}</a>'
             f'<a class="btn-sm" href="#doc-{next_i}">{next_label}</a></div></div>'
-            f'<div class="prof-title"><span>{escape(doc_id)}</span>'
-            f'<span class="muted prof-pos">{pos}</span></div>'
+            f'<div class="drill-title"><span>{escape(doc_id)}</span>'
+            f'<span class="muted drill-pos">{pos}</span></div>'
             f"{body}</div>"
         )
 
@@ -439,7 +439,7 @@ class DocumentDetailSection:
             "Diff ground truth ↔ output (full page)",
         )
         return (
-            f'<div class="dd-fullwrap"><div class="prof-chart-title">{full_title}'
+            f'<div class="dd-fullwrap"><div class="drill-caption">{full_title}'
             "</div>"
             f'<div class="dd-engine-tabs segmented" role="tablist">{tabs}</div>'
             f"{blocks}</div>"

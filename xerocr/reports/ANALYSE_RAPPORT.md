@@ -75,7 +75,15 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
   strates). Non-spéculatif (3 consommateurs réels au moment de l'extraction).
 - **S1.3c — primitive `chip` + `chips`** ✅ : `dd-hl-chip` (×8) et `preview-chip`
   fusionnés en `.chip` (+ rangée `.chips`). Net −1 règle, 2 sections unifiées.
-- **S1.3 (suite) — primitives restantes** : `metric_row`, fusion `prof-*`/`dd-*`
-  en un drill-in, *cadre de section* uniforme. Règle : extraire **au 2ᵉ
-  consommateur**, jamais d'avance.
+- **S1.3d — vocabulaire de drill unifié + orphelin corrigé** ✅ : constat —
+  les « deux systèmes » `prof-*`/`dd-*` étaient **déjà fusionnés** au niveau JS
+  (`.drill-panel`/`.drill-back` génériques) et chrome (la vue document réutilisait
+  `prof-*`). Dette réelle = **nom trompeur** (`prof-*` = profil moteur, mais
+  partagé par les panneaux document) + **orphelin** (`.eng-back` stylé, mais le
+  markup utilisait `.drill-back` → lien « ← retour » non stylé). Corrigé : chrome
+  partagé `prof-{head,nav,title,pos,chart-title}` → `drill-{head,nav,title,pos}` +
+  `drill-caption` ; `.eng-back` → `.drill-back` (orphelin résolu). `prof-row`/
+  `prof-cell` (layout interne du profil moteur, non partagé) conservés.
+- **S1.3 (suite) — restant** : `metric_row` (au 2ᵉ consommateur), *cadre de
+  section* uniforme (titre + how-to-read homogène).
 - **S1.4 — garde-fou** anti-prolifération de classes.
