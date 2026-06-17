@@ -505,6 +505,28 @@ def localized(lang: str, fr: str, en: str) -> str:
     return en if lang == "en" else fr
 
 
+#: Libellés humains des vues d'évaluation : nom interne → (FR, EN). **Source
+#: unique** consommée par toutes les sections (fin du « vue : text » brut dans les
+#: titres). Une vue absente d'ici porte déjà un nom lisible (ex. « référence OCR
+#: (pas une vérité-terrain manuelle) ») → affichée telle quelle.
+_VIEW_LABELS: dict[str, tuple[str, str]] = {
+    "text": ("Texte brut", "Plain text"),
+    "diplomatic": ("Transcription diplomatique", "Diplomatic transcription"),
+}
+
+
+def view_label(view: str, lang: str) -> str:
+    """Libellé humain d'une vue d'évaluation (repli sur le nom brut si inconnu).
+
+    Centralise la traduction du **nom interne** de vue (``"text"``) vers un
+    libellé lisible (« Texte brut »). Déterministe (même vue + langue → mêmes
+    octets) ; n'échappe pas (l'appelant échappe au point d'insertion HTML)."""
+    pair = _VIEW_LABELS.get(view)
+    if pair is None:
+        return view
+    return pair[1] if lang == "en" else pair[0]
+
+
 def render_document(
     title: str,
     body: Html,
@@ -549,4 +571,4 @@ def render_document(
     )
 
 
-__all__ = ["escape", "localized", "render_document"]
+__all__ = ["escape", "localized", "render_document", "view_label"]

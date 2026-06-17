@@ -27,7 +27,7 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -296,16 +296,17 @@ def _inter_engine_blocks(
         payload = analysis.payload
         if not isinstance(payload, InterEnginePayload):
             continue
+        label = view_label(analysis.view, lang)
         if payload.complementarity is not None:
             blocks.append(
                 _complementarity_block(
-                    analysis.view, payload.complementarity, order, lang
+                    label, payload.complementarity, order, lang
                 )
             )
         if payload.taxonomy_divergence is not None:
             blocks.append(
                 _divergence_block(
-                    analysis.view, payload.taxonomy_divergence, order, lang
+                    label, payload.taxonomy_divergence, order, lang
                 )
             )
     return "".join(blocks)
@@ -330,7 +331,7 @@ class CrossEngineSection:
                 view, metric = _split_key(score.metric)
                 label, css = _verdict(score.value, lang)
                 body.append(
-                    f'<tr><td class="eng-cell">{escape(view)}</td>'
+                    f'<tr><td class="eng-cell">{escape(view_label(view, lang))}</td>'
                     f'<td class="eng-cell">{escape(metric)}</td>'
                     f'<td class="disp">{_format_p(score.value)}</td>'
                     f'<td class="disp">{score.support}</td>'
@@ -355,7 +356,9 @@ class CrossEngineSection:
                 f"<tbody>{''.join(body)}</tbody>\n</table>\n"
             )
         blocks = "".join(
-            _inference_block(analysis.view, analysis.payload, order, lang)
+            _inference_block(
+                view_label(analysis.view, lang), analysis.payload, order, lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, InferencePayload)
         )

@@ -13,7 +13,7 @@ from collections.abc import Mapping
 
 from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
 
@@ -64,9 +64,9 @@ def _table_for_view(
                 f'<tr><td class="eng-cell">{label}</td>'
                 f'<td class="eng-cell">{badge}</td>{cells}</tr>'
             )
-    view_label = localized(lang, "Vue", "View")
+    view_caption = localized(lang, "Vue", "View")
     return (
-        f"<h2>{view_label} : {escape(view_name)}</h2>\n"
+        f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
         f'<table class="data">\n'
         f"<thead><tr><th>Document</th><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body)}</tbody>\n</table>"

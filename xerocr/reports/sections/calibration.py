@@ -9,7 +9,7 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import CalibrationPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import calibration_curve
 
@@ -79,7 +79,9 @@ class CalibrationSection:
         # Ordre canonique des moteurs (accent stable, partagé avec les sections).
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_label(analysis.view, ctx.lang), analysis.payload, order, ctx.lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, CalibrationPayload)
         ]

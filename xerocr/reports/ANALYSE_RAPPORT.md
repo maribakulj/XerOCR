@@ -57,8 +57,12 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
 
 - **S1.1 — proportion** ✅ : SVG à taille bornée ; `wmap` heatmap rendue à sa
   taille intrinsèque (fin des cellules géantes).
-- **S1.2 — cadre de section + libellés de vue** : titre + how-to-read + libellé
-  humain (`text` → « Texte brut »…), une source unique.
+- **S1.2 — libellés de vue humains** ✅ : `view_label(view, lang)` dans `html.py`
+  (**source unique**) ; `text` → « Texte brut », `diplomatic` → « Transcription
+  diplomatique » ; vue déjà lisible (réf. OCR) rendue telle quelle. Routé dans
+  **toutes** les sections (titres + cellules) — fin du « vue : text » brut. Le
+  *cadre de section* uniforme (how-to-read homogène) est repoussé à S1.3 avec les
+  primitives (mieux fait d'un coup que dispersé).
 - **S1.3 — primitives partagées** : `metric_row`/`bar`/`chip`/`stat_table`,
   migration des sections (vue document d'abord), **suppression des `dd-*`** ;
   fusion `prof-*`/`dd-*` en un drill-in.

@@ -11,7 +11,7 @@ des métriques.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
 
@@ -52,9 +52,9 @@ def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
         body_rows.append(
             f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>{cells}</tr>'
         )
-    view_label = localized(lang, "Vue", "View")
+    view_caption = localized(lang, "Vue", "View")
     return (
-        f"<h2>{view_label} : {escape(view_name)}</h2>\n"
+        f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
         f'<table class="data">\n<thead><tr><th>Pipeline</th>{header}</tr></thead>\n'
         f"<tbody>{''.join(body_rows)}</tbody>\n</table>"
     )

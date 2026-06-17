@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.result import MetricScore, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 
@@ -98,8 +98,8 @@ class DocumentGallerySection:
         )
         title = localized(
             ctx.lang,
-            f"Galerie des documents (vue : {escape(view)})",
-            f"Document gallery (view: {escape(view)})",
+            f"Galerie des documents (vue : {escape(view_label(view, ctx.lang))})",
+            f"Document gallery (view: {escape(view_label(view, ctx.lang))})",
         )
         caption = localized(
             ctx.lang,

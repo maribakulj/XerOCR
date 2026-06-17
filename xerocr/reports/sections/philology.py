@@ -17,7 +17,7 @@ from xerocr.evaluation.analysis import (
     RomanNumeralsPayload,
 )
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 
 #: Statuts romains : clé → libellé lisible bilingue (ordre de rendu).
@@ -266,11 +266,12 @@ class PhilologySection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         blocks: list[str] = []
         for analysis in result.analyses:
+            label = view_label(analysis.view, ctx.lang)
             if isinstance(analysis.payload, PhilologyPayload):
-                blocks.append(_block(analysis.view, analysis.payload, ctx.lang))
+                blocks.append(_block(label, analysis.payload, ctx.lang))
             elif isinstance(analysis.payload, RomanNumeralsPayload):
                 blocks.append(
-                    _roman_block(analysis.view, analysis.payload, ctx.lang)
+                    _roman_block(label, analysis.payload, ctx.lang)
                 )
         if not blocks:
             return None

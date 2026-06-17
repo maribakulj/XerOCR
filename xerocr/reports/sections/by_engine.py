@@ -14,7 +14,7 @@ from statistics import median
 
 from xerocr.evaluation.result import PipelineResult, RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import (
     bar_cell,
@@ -88,8 +88,8 @@ class EngineSection:
         header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
         heading = localized(
             ctx.lang,
-            f"Classement (vue : {escape(view)})",
-            f"Ranking (view: {escape(view)})",
+            f"Classement (vue : {escape(view_label(view, ctx.lang))})",
+            f"Ranking (view: {escape(view_label(view, ctx.lang))})",
         )
         prose = localized(
             ctx.lang,

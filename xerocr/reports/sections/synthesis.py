@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import InferencePayload
 from xerocr.evaluation.result import MetricScore, RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 
@@ -154,7 +154,7 @@ class SynthesisSection:
                 else f'<span class="sig-badge sig-{state}">{escape(label)}</span>'
             )
             rows.append(
-                f'<tr><td class="eng-cell">{escape(view)}</td>'
+                f'<tr><td class="eng-cell">{escape(view_label(view, ctx.lang))}</td>'
                 f'<td class="eng-cell">{escape(best)}</td>'
                 f'<td class="disp">{best_cer:.4f}</td>'
                 f'<td class="eng-cell">{runner_label}</td>'

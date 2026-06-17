@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import PipelineTaxonomy, TaxonomyPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import composition_bar
 
@@ -165,7 +165,9 @@ class TaxonomySection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_label(analysis.view, ctx.lang), analysis.payload, order, ctx.lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, TaxonomyPayload)
         ]

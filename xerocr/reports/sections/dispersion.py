@@ -12,7 +12,7 @@ from statistics import fmean, median
 
 from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.svg import dispersion_strip
@@ -62,8 +62,8 @@ class DispersionSection:
         rows = "".join(self._row(p, v, order[p], scale_max, lang) for p, v in series)
         title = localized(
             lang,
-            f"Dispersion du CER (vue : {escape(view)})",
-            f"CER dispersion (view: {escape(view)})",
+            f"Dispersion du CER (vue : {escape(view_label(view, lang))})",
+            f"CER dispersion (view: {escape(view_label(view, lang))})",
         )
         intro = localized(
             lang,
