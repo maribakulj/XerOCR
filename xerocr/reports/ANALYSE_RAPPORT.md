@@ -260,6 +260,18 @@ Constats vérifiés sur captures utilisateur + `design/screenshots/` + CSS (`htm
 | **L2-d** | **Vue document loin du canonique + casse en fenêtre étroite** | Canonique « Par document » = **galerie compacte** (cartes vignette+titre+mini-barres). XerOCR drill-in = **image fixe 460px** (`html.py:174`) à gauche + diff **2 colonnes** [GT\|sortie] à droite. Bascule 1 colonne seulement < **860px** (`dd-top2`, `html.py:172`) et < **720px** pour `dd-sbs` (`html.py:190`) → à ~1000–1280px : image(½) + [GT\|sortie] tassés. | Cadre image **non fixe** (max-height en `vh`, ou ratio 40/60) ; **remonter** le point de bascule (empiler image au-dessus du diff dès ~1100px) ; en drill-in étroit, diff **unifié** plutôt que 2 colonnes. |
 | **L2-e** *(contenu)* | **Taxonomie « other » 70–76 %** | La classification range la majorité des erreurs en fourre-tout `other` → graphe dominé par une catégorie, peu informatif. | Affiner les règles de classification (couche 3) **ou** assumer/renommer « non classé » et le dé-emphaser. Hors mise en page. |
 
+**Diagrammes cassés — réparés (vérif visuelle à 1120px, pas grep).**
+- **Barres percentiles CER** ✅ : `document_detail.py:115` `v*200` (saturait tout
+  ≥ 50 %) → `v*100` (échelle honnête 0–100 % ; p50 court, p99 plein).
+- **Carte thermique par ligne** ✅ : `html.py` `.dd-lh-bar` `flex:0 0 8px`
+  (5 barres tassées à gauche) → `flex:1 1 0;max-width:48px` + `justify-content:
+  center` → remplit la largeur, lisible comme un strip.
+- **Venn** ✅ : `svg.py` géométrie fixe → `_venn2_proportional` (rayon ∝ √|set|,
+  écart des centres ∝ 1−Jaccard **borné** ≥ 0.50·(r_a+r_b) pour ne pas devenir
+  concentrique quand Jaccard ≈ 1). Constat data : sur la presse BNL, les 2
+  Tesseract ratent ~les mêmes mots (crescents vides).
+- Reste (L2-a/c/d) : table large, tables éparses, vue document responsive.
+
 > ⚠️ L2-a est en partie **auto-infligé** : verser M2/M3/M4 d'office dans `standard`
 > a fait passer la table de 7 à 13 colonnes. Le **canonique** privilégie un socle
 > resserré + cellules compactes — à rapprocher. Tranche **mise en page**, par

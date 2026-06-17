@@ -112,7 +112,7 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
         pcts = "".join(
             f'<div class="dd-pct-row"><span class="dd-pct-lbl">{label}</span>'
             f'<span class="track"><i class="lh-{_cer_bucket(v)}" '
-            f'style="width:{min(100.0, v * 200):.0f}%"></i></span>'
+            f'style="width:{min(100.0, v * 100):.0f}%"></i></span>'
             f'<span class="dd-pct-val">{v * 100:.1f} %</span></div>'
             for label, v in (
                 (lbl, percentile(ordered, q)) for lbl, q in _PCTS

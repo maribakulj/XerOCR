@@ -69,13 +69,8 @@ __all__ = [
 ]
 
 
-#: Géométrie fixe des régions de Venn (2 et 3 ensembles) : ``frozenset`` d'indices
-#: de moteur → (x, y) où inscrire le compte. Déterministe, octet-stable.
-_VENN2_POS: dict[frozenset[int], tuple[float, float]] = {
-    frozenset({0}): (78.0, 95.0),
-    frozenset({1}): (242.0, 95.0),
-    frozenset({0, 1}): (160.0, 95.0),
-}
+#: Géométrie fixe du Venn à **3** ensembles (le Venn proportionnel à 3 cercles est
+#: un problème ouvert) : ``frozenset`` d'indices → (x, y) où inscrire le compte.
 _VENN3_POS: dict[frozenset[int], tuple[float, float]] = {
     frozenset({0}): (160.0, 70.0),
     frozenset({1}): (108.0, 158.0),
@@ -85,15 +80,49 @@ _VENN3_POS: dict[frozenset[int], tuple[float, float]] = {
     frozenset({1, 2}): (160.0, 168.0),
     frozenset({0, 1, 2}): (160.0, 122.0),
 }
-_VENN2_CIRCLES: tuple[tuple[float, float, float], ...] = (
-    (120.0, 95.0, 75.0),
-    (200.0, 95.0, 75.0),
-)
 _VENN3_CIRCLES: tuple[tuple[float, float, float], ...] = (
     (160.0, 100.0, 68.0),
     (122.0, 150.0, 68.0),
     (198.0, 150.0, 68.0),
 )
+
+
+def _venn2_proportional(
+    region_counts: dict[frozenset[int], int],
+) -> tuple[
+    tuple[tuple[float, float, float], ...],
+    dict[frozenset[int], tuple[float, float]],
+    float,
+    float,
+]:
+    """Géométrie **proportionnelle** d'un Venn à 2 ensembles : rayon ∝ √|ensemble|
+    (l'**aire** code l'effectif) et distance des centres ∝ (1 − Jaccard) — fort
+    recouvrement → cercles proches, recouvrement nul → cercles tangents.
+    Déterministe (les coordonnées sont arrondies à l'écriture par ``num``)."""
+    a_only = region_counts.get(frozenset({0}), 0)
+    b_only = region_counts.get(frozenset({1}), 0)
+    both = region_counts.get(frozenset({0, 1}), 0)
+    size_a, size_b = a_only + both, b_only + both
+    union = a_only + b_only + both
+    width, height, r_max = 320.0, 200.0, 82.0
+    cy, center = height / 2, width / 2
+    biggest = max(size_a, size_b, 1)
+    r_a = max(14.0, r_max * (size_a / biggest) ** 0.5)
+    r_b = max(14.0, r_max * (size_b / biggest) ** 0.5)
+    # Écart des centres **borné** : ∝ (1 − Jaccard) pour montrer le recouvrement,
+    # mais jamais < 0.50·(r_a+r_b) — sinon, quand les deux moteurs ratent presque
+    # les mêmes mots (Jaccard ≈ 1), les cercles deviennent concentriques et
+    # illisibles. Le **volume** du recouvrement reste lu par le compte central.
+    jaccard = both / union if union else 0.0
+    gap = (r_a + r_b) * (0.50 + 0.45 * (1.0 - jaccard))
+    cx_a, cx_b = center - gap / 2, center + gap / 2
+    circles = ((cx_a, cy, r_a), (cx_b, cy, r_b))
+    pos = {
+        frozenset({0}): (cx_a - r_a * 0.5, cy),
+        frozenset({0, 1}): ((cx_a + cx_b) / 2, cy),
+        frozenset({1}): (cx_b + r_b * 0.5, cy),
+    }
+    return circles, pos, width, height
 
 
 def word_overlap_venn(
@@ -113,7 +142,7 @@ def word_overlap_venn(
     Déterministe (coords ``num``), zéro JS."""
     n = len(columns)
     if n == 2:
-        circles, pos, width, height = _VENN2_CIRCLES, _VENN2_POS, 320.0, 190.0
+        circles, pos, width, height = _venn2_proportional(region_counts)
     elif n == 3:
         circles, pos, width, height = _VENN3_CIRCLES, _VENN3_POS, 320.0, 240.0
     else:
