@@ -52,6 +52,7 @@ def register_default_metrics(registry: MetricRegistry) -> None:
     from xerocr.evaluation.metrics.conformity import CONFORMITY_METRICS
     from xerocr.evaluation.metrics.diacritics import DIACRITIC_METRICS
     from xerocr.evaluation.metrics.diagnostics import DIAGNOSTIC_METRICS
+    from xerocr.evaluation.metrics.flexible import FLEXIBLE_METRICS
     from xerocr.evaluation.metrics.layout import LAYOUT_METRICS
     from xerocr.evaluation.metrics.ner import NER_METRICS
     from xerocr.evaluation.metrics.philology import PHILOLOGY_METRICS
@@ -61,6 +62,7 @@ def register_default_metrics(registry: MetricRegistry) -> None:
 
     for document in (
         *TEXT_METRICS,
+        *FLEXIBLE_METRICS,
         *DIACRITIC_METRICS,
         *PHILOLOGY_METRICS,
         *ARCHAIC_METRICS,

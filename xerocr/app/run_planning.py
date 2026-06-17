@@ -108,7 +108,7 @@ METRIC_PROFILES: dict[str, tuple[str, ...]] = {
     # font dépasser le CER ; cf. metrics/conformity) — calculé sur RAW_TEXT comme
     # CER, donc exposé d'office au socle (≠ réservé HIPE). Groupé « caractère ».
     "standard": (
-        "cer", "cmer", "char_accuracy", "word_accuracy", "wer", "mer",
+        "cer", "cmer", "char_accuracy", "word_accuracy", "fca", "wer", "mer",
         "searchability", "hallucination", "air",
     ),
     "essentiel": ("cer", "wer", "mer"),

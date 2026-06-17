@@ -79,7 +79,7 @@ _METRIC_GROUPS: tuple[tuple[str, tuple[str, str], frozenset[str]], ...] = (
     ("char", ("Erreur · caractère", "Character error"),
      frozenset({"cer", "cer_diplo", "cmer"})),
     ("accuracy", ("Exactitude", "Accuracy"),
-     frozenset({"char_accuracy", "word_accuracy"})),
+     frozenset({"char_accuracy", "word_accuracy", "fca"})),
     ("word", ("Erreur · mot", "Word error"),
      frozenset({"wer", "mer", "wil"})),
     ("philo", ("Philologique", "Philological"),
