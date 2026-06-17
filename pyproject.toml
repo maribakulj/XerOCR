@@ -19,9 +19,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff", "mypy", "pytest", "pytest-cov", "lxml-stubs", "types-PyYAML",
-    "jiwer", "fastapi", "httpx", "httpcore", "jinja2", "python-multipart",
-    "Pillow",
+    "ruff", "mypy", "pytest", "pytest-cov", "pytest-xdist", "lxml-stubs",
+    "types-PyYAML", "jiwer", "fastapi", "httpx", "httpcore", "jinja2",
+    "python-multipart", "Pillow",
 ]
 tesseract = ["pytesseract"]
 kraken = ["kraken"]

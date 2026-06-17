@@ -404,19 +404,29 @@ couche 3), DTO web (transport → couche 8).
 ## 11. Commandes
 
 ```bash
-pip install -e ".[dev]"      # installation dev
-make ci                      # ruff + mypy + pytest COMPLET — porte avant push
+pip install -e ".[dev]"      # installation dev (inclut pytest-xdist)
+make check-fast              # PRÉ-PUSH local : ruff + mypy + TOUTE la suite (parallèle, SANS coverage)
+make ci                      # gate complet local (avec coverage) — ponctuel
 make lint                    # ruff
 make type                    # mypy
-make test                    # pytest complet
+make test                    # pytest complet (parallèle, sans coverage)
 xerocr demo --output r.html  # rapport démo sans moteur (squelette)
 ```
 
-**Règle de vérification (non négociable)** : avant tout push, lancer **`make ci`**
-(suite **complète**). **Ne jamais** rapporter « vert » sur un *sous-ensemble* de
-tests — c'est ainsi qu'une CI rouge est passée inaperçue pendant 11 commits
-(cf. `MIGRATION_PLAN.md` D-049/D-050). Les tests `live`/`network` sont opt-in
-(skippés sans `XEROCR_LIVE_*` / env requis) : ils ne dispensent pas du reste.
+**Règle de vérification (non négociable)** : avant tout push local, lancer
+**`make check-fast`** — ruff + mypy + **toute** la suite, en parallèle
+(`pytest-xdist -n auto`), **sans coverage**. **Ne jamais** rapporter « vert » sur
+un *sous-ensemble* de tests (c'est ainsi qu'une CI rouge est passée inaperçue
+pendant 11 commits, cf. `MIGRATION_PLAN.md` D-049/D-050) : `check-fast` exécute
+**tous** les tests — ce n'est pas un sous-ensemble, seulement l'instrumentation
+coverage en moins.
+
+**Le gate de coverage (seuil 85 %) est le concern de la CI GitHub Actions**
+(`.github/workflows/ci.yml`), exécuté sur push/PR — **pas** de chaque push local
+(sinon on paie ~3× le temps à chaque itération). `make ci` (avec coverage) reste
+disponible en local pour une vérif ponctuelle, mais l'autorité du seuil est
+GitHub. Les tests `live`/`network` sont opt-in (skippés sans `XEROCR_LIVE_*` /
+env requis) : ils ne dispensent pas du reste.
 
 ---
 
