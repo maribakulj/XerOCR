@@ -73,6 +73,63 @@ def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -
     )
 
 
+#: Groupes thématiques de métriques (ordre = ordre d'affichage canonique).
+#: ``(clé, (libellé FR, EN), {métriques})`` — calque « Par moteur » du design.
+_METRIC_GROUPS: tuple[tuple[str, tuple[str, str], frozenset[str]], ...] = (
+    ("char", ("Erreur · caractère", "Character error"),
+     frozenset({"cer", "cer_diplo", "cmer"})),
+    ("word", ("Erreur · mot", "Word error"),
+     frozenset({"wer", "mer", "wil"})),
+    ("philo", ("Philologique", "Philological"),
+     frozenset({"diacritic_err", "mufi_err"})),
+    ("trust", ("Fiabilité documentaire", "Document reliability"),
+     frozenset({"searchability", "hallucination", "air", "hcpr"})),
+    ("struct", ("Structuré", "Structured"),
+     frozenset({"numseq_strict", "numseq_value", "region_cer", "region_detection"})),
+)
+_GROUP_OF: dict[str, tuple[str, tuple[str, str]]] = {
+    metric: (key, label)
+    for key, label, members in _METRIC_GROUPS
+    for metric in members
+}
+
+
+def group_header_row(
+    metrics: list[str], lang: str, *, lead: int = 0, trail: int = 0
+) -> str:
+    """Rangée de **super-en-têtes** thématiques au-dessus des colonnes de métriques.
+
+    Fusionne les métriques **consécutives** d'un même groupe en une cellule
+    ``colspan`` (les profils sont déjà ordonnés par thème). ``lead``/``trail`` =
+    nombre de colonnes hors-métrique à gauche/droite (#, moteur, dispersion…) →
+    cellules vides de cadrage. Une métrique hors groupe connu → cellule vide."""
+    cells: list[str] = []
+    if lead:
+        cells.append(f'<th colspan="{lead}"></th>')
+    i = 0
+    while i < len(metrics):
+        entry = _GROUP_OF.get(metrics[i])
+        if entry is None:
+            cells.append("<th></th>")
+            i += 1
+            continue
+        key, label = entry
+        span = 1
+        while i + span < len(metrics):
+            nxt = _GROUP_OF.get(metrics[i + span])
+            if nxt is None or nxt[0] != key:
+                break
+            span += 1
+        text = label[1] if lang == "en" else label[0]
+        cells.append(
+            f'<th class="grp-head" colspan="{span}">{escape(text)}</th>'
+        )
+        i += span
+    if trail:
+        cells.append(f'<th colspan="{trail}"></th>')
+    return f'<tr class="grp-row">{"".join(cells)}</tr>'
+
+
 def bar_legend(lang: str) -> str:
     """Légende des barres de données (explique l'indicateur subtil sous les valeurs).
 
@@ -111,6 +168,7 @@ __all__ = [
     "bar_legend",
     "col_max",
     "format_value",
+    "group_header_row",
     "metric_th",
     "nonempty_metric_indices",
     "ordered_unique",

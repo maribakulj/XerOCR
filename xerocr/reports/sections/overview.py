@@ -18,6 +18,7 @@ from xerocr.reports.sections._tables import (
     bar_cell,
     bar_legend,
     col_max,
+    group_header_row,
     nonempty_metric_indices,
     ordered_unique,
 )
@@ -64,7 +65,8 @@ def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
     view_caption = localized(lang, "Vue", "View")
     return (
         f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
-        f'<table class="data">\n<thead><tr><th>Pipeline</th>{header}</tr></thead>\n'
+        f'<table class="data">\n<thead>{group_header_row(metrics, lang, lead=1)}'
+        f"<tr><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body_rows)}</tbody>\n</table>\n"
         f"{bar_legend(lang)}"
     )

@@ -173,7 +173,11 @@ intégration ultérieure, pas bloquante.
    - **R2b** ✅ : **masquer les colonnes tout-`—`** — `nonempty_metric_indices()`
      (distingue tout-None → masqué vs tout-zéro → gardé) appliqué à overview /
      by_engine / by_document. AIR/HCPR vides disparaissent.
-   - **R2c** : super-en-têtes thématiques (groupes) + indice d'échelle/colonne.
+   - **R2c** ✅ : **super-en-têtes thématiques** — `group_header_row()` fusionne
+     les métriques consécutives d'un même groupe (Erreur·caractère / Erreur·mot /
+     Philologique / Fiabilité / Structuré) en `colspan`. Appliqué overview +
+     by_engine (cadrage `lead`/`trail` pour les colonnes hors-métrique). Pas de
+     réordonnancement (profils déjà groupés).
    - **R2d** : métriques — CMER exposé, MUFI réservé médiéval (run_planning).
 3. **R3 — organisation multi-colonnes (D2)** : remplir l'horizontale — grille de
    sous-tables côte à côte (« mots ratés »), `columns` journal (« modernisation

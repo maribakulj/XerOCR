@@ -94,6 +94,11 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"
     "padding:8px 14px 10px;border-bottom:1px solid var(--g-100);}"
     "table.data th.num-cell{text-align:right;}"
+    # Super-en-tête de groupe thématique (calque « Par moteur » du canon).
+    "table.data tr.grp-row th{border-bottom:none;padding:8px 14px 0;}"
+    "table.data tr.grp-row th.grp-head{font-size:9.5px;letter-spacing:0.05em;"
+    "text-transform:uppercase;color:var(--g-300);font-weight:600;"
+    "border-bottom:1px solid var(--g-100);}"
     # Tables vivantes : en-tête triable (clic) + définition au survol (E1).
     "table.data th.sortable{cursor:pointer;user-select:none;}"
     "table.data th.sortable:hover{color:var(--ink);}"

@@ -3,11 +3,40 @@
 from __future__ import annotations
 
 from xerocr.evaluation.result import MetricScore
-from xerocr.reports.sections._tables import bar_cell, metric_th
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    group_header_row,
+    metric_th,
+    nonempty_metric_indices,
+)
 
 
-def _s(value: float | None) -> MetricScore:
-    return MetricScore(metric="cer", value=value, support=1)
+def _s(value: float | None, metric: str = "cer") -> MetricScore:
+    return MetricScore(metric=metric, value=value, support=1)
+
+
+def test_group_header_row_merges_consecutive_same_group() -> None:
+    # cer, cer_diplo = « caractère » (colspan 2) ; mer = « mot » ; diacritic = « philo »
+    row = group_header_row(["cer", "cer_diplo", "mer", "diacritic_err"], "fr", lead=1)
+    assert '<th colspan="1"></th>' in row  # cadrage colonne pipeline
+    assert 'colspan="2">Erreur · caractère' in row
+    assert 'colspan="1">Erreur · mot' in row
+    assert "Philologique" in row
+
+
+def test_group_header_row_unknown_metric_is_blank_cell() -> None:
+    row = group_header_row(["mystery"], "fr")
+    assert "<th></th>" in row  # métrique hors groupe → cellule vide, pas d'erreur
+
+
+def test_group_header_row_localized() -> None:
+    assert "Character error" in group_header_row(["cer"], "en")
+
+
+def test_nonempty_metric_indices_hides_all_none_keeps_zero() -> None:
+    rows = [(_s(0.0, "cer"), _s(None, "air")), (_s(0.1, "cer"), _s(None, "air"))]
+    # cer a des valeurs (dont 0.0 = vraie valeur) → gardé ; air tout None → masqué
+    assert nonempty_metric_indices(rows) == [0]
 
 
 def test_bar_cell_sortable_adds_data_sort() -> None:

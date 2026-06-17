@@ -20,6 +20,7 @@ from xerocr.reports.sections._tables import (
     bar_cell,
     bar_legend,
     col_max,
+    group_header_row,
     metric_th,
     nonempty_metric_indices,
     ordered_unique,
@@ -88,8 +89,9 @@ class EngineSection:
                 f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
                 f'title="{profil_title}">→</a></td></tr>'
             )
+        display_metrics = [metrics[i] for i in keep]
         header = "".join(
-            metric_th(metrics[i], ctx.lang, sortable=True) for i in keep
+            metric_th(m, ctx.lang, sortable=True) for m in display_metrics
         )
         heading = localized(
             ctx.lang,
@@ -113,7 +115,9 @@ class EngineSection:
             f"<h2>{heading}</h2>\n"
             + prose
             + '<table class="data sortable">\n'
-            f"<thead><tr><th>#</th><th>{th_engine}</th>{header}"
+            "<thead>"
+            + group_header_row(display_metrics, ctx.lang, lead=2, trail=2)
+            + f"<tr><th>#</th><th>{th_engine}</th>{header}"
             f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table>\n"
             + bar_legend(ctx.lang)
