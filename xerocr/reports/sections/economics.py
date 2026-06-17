@@ -12,7 +12,7 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -105,8 +105,8 @@ def _block(
         )
     head = localized(
         lang,
-        f"{escape(view)} — coûts &amp; débit",
-        f"{escape(view)} — costs &amp; throughput",
+        f"{view}coûts &amp; débit",
+        f"{view}costs &amp; throughput",
     )
     prose = localized(
         lang,
@@ -164,10 +164,12 @@ class EconomicsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
             _block(
-                view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang, order
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang, order
             )
             for analysis in result.analyses
             if isinstance(analysis.payload, EconomicsPayload)

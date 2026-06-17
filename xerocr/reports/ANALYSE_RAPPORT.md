@@ -193,11 +193,13 @@ intégration ultérieure, pas bloquante.
 5. **R5 — titres (D6)** ✅ (titres de section) : libellé de vue affiché **seulement
    si plusieurs vues** (vue unique → pas de ressassage). Fait pour overview,
    by_document, by_engine, gallery, dispersion (les h2/sous-titres proéminents).
-   **R5-bis (reste)** : les préfixes h3 des sections analytiques (« Texte brut —
-   composition/modernisation… ») dans ~12 sections (taxonomy, ner, calibration,
-   philology, structured_data, lines, economics, textual_fidelity, correction,
-   diagnostics, word_errors, cross_engine) — même règle multi-vue, passe dédiée
-   (toucher 12 sections d'un coup = à faire proprement, pas en fin de session).
+   **R5-bis** ✅ : préfixes h3 des 12 sections analytiques (« Texte brut —
+   composition/modernisation… ») traités via le helper partagé `view_prefix(view,
+   lang, *, multi)` (« Libellé — » si multi, sinon ``""``). Appliqué à taxonomy,
+   ner, calibration, philology, structured_data, lines, economics,
+   textual_fidelity, correction, diagnostics, word_errors, et cross_engine
+   (préfixe « Libellé · » pour ses titres vue·métrique). La colonne « Vue » de la
+   table de significativité garde le libellé (c'est une donnée, pas un titre).
 
 Chaque R# : analyse ciblée → 1 correctif → capture de vérif vs canon → `make ci`
 → commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**

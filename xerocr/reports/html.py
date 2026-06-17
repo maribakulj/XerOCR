@@ -550,6 +550,14 @@ def view_label(view: str, lang: str) -> str:
     return pair[1] if lang == "en" else pair[0]
 
 
+def view_prefix(view: str, lang: str, *, multi: bool) -> str:
+    """Préfixe de titre de bloc « <Libellé de vue> — », **seulement** si le run
+    porte plusieurs vues à distinguer ; sinon ``""`` (le libellé est déjà porté
+    par le héros/onglet → pas de ressassage « Texte brut — » sur chaque section).
+    Déjà échappé (fragment HTML prêt) : l'appelant l'insère tel quel."""
+    return f"{escape(view_label(view, lang))} — " if multi else ""
+
+
 def render_document(
     title: str,
     body: Html,
@@ -594,4 +602,10 @@ def render_document(
     )
 
 
-__all__ = ["escape", "localized", "render_document", "view_label"]
+__all__ = [
+    "escape",
+    "localized",
+    "render_document",
+    "view_label",
+    "view_prefix",
+]

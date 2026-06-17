@@ -16,7 +16,7 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -75,8 +75,8 @@ def _modernization_block(
         return ""
     head = localized(
         lang,
-        f"{escape(view)} — modernisation lexicale",
-        f"{escape(view)} — lexical modernization",
+        f"{view}modernisation lexicale",
+        f"{view}lexical modernization",
     )
     prose = localized(
         lang,
@@ -98,9 +98,9 @@ def _block(
     rare_rows = "".join(_rare_row(row, order) for row in payload.pipelines)
     head = localized(
         lang,
-        f"{escape(view)} — rappel des tokens rares "
+        f"{view}rappel des tokens rares "
         f"(≤ {payload.max_freq} occurrence(s))",
-        f"{escape(view)} — rare-token recall "
+        f"{view}rare-token recall "
         f"(≤ {payload.max_freq} occurrence(s))",
     )
     prose = localized(
@@ -138,10 +138,12 @@ class TextualFidelitySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
             _block(
-                view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang, order
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang, order
             )
             for analysis in result.analyses
             if isinstance(analysis.payload, TextualFidelityPayload)

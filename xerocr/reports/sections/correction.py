@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import CorrectionPayload, PipelineCorrection
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -190,8 +190,8 @@ def _pipeline_block(
 def _block(view: str, payload: CorrectionPayload, lang: str) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — bilan de correction",
-        f"{escape(view)} — correction balance",
+        f"{view}bilan de correction",
+        f"{view}correction balance",
     )
     prose = localized(
         lang,
@@ -224,8 +224,10 @@ class CorrectionSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         blocks = [
-            _block(view_label(analysis.view, ctx.lang), analysis.payload, ctx.lang)
+            _block(view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang)
             for analysis in result.analyses
             if isinstance(analysis.payload, CorrectionPayload)
         ]

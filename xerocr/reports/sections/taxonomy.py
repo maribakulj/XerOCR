@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import PipelineTaxonomy, TaxonomyPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_cell, engine_order
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import composition_bar
 
@@ -115,7 +115,7 @@ def _profile_block(
                 cells.append('<td class="databar"><span class="db-num">·</span></td>')
         rows.append(f'<tr><td class="eng-cell">{escape(cls)}</td>{"".join(cells)}</tr>')
     return (
-        f"<h3>{escape(view)} — {text['title']}</h3>\n"
+        f"<h3>{view}{text['title']}</h3>\n"
         f'<p class="muted">{text["intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["th_class"]}</th>{headers}</tr></thead>\n'
@@ -128,8 +128,8 @@ def _block(
 ) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — composition des erreurs",
-        f"{escape(view)} — error composition",
+        f"{view}composition des erreurs",
+        f"{view}error composition",
     )
     prose = localized(
         lang,
@@ -163,10 +163,12 @@ class TaxonomySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
             _block(
-                view_label(analysis.view, ctx.lang), analysis.payload, order, ctx.lang
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
             )
             for analysis in result.analyses
             if isinstance(analysis.payload, TaxonomyPayload)

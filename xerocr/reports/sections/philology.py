@@ -17,7 +17,7 @@ from xerocr.evaluation.analysis import (
     RomanNumeralsPayload,
 )
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 #: Statuts romains : clé → libellé lisible bilingue (ordre de rendu).
@@ -164,8 +164,8 @@ def _pipeline_block(row: PipelinePhilology, lang: str) -> str:
 def _block(view: str, payload: PhilologyPayload, lang: str) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — marqueurs philologiques",
-        f"{escape(view)} — philological markers",
+        f"{view}marqueurs philologiques",
+        f"{view}philological markers",
     )
     prose = localized(
         lang,
@@ -236,8 +236,8 @@ def _roman_pipeline_block(row: PipelineRomanNumerals, lang: str) -> str:
 def _roman_block(view: str, payload: RomanNumeralsPayload, lang: str) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — numéraux romains",
-        f"{escape(view)} — Roman numerals",
+        f"{view}numéraux romains",
+        f"{view}Roman numerals",
     )
     prose = localized(
         lang,
@@ -264,9 +264,10 @@ class PhilologySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         blocks: list[str] = []
         for analysis in result.analyses:
-            label = view_label(analysis.view, ctx.lang)
+            label = view_prefix(analysis.view, ctx.lang, multi=multi)
             if isinstance(analysis.payload, PhilologyPayload):
                 blocks.append(_block(label, analysis.payload, ctx.lang))
             elif isinstance(analysis.payload, RomanNumeralsPayload):

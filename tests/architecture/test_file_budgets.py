@@ -34,6 +34,11 @@ FILE_BUDGETS: dict[str, int] = {
     # (``document_lines`` + ``document_taxonomy``, vue document recentrée :
     # 1102 LOC) + ~15 %.
     "evaluation/analysis.py": 1265,
+    # CSS **inline** du rapport autonome : une chaîne `_CSS` unique (contrainte
+    # d'autonomie — aucun fichier externe) + helpers d'assemblage. Cohésion du
+    # design system > éclatement ; grandit avec les composants (axe 2). Budget
+    # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
+    "reports/html.py": 705,
 }
 
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import CharConfusion, DiagnosticsPayload, WorstLine
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, view_label
+from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.text_diff import char_diff
 
@@ -134,6 +134,7 @@ class DiagnosticsSection:
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         order = engine_order(p.pipeline for p in result.pipelines)
+        multi = len({a.view for a in result.analyses}) > 1
         blocks: list[str] = []
         for analysis in result.analyses:
             payload = analysis.payload
@@ -146,7 +147,7 @@ class DiagnosticsSection:
             )
             if inner:
                 blocks.append(
-                    f"<h3>{escape(view_label(analysis.view, ctx.lang))} — "
+                    f"<h3>{view_prefix(analysis.view, ctx.lang, multi=multi)}"
                     "où ça casse</h3>\n" + inner
                 )
         if not blocks:

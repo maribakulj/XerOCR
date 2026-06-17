@@ -13,7 +13,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import LinesPayload, PipelineLines
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized, view_label
+from xerocr.reports.html import localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -59,8 +59,8 @@ def _block(
     )
     dist_head = localized(
         lang,
-        f"{escape(view)} — distribution du CER par ligne",
-        f"{escape(view)} — per-line CER distribution",
+        f"{view}distribution du CER par ligne",
+        f"{view}per-line CER distribution",
     )
     dist_prose = localized(
         lang,
@@ -83,8 +83,8 @@ def _block(
     th_catastrophic = localized(lang, "catastrophiques", "catastrophic")
     heat_head = localized(
         lang,
-        f"{escape(view)} — heatmap positionnelle (début → fin de document)",
-        f"{escape(view)} — positional heatmap (document start → end)",
+        f"{view}heatmap positionnelle (début → fin de document)",
+        f"{view}positional heatmap (document start → end)",
     )
     heat_prose = localized(
         lang,
@@ -123,10 +123,12 @@ class LinesSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
             _block(
-                view_label(analysis.view, ctx.lang), analysis.payload, order, ctx.lang
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
             )
             for analysis in result.analyses
             if isinstance(analysis.payload, LinesPayload)

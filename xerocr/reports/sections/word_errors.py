@@ -23,7 +23,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import WordError, WordErrorPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_letter, engine_order
-from xerocr.reports.html import escape, view_label
+from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import word_engine_heatmap
 
@@ -219,7 +219,7 @@ def _overlap_block(
             f'<td class="muted">{sample}{more}</td></tr>'
         )
     return (
-        f"<h3>{escape(view)} — {text['overlap_subtitle']}</h3>\n"
+        f"<h3>{view}{text['overlap_subtitle']}</h3>\n"
         f'<p class="muted">{text["overlap_intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["legend"]}</th>'
@@ -257,7 +257,7 @@ def _variant_block(
         )
         rows.append(f'<tr><td class="eng-cell">{escape(word.word)}</td>{cells}</tr>')
     return (
-        f"<h3>{escape(view)} — {text['variant_subtitle']}</h3>\n"
+        f"<h3>{view}{text['variant_subtitle']}</h3>\n"
         f'<p class="muted">{text["variant_intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["th_word"]}</th>{headers}</tr></thead>\n'
@@ -290,7 +290,7 @@ def _block(
     )
     graph_note = text["graph_note"].format(n=min(_HEATMAP_ROWS, len(payload.words)))
     return (
-        f"<h3>{escape(view)} — {text['subtitle']}</h3>\n"
+        f"<h3>{view}{text['subtitle']}</h3>\n"
         f'<p class="muted">{text["intro"]}</p>\n'
         f'<p class="muted">{text["legend"]} : {legend}</p>\n'
         f"{svg}\n"
@@ -309,10 +309,12 @@ class WordErrorsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
             _block(
-                view_label(analysis.view, ctx.lang), analysis.payload, order, ctx.lang
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
             )
             for analysis in result.analyses
             if isinstance(analysis.payload, WordErrorPayload)
