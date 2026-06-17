@@ -87,3 +87,34 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
 - **S1.3 (suite) — restant** : `metric_row` (au 2ᵉ consommateur), *cadre de
   section* uniforme (titre + how-to-read homogène).
 - **S1.4 — garde-fou** anti-prolifération de classes.
+
+## S2 — largeur, densité, hiérarchie (analyse, juin 2026)
+
+Captures réelles (Playwright, viewport **1920 px**) + comparaison à la spec
+canonique `design/` (rendue **bornée à 1200 px**). Le rapport est **sain en
+structure** mais **mal calibré en largeur** : sur grand écran il s'étale et
+devient illisible. Problèmes, du plus structurant au plus local :
+
+| # | Problème | Cause (preuve) | Correctif visé |
+|---|---|---|---|
+| **P1** | **Tout s'étire pleine fenêtre** (gouttières géantes, barres de 700 px, colonnes repoussées au bord) | `body.report-board` n'a **ni `max-width` ni centrage**. La spec canonique impose `.report-board{max-width:1200px;margin:0 auto}` (`design/render/render.js:43`) — **absent du rapport réel**. | **Caper la colonne** ~1100–1200 px, centrée. **Corrige toutes les sections d'un coup.** |
+| **P2** | **Barres de données démesurées** (`table.data` databar ∝ largeur de colonne ; légende taxonomy : nom à gauche, % au bord droit) | barre = % de la cellule, cellule = 1/n de la largeur → barre absurde quand large ; légende en `space-between` pleine largeur. | borne la barre (largeur fixe ~120 px, valeur **collée**) ; légende en grille compacte. |
+| **P3** | **Sections « verticales » trop longues** : « Carte des mots ratés » (~40 lignes), « modernisation lexicale » (~25 mots × variantes) = murs verticaux qui **gâchent l'horizontale** | listes mono-colonne. | passer ces listes en **multi-colonnes** (CSS `columns`/grid responsive) → utilise la largeur, réduit la hauteur. C'est le sens de « s'adapter à l'horizontale ». |
+| **P4** | **Titres répétitifs / qui s'enchaînent mal** : le libellé de vue est ressassé partout (« Classement (vue : Texte brut) », « Texte brut — composition… », « Vue : Texte brut ») | suffixe/préfixe de vue **systématique** par section (S1.2). Inutile quand il n'y a **qu'une vue** (cas courant). | afficher le libellé de vue **une seule fois** (bandeau d'onglet/section) ; retirer le ressassage des titres quand vue unique. Clarifier la hiérarchie h2/h3/`drill-caption`. |
+| **P5** | **Grands vides verticaux** (≈ 1/3 de page vide sous l'overview en 1920) | conséquence de P1 (contenu étroit en réalité, conteneur large). | résolu par P1 ; ajuster les gaps ensuite. |
+
+**Inspiration canonique** (`design/screenshots/report-by-engine.png`) : board
+**borné centré**, cartes denses, **barres courtes dans les cellules**, hiérarchie
+nette (eyebrow + titre display + sous-titre). On reproduit ce calibrage.
+
+### Tranches S2 (disciplinées, net-négatif quand possible)
+
+- **S2.1 — largeur max + centrage du board** : le gros levier (~3 décl. CSS),
+  corrige P1 (et P5) pour **toutes** les sections. À faire en premier.
+- **S2.2 — barres de données bornées** : largeur de barre plafonnée + valeur
+  proche (P2), `table.data` databar + légende taxonomy.
+- **S2.3 — libellé de vue affiché une fois** (P4) : retrait du suffixe
+  systématique dans les titres (raffine S1.2 dans le bon sens : une seule
+  surface d'affichage), hiérarchie typographique clarifiée.
+- **S2.4 — sections denses en multi-colonnes** (P3) : « mots ratés » +
+  « modernisation lexicale ».
