@@ -144,7 +144,7 @@ class SynthesisSection:
             if len(ranked) >= 2:
                 runner_cer, runner = ranked[1]
                 delta = f"{runner_cer - best_cer:.4f}"
-                runner_label = engine_cell(runner, order.get(runner, 0))
+                runner_label: str = engine_cell(runner, order.get(runner, 0))
                 label, state = _corrected_verdict(
                     result, view, best, runner, ctx.lang
                 )
