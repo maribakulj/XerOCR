@@ -209,14 +209,30 @@ intégration ultérieure, pas bloquante.
 
 ### Reste (métriques — surface fonctionnelle, hors mise en page)
 
-- **cmer micro + macro** : `conformity.py` calcule déjà les deux, mais la section
-  est **gated à une vue HIPE** → invisible sur l'exemple presse. La **macro** est
-  dérivable des valeurs par-document (`RunResult.documents`) sans toucher le
-  moteur → à exposer (micro · macro) côté rapport. **À trancher** : où (table
-  principale ? bloc dédié ?) et pour quelles métriques (cmer seul vs toutes).
-- **Autres métriques ICDAR** : le moteur n'a que CER/WER/MER (compétition, déjà
-  là) + Region-F1 ICDAR 2015 (`layout.py`, couche segmentation, **pas branchée**
-  au rapport). Pas d'autre famille « ICDAR » nommée → **à préciser** (lesquelles).
+### Tranche M — métriques (décision utilisateur : « je veux tout »)
 
-Chaque R# : analyse ciblée → 1 correctif → capture de vérif vs canon → `make ci`
+Surface fonctionnelle (≠ mise en page) : **5 ajouts métriques**, chacun sa
+tranche (moteur couche 3 + branchement rapport + tests + gate). Ordre conseillé :
+
+- **M1 — dégater la conformité (cmer/wmer micro · macro)** ✅ : `conformity.py`
+  ancre = vue `hipe` **ou** première vue portant `cmer` (profil `standard` depuis
+  R2d) → la section s'affiche sur tout corpus ; deltas norm/heritage **seulement**
+  avec une vraie ancre HIPE + vues brute/heritage (sinon colonnes Δ masquées).
+  Section retitrée « Précision bornée (cMER · wMER) » hors HIPE ; libellé de vue
+  humain. Tests `test_conformity` mis à jour (gate = « aucun cmer → None »).
+- **M2 — exactitude caractère & mot** : `char_accuracy = max(0, 1−CER)`,
+  `word_accuracy = max(0, 1−WER)` (métriques `higher_is_better`, RAW_TEXT,
+  réutilisent l'édition de CER/WER) + groupe « Exactitude ».
+- **M3 — Flexible Character Accuracy (FCA)** : métrique ICDAR 2019 robuste aux
+  réordonnancements — **nouvel algorithme** d'alignement (le plus lourd).
+- **M4 — Bag-of-Words P/R/F1** : multiset de tokens (tp = Σ min comptes ;
+  P = tp/|hyp|, R = tp/|ref|, F1) — RAW_TEXT, déterministe ; groupe « Recherche ».
+- **M5 — brancher Region-F1 ICDAR 2015** : `layout.py` la calcule déjà ; section
+  rapport quand un run de **segmentation** existe (sinon absente).
+
+> ⚠️ Ce sont des tranches **moteur**, pas de la mise en page : à faire une par une
+> (axe 2 — surface incrémentale), chacune vérifiée + commitée seule. Non démarrées
+> en fin de session longue pour ne pas bâcler (cf. discipline anti-empilement).
+
+Chaque R#/M# : analyse ciblée → 1 correctif → capture/golden de vérif → `make ci`
 → commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**
