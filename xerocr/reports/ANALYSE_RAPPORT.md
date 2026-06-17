@@ -247,3 +247,20 @@ tranche (moteur couche 3 + branchement rapport + tests + gate). Ordre conseillé
 
 Chaque R#/M# : analyse ciblée → 1 correctif → capture/golden de vérif → `make ci`
 → commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**
+
+### Tranche L2 — défauts mise en page restants (analyse, MacBook ~1000–1280px)
+
+Constats vérifiés sur captures utilisateur + `design/screenshots/` + CSS (`html.py`).
+
+| # | Symptôme | Cause racine | Direction |
+|---|---|---|---|
+| **L2-a** | **Table métriques déborde / clippée** (13 colonnes, coupée à `HALLUCINAT…`) | (1) `standard` = **13 métriques** empilées (R2d+M2+M3+M4) ; (2) largeur/colonne excessive : en-têtes longs en CAPS (`CHAR_ACCURACY`, `BOW_PRECISION`, `SEARCHABILITY`), padding 14px (`html.py:130`), nombres 12px mono ; (3) **aucun `overflow-x`** autour de `table.data` (`.sec` `html.py:65` sans overflow) → clip viewport, pas de scroll. Le **canonique** fait tenir ~12 colonnes via en-têtes **courts** + cellules compactes. | (1) alléger `standard` (sortir bow → profil/section dédiée, ou profil « complet » opt-in) ; (2) **abréger les en-têtes** (le super-en-tête de groupe porte le contexte : « Recherche · sac de mots » → `P/R/F1` ; « Exactitude » → `car./mot/flex`) ; (3) envelopper les tables larges dans `overflow-x:auto`. |
+| **L2-b** | **Barres trop longues / sans signal** | `bar_cell` normalise par le **max de colonne** (`db-fill` width = value/col_max, `by_engine.py:69`+`html.py:124`). Deux moteurs proches (quasi toujours) → toutes barres ~pleines. Le **canonique n'a pas de barre-soulignement** : il **teinte la cellule** (fond clair ∝ magnitude). | Soit **échelle absolue [0,1]** pour métriques bornées (0.90→90 %, 0.10→10 %), soit **teinte de cellule** façon canonique (compact, résout aussi la largeur). |
+| **L2-c** | **Tables éparses désalignées** (`structured_data` STATUT/N/PART ; `word_errors` étroite) | Libellés en cellule **right-aligned** (`td.disp`) sous en-tête `STATUT` left → décalage ; table 3 colonnes étirée `width:100%` → colonnes éparpillées, grand vide central. Heatmap mots = table étroite + vide à droite. | Aligner le libellé à **gauche** (cohérent avec l'en-tête) ; **plafonner** la largeur des tables éparses (`max-width`, ne pas étirer) ou les disposer **côte à côte** (comme R3). |
+| **L2-d** | **Vue document loin du canonique + casse en fenêtre étroite** | Canonique « Par document » = **galerie compacte** (cartes vignette+titre+mini-barres). XerOCR drill-in = **image fixe 460px** (`html.py:174`) à gauche + diff **2 colonnes** [GT\|sortie] à droite. Bascule 1 colonne seulement < **860px** (`dd-top2`, `html.py:172`) et < **720px** pour `dd-sbs` (`html.py:190`) → à ~1000–1280px : image(½) + [GT\|sortie] tassés. | Cadre image **non fixe** (max-height en `vh`, ou ratio 40/60) ; **remonter** le point de bascule (empiler image au-dessus du diff dès ~1100px) ; en drill-in étroit, diff **unifié** plutôt que 2 colonnes. |
+| **L2-e** *(contenu)* | **Taxonomie « other » 70–76 %** | La classification range la majorité des erreurs en fourre-tout `other` → graphe dominé par une catégorie, peu informatif. | Affiner les règles de classification (couche 3) **ou** assumer/renommer « non classé » et le dé-emphaser. Hors mise en page. |
+
+> ⚠️ L2-a est en partie **auto-infligé** : verser M2/M3/M4 d'office dans `standard`
+> a fait passer la table de 7 à 13 colonnes. Le **canonique** privilégie un socle
+> resserré + cellules compactes — à rapprocher. Tranche **mise en page**, par
+> petits correctifs vérifiés (un défaut, une capture vs canon, un commit).
