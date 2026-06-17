@@ -109,8 +109,10 @@ nette (eyebrow + titre display + sous-titre). On reproduit ce calibrage.
 
 ### Tranches S2 (disciplinées, net-négatif quand possible)
 
-- **S2.1 — largeur max + centrage du board** : le gros levier (~3 décl. CSS),
-  corrige P1 (et P5) pour **toutes** les sections. À faire en premier.
+- **S2.1 — largeur max + centrage du board** ✅ : `body.report-board` passe en
+  `align-items:center` + `.report-chrome,.report-main,.compare-bar{max-width:1200px}`
+  (calage sur la spec canonique). Corrige P1 **et** P5 pour **toutes** les sections
+  d'un coup ; le fond (trame) reste pleine page. Vérifié en capture 1920 px.
 - **S2.2 — barres de données bornées** : largeur de barre plafonnée + valeur
   proche (P2), `table.data` databar + légende taxonomy.
 - **S2.3 — libellé de vue affiché une fois** (P4) : retrait du suffixe

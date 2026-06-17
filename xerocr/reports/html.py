@@ -38,8 +38,12 @@ _CSS = (
     " fill='%231a1917' fill-opacity='0.28'/></svg>\");"
     "background-attachment:fixed;color:var(--ink);"
     "font-family:var(--sans);font-size:14px;line-height:1.5;padding:22px;"
-    "display:flex;flex-direction:column;gap:18px;"
+    "display:flex;flex-direction:column;align-items:center;gap:18px;"
     "-webkit-font-smoothing:antialiased;}"
+    # Colonne de contenu **bornée et centrée** (calage sur la spec canonique
+    # `design/`, 1200 px) : sans plafond, tables/barres s'étirent pleine fenêtre
+    # sur grand écran et deviennent illisibles. Le fond (trame) reste pleine page.
+    ".report-chrome,.report-main,.compare-bar{width:100%;max-width:1200px;}"
     ".report-chrome{display:flex;align-items:center;gap:16px;padding:12px 18px;"
     "background:var(--ink);border-radius:var(--r-pill);color:var(--paper);"
     "flex-wrap:wrap;}"
