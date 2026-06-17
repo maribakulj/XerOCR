@@ -316,6 +316,7 @@ def test_metric_profile_default_is_standard_and_byte_identical(tmp_path: Path) -
     # ``cmer`` (MER caractère borné) exposé d'office au socle, groupé « caractère ».
     assert _plan_metrics(tmp_path, None) == (
         "cer", "cmer", "char_accuracy", "word_accuracy", "fca", "wer", "mer",
+        "bow_precision", "bow_recall", "bow_f1",
         "searchability", "hallucination", "air",
     )
     assert _plan_metrics(tmp_path, "standard") == _plan_metrics(tmp_path, None)

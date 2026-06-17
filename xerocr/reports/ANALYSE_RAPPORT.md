@@ -230,8 +230,11 @@ tranche (moteur couche 3 + branchement rapport + tests + gate). Ordre conseillé
   `evaluation/metrics/flexible.py`, groupe « Exactitude », profil `standard`.
   L'appariement **sous-ligne** récursif de Clausner (non déterministe) est
   **différé** — assumé et documenté.
-- **M4 — Bag-of-Words P/R/F1** : multiset de tokens (tp = Σ min comptes ;
-  P = tp/|hyp|, R = tp/|ref|, F1) — RAW_TEXT, déterministe ; groupe « Recherche ».
+- **M4 — Bag-of-Words P/R/F1** ✅ : multiset de tokens (`tp = Σ min comptes` ;
+  `P = tp/|hyp|`, `R = tp/|réf|`, `F1` harmonique) — `evaluation/metrics/bow.py`,
+  RAW_TEXT, déterministe, insensible à l'ordre ; groupe « Recherche · sac de
+  mots », profil `standard`. P/R agrègent en micro exact (poids |hyp|/|réf|) ;
+  F1 = moyenne pondérée par la taille (non linéaire, documenté).
 - **M5 — brancher Region-F1 ICDAR 2015** : `layout.py` la calcule déjà ; section
   rapport quand un run de **segmentation** existe (sinon absente).
 

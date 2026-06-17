@@ -109,6 +109,7 @@ METRIC_PROFILES: dict[str, tuple[str, ...]] = {
     # CER, donc exposé d'office au socle (≠ réservé HIPE). Groupé « caractère ».
     "standard": (
         "cer", "cmer", "char_accuracy", "word_accuracy", "fca", "wer", "mer",
+        "bow_precision", "bow_recall", "bow_f1",
         "searchability", "hallucination", "air",
     ),
     "essentiel": ("cer", "wer", "mer"),
