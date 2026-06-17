@@ -171,11 +171,11 @@ _CSS = (
     # Détail document : fac-similé medium EN HAUT, zoomable/pan (molette + glisser).
     # Haut de la vue document : fac-similé | diff **côte à côte** (canon « Par
     # document ») ; replie en 1 colonne sur écran étroit.
-    ".dd-top2{display:grid;grid-template-columns:1fr 1fr;gap:16px;"
+    ".dd-top2{display:grid;grid-template-columns:minmax(230px,38%) 1fr;gap:16px;"
     "align-items:start;margin-bottom:14px;}"
-    "@media (max-width:860px){.dd-top2{grid-template-columns:1fr;}}"
+    "@media (max-width:820px){.dd-top2{grid-template-columns:1fr;}}"
     ".dd-fac-top{margin-bottom:14px;}"
-    ".dd-fac-zoom{position:relative;overflow:hidden;height:460px;"
+    ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
     "background:var(--surface);border-radius:var(--r-md);"
     "border:1px solid var(--g-50);cursor:zoom-in;}"
     ".dd-fac-img{width:100%;height:100%;object-fit:contain;display:block;"
