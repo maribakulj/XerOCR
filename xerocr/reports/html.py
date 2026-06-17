@@ -176,10 +176,12 @@ _CSS = (
     ".dd-iq-row{display:flex;align-items:center;gap:8px;font-size:12px;"
     "color:var(--g-700);}"
     ".dd-iq-lbl{flex:0 0 150px;}"
-    ".dd-iq-bar{flex:1;height:8px;background:var(--surface);border-radius:var(--r-pill);"
+    # Primitive partagée : piste de proportion horizontale [0,1]. La coque est
+    # commune (qualité d'image, percentiles, strates) ; l'appelant pose la largeur
+    # du fill (`width:X%`) + sa couleur (classe `lh-*` ou style inline).
+    ".track{flex:1;height:8px;background:var(--surface);border-radius:var(--r-pill);"
     "overflow:hidden;}"
-    ".dd-iq-bar i{display:block;height:100%;background:var(--g-300);"
-    "border-radius:inherit;}"
+    ".track>i{display:block;height:100%;border-radius:inherit;}"
     ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
     ".dd-iq-meta{font-size:11px;margin-top:6px;}"
     # CER ligne par ligne du document : un mini histogramme par moteur (hauteur
@@ -208,9 +210,6 @@ _CSS = (
     ".dd-pct-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
     "font-size:11px;color:var(--g-700);margin-bottom:4px;}"
     ".dd-pct-lbl{flex:0 0 30px;}"
-    ".dd-pct-track{flex:1;height:8px;background:var(--surface);"
-    "border-radius:var(--r-pill);overflow:hidden;}"
-    ".dd-pct-track i{display:block;height:100%;}"
     ".dd-pct-val{flex:0 0 52px;text-align:right;font-variant-numeric:tabular-nums;}"
     # Analyse des hallucinations du document : par moteur, indicateurs + blocs.
     ".dd-hl{margin-bottom:14px;}"
@@ -309,9 +308,6 @@ _CSS = (
     ".strata-head{display:flex;align-items:center;gap:8px;}"
     ".strata-name{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:15px;color:var(--ink);}"
-    ".strata-bar{height:8px;background:var(--g-50);border-radius:var(--r-pill);"
-    "overflow:hidden;}"
-    ".strata-fill{display:block;height:100%;background:var(--fern);opacity:0.55;}"
     ".strata-pct{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:22px;font-variant-numeric:tabular-nums;"
     "color:var(--ink);}"

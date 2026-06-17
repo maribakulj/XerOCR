@@ -111,7 +111,7 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
         )
         pcts = "".join(
             f'<div class="dd-pct-row"><span class="dd-pct-lbl">{label}</span>'
-            f'<span class="dd-pct-track"><i class="lh-{_cer_bucket(v)}" '
+            f'<span class="track"><i class="lh-{_cer_bucket(v)}" '
             f'style="width:{min(100.0, v * 200):.0f}%"></i></span>'
             f'<span class="dd-pct-val">{v * 100:.1f} %</span></div>'
             for label, v in (
@@ -209,7 +209,8 @@ def _iq_bar(label: str, value: float) -> str:
     pct = max(0.0, min(1.0, value)) * 100
     return (
         f'<div class="dd-iq-row"><span class="dd-iq-lbl">{label}</span>'
-        f'<span class="dd-iq-bar"><i style="width:{pct:.0f}%"></i></span>'
+        f'<span class="track"><i style="width:{pct:.0f}%;background:var(--g-300)">'
+        "</i></span>"
         f'<span class="dd-iq-val">{value:.2f}</span></div>'
     )
 

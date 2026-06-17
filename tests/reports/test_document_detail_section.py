@@ -150,7 +150,7 @@ def test_image_quality_block_recentred_on_document() -> None:
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
     assert 'class="dd-iq"' in html  # bloc qualité d'image du doc
-    assert "Netteté" in html and "dd-iq-bar" in html  # barres mesurées
+    assert "Netteté" in html and 'class="track"' in html  # barres mesurées (primitive)
     assert "-1.3°" in html  # inclinaison de CE doc
     # un doc sans mesure (folio_2) ne porte pas le bloc (dégradé propre)
     assert html.count('class="dd-iq"') == 1

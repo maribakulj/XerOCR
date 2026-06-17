@@ -46,8 +46,9 @@ class CorpusCompositionSection:
             f'<div class="strata-row"><div class="strata-head">'
             f'<span class="strata-name">{escape(name)}</span>'
             f'<span class="preview-chip mono">n = {n}</span></div>'
-            f'<div class="strata-bar"><span class="strata-fill" '
-            f'style="width:{round(n / total * 100)}%"></span></div>'
+            f'<div class="track"><i '
+            f'style="width:{round(n / total * 100)}%;background:var(--fern);'
+            f'opacity:0.55"></i></div>'
             f'<span class="strata-pct">{n / total:.0%}</span></div>'
             for name, n in ordered
         )

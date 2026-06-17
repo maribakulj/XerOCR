@@ -68,11 +68,12 @@ composant. Ce n'est pas Picarones, mais c'en est la pente.
   éloignée »). Passée en **grille compacte** (badge · nom · valeur) : la valeur
   suit le nom dans sa colonne (alignée ET proche). 0 classe ajoutée, suppression
   de l'idiome `flex`.
-- **S1.3 (suite) — primitives partagées** : `metric_row`/`bar`/`chip`/`stat_table`,
-  migration des sections, **suppression des `dd-*`**, fusion `prof-*`/`dd-*` en un
-  drill-in. ⚠️ **Non-spéculatif** : une primitive n'est extraite qu'au **2ᵉ
-  consommateur** (garde-fou « pas de consommateur = supprimé ») → on migre les
-  idiomes qui ont **déjà** ≥2 instances (barres, chips), pas une API posée
-  d'avance. **Migration multi-sections = à confirmer** (ampleur). Inclut le
-  *cadre de section* uniforme (reporté de S1.2).
+- **S1.3b — primitive `track` (piste de proportion horizontale)** ✅ : 3 coques
+  quasi-identiques (`dd-iq-bar`, `dd-pct-track`, `strata-bar`/`strata-fill`)
+  fusionnées en **une** `.track` + `.track>i` (l'appelant pose largeur + couleur).
+  Net −4 règles CSS, 3 consommateurs unifiés (qualité d'image, percentiles,
+  strates). Non-spéculatif (3 consommateurs réels au moment de l'extraction).
+- **S1.3 (suite) — primitives restantes** : `chip` (≥2 instances : `dd-hl-chip`,
+  `preview-chip`), `metric_row`, fusion `prof-*`/`dd-*` en un drill-in, *cadre de
+  section* uniforme. Règle : extraire **au 2ᵉ consommateur**, jamais d'avance.
 - **S1.4 — garde-fou** anti-prolifération de classes.
