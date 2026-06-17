@@ -312,10 +312,10 @@ def _plan_metrics(tmp_path: Path, profile: str | None) -> tuple[str, ...]:
 
 
 def test_metric_profile_default_is_standard_and_byte_identical(tmp_path: Path) -> None:
-    # Sans profil → ``standard`` ; et ``standard`` explicite donne le MÊME tuple
-    # (byte-identique à l'historique → aucun golden ne bouge).
+    # Sans profil → ``standard`` ; et ``standard`` explicite donne le MÊME tuple.
+    # ``cmer`` (MER caractère borné) exposé d'office au socle, groupé « caractère ».
     assert _plan_metrics(tmp_path, None) == (
-        "cer", "wer", "mer", "searchability", "hallucination", "air",
+        "cer", "cmer", "wer", "mer", "searchability", "hallucination", "air",
     )
     assert _plan_metrics(tmp_path, "standard") == _plan_metrics(tmp_path, None)
 

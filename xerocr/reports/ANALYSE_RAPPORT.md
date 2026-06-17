@@ -178,7 +178,10 @@ intégration ultérieure, pas bloquante.
      Philologique / Fiabilité / Structuré) en `colspan`. Appliqué overview +
      by_engine (cadrage `lead`/`trail` pour les colonnes hors-métrique). Pas de
      réordonnancement (profils déjà groupés).
-   - **R2d** : métriques — CMER exposé, MUFI réservé médiéval (run_planning).
+   - **R2d** ✅ : **CMER exposé** au profil `standard` (calculé sur RAW_TEXT comme
+     CER, MER caractère borné [0,1] — ≠ réservé HIPE) ; **MUFI** reste au seul
+     profil `philologie` (médiéval). Exemple BNL régénéré en `standard` → CMER
+     visible, MUFI absent (presse XIXe).
 3. **R3 — organisation multi-colonnes (D2)** : remplir l'horizontale — grille de
    sous-tables côte à côte (« mots ratés »), `columns` journal (« modernisation
    lexicale »).

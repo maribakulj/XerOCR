@@ -104,7 +104,10 @@ _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 #: (byte-identique à l'ancienne vue par défaut).
 DEFAULT_METRIC_PROFILE = "standard"
 METRIC_PROFILES: dict[str, tuple[str, ...]] = {
-    "standard": ("cer", "wer", "mer", "searchability", "hallucination", "air"),
+    # ``cmer`` = MER caractère **borné [0,1]** (robuste aux modèles génératifs qui
+    # font dépasser le CER ; cf. metrics/conformity) — calculé sur RAW_TEXT comme
+    # CER, donc exposé d'office au socle (≠ réservé HIPE). Groupé « caractère ».
+    "standard": ("cer", "cmer", "wer", "mer", "searchability", "hallucination", "air"),
     "essentiel": ("cer", "wer", "mer"),
     "philologie": ("cer", "cer_diplo", "mer", "diacritic_err", "mufi_err", "air"),
 }
