@@ -95,6 +95,8 @@ _CSS = (
     ".tcols{display:grid;grid-template-columns:repeat(var(--n,2),1fr);"
     "gap:0 26px;align-items:start;}"
     "@media (max-width:760px){.tcols{grid-template-columns:1fr;}}"
+    ".table-scroll{overflow-x:auto;}"
+    ".table-scroll table.data{min-width:max-content;}"
     "table.data{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0 0;}"
     "table.data th{text-align:left;font-size:10.5px;letter-spacing:0.04em;"
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"

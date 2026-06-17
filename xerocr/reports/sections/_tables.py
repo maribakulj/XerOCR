@@ -150,6 +150,33 @@ def bar_legend(lang: str) -> str:
     return en if lang == "en" else fr
 
 
+#: Libellés **courts** d'en-tête de colonne — le super-en-tête de groupe porte le
+#: contexte (« Recherche · sac de mots » → P/R/F1), le nom complet reste au survol
+#: (glossaire). Réduit fortement la largeur des colonnes (cf. L2-a). Métrique
+#: absente = clé brute (les noms déjà courts : cer/wer/mer/air…).
+_METRIC_SHORT: dict[str, str] = {
+    "cer_diplo": "cer·d",
+    "char_accuracy": "car.",
+    "word_accuracy": "mot",
+    "bow_precision": "P",
+    "bow_recall": "R",
+    "bow_f1": "F1",
+    "searchability": "search.",
+    "hallucination": "halluc.",
+    "diacritic_err": "diacr.",
+    "mufi_err": "MUFI",
+    "region_cer": "CER rég.",
+    "region_detection": "F1 rég.",
+    "numseq_strict": "num·s",
+    "numseq_value": "num·v",
+}
+
+
+def metric_short_label(metric: str) -> str:
+    """Libellé court d'affichage d'une métrique (clé brute si non répertoriée)."""
+    return _METRIC_SHORT.get(metric, metric)
+
+
 def metric_th(metric: str, lang: str, *, sortable: bool = False) -> str:
     """En-tête de colonne de métrique : libellé + **définition au survol** (E1,
     depuis le glossaire) + **affordance de tri** (si ``sortable``).
@@ -164,7 +191,8 @@ def metric_th(metric: str, lang: str, *, sortable: bool = False) -> str:
     cls = "num-cell" + (" has-def" if title else "") + (" sortable" if sortable else "")
     arrow = ' <span class="th-sort" aria-hidden="true">↕</span>' if sortable else ""
     sort_attr = ' aria-sort="none"' if sortable else ""
-    return f'<th class="{cls}"{title_attr}{sort_attr}>{escape(metric)}{arrow}</th>'
+    label = escape(metric_short_label(metric))
+    return f'<th class="{cls}"{title_attr}{sort_attr}>{label}{arrow}</th>'
 
 
 __all__ = [
@@ -173,6 +201,7 @@ __all__ = [
     "col_max",
     "format_value",
     "group_header_row",
+    "metric_short_label",
     "metric_th",
     "nonempty_metric_indices",
     "ordered_unique",

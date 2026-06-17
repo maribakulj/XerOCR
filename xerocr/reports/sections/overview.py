@@ -19,6 +19,7 @@ from xerocr.reports.sections._tables import (
     bar_legend,
     col_max,
     group_header_row,
+    metric_short_label,
     nonempty_metric_indices,
     ordered_unique,
 )
@@ -56,7 +57,11 @@ def _table_for_view(
     keep = nonempty_metric_indices(rows)  # masque les colonnes tout-« — »
     all_metrics = tuple(score.metric for score in pipelines[0].aggregate)
     metrics = [all_metrics[i] for i in keep]
-    header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
+    header = "".join(
+        f'<th class="num-cell" title="{escape(m)}">'
+        f"{escape(metric_short_label(m))}</th>"
+        for m in metrics
+    )
     maxes = [col_max(rows, i) for i in keep]
     body_rows: list[str] = []
     for pipeline in pipelines:
@@ -73,9 +78,10 @@ def _table_for_view(
         head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
     return (
         f"{head}"
+        '<div class="table-scroll">'
         f'<table class="data">\n<thead>{group_header_row(metrics, lang, lead=1)}'
         f"<tr><th>Pipeline</th>{header}</tr></thead>\n"
-        f"<tbody>{''.join(body_rows)}</tbody>\n</table>\n"
+        f"<tbody>{''.join(body_rows)}</tbody>\n</table></div>\n"
         f"{bar_legend(lang)}"
     )
 

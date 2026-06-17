@@ -117,12 +117,12 @@ class EngineSection:
         return Html(
             f"<h2>{heading}</h2>\n"
             + prose
-            + '<table class="data sortable">\n'
+            + '<div class="table-scroll"><table class="data sortable">\n'
             "<thead>"
             + group_header_row(display_metrics, ctx.lang, lead=2, trail=2)
             + f"<tr><th>#</th><th>{th_engine}</th>{header}"
             f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
-            f"<tbody>{''.join(body)}</tbody>\n</table>\n"
+            f"<tbody>{''.join(body)}</tbody>\n</table></div>\n"
             + bar_legend(ctx.lang)
         )
 
