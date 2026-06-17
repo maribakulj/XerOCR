@@ -113,8 +113,11 @@ nette (eyebrow + titre display + sous-titre). On reproduit ce calibrage.
   `align-items:center` + `.report-chrome,.report-main,.compare-bar{max-width:1200px}`
   (calage sur la spec canonique). Corrige P1 **et** P5 pour **toutes** les sections
   d'un coup ; le fond (trame) reste pleine page. Vérifié en capture 1920 px.
-- **S2.2 — barres de données bornées** : largeur de barre plafonnée + valeur
-  proche (P2), `table.data` databar + légende taxonomy.
+- **S2.2 — légende de composition groupée** ✅ : `.comp-row` passait le label
+  en `1fr` → valeur (`%`/compte) projetée au bord droit. Passé à
+  `14px 132px auto auto 1fr` (spacer final) → swatch·label·part·compte **groupés
+  à gauche**, lisibles. (Les data-bars de `table.data` sont redevenues correctes
+  via S2.1 — pas de plafond séparé nécessaire.)
 - **S2.3 — libellé de vue affiché une fois** (P4) : retrait du suffixe
   systématique dans les titres (raffine S1.2 dans le bon sens : une seule
   surface d'affichage), hiérarchie typographique clarifiée.

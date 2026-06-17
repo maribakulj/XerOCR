@@ -347,7 +347,9 @@ _CSS = (
     ".comp-bar{width:100%;height:14px;display:block;border-radius:6px;"
     "overflow:hidden;}"
     ".comp-legend{display:flex;flex-direction:column;gap:4px;}"
-    ".comp-row{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;"
+    # swatch · label · part · compte **groupés à gauche** (spacer 1fr en fin) :
+    # sinon le label en 1fr poussait la valeur au bord droit (illisible en large).
+    ".comp-row{display:grid;grid-template-columns:14px 132px auto auto 1fr;gap:10px;"
     "align-items:center;font-size:12px;}"
     ".comp-sw{width:12px;height:12px;border-radius:3px;}"
     ".comp-label{color:var(--g-700);}"
