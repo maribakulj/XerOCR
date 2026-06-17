@@ -78,6 +78,8 @@ def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -
 _METRIC_GROUPS: tuple[tuple[str, tuple[str, str], frozenset[str]], ...] = (
     ("char", ("Erreur · caractère", "Character error"),
      frozenset({"cer", "cer_diplo", "cmer"})),
+    ("accuracy", ("Exactitude", "Accuracy"),
+     frozenset({"char_accuracy", "word_accuracy"})),
     ("word", ("Erreur · mot", "Word error"),
      frozenset({"wer", "mer", "wil"})),
     ("philo", ("Philologique", "Philological"),

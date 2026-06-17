@@ -220,9 +220,10 @@ tranche (moteur couche 3 + branchement rapport + tests + gate). Ordre conseillé
   avec une vraie ancre HIPE + vues brute/heritage (sinon colonnes Δ masquées).
   Section retitrée « Précision bornée (cMER · wMER) » hors HIPE ; libellé de vue
   humain. Tests `test_conformity` mis à jour (gate = « aucun cmer → None »).
-- **M2 — exactitude caractère & mot** : `char_accuracy = max(0, 1−CER)`,
-  `word_accuracy = max(0, 1−WER)` (métriques `higher_is_better`, RAW_TEXT,
-  réutilisent l'édition de CER/WER) + groupe « Exactitude ».
+- **M2 — exactitude caractère & mot** ✅ : `char_accuracy = max(0, 1−CER)`,
+  `word_accuracy = max(0, 1−WER)` (métriques `higher_is_better`, RAW_TEXT, poids =
+  longueur réf → micro = 1−CER/WER micro), groupe « Exactitude », ajoutées au
+  profil `standard` (ordre contigu cer·cmer | char·word acc | wer·mer).
 - **M3 — Flexible Character Accuracy (FCA)** : métrique ICDAR 2019 robuste aux
   réordonnancements — **nouvel algorithme** d'alignement (le plus lourd).
 - **M4 — Bag-of-Words P/R/F1** : multiset de tokens (tp = Σ min comptes ;

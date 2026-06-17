@@ -14,6 +14,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "air",
         "cer",
         "cer_diplo",
+        "char_accuracy",
         "cmer",
         "del_rate",
         "diacritic_err",
@@ -28,6 +29,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "region_detection",
         "searchability",
         "wer",
+        "word_accuracy",
     )
 
 
@@ -44,12 +46,14 @@ def test_get_and_select_by_input_types() -> None:
         "air",
         "cer",
         "cer_diplo",
+        "char_accuracy",
         "cmer",
         "del_rate",
         "diacritic_err",
         "hallucination",
         "ins_rate",
         "wer",
+        "word_accuracy",
         "mer",
         "mufi_err",
         "numseq_strict",

@@ -107,7 +107,10 @@ METRIC_PROFILES: dict[str, tuple[str, ...]] = {
     # ``cmer`` = MER caractère **borné [0,1]** (robuste aux modèles génératifs qui
     # font dépasser le CER ; cf. metrics/conformity) — calculé sur RAW_TEXT comme
     # CER, donc exposé d'office au socle (≠ réservé HIPE). Groupé « caractère ».
-    "standard": ("cer", "cmer", "wer", "mer", "searchability", "hallucination", "air"),
+    "standard": (
+        "cer", "cmer", "char_accuracy", "word_accuracy", "wer", "mer",
+        "searchability", "hallucination", "air",
+    ),
     "essentiel": ("cer", "wer", "mer"),
     "philologie": ("cer", "cer_diplo", "mer", "diacritic_err", "mufi_err", "air"),
 }

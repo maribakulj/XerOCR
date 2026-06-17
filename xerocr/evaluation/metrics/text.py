@@ -209,10 +209,42 @@ def insertion_rate(ctx: DocContext) -> Observation:
     )
 
 
+@document_metric(
+    name="char_accuracy",
+    input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
+    description="Exactitude caractère : 1 − CER, bornée [0, 1] (lecture ICDAR).",
+    higher_is_better=True,
+    tags=frozenset({"text", "edit_distance", "accuracy"}),
+)
+def char_accuracy(ctx: DocContext) -> Observation:
+    """``max(0, 1 − CER)`` ; poids = longueur de réf. → l'agrégat micro vaut
+    exactement ``1 − CER_micro`` (sauf plancher 0 quand un doc a CER > 1)."""
+    reference, hypothesis = _text_pair(ctx)
+    rate = _error_rate(_edit_distance(reference, hypothesis), len(reference))
+    return Observation(value=max(0.0, 1.0 - rate), weight=len(reference))
+
+
+@document_metric(
+    name="word_accuracy",
+    input_types=(ArtifactType.RAW_TEXT, ArtifactType.RAW_TEXT),
+    description="Exactitude mot : 1 − WER, bornée [0, 1] (lecture ICDAR).",
+    higher_is_better=True,
+    tags=frozenset({"text", "edit_distance", "word", "accuracy"}),
+)
+def word_accuracy(ctx: DocContext) -> Observation:
+    """``max(0, 1 − WER)`` ; poids = nb de mots de réf. (cf. ``char_accuracy``)."""
+    reference, hypothesis = _text_pair(ctx)
+    ref_words, hyp_words = reference.split(), hypothesis.split()
+    rate = _error_rate(_edit_distance(ref_words, hyp_words), len(ref_words))
+    return Observation(value=max(0.0, 1.0 - rate), weight=len(ref_words))
+
+
 #: Socle de métriques texte, collecté explicitement par le registre.
 TEXT_METRICS: tuple[DocumentMetric, ...] = (
     cer,
     cer_diplomatic,
+    char_accuracy,
+    word_accuracy,
     wer,
     mer,
     deletion_rate,
@@ -223,8 +255,10 @@ __all__ = [
     "TEXT_METRICS",
     "cer",
     "cer_diplomatic",
+    "char_accuracy",
     "deletion_rate",
     "insertion_rate",
     "mer",
     "wer",
+    "word_accuracy",
 ]
