@@ -200,6 +200,23 @@ intégration ultérieure, pas bloquante.
    textual_fidelity, correction, diagnostics, word_errors, et cross_engine
    (préfixe « Libellé · » pour ses titres vue·métrique). La colonne « Vue » de la
    table de significativité garde le libellé (c'est une donnée, pas un titre).
+6. **R6 — diagramme de Venn du recouvrement** ✅ (parité Picarones) : `word_overlap_venn`
+   (svg) rend un Venn **2-3 moteurs** des mots ratés par exactement chaque
+   combinaison (cercles teintés par moteur, compte par région), compagnon visuel
+   de la liste UpSet (qui reste la matière accessible). > 3 moteurs → `""` (liste
+   seule). **Verdict « gadget » du début rétracté** : c'est la visualisation
+   canonique du recouvrement, la donnée existait déjà.
+
+### Reste (métriques — surface fonctionnelle, hors mise en page)
+
+- **cmer micro + macro** : `conformity.py` calcule déjà les deux, mais la section
+  est **gated à une vue HIPE** → invisible sur l'exemple presse. La **macro** est
+  dérivable des valeurs par-document (`RunResult.documents`) sans toucher le
+  moteur → à exposer (micro · macro) côté rapport. **À trancher** : où (table
+  principale ? bloc dédié ?) et pour quelles métriques (cmer seul vs toutes).
+- **Autres métriques ICDAR** : le moteur n'a que CER/WER/MER (compétition, déjà
+  là) + Region-F1 ICDAR 2015 (`layout.py`, couche segmentation, **pas branchée**
+  au rapport). Pas d'autre famille « ICDAR » nommée → **à préciser** (lesquelles).
 
 Chaque R# : analyse ciblée → 1 correctif → capture de vérif vs canon → `make ci`
 → commit. **Cible visuelle = `design/screenshots/` (captures canoniques).**

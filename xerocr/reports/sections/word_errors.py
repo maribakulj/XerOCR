@@ -22,10 +22,15 @@ from collections.abc import Mapping
 
 from xerocr.evaluation.analysis import WordError, WordErrorPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.engine_badges import engine_cell, engine_letter, engine_order
+from xerocr.reports.engine_badges import (
+    engine_accent,
+    engine_cell,
+    engine_letter,
+    engine_order,
+)
 from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.svg import word_engine_heatmap
+from xerocr.reports.svg import word_engine_heatmap, word_overlap_venn
 
 #: Lignes de la heatmap **visuelle** (les mots les plus ratés) — la table porte la
 #: liste complète du payload (≤ 50). Borne la hauteur du graphe.
@@ -218,9 +223,23 @@ def _overlap_block(
             f'</span><span class="db-num">{len(words)}</span></td>'
             f'<td class="muted">{sample}{more}</td></tr>'
         )
+    # Venn (2-3 moteurs) : nombre de mots ratés par exactement chaque combinaison
+    # — compagnon visuel de la liste (qui reste la matière détaillée/accessible).
+    columns = _columns(payload, order)
+    col_pos = {name: i for i, name in enumerate(columns)}
+    region_counts: dict[frozenset[int], int] = {}
+    for signature, words in groups.items():
+        region = frozenset(col_pos[n] for n in signature if n in col_pos)
+        region_counts[region] = region_counts.get(region, 0) + len(words)
+    venn = word_overlap_venn(
+        [engine_letter(order.get(name, 0)) for name in columns],
+        region_counts,
+        accents=[engine_accent(order.get(name, 0)) for name in columns],
+    )
     return (
         f"<h3>{view}{text['overlap_subtitle']}</h3>\n"
         f'<p class="muted">{text["overlap_intro"]}</p>\n'
+        f"{venn}"
         '<table class="data">\n'
         f'<thead><tr><th>{text["legend"]}</th>'
         f'<th class="num-cell">{text["th_overlap_count"]}</th>'

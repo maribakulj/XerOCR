@@ -65,7 +65,84 @@ __all__ = [
     "dispersion_strip",
     "num",
     "word_engine_heatmap",
+    "word_overlap_venn",
 ]
+
+
+#: Géométrie fixe des régions de Venn (2 et 3 ensembles) : ``frozenset`` d'indices
+#: de moteur → (x, y) où inscrire le compte. Déterministe, octet-stable.
+_VENN2_POS: dict[frozenset[int], tuple[float, float]] = {
+    frozenset({0}): (78.0, 95.0),
+    frozenset({1}): (242.0, 95.0),
+    frozenset({0, 1}): (160.0, 95.0),
+}
+_VENN3_POS: dict[frozenset[int], tuple[float, float]] = {
+    frozenset({0}): (160.0, 70.0),
+    frozenset({1}): (108.0, 158.0),
+    frozenset({2}): (212.0, 158.0),
+    frozenset({0, 1}): (118.0, 110.0),
+    frozenset({0, 2}): (202.0, 110.0),
+    frozenset({1, 2}): (160.0, 168.0),
+    frozenset({0, 1, 2}): (160.0, 122.0),
+}
+_VENN2_CIRCLES: tuple[tuple[float, float, float], ...] = (
+    (120.0, 95.0, 75.0),
+    (200.0, 95.0, 75.0),
+)
+_VENN3_CIRCLES: tuple[tuple[float, float, float], ...] = (
+    (160.0, 100.0, 68.0),
+    (122.0, 150.0, 68.0),
+    (198.0, 150.0, 68.0),
+)
+
+
+def word_overlap_venn(
+    columns: list[str],
+    region_counts: dict[frozenset[int], int],
+    *,
+    accents: list[str],
+) -> str:
+    """Diagramme de Venn (2 ou 3 moteurs) du **recouvrement** des mots ratés.
+
+    ``columns`` = libellés moteur (lettres) ; ``region_counts`` = ``frozenset``
+    d'indices de moteur → nombre de mots ratés par **exactement** cette
+    combinaison ; ``accents`` = couleur par moteur (alignée sur ``columns``).
+    Cercles teintés (faible opacité) + compte inscrit dans chaque région.
+    Au-delà de 3 moteurs un Venn n'est pas lisible → ``""`` (l'appelant garde la
+    liste). Compagnon **visuel** (``aria-hidden`` ; la matière vit dans la table).
+    Déterministe (coords ``num``), zéro JS."""
+    n = len(columns)
+    if n == 2:
+        circles, pos, width, height = _VENN2_CIRCLES, _VENN2_POS, 320.0, 190.0
+    elif n == 3:
+        circles, pos, width, height = _VENN3_CIRCLES, _VENN3_POS, 320.0, 240.0
+    else:
+        return ""
+    parts: list[str] = []
+    for i, (cx, cy, r) in enumerate(circles):
+        parts.append(
+            f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+            f'class="venn-circle" style="fill:{accents[i]};stroke:{accents[i]}"/>'
+        )
+    for i, (cx, _cy, r) in enumerate(circles):
+        ly = circles[i][1] - r - 4 if n == 3 and i == 0 else circles[i][1] - r - 4
+        parts.append(
+            f'<text x="{num(cx)}" y="{num(ly)}" class="venn-label" '
+            f'text-anchor="middle">{escape(columns[i])}</text>'
+        )
+    for region, (x, y) in pos.items():
+        count = region_counts.get(region, 0)
+        if count <= 0:
+            continue
+        parts.append(
+            f'<text x="{num(x)}" y="{num(y)}" class="venn-count" '
+            f'text-anchor="middle">{count}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" width="{num(width)}" '
+        f'height="{num(height)}" class="venn-svg" aria-hidden="true">'
+        f'{"".join(parts)}</svg>'
+    )
 
 
 def bar_series(

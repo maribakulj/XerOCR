@@ -371,6 +371,13 @@ _CSS = (
     ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
+    # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par
+    # moteur (faible opacité), compte par région inscrit.
+    ".venn-svg{max-width:340px;height:auto;display:block;margin:.4rem 0 .2rem;}"
+    ".venn-circle{fill-opacity:0.13;stroke-width:1.5;}"
+    ".venn-count{font-family:var(--mono);font-size:15px;fill:var(--ink);"
+    "font-variant-numeric:tabular-nums;}"
+    ".venn-label{font-family:var(--mono);font-size:11px;fill:var(--g-500);}"
     ".wmap-svg{max-width:100%;height:auto;display:block;background:var(--surface);"
     "border-radius:var(--r-md);margin:.4rem 0 0;}"
     ".wmap-word{font-family:var(--mono);font-size:11px;fill:var(--ink);}"

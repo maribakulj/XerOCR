@@ -9,7 +9,45 @@ from xerocr.reports.svg import (
     dispersion_strip,
     num,
     word_engine_heatmap,
+    word_overlap_venn,
 )
+
+
+def test_word_overlap_venn_two_engines_regions_and_counts() -> None:
+    svg = word_overlap_venn(
+        ["A", "B"],
+        {frozenset({0}): 5, frozenset({1}): 3, frozenset({0, 1}): 44},
+        accents=["var(--fern)", "var(--slate)"],
+    )
+    assert svg.startswith("<svg") and 'class="venn-svg"' in svg
+    assert svg.count("<circle") == 2
+    assert ">5<" in svg and ">3<" in svg and ">44<" in svg
+    assert ">A<" in svg and ">B<" in svg
+    assert "var(--fern)" in svg and "var(--slate)" in svg
+
+
+def test_word_overlap_venn_three_engines_has_three_circles() -> None:
+    svg = word_overlap_venn(
+        ["A", "B", "C"], {frozenset({0, 1, 2}): 7}, accents=["#a", "#b", "#c"]
+    )
+    assert svg.count("<circle") == 3 and ">7<" in svg
+
+
+def test_word_overlap_venn_skips_zero_regions() -> None:
+    svg = word_overlap_venn(
+        ["A", "B"], {frozenset({0}): 0, frozenset({0, 1}): 9}, accents=["#a", "#b"]
+    )
+    assert ">9<" in svg and ">0<" not in svg
+
+
+def test_word_overlap_venn_beyond_three_is_empty() -> None:
+    assert word_overlap_venn(["A", "B", "C", "D"], {}, accents=["#a"] * 4) == ""
+
+
+def test_word_overlap_venn_is_deterministic() -> None:
+    a = word_overlap_venn(["A", "B"], {frozenset({0}): 2}, accents=["#a", "#b"])
+    b = word_overlap_venn(["A", "B"], {frozenset({0}): 2}, accents=["#a", "#b"])
+    assert a == b
 
 
 def test_bar_series_one_rect_per_value_scaled_to_max() -> None:
