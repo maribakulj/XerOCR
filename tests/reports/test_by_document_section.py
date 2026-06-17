@@ -69,10 +69,20 @@ def test_renders_english_labels() -> None:
 
 
 def test_none_value_rendered_as_dash() -> None:
-    result = _result(_doc("f", "tesseract", None))
+    # colonne avec données (tesseract 0.10) → gardée ; la valeur None (pero) → « — »
+    # (une colonne *entièrement* None serait masquée — cf. nonempty_metric_indices)
+    result = _result(_doc("f", "tesseract", 0.10), _doc("f", "pero", None))
     html = DocumentSection().render(result, SectionContext())
     assert html is not None
     assert "—" in html
+
+
+def test_all_none_metric_column_is_hidden() -> None:
+    # un métrique sans aucune valeur (tout None) ne doit pas encombrer avec des « — »
+    result = _result(_doc("f", "tesseract", None), _doc("f", "pero", None))
+    html = DocumentSection().render(result, SectionContext())
+    assert html is not None
+    assert "—" not in html  # colonne cer entièrement vide → masquée
 
 
 def test_no_documents_returns_none() -> None:

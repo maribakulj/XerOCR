@@ -18,8 +18,10 @@ from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import (
     bar_cell,
+    bar_legend,
     col_max,
     metric_th,
+    nonempty_metric_indices,
     ordered_unique,
 )
 
@@ -62,13 +64,14 @@ class EngineSection:
         # Badge moteur (lettre + accent) = identité STABLE, indépendante du rang :
         # ordre canonique = première apparition dans le run (partagé entre sections).
         order = engine_order(p.pipeline for p in result.pipelines)
-        maxes = [col_max([p.aggregate for p in rows], i) for i in range(len(metrics))]
+        keep = nonempty_metric_indices([p.aggregate for p in rows])  # masque tout-« — »
+        maxes = [col_max([p.aggregate for p in rows], i) for i in keep]
         profil_title = localized(ctx.lang, "Profil", "Profile")
         body: list[str] = []
         for position, pipeline in enumerate(ordered, start=1):
             cells = "".join(
-                bar_cell(s, maxes[i], sortable=True)
-                for i, s in enumerate(pipeline.aggregate)
+                bar_cell(pipeline.aggregate[i], maxes[j], sortable=True)
+                for j, i in enumerate(keep)
             )
             vals = _per_doc_values(result.documents, pipeline.pipeline, view, rank)
             disp = (
@@ -85,7 +88,9 @@ class EngineSection:
                 f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
                 f'title="{profil_title}">→</a></td></tr>'
             )
-        header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
+        header = "".join(
+            metric_th(metrics[i], ctx.lang, sortable=True) for i in keep
+        )
         heading = localized(
             ctx.lang,
             f"Classement (vue : {escape(view_label(view, ctx.lang))})",
@@ -111,6 +116,7 @@ class EngineSection:
             f"<thead><tr><th>#</th><th>{th_engine}</th>{header}"
             f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table>\n"
+            + bar_legend(ctx.lang)
         )
 
 

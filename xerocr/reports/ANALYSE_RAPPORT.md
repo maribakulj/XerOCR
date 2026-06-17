@@ -165,12 +165,16 @@ intégration ultérieure, pas bloquante.
    structured_data, economics, conformity, textual_fidelity (rappel + flux),
    synthesis (meilleur + suivant), diagnostics (confusions). Ordre moteur global
    (`engine_order`) threadé. Couleur cohérente partout (comme le canon).
-2. **R2 — tableau de métriques groupé (D4+D5)** : refonte de la table « Par
-   moteur » au modèle canonique — super-en-têtes thématiques, indice d'échelle
-   par colonne, **barres subtiles à échelle commune + légende** (corrige les
-   barres qui « remplissent tout »), colonnes tout-`—` masquées. Métriques :
-   set canonique avec ce qui existe (CER, CER diplo, **CMER**, WER, MER,
-   diacritiques, repérabilité, hallucination…), MUFI réservé médiéval.
+2. **R2 — tableau de métriques groupé (D4+D5)** — en sous-tranches :
+   - **R2a** ✅ : **barres subtiles + légende** — `db-fill` passe d'un bloc qui
+     remplit la cellule à un **fin trait de base** (position sur l'axe, échelle
+     commune par colonne) + `bar_legend()` partagée sous overview/by_engine.
+     Corrige le « n'a aucun sens et remplit tout ».
+   - **R2b** ✅ : **masquer les colonnes tout-`—`** — `nonempty_metric_indices()`
+     (distingue tout-None → masqué vs tout-zéro → gardé) appliqué à overview /
+     by_engine / by_document. AIR/HCPR vides disparaissent.
+   - **R2c** : super-en-têtes thématiques (groupes) + indice d'échelle/colonne.
+   - **R2d** : métriques — CMER exposé, MUFI réservé médiéval (run_planning).
 3. **R3 — organisation multi-colonnes (D2)** : remplir l'horizontale — grille de
    sous-tables côte à côte (« mots ratés »), `columns` journal (« modernisation
    lexicale »).

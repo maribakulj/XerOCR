@@ -15,7 +15,12 @@ from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    col_max,
+    nonempty_metric_indices,
+    ordered_unique,
+)
 
 
 class DocumentSection:
@@ -48,16 +53,18 @@ def _table_for_view(
     lang: str,
 ) -> str:
     rows = [d for d in documents if d.view == view_name]
-    metrics = tuple(score.metric for score in rows[0].scores)
+    keep = nonempty_metric_indices([d.scores for d in rows])  # masque tout-« — »
+    all_metrics = tuple(score.metric for score in rows[0].scores)
+    metrics = [all_metrics[i] for i in keep]
     header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
-    maxes = [col_max([d.scores for d in rows], i) for i in range(len(metrics))]
+    maxes = [col_max([d.scores for d in rows], i) for i in keep]
     body: list[str] = []
     for doc_id in ordered_unique(d.document_id for d in rows):
         doc_rows = [d for d in rows if d.document_id == doc_id]
         for offset, doc in enumerate(doc_rows):
             label = escape(doc_id) if offset == 0 else ""  # groupé : nom 1×
             cells = "".join(
-                bar_cell(score, maxes[i]) for i, score in enumerate(doc.scores)
+                bar_cell(doc.scores[i], maxes[j]) for j, i in enumerate(keep)
             )
             badge = engine_cell(doc.pipeline, order.get(doc.pipeline, 0))
             body.append(

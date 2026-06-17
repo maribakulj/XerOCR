@@ -36,6 +36,22 @@ def col_max(rows: list[tuple[MetricScore, ...]], index: int) -> float:
     return max(values) if values else 0.0
 
 
+def nonempty_metric_indices(rows: list[tuple[MetricScore, ...]]) -> list[int]:
+    """Indices de colonnes ayant **au moins une** valeur non ``None``.
+
+    Une colonne tout-``None`` (métrique non applicable au corpus, ex. AIR/HCPR sur
+    de la presse) n'apporte que des « — » : on la **masque** pour désencombrer.
+    On distingue bien « tout None » (masqué) de « tout zéro » (gardé : c'est une
+    vraie valeur)."""
+    if not rows:
+        return []
+    return [
+        i
+        for i in range(len(rows[0]))
+        if any(r[i].value is not None for r in rows)
+    ]
+
+
 def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -> str:
     """Cellule ``td.databar`` : barre relative à la colonne + valeur.
 
@@ -57,6 +73,22 @@ def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -
     )
 
 
+def bar_legend(lang: str) -> str:
+    """Légende des barres de données (explique l'indicateur subtil sous les valeurs).
+
+    Le canon montre une barre = **position sur l'axe de la métrique**, à **échelle
+    commune par colonne** — sans légende, le lecteur ne sait pas ce qu'elle code."""
+    fr = (
+        '<p class="muted bar-legend">La barre sous chaque valeur indique sa '
+        "position sur l'axe de la métrique — échelle commune par colonne.</p>\n"
+    )
+    en = (
+        '<p class="muted bar-legend">The bar under each value shows its position '
+        "on the metric's axis — common scale per column.</p>\n"
+    )
+    return en if lang == "en" else fr
+
+
 def metric_th(metric: str, lang: str, *, sortable: bool = False) -> str:
     """En-tête de colonne de métrique : libellé + **définition au survol** (E1,
     depuis le glossaire) + **affordance de tri** (si ``sortable``).
@@ -74,4 +106,12 @@ def metric_th(metric: str, lang: str, *, sortable: bool = False) -> str:
     return f'<th class="{cls}"{title_attr}{sort_attr}>{escape(metric)}{arrow}</th>'
 
 
-__all__ = ["bar_cell", "col_max", "format_value", "metric_th", "ordered_unique"]
+__all__ = [
+    "bar_cell",
+    "bar_legend",
+    "col_max",
+    "format_value",
+    "metric_th",
+    "nonempty_metric_indices",
+    "ordered_unique",
+]

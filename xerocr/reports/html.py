@@ -108,8 +108,10 @@ _CSS = (
     "table.data td.databar{position:relative;padding:0;font-family:var(--mono);"
     "font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink);"
     "border-bottom:1px solid var(--g-50);vertical-align:middle;}"
-    "table.data td.databar .db-fill{position:absolute;top:6px;bottom:6px;left:6px;"
-    "border-radius:8px;background:var(--fern);opacity:0.18;z-index:0;}"
+    # Indicateur **subtil** : fin trait de base (position sur l'axe de la métrique,
+    # échelle commune par colonne) — ne « remplit » plus la cellule comme un bloc.
+    "table.data td.databar .db-fill{position:absolute;left:14px;bottom:5px;height:3px;"
+    "border-radius:2px;background:var(--fern);opacity:0.55;z-index:0;}"
     "table.data td.databar .db-num{position:relative;z-index:1;display:block;"
     "text-align:right;padding:12px 14px;}"
     "table.data td.rank{padding:11px 8px 11px 14px;color:var(--g-400);"

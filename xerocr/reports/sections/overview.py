@@ -14,7 +14,13 @@ from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    bar_legend,
+    col_max,
+    nonempty_metric_indices,
+    ordered_unique,
+)
 
 
 class OverviewSection:
@@ -42,14 +48,16 @@ class OverviewSection:
 def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
     pipelines = [p for p in result.pipelines if p.view == view_name]
     order = engine_order(p.pipeline for p in result.pipelines)
-    metrics = tuple(score.metric for score in pipelines[0].aggregate)
-    header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
     rows = [p.aggregate for p in pipelines]
-    maxes = [col_max(rows, i) for i in range(len(metrics))]
+    keep = nonempty_metric_indices(rows)  # masque les colonnes tout-« — »
+    all_metrics = tuple(score.metric for score in pipelines[0].aggregate)
+    metrics = [all_metrics[i] for i in keep]
+    header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
+    maxes = [col_max(rows, i) for i in keep]
     body_rows: list[str] = []
     for pipeline in pipelines:
         cells = "".join(
-            bar_cell(score, maxes[i]) for i, score in enumerate(pipeline.aggregate)
+            bar_cell(pipeline.aggregate[i], maxes[j]) for j, i in enumerate(keep)
         )
         badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
         body_rows.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')
@@ -57,7 +65,8 @@ def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
     return (
         f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
         f'<table class="data">\n<thead><tr><th>Pipeline</th>{header}</tr></thead>\n'
-        f"<tbody>{''.join(body_rows)}</tbody>\n</table>"
+        f"<tbody>{''.join(body_rows)}</tbody>\n</table>\n"
+        f"{bar_legend(lang)}"
     )
 
 
