@@ -276,9 +276,9 @@ Constats vérifiés sur captures utilisateur + `design/screenshots/` + CSS (`htm
 - **L2-d** ✅ vue document : cadre image `minmax(230px,38%)` (au lieu de 50 %) +
   hauteur `clamp(300px,46vh,420px)` (au lieu de 460px fixe), bascule 1 colonne à
   820px → le diff GT/sortie reçoit la largeur.
-- **L2-b** (barres de table normalisées par max-colonne) : **reste** — nécessite
-  le passage à la **teinte de cellule** (canon) plutôt qu'une barre ; décision à
-  prendre (rework de `bar_cell` transverse).
+- **L2-b** ✅ barres → **cellules teintées** (option A canon) : `bar_cell` pose
+  `--t` (= value/col_max), fond sauge ∝ `--t` ; `.db-fill` conservé pour
+  image_quality/word_errors (longueur = score). Fin des barres saturées.
 
 > ⚠️ L2-a est en partie **auto-infligé** : verser M2/M3/M4 d'office dans `standard`
 > a fait passer la table de 7 à 13 colonnes. Le **canonique** privilégie un socle
