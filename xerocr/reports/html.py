@@ -61,7 +61,13 @@ _CSS = (
     "font-family:var(--mono);font-size:10.5px;}"
     ".chrome-btn:hover{background:rgba(239,237,232,0.18);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
-    ".tab-panel{display:flex;flex-direction:column;gap:14px;}"
+    # Flux de cartes (masonry CSS, sans JS) : le panneau coule ses cartes en
+    # colonnes de ~23rem qui se réagencent selon la largeur ; chaque carte reste
+    # entière (break-inside). Les cartes larges (tableaux, héros) prennent toute
+    # la largeur (column-span). Réempile en 1 colonne sur écran étroit.
+    ".tab-panel{columns:23rem;column-gap:14px;}"
+    ".tab-panel>.r-block,.tab-panel>.view-hero{break-inside:avoid;margin:0 0 14px;}"
+    ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{column-span:all;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
@@ -176,6 +182,12 @@ _CSS = (
     # Bandeau étroit **centré** au-dessus du diff (qui prend toute la largeur en
     # dessous) — image modeste, le texte respire.
     ".dd-fac-top{max-width:560px;margin:0 auto 14px;}"
+    # Cartes secondaires du drill-in (CER, heatmap ligne, qualité image…) en flux :
+    # chacune à sa taille, côte à côte, réagencement par largeur (masonry CSS).
+    ".dd-flow{columns:21rem;column-gap:12px;margin-top:14px;}"
+    ".dd-card{break-inside:avoid;margin:0 0 12px;border:1px solid var(--g-50);"
+    "border-radius:var(--r-md);padding:13px 15px;background:var(--surface);}"
+    ".dd-card.dd-wide{column-span:all;}"
     ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
     "background:var(--surface);border-radius:var(--r-md);"
     "border:1px solid var(--g-50);cursor:zoom-in;}"

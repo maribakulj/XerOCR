@@ -179,7 +179,7 @@ def test_line_heatmap_recentred_on_document() -> None:
     assert "Gini" in html and "CER≥30 %" in html  # badges de distribution
 
 
-def test_image_quality_stays_last_below_line_heatmap() -> None:
+def test_line_heatmap_is_wide_card_image_quality_flows() -> None:
     base = _result()
     dl = DocumentLinesPayload(
         documents=(
@@ -206,8 +206,11 @@ def test_image_quality_stays_last_below_line_heatmap() -> None:
     )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
-    # qualité d'image (dd-iq) APRÈS la heatmap (dd-lh) — graphique image en dernier
-    assert html.index('class="dd-lh"') < html.index('class="dd-iq"')
+    # Flux de cartes : la distribution par ligne (large) prend toute la largeur
+    # (dd-wide) ; la qualité d'image est une petite carte qui s'écoule au-dessus.
+    assert 'class="dd-card dd-wide"' in html
+    assert 'class="dd-lh"' in html and 'class="dd-iq"' in html
+    assert html.index('class="dd-iq"') < html.index('dd-card dd-wide')
 
 
 def test_hallucination_block_recentred_on_document() -> None:

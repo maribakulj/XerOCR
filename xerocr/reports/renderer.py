@@ -151,10 +151,22 @@ _SECTION_TAB = {
 }
 
 
+#: Sections **intrinsèquement larges** (tableaux multi-colonnes, galeries, charts
+#: pleine largeur) : elles prennent toute la largeur dans le flux de cartes
+#: (``column-span:all``). Les autres (petits charts/listes) s'écoulent en colonnes.
+_WIDE_SECTIONS: frozenset[str] = frozenset({
+    "synthesis", "overview", "by_engine", "engine_profiles", "conformity",
+    "structured_data", "ner", "lines", "economics", "cross_engine",
+    "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
+    "diagnostics",
+})
+
+
 def _block(name: str, html: str, lang: str) -> str:
     """Une section = sa **propre carte** ``.sec``, région ancrée (``#r-<name>``)."""
+    wide = " r-wide" if name in _WIDE_SECTIONS else ""
     return (
-        f'<section id="r-{escape(name)}" class="r-block sec" '
+        f'<section id="r-{escape(name)}" class="r-block sec{wide}" '
         f'aria-label="{escape(_label(name, lang))}">{html}</section>'
     )
 

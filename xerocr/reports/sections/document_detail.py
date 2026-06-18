@@ -381,11 +381,22 @@ class DocumentDetailSection:
         # écran, et tient même pour de longues pages multi-colonnes). Sans image :
         # le diff seul. Puis CER → heatmap ligne → hallucinations → qualité image.
         top = f"{fac_block}{diffs}"
-        body = (
-            f"{top}"
-            f'<div class="drill-caption">{cer_title}</div>'
-            f'<div class="dd-cers">{cer_rows}</div>{lh_block}{hl_block}{iq_block}'
-        )
+        # Les graphiques secondaires (CER par moteur, heatmap ligne,
+        # hallucinations, qualité image) deviennent des **cartes** qui s'écoulent
+        # côte à côte (chacune à sa taille) au lieu d'être empilées pleine largeur.
+        sec_cards = [
+            f'<div class="dd-card"><div class="drill-caption">{cer_title}</div>'
+            f'<div class="dd-cers">{cer_rows}</div></div>'
+        ]
+        # Petites cartes (CER, hallucinations, qualité image) s'écoulent côte à
+        # côte ; la distribution par ligne (heatmap + percentiles) est large →
+        # elle prend toute la largeur (dd-wide) pour ne pas être tassée.
+        sec_cards += [
+            f'<div class="dd-card">{blk}</div>' for blk in (hl_block, iq_block) if blk
+        ]
+        if lh_block:
+            sec_cards.append(f'<div class="dd-card dd-wide">{lh_block}</div>')
+        body = f'{top}<div class="dd-flow">{"".join(sec_cards)}</div>'
         back = localized(lang, "← retour à la galerie", "← back to gallery")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
