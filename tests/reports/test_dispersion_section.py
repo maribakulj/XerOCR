@@ -55,9 +55,12 @@ def test_renders_one_strip_per_engine() -> None:
     assert html is not None
     assert "Dispersion du CER" in html
     assert html.count('class="disp-row"') == 2  # un par moteur
-    assert html.count('class="disp-strip"') == 2  # une bande SVG par moteur
-    # labels min·méd·µ·max en pourcentage (échelle commune : max 30 %)
-    assert "min 10.0 % · méd 20.0 % · µ 20.0 % · max 30.0 %" in html  # tesseract
+    assert html.count('class="box-plot"') == 2  # une boîte SVG par moteur
+    # labels min·Q1·méd·µ·Q3·max en pourcentage (échelle commune : max 30 %)
+    assert (
+        "min 10.0 % · Q1 5.0 % · méd 20.0 % · µ 20.0 % · Q3 35.0 % · max 30.0 %"
+        in html
+    )  # tesseract
 
 
 def test_none_without_documents() -> None:
@@ -90,7 +93,7 @@ def test_renders_english_labels() -> None:
     )
     assert html is not None
     assert "CER dispersion" in html and "Dispersion du CER" not in html
-    assert "Range per document" in html and "Étendue par document" not in html
+    assert "Box plot per engine" in html and "Boîte à moustaches" not in html
     assert "Common scale across engines" in html
     # labels use the English "med" abbreviation, not the French "méd"
     assert "med 20.0 %" in html and "méd" not in html

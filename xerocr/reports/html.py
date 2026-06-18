@@ -362,6 +362,13 @@ _CSS = (
     ".disp-mean{stroke:var(--ink);stroke-width:1.5;}"
     ".disp-labels{grid-column:2;font-size:11px;color:var(--g-500);"
     "font-variant-numeric:tabular-nums;}"
+    # Boîte à moustaches (SVG serveur) : moustaches min→max + capuchons, boîte
+    # interquartile teintée, trait médian (couleur moteur), tick moyenne (encre).
+    ".box-plot{width:100%;height:22px;display:block;}"
+    ".box-whisker,.box-cap{stroke:var(--g-300);stroke-width:1.5;}"
+    ".box-box{fill-opacity:0.32;stroke-width:1.5;}"
+    ".box-med{stroke-width:2;}"
+    ".box-mean{stroke:var(--ink);stroke-width:1;stroke-dasharray:2 2;}"
     # Courbe de calibration (SVG serveur) : diagonale pointillée = parfaite,
     # polyligne + disques = le moteur. Plot carré à gauche, table à droite.
     ".calib-block{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;"

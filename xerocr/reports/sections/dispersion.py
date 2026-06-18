@@ -8,14 +8,14 @@ zéro JS. Donnée : ``RunResult.documents`` (CER par document, déjà calculé).
 
 from __future__ import annotations
 
-from statistics import fmean, median
+from statistics import fmean, median, quantiles
 
 from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
-from xerocr.reports.svg import dispersion_strip
+from xerocr.reports.svg import box_plot
 
 _METRIC = "cer"
 
@@ -37,7 +37,7 @@ def _pct(v: float) -> str:
 
 
 class DispersionSection:
-    """Bandes de dispersion du CER par moteur (min·médiane·µ·max, échelle commune)."""
+    """Boîtes à moustaches du CER par moteur (Q1·médiane·µ·Q3, échelle commune)."""
 
     name = "dispersion"
     requires: tuple[str, ...] = ()
@@ -70,10 +70,11 @@ class DispersionSection:
         )
         intro = localized(
             lang,
-            '<p class="muted">Étendue par document : min · médiane (disque) · '
-            "moyenne (tick) · max. Échelle commune entre moteurs.</p>\n",
-            '<p class="muted">Range per document: min · median (disc) · '
-            "mean (tick) · max. Common scale across engines.</p>\n",
+            '<p class="muted">Boîte à moustaches par moteur : moustaches min→max, '
+            "boîte interquartile Q1→Q3, trait médian, tick moyenne. Échelle "
+            "commune entre moteurs.</p>\n",
+            '<p class="muted">Box plot per engine: whiskers min→max, interquartile '
+            "box Q1→Q3, median line, mean tick. Common scale across engines.</p>\n",
         )
         return Html(
             f"<h2>{title}</h2>\n"
@@ -87,18 +88,23 @@ class DispersionSection:
     ) -> str:
         lo, hi = min(vals), max(vals)
         med, mean = median(vals), fmean(vals)
+        # Quartiles : ``quantiles`` exige ≥2 points ; sinon boîte plate sur la valeur.
+        if len(vals) >= 2:
+            q1, _q2, q3 = quantiles(vals, n=4)
+        else:
+            q1 = q3 = med
         accent = engine_accent(index)
-        strip = dispersion_strip(lo, med, mean, hi, scale_max, accent=accent)
+        plot = box_plot(lo, q1, med, q3, hi, mean, scale_max, accent=accent)
         med_label = localized(lang, "méd", "med")
         return (
             '<div class="disp-row">'
             f'<div class="disp-head"><span class="eng-badge" style="--badge:{accent}">'
             f"{engine_letter(index)}</span>"
             f'<span class="disp-name">{escape(pipeline)}</span></div>'
-            f"{strip}"
+            f"{plot}"
             '<div class="disp-labels mono">'
-            f"min {_pct(lo)} · {med_label} {_pct(med)} · µ {_pct(mean)} · "
-            f"max {_pct(hi)}"
+            f"min {_pct(lo)} · Q1 {_pct(q1)} · {med_label} {_pct(med)} · "
+            f"µ {_pct(mean)} · Q3 {_pct(q3)} · max {_pct(hi)}"
             "</div></div>"
         )
 

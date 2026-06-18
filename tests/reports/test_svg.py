@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from xerocr.reports.svg import (
     bar_series,
+    box_plot,
     bubble_chart,
     calibration_curve,
     composition_bar,
@@ -13,6 +14,14 @@ from xerocr.reports.svg import (
     word_engine_heatmap,
     word_overlap_venn,
 )
+
+
+def test_box_plot_parts_and_deterministic() -> None:
+    svg = box_plot(0.0, 0.1, 0.2, 0.3, 0.5, 0.22, 0.5, accent="var(--fern)")
+    for cls in ("box-whisker", "box-cap", "box-box", "box-med", "box-mean"):
+        assert cls in svg
+    assert svg.startswith("<svg") and 'aria-hidden="true"' in svg
+    assert svg == box_plot(0.0, 0.1, 0.2, 0.3, 0.5, 0.22, 0.5, accent="var(--fern)")
 
 
 def test_bubble_chart_empty_has_frame_no_dots() -> None:

@@ -163,8 +163,54 @@ def bubble_chart(
     )
 
 
+def box_plot(
+    lo: float,
+    q1: float,
+    med: float,
+    q3: float,
+    hi: float,
+    mean: float,
+    scale_max: float,
+    *,
+    accent: str,
+    width: float = 280.0,
+    height: float = 22.0,
+) -> str:
+    """Boîte à moustaches horizontale d'un moteur : moustaches min→max (+ capuchons),
+    boîte interquartile Q1→Q3, trait **médian**, repère **moyenne** (tick). Échelle
+    commune (``scale_max`` partagé) → boîtes comparables entre moteurs. Étirée par
+    CSS (``preserveAspectRatio="none"``). Déterministe (coords ``num``), zéro JS."""
+    s = scale_max or 1.0
+
+    def xv(v: float) -> float:
+        return max(0.0, min(v, s)) / s * width
+
+    mid = height / 2.0
+    box_top, box_h = height * 0.20, height * 0.60
+    cap_top, cap_bot = height * 0.30, height * 0.70
+    box_x, box_w = xv(q1), max(1.0, xv(q3) - xv(q1))
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="box-plot" '
+        'preserveAspectRatio="none" aria-hidden="true">'
+        f'<line x1="{num(xv(lo))}" y1="{num(mid)}" x2="{num(xv(hi))}" '
+        f'y2="{num(mid)}" class="box-whisker"/>'
+        f'<line x1="{num(xv(lo))}" y1="{num(cap_top)}" x2="{num(xv(lo))}" '
+        f'y2="{num(cap_bot)}" class="box-cap"/>'
+        f'<line x1="{num(xv(hi))}" y1="{num(cap_top)}" x2="{num(xv(hi))}" '
+        f'y2="{num(cap_bot)}" class="box-cap"/>'
+        f'<rect x="{num(box_x)}" y="{num(box_top)}" width="{num(box_w)}" '
+        f'height="{num(box_h)}" class="box-box" style="fill:{accent};stroke:{accent}"/>'
+        f'<line x1="{num(xv(med))}" y1="{num(box_top)}" x2="{num(xv(med))}" '
+        f'y2="{num(box_top + box_h)}" class="box-med" style="stroke:{accent}"/>'
+        f'<line x1="{num(xv(mean))}" y1="{num(height * 0.12)}" x2="{num(xv(mean))}" '
+        f'y2="{num(height * 0.88)}" class="box-mean"/>'
+        "</svg>"
+    )
+
+
 __all__ = [
     "bar_series",
+    "box_plot",
     "bubble_chart",
     "calibration_curve",
     "composition_bar",
