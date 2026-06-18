@@ -39,6 +39,13 @@ FILE_BUDGETS: dict[str, int] = {
     # design system > éclatement ; grandit avec les composants (axe 2). Budget
     # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
     "reports/html.py": 705,
+    # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
+    # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
+    # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu
+    # (coords ``num`` octet-stables, accents passés par l'appelant) > éclatement ;
+    # grandit d'un graphe à la fois (axe 2). Budget re-basé au courant (703 LOC)
+    # + ~15 %.
+    "reports/svg.py": 810,
 }
 
 

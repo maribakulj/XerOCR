@@ -426,6 +426,23 @@ _CSS = (
     ".donut-legend{text-align:center;}"
     ".donut-key{display:inline-block;width:9px;height:9px;border-radius:2px;"
     "vertical-align:middle;margin-right:2px;}"
+    # Graphe haltère (SVG serveur) : une ligne par document, points = CER par
+    # moteur reliés (min→max). Échelle uniforme, libellé doc à gauche.
+    ".dumb-wrap{max-width:380px;margin:8px auto 4px;}"
+    ".dumb-svg{width:100%;height:auto;display:block;}"
+    ".dumb-link{stroke:var(--g-300);stroke-width:2;}"
+    ".dumb-dot{stroke-width:1;fill-opacity:0.9;}"
+    ".dumb-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".dumb-legend{text-align:center;}"
+    # Bump chart (SVG serveur) : rang moteur par métrique, lignes + points ; les
+    # croisements = inversions de classement. Grille de rangs + libellés métrique.
+    ".bump-wrap{max-width:360px;margin:8px auto 4px;}"
+    ".bump-svg{width:100%;height:auto;display:block;}"
+    ".bump-grid{stroke:var(--g-50);stroke-width:1;}"
+    ".bump-rank,.bump-col{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".bump-line{fill:none;stroke-width:2.5;stroke-linejoin:round;}"
+    ".bump-dot{stroke-width:1;}"
+    ".bump-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

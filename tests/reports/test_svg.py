@@ -6,10 +6,12 @@ from xerocr.reports.svg import (
     bar_series,
     box_plot,
     bubble_chart,
+    bump_chart,
     calibration_curve,
     composition_bar,
     dispersion_strip,
     donut_chart,
+    dumbbell_rows,
     grouped_columns,
     num,
     radar_chart,
@@ -27,6 +29,28 @@ def test_donut_chart_empty_full_and_segments() -> None:
     assert multi.count('class="donut-seg"') == 3
     assert "donut-hole" in multi
     assert multi == donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])  # octet-stable
+
+
+def test_bump_chart_empty_and_lines() -> None:
+    assert bump_chart([], [], accents=[], n_ranks=2) == ""
+    assert bump_chart(["m"], [("e", [1])], accents=["a"], n_ranks=1) == ""  # <2 cols
+    cols = ["CER", "F1"]
+    series = [("e1", [1, 2]), ("e2", [2, 1])]
+    svg = bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
+    assert svg.count('class="bump-line"') == 2
+    assert svg.count('class="bump-dot"') == 4  # 2 séries × 2 colonnes
+    assert "CER" in svg and "F1" in svg
+    assert svg == bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
+
+
+def test_dumbbell_rows_empty_and_links() -> None:
+    assert dumbbell_rows([], scale_max=1.0) == ""
+    rows = [("d1", [(0.1, "a"), (0.3, "b")]), ("d2", [(0.2, "a"), (0.2, "b")])]
+    svg = dumbbell_rows(rows, scale_max=0.4)
+    assert svg.count('class="dumb-dot"') == 4  # 2 points × 2 lignes
+    assert svg.count('class="dumb-link"') == 2  # une liaison par ligne (≥2 points)
+    assert "d1" in svg and "d2" in svg
+    assert svg == dumbbell_rows(rows, scale_max=0.4)  # octet-stable
 
 
 def test_grouped_columns_empty_is_empty() -> None:

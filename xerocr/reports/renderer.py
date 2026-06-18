@@ -25,12 +25,14 @@ _SECTION_LABELS = {
     "by_engine": "Par moteur",
     "engine_radar": "Profil radar",
     "metric_columns": "Colonnes métriques",
+    "rank_bump": "Bascule de classement",
     "engine_profiles": "Profils moteur",
     "documents": "Par document",
     "image_quality": "Qualité image",
     "quality_error": "Qualité × erreur",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "engine_duel": "Duel par document",
     "word_errors": "Carte des mots",
     "conformity": "Conformité HIPE",
     "structure": "Structure",
@@ -55,12 +57,14 @@ _SECTION_LABELS_EN = {
     "by_engine": "By engine",
     "engine_radar": "Radar profile",
     "metric_columns": "Metric columns",
+    "rank_bump": "Ranking shift",
     "engine_profiles": "Engine profiles",
     "documents": "By document",
     "image_quality": "Image quality",
     "quality_error": "Quality × error",
     "dispersion": "Dispersion",
     "cross_engine": "Cross-engine",
+    "engine_duel": "Per-document duel",
     "conformity": "HIPE conformity",
     "structure": "Layout structure",
     "correction": "Correction balance",
@@ -138,6 +142,7 @@ _SECTION_TAB = {
     "by_engine": "engines",
     "engine_radar": "engines",
     "metric_columns": "engines",
+    "rank_bump": "engines",
     "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
@@ -156,6 +161,7 @@ _SECTION_TAB = {
     "image_quality": "documents",
     "quality_error": "documents",
     "cross_engine": "crosses",
+    "engine_duel": "crosses",
     "word_errors": "crosses",
 }
 
@@ -368,6 +374,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.dispersion import DispersionSection
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
+    from xerocr.reports.sections.engine_duel import EngineDuelSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.engine_radar import EngineRadarSection
     from xerocr.reports.sections.image_quality import ImageQualitySection
@@ -377,6 +384,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.philology import PhilologySection
     from xerocr.reports.sections.quality_error import QualityErrorSection
+    from xerocr.reports.sections.rank_bump import RankBumpSection
     from xerocr.reports.sections.structure import StructureSection
     from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
@@ -392,6 +400,7 @@ def default_report_renderer() -> ReportRenderer:
             EngineSection(),
             EngineRadarSection(),
             MetricColumnsSection(),
+            RankBumpSection(),
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),
@@ -399,6 +408,7 @@ def default_report_renderer() -> ReportRenderer:
             QualityErrorSection(),
             CrossEngineSection(),
             WordErrorsSection(),
+            EngineDuelSection(),
             ConformitySection(),
             StructureSection(),
             CorrectionSection(),

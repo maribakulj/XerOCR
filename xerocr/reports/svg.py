@@ -257,6 +257,111 @@ def donut_chart(
     )
 
 
+def bump_chart(
+    columns: list[str],
+    series: list[tuple[str, list[int]]],
+    *,
+    accents: list[str],
+    n_ranks: int,
+    width: float = 340.0,
+    height: float = 180.0,
+) -> str:
+    """Bump chart (bascule de classement) : ``columns`` = étapes en abscisse
+    (libellés en bas), ``series`` = ``(libellé, [rang 1-based par colonne])`` ;
+    rang 1 **en haut**. Polyligne + points par série ; les lignes qui se
+    **croisent** = inversions de classement. Échelle uniforme (points ronds).
+    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
+    n_c = len(columns)
+    if n_c < 2 or not series or n_ranks < 1:
+        return ""
+    pad_l, pad_r, pad_t, pad_b = 22.0, 10.0, 8.0, 20.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    def cx(i: int) -> float:
+        return pad_l + (plot_w * i / (n_c - 1) if n_c > 1 else plot_w / 2.0)
+
+    def cy(rank: int) -> float:
+        return pad_t + (
+            plot_h * (rank - 1) / (n_ranks - 1) if n_ranks > 1 else plot_h / 2.0
+        )
+
+    parts: list[str] = []
+    for r in range(1, n_ranks + 1):
+        y = cy(r)
+        parts.append(
+            f'<line x1="{num(pad_l)}" y1="{num(y)}" x2="{num(pad_l + plot_w)}" '
+            f'y2="{num(y)}" class="bump-grid"/>'
+            f'<text x="{num(pad_l - 6.0)}" y="{num(y + 3.0)}" class="bump-rank" '
+            f'text-anchor="end">{r}</text>'
+        )
+    for i, label in enumerate(columns):
+        parts.append(
+            f'<text x="{num(cx(i))}" y="{num(height - 6.0)}" class="bump-col" '
+            f'text-anchor="middle">{escape(label)}</text>'
+        )
+    for si, (_name, ranks) in enumerate(series):
+        accent = accents[si] if si < len(accents) else "var(--ink)"
+        m = min(n_c, len(ranks))
+        pts = " ".join(f"{num(cx(i))},{num(cy(ranks[i]))}" for i in range(m))
+        parts.append(
+            f'<polyline points="{pts}" class="bump-line" style="stroke:{accent}"/>'
+        )
+        for i in range(m):
+            parts.append(
+                f'<circle cx="{num(cx(i))}" cy="{num(cy(ranks[i]))}" r="4" '
+                f'class="bump-dot" style="fill:{accent};stroke:{accent}"/>'
+            )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bump-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
+def dumbbell_rows(
+    rows: list[tuple[str, list[tuple[float, str]]]],
+    *,
+    scale_max: float,
+    width: float = 340.0,
+    label_w: float = 66.0,
+    row_h: float = 20.0,
+) -> str:
+    """Graphe haltère (dumbbell) : une ligne par ``rows`` = ``(libellé, [(valeur,
+    couleur)])`` ; les points d'une ligne sont reliés (min→max) et posés sur une
+    **échelle commune** (``scale_max``). Pour 2 moteurs = un duel par document ;
+    plus = un dot-plot. Échelle uniforme (points ronds). Déterministe, zéro JS."""
+    if not rows:
+        return ""
+    s = scale_max or 1.0
+    plot_w = width - label_w - 6.0
+    height = row_h * len(rows) + 4.0
+
+    def x(v: float) -> float:
+        return label_w + max(0.0, min(v, s)) / s * plot_w
+
+    parts: list[str] = []
+    for i, (label, dots) in enumerate(rows):
+        cy = row_h * i + row_h / 2.0 + 2.0
+        if len(dots) >= 2:
+            xs = [x(v) for v, _c in dots]
+            parts.append(
+                f'<line x1="{num(min(xs))}" y1="{num(cy)}" x2="{num(max(xs))}" '
+                f'y2="{num(cy)}" class="dumb-link"/>'
+            )
+        for v, accent in dots:
+            parts.append(
+                f'<circle cx="{num(x(v))}" cy="{num(cy)}" r="4" class="dumb-dot" '
+                f'style="fill:{accent};stroke:{accent}"/>'
+            )
+        parts.append(
+            f'<text x="0" y="{num(cy + 3.0)}" class="dumb-label">{escape(label)}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="dumb-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
 def grouped_columns(
     groups: list[str],
     series: list[tuple[str, list[float]]],
@@ -311,10 +416,12 @@ __all__ = [
     "bar_series",
     "box_plot",
     "bubble_chart",
+    "bump_chart",
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",
     "donut_chart",
+    "dumbbell_rows",
     "grouped_columns",
     "num",
     "radar_chart",
