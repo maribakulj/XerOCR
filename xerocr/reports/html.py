@@ -386,6 +386,15 @@ _CSS = (
     ".comp-label{color:var(--g-700);}"
     ".comp-share{color:var(--ink);font-variant-numeric:tabular-nums;}"
     ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
+    # Radar multi-métrique (SVG serveur) : grille concentrique + un polygone teinté
+    # par moteur (superposés). Carré, centré dans sa carte ; légende moteurs sous.
+    ".radar-wrap{max-width:300px;margin:8px auto 4px;}"
+    ".radar-svg{width:100%;height:auto;display:block;}"
+    ".radar-grid{fill:none;stroke:var(--g-100);stroke-width:1;}"
+    ".radar-spoke{stroke:var(--g-100);stroke-width:1;}"
+    ".radar-axis{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".radar-area{fill-opacity:0.13;stroke-width:2;stroke-linejoin:round;}"
+    ".radar-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

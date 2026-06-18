@@ -23,6 +23,7 @@ _SECTION_LABELS = {
     "overview": "Vue d'ensemble",
     "corpus_composition": "Composition",
     "by_engine": "Par moteur",
+    "engine_radar": "Profil radar",
     "engine_profiles": "Profils moteur",
     "documents": "Par document",
     "image_quality": "Qualité image",
@@ -50,6 +51,7 @@ _SECTION_LABELS_EN = {
     "overview": "Overview",
     "corpus_composition": "Composition",
     "by_engine": "By engine",
+    "engine_radar": "Radar profile",
     "engine_profiles": "Engine profiles",
     "documents": "By document",
     "image_quality": "Image quality",
@@ -130,6 +132,7 @@ _SECTION_TAB = {
     "overview": "overview",
     "corpus_composition": "overview",
     "by_engine": "engines",
+    "engine_radar": "engines",
     "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
@@ -360,6 +363,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
+    from xerocr.reports.sections.engine_radar import EngineRadarSection
     from xerocr.reports.sections.image_quality import ImageQualitySection
     from xerocr.reports.sections.lines import LinesSection
     from xerocr.reports.sections.ner import NerSection
@@ -378,6 +382,7 @@ def default_report_renderer() -> ReportRenderer:
             OverviewSection(),
             CorpusCompositionSection(),
             EngineSection(),
+            EngineRadarSection(),
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),

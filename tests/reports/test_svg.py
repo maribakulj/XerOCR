@@ -8,9 +8,28 @@ from xerocr.reports.svg import (
     composition_bar,
     dispersion_strip,
     num,
+    radar_chart,
     word_engine_heatmap,
     word_overlap_venn,
 )
+
+
+def test_radar_chart_too_few_axes_is_empty() -> None:
+    assert radar_chart(["A", "B"], [("e", [0.5, 0.5])], accents=["var(--fern)"]) == ""
+    assert radar_chart(["A", "B", "C"], [], accents=[]) == ""
+
+
+def test_radar_chart_one_polygon_per_series_and_deterministic() -> None:
+    axes = ["Car.", "Mot", "F1", "Rech."]
+    series = [("a", [0.9, 0.6, 0.7, 0.8]), ("b", [0.5, 0.5, 0.4, 0.3])]
+    accents = ["var(--fern)", "var(--slate)"]
+    svg = radar_chart(axes, series, accents=accents)
+    # une aire par série + grille (4 anneaux) + libellé d'axe présent.
+    assert svg.count('class="radar-area"') == 2
+    assert svg.count('class="radar-grid"') == 4
+    assert "Rech." in svg
+    assert svg.startswith("<svg") and 'aria-hidden="true"' in svg
+    assert svg == radar_chart(axes, series, accents=accents)  # octet-stable
 
 
 def test_word_overlap_venn_two_engines_regions_and_counts() -> None:

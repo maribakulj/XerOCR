@@ -9,6 +9,8 @@ flottant à précision variable). Les couleurs d'accent sont passées par l'appe
 
 from __future__ import annotations
 
+import math
+
 from xerocr.reports.html import escape
 
 #: Précision fixe des coordonnées SVG (déterminisme inter-plateformes).
@@ -58,12 +60,75 @@ def dispersion_strip(
     )
 
 
+def radar_chart(
+    axes: list[str],
+    series: list[tuple[str, list[float]]],
+    *,
+    accents: list[str],
+    size: float = 260.0,
+) -> str:
+    """Radar (toile d'araignée) multi-métrique : ``axes`` = libellés (chaque axe
+    normalisé « plus loin = meilleur », valeurs dans [0,1]) ; ``series`` =
+    ``(libellé, [valeur par axe])`` ; ``accents`` = couleur par série. Grille
+    concentrique + un polygone par série (superposés). Moins de 3 axes → ``""``
+    (un radar n'a pas de sens). Déterministe (coords ``num``), zéro JS."""
+    n = len(axes)
+    if n < 3 or not series:
+        return ""
+    cx = cy = size / 2.0
+    radius = size / 2.0 - 50.0
+
+    def point(i: int, frac: float) -> tuple[float, float]:
+        angle = -math.pi / 2.0 + 2.0 * math.pi * i / n
+        return (
+            cx + math.cos(angle) * radius * frac,
+            cy + math.sin(angle) * radius * frac,
+        )
+
+    parts: list[str] = []
+    for ring in (0.25, 0.5, 0.75, 1.0):
+        pts = " ".join(
+            f"{num(x)},{num(y)}" for x, y in (point(i, ring) for i in range(n))
+        )
+        parts.append(f'<polygon points="{pts}" class="radar-grid"/>')
+    for i, label in enumerate(axes):
+        ex, ey = point(i, 1.0)
+        parts.append(
+            f'<line x1="{num(cx)}" y1="{num(cy)}" x2="{num(ex)}" y2="{num(ey)}" '
+            'class="radar-spoke"/>'
+        )
+        lx, ly = point(i, 1.13)
+        anchor = "middle" if abs(lx - cx) < 1.0 else ("start" if lx > cx else "end")
+        parts.append(
+            f'<text x="{num(lx)}" y="{num(ly + 3.0)}" class="radar-axis" '
+            f'text-anchor="{anchor}">{escape(label)}</text>'
+        )
+    for s_idx, (_label, values) in enumerate(series):
+        pts = " ".join(
+            f"{num(x)},{num(y)}"
+            for x, y in (
+                point(i, max(0.0, min(values[i], 1.0)))
+                for i in range(min(n, len(values)))
+            )
+        )
+        accent = accents[s_idx] if s_idx < len(accents) else "var(--ink)"
+        parts.append(
+            f'<polygon points="{pts}" class="radar-area" '
+            f'style="fill:{accent};stroke:{accent}"/>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(size)} {num(size)}" class="radar-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
 __all__ = [
     "bar_series",
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",
     "num",
+    "radar_chart",
     "word_engine_heatmap",
     "word_overlap_venn",
 ]
