@@ -173,12 +173,9 @@ _CSS = (
     ".dd-diff-head{font-size:11px;color:var(--g-500);margin-bottom:6px;"
     "display:flex;align-items:center;gap:6px;}"
     # Détail document : fac-similé medium EN HAUT, zoomable/pan (molette + glisser).
-    # Haut de la vue document : fac-similé | diff **côte à côte** (canon « Par
-    # document ») ; replie en 1 colonne sur écran étroit.
-    ".dd-top2{display:grid;grid-template-columns:minmax(230px,38%) 1fr;gap:16px;"
-    "align-items:start;margin-bottom:14px;}"
-    "@media (max-width:820px){.dd-top2{grid-template-columns:1fr;}}"
-    ".dd-fac-top{margin-bottom:14px;}"
+    # Bandeau étroit **centré** au-dessus du diff (qui prend toute la largeur en
+    # dessous) — image modeste, le texte respire.
+    ".dd-fac-top{max-width:560px;margin:0 auto 14px;}"
     ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
     "background:var(--surface);border-radius:var(--r-md);"
     "border:1px solid var(--g-50);cursor:zoom-in;}"
