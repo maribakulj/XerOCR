@@ -31,6 +31,7 @@ from xerocr.reports.engine_badges import (
 from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import word_engine_heatmap, word_overlap_venn
+from xerocr.reports.text_diff import char_diff
 
 #: Lignes de la heatmap **visuelle** (les mots les plus ratés) — la table porte la
 #: liste complète du payload (≤ 50). Borne la hauteur du graphe.
@@ -248,6 +249,15 @@ def _overlap_block(
     )
 
 
+def _produced_cell(gt: str, variant: str, empty: str) -> str:
+    """Cellule « forme produite » : écart au mot GT **surligné** (nature de la
+    confusion, ex. ``ist`` → ``i[f]t``). ``∅`` (mot supprimé) reste en sourdine."""
+    if variant == empty:
+        return f'<td class="disp"><span class="muted">{escape(empty)}</span></td>'
+    _, hyp_html = char_diff(gt, variant)
+    return f'<td class="disp">{hyp_html}</td>'
+
+
 def _variant_block(
     view: str,
     payload: WordErrorPayload,
@@ -259,7 +269,7 @@ def _variant_block(
 
     Rend la ``variant`` (forme produite dominante) **déjà portée** par le payload
     pour les mots les plus durs — ``maistre`` → ``maitre``/``maistrc`` (``∅`` =
-    supprimé). Verbatim, aucune invention.
+    supprimé), l'**écart au mot GT surligné**. Verbatim, aucune invention.
     """
     headers = "".join(
         f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
@@ -269,7 +279,7 @@ def _variant_block(
     for word in payload.words[:_VARIANT_ROWS]:
         produced = {engine.pipeline: engine.variant for engine in word.per_engine}
         cells = "".join(
-            f'<td class="disp">{escape(produced[name])}</td>'
+            _produced_cell(word.word, produced[name], "∅")
             if name in produced
             else f'<td class="disp">{text["empty"]}</td>'
             for name in columns

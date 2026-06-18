@@ -81,9 +81,10 @@ def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     # Mots de la GT **verbatim**.
     assert "prologve" in html and "roi" in html
     # #3 forme produite : la variante dominante (portée par le payload) est
-    # désormais rendue — la forme produite apparaît, verbatim (rien d'inventé).
+    # rendue avec l'**écart au mot GT surligné** (char_diff → <ins>) — les parties
+    # stables restent verbatim ("prolog"), le caractère changé est marqué.
     assert "forme produite par moteur" in html
-    assert "prologue" in html and "prolog" in html and "roy" in html
+    assert "prolog" in html and 'class="d-ins"' in html
     # #2 recouvrement inter-moteurs + regroupements (libellés FR).
     assert "recouvrement inter-moteurs" in html
     assert "tous" in html and "un seul" in html
