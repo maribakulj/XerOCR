@@ -122,8 +122,50 @@ def radar_chart(
     )
 
 
+def bubble_chart(
+    points: list[tuple[float, float, float, str]],
+    *,
+    width: float = 320.0,
+    height: float = 240.0,
+    r_min: float = 3.0,
+    r_max: float = 17.0,
+) -> str:
+    """Nuage de bulles : ``points`` = ``(x, y, taille, couleur)`` avec x, y dans
+    [0,1] (l'appelant normalise/échelonne les axes) ; le **rayon** ∝ √(taille/max)
+    code une 3ᵉ dimension. Origine en **bas-gauche** (y inversé pour l'écran).
+    Cadre clair + repères à mi-axes + bulles teintées translucides (les
+    chevauchements restent lisibles). **Pas** de ``preserveAspectRatio=none`` :
+    l'échelle reste uniforme → les bulles restent rondes. Déterministe (coords
+    ``num``), zéro JS, ``aria-hidden`` (la matière vit dans les tableaux)."""
+    pad = 6.0
+    plot_w, plot_h = width - pad * 2, height - pad * 2
+    frame = (
+        f'<rect x="{num(pad)}" y="{num(pad)}" width="{num(plot_w)}" '
+        f'height="{num(plot_h)}" class="bubble-frame"/>'
+        f'<line x1="{num(pad + plot_w / 2)}" y1="{num(pad)}" '
+        f'x2="{num(pad + plot_w / 2)}" y2="{num(pad + plot_h)}" class="bubble-grid"/>'
+        f'<line x1="{num(pad)}" y1="{num(pad + plot_h / 2)}" '
+        f'x2="{num(pad + plot_w)}" y2="{num(pad + plot_h / 2)}" class="bubble-grid"/>'
+    )
+    size_max = max((s for _x, _y, s, _c in points), default=1.0) or 1.0
+    dots: list[str] = []
+    for x01, y01, size, accent in points:
+        cx = pad + max(0.0, min(x01, 1.0)) * plot_w
+        cy = pad + (1.0 - max(0.0, min(y01, 1.0))) * plot_h
+        r = r_min + (r_max - r_min) * (max(0.0, size) / size_max) ** 0.5
+        dots.append(
+            f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+            f'class="bubble-dot" style="fill:{accent};stroke:{accent}"/>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bubble-svg" '
+        f'aria-hidden="true">{frame}{"".join(dots)}</svg>'
+    )
+
+
 __all__ = [
     "bar_series",
+    "bubble_chart",
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",

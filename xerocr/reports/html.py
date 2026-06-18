@@ -395,6 +395,14 @@ _CSS = (
     ".radar-axis{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".radar-area{fill-opacity:0.13;stroke-width:2;stroke-linejoin:round;}"
     ".radar-legend{text-align:center;}"
+    # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
+    # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.
+    ".bubble-wrap{max-width:360px;margin:8px auto 4px;}"
+    ".bubble-svg{width:100%;height:auto;display:block;}"
+    ".bubble-frame{fill:none;stroke:var(--g-100);stroke-width:1;}"
+    ".bubble-grid{stroke:var(--g-50);stroke-width:1;stroke-dasharray:3 3;}"
+    ".bubble-dot{fill-opacity:0.34;stroke-width:1;stroke-opacity:0.65;}"
+    ".bubble-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par
