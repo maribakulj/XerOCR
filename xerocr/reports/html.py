@@ -410,6 +410,14 @@ _CSS = (
     ".bubble-grid{stroke:var(--g-50);stroke-width:1;stroke-dasharray:3 3;}"
     ".bubble-dot{fill-opacity:0.34;stroke-width:1;stroke-opacity:0.65;}"
     ".bubble-legend{text-align:center;}"
+    # Colonnes groupées (SVG serveur) : un groupe de colonnes par métrique, une
+    # colonne par moteur (teinte moteur). Échelle uniforme, libellés sous l'axe.
+    ".col-wrap{max-width:380px;margin:8px auto 4px;}"
+    ".col-svg{width:100%;height:auto;display:block;}"
+    ".col-axis{stroke:var(--g-100);stroke-width:1;}"
+    ".col-bar{fill-opacity:0.85;}"
+    ".col-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".col-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

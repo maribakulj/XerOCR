@@ -9,11 +9,27 @@ from xerocr.reports.svg import (
     calibration_curve,
     composition_bar,
     dispersion_strip,
+    grouped_columns,
     num,
     radar_chart,
     word_engine_heatmap,
     word_overlap_venn,
 )
+
+
+def test_grouped_columns_empty_is_empty() -> None:
+    assert grouped_columns([], [], accents=[]) == ""
+    assert grouped_columns(["A"], [], accents=[]) == ""
+
+
+def test_grouped_columns_one_bar_per_group_series_deterministic() -> None:
+    groups = ["Car.", "Mot"]
+    series = [("e1", [0.5, 0.9]), ("e2", [0.3, 0.7])]
+    accents = ["var(--fern)", "var(--slate)"]
+    svg = grouped_columns(groups, series, accents=accents)
+    assert svg.count('class="col-bar"') == 4  # 2 groupes × 2 séries
+    assert "Car." in svg and "Mot" in svg
+    assert svg == grouped_columns(groups, series, accents=accents)  # octet-stable
 
 
 def test_box_plot_parts_and_deterministic() -> None:

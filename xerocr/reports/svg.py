@@ -208,6 +208,56 @@ def box_plot(
     )
 
 
+def grouped_columns(
+    groups: list[str],
+    series: list[tuple[str, list[float]]],
+    *,
+    accents: list[str],
+    width: float = 360.0,
+    height: float = 190.0,
+) -> str:
+    """Colonnes verticales **groupées** : un groupe par ``groups`` (libellé en bas),
+    une colonne par série dans chaque groupe. ``series`` = ``(libellé, [valeur par
+    groupe])`` avec valeurs dans [0,1] ; ``accents`` = couleur par série. Échelle
+    uniforme (pas de ``preserveAspectRatio=none`` → barres non déformées).
+    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
+    n_g, n_s = len(groups), len(series)
+    if n_g == 0 or n_s == 0:
+        return ""
+    pad_l, pad_r, pad_t, pad_b = 4.0, 4.0, 6.0, 22.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+    base_y = pad_t + plot_h
+    group_w = plot_w / n_g
+    inner = group_w * 0.16
+    bar_w = (group_w - inner) / n_s
+    parts: list[str] = [
+        f'<line x1="{num(pad_l)}" y1="{num(base_y)}" x2="{num(pad_l + plot_w)}" '
+        f'y2="{num(base_y)}" class="col-axis"/>'
+    ]
+    for gi, label in enumerate(groups):
+        gx = pad_l + group_w * gi + inner / 2.0
+        for si, (_name, values) in enumerate(series):
+            v = max(0.0, min(values[gi] if gi < len(values) else 0.0, 1.0))
+            bar_h = v * plot_h
+            x = gx + bar_w * si
+            accent = accents[si] if si < len(accents) else "var(--ink)"
+            parts.append(
+                f'<rect x="{num(x)}" y="{num(base_y - bar_h)}" '
+                f'width="{num(bar_w * 0.86)}" height="{num(bar_h)}" '
+                f'class="col-bar" style="fill:{accent}"/>'
+            )
+        lx = pad_l + group_w * gi + group_w / 2.0
+        parts.append(
+            f'<text x="{num(lx)}" y="{num(height - 7.0)}" class="col-label" '
+            f'text-anchor="middle">{escape(label)}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="col-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
 __all__ = [
     "bar_series",
     "box_plot",
@@ -215,6 +265,7 @@ __all__ = [
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",
+    "grouped_columns",
     "num",
     "radar_chart",
     "word_engine_heatmap",
