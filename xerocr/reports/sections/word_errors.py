@@ -69,6 +69,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "th_total": "total",
         "th_group": "recoupement",
         "graph_note": "Graphe : les {n} mots les plus ratés ; table : liste complète.",
+        "card_matrix": "Matrice mots × moteurs",
+        "card_venn": "Recouvrement (Venn)",
         "u_universal": "tous",
         "u_engine_specific": "un seul",
         "u_partial": "plusieurs",
@@ -109,6 +111,8 @@ _TEXT: dict[str, dict[str, str]] = {
         "th_total": "total",
         "th_group": "overlap",
         "graph_note": "Graph: the {n} most-missed words; table: full list.",
+        "card_matrix": "Words × engines matrix",
+        "card_venn": "Overlap (Venn)",
         "u_universal": "all",
         "u_engine_specific": "one only",
         "u_partial": "several",
@@ -178,6 +182,24 @@ def _matrix_grid(
     return f'<div class="tcols" style="--n:{len(tables)}">{"".join(tables)}</div>\n'
 
 
+def _venn_svg(payload: WordErrorPayload, order: Mapping[str, int]) -> str:
+    """Venn (2-3 moteurs) du recouvrement des mots ratés — compagnon visuel,
+    rendu en carte à part (à côté de la matrice). ``""`` au-delà de 3 moteurs."""
+    columns = _columns(payload, order)
+    col_pos = {name: i for i, name in enumerate(columns)}
+    region_counts: dict[frozenset[int], int] = {}
+    for word in payload.words:
+        region = frozenset(
+            col_pos[e.pipeline] for e in word.per_engine if e.pipeline in col_pos
+        )
+        region_counts[region] = region_counts.get(region, 0) + 1
+    return word_overlap_venn(
+        [engine_letter(order.get(name, 0)) for name in columns],
+        region_counts,
+        accents=[engine_accent(order.get(name, 0)) for name in columns],
+    )
+
+
 def _overlap_block(
     view: str,
     payload: WordErrorPayload,
@@ -224,23 +246,9 @@ def _overlap_block(
             f'</span><span class="db-num">{len(words)}</span></td>'
             f'<td class="muted">{sample}{more}</td></tr>'
         )
-    # Venn (2-3 moteurs) : nombre de mots ratés par exactement chaque combinaison
-    # — compagnon visuel de la liste (qui reste la matière détaillée/accessible).
-    columns = _columns(payload, order)
-    col_pos = {name: i for i, name in enumerate(columns)}
-    region_counts: dict[frozenset[int], int] = {}
-    for signature, words in groups.items():
-        region = frozenset(col_pos[n] for n in signature if n in col_pos)
-        region_counts[region] = region_counts.get(region, 0) + len(words)
-    venn = word_overlap_venn(
-        [engine_letter(order.get(name, 0)) for name in columns],
-        region_counts,
-        accents=[engine_accent(order.get(name, 0)) for name in columns],
-    )
     return (
         f"<h3>{view}{text['overlap_subtitle']}</h3>\n"
         f'<p class="muted">{text["overlap_intro"]}</p>\n'
-        f"{venn}"
         '<table class="data">\n'
         f'<thead><tr><th>{text["legend"]}</th>'
         f'<th class="num-cell">{text["th_overlap_count"]}</th>'
@@ -318,12 +326,26 @@ def _block(
         f'<th>{text["th_group"]}</th>'
     )
     graph_note = text["graph_note"].format(n=min(_HEATMAP_ROWS, len(payload.words)))
+    # Compagnons visuels (matrice mots×moteurs + Venn) en **cartes à leur taille,
+    # côte à côte** — au lieu d'une heatmap étroite qui flotte dans la largeur.
+    venn = _venn_svg(payload, order)
+    venn_card = (
+        f'<div class="dd-card"><div class="drill-caption">{text["card_venn"]}'
+        f"</div>{venn}</div>"
+        if venn
+        else ""
+    )
+    visuals = (
+        '<div class="dd-flow">'
+        f'<div class="dd-card"><div class="drill-caption">{text["card_matrix"]}'
+        f'</div>{svg}<p class="muted">{graph_note}</p></div>'
+        f"{venn_card}</div>"
+    )
     return (
         f"<h3>{view}{text['subtitle']}</h3>\n"
         f'<p class="muted">{text["intro"]}</p>\n'
         f'<p class="muted">{text["legend"]} : {legend}</p>\n'
-        f"{svg}\n"
-        f'<p class="muted">{graph_note}</p>\n'
+        f"{visuals}"
         + _matrix_grid(payload.words, header_cells, columns, text)
         + _overlap_block(view, payload, order, text)
         + _variant_block(view, payload, columns, order, text)
