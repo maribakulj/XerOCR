@@ -57,9 +57,9 @@ def test_renders_per_document_rows_with_grouping() -> None:
         assert token in html
     # nom de document **groupé** : affiché une seule fois malgré 2 lignes
     assert html.count("folio_1") == 1
-    # data-bar relative au max de la colonne (0.20) : 0.10 → 50 %, 0.20 → 100 %
-    assert 'style="width:50%"' in html
-    assert 'style="width:100%"' in html
+    # teinte relative au max de la colonne (0.20) : 0.10 → 0.5, 0.20 → 1.0
+    assert 'style="--t:0.5"' in html
+    assert 'style="--t:1.0"' in html
 
 
 def test_multi_view_shows_localized_view_label() -> None:

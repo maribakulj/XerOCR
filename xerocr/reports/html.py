@@ -122,9 +122,13 @@ _CSS = (
     "table.data tr:last-child td{border-bottom:none;}"
     "table.data td.databar{position:relative;padding:0;font-family:var(--mono);"
     "font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink);"
-    "border-bottom:1px solid var(--g-50);vertical-align:middle;}"
-    # Indicateur **subtil** : fin trait de base (position sur l'axe de la métrique,
-    # échelle commune par colonne) — ne « remplit » plus la cellule comme un bloc.
+    "border-bottom:1px solid var(--g-50);vertical-align:middle;"
+    # Teinte de cellule (canon) : fond sauge ∝ position sur l'axe de la colonne
+    # (``--t`` ∈ [0,1], posé par ``bar_cell``). Valeurs proches → teintes proches,
+    # contrairement à l'ancienne barre normalisée qui saturait la cellule.
+    "background:rgba(120,134,107,calc(var(--t,0) * 0.26));}"
+    # Barre fine de base : encore utilisée par image_quality / word_errors (où la
+    # LONGUEUR = score/compte a un sens) — la table de métriques, elle, est teintée.
     "table.data td.databar .db-fill{position:absolute;left:14px;bottom:5px;height:3px;"
     "border-radius:2px;background:var(--fern);opacity:0.55;z-index:0;}"
     "table.data td.databar .db-num{position:relative;z-index:1;display:block;"

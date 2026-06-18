@@ -53,7 +53,11 @@ def nonempty_metric_indices(rows: list[tuple[MetricScore, ...]]) -> list[int]:
 
 
 def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -> str:
-    """Cellule ``td.databar`` : barre relative à la colonne + valeur.
+    """Cellule ``td.databar`` : **teinte de fond** ∝ position sur l'axe de la
+    colonne (échelle commune par colonne, façon canon) + valeur. Plus de barre
+    pleine : deux valeurs proches donnent une teinte proche — lecture honnête
+    (la barre normalisée saturait toute la cellule dès que les valeurs étaient
+    voisines).
 
     ``sortable`` ajoute ``data-sort`` (valeur brute) → le tri client de
     ``report.js`` réordonne le DOM par cette clé (aucune donnée reconstruite)."""
@@ -65,10 +69,9 @@ def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -
     )
     if score.value is None or column_max <= 0:
         return f'<td class="databar"{sort}><span class="db-num">{text}</span></td>'
-    width = round(score.value / column_max * 100)
+    intensity = round(min(1.0, max(0.0, score.value / column_max)), 3)
     return (
-        f'<td class="databar"{sort}>'
-        f'<span class="db-fill" style="width:{width}%"></span>'
+        f'<td class="databar" style="--t:{intensity}"{sort}>'
         f'<span class="db-num">{text}</span></td>'
     )
 
@@ -135,16 +138,16 @@ def group_header_row(
 
 
 def bar_legend(lang: str) -> str:
-    """Légende des barres de données (explique l'indicateur subtil sous les valeurs).
+    """Légende de la **teinte** des cellules (position sur l'axe de la métrique).
 
-    Le canon montre une barre = **position sur l'axe de la métrique**, à **échelle
-    commune par colonne** — sans légende, le lecteur ne sait pas ce qu'elle code."""
+    Le canon teinte chaque cellule à **échelle commune par colonne** — sans
+    légende, le lecteur ne sait pas ce que code l'intensité."""
     fr = (
-        '<p class="muted bar-legend">La barre sous chaque valeur indique sa '
+        '<p class="muted bar-legend">La teinte de chaque cellule indique sa '
         "position sur l'axe de la métrique — échelle commune par colonne.</p>\n"
     )
     en = (
-        '<p class="muted bar-legend">The bar under each value shows its position '
+        '<p class="muted bar-legend">Each cell\'s tint shows its position '
         "on the metric's axis — common scale per column.</p>\n"
     )
     return en if lang == "en" else fr
