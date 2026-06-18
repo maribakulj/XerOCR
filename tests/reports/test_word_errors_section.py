@@ -73,6 +73,15 @@ def _result() -> RunResult:
     )
 
 
+def test_overlap_composition_donut_renders() -> None:
+    html = WordErrorsSection().render(_result(), SectionContext(lang="fr"))
+    assert html is not None
+    assert "Composition (camembert)" in html
+    assert 'class="donut-svg"' in html
+    # 1 mot raté par tous, 2 par un seul moteur → comptes en légende.
+    assert "tous 1" in html and "un seul 2" in html
+
+
 def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     html = WordErrorsSection().render(_result(), SectionContext(lang="fr"))
     assert html is not None

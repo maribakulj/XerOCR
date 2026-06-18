@@ -30,7 +30,7 @@ from xerocr.reports.engine_badges import (
 )
 from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.svg import word_engine_heatmap, word_overlap_venn
+from xerocr.reports.svg import donut_chart, word_engine_heatmap, word_overlap_venn
 from xerocr.reports.text_diff import char_diff
 
 #: Lignes de la heatmap **visuelle** (les mots les plus ratés) — la table porte la
@@ -71,6 +71,7 @@ _TEXT: dict[str, dict[str, str]] = {
         "graph_note": "Graphe : les {n} mots les plus ratés ; table : liste complète.",
         "card_matrix": "Matrice mots × moteurs",
         "card_venn": "Recouvrement (Venn)",
+        "card_donut": "Composition (camembert)",
         "u_universal": "tous",
         "u_engine_specific": "un seul",
         "u_partial": "plusieurs",
@@ -113,6 +114,7 @@ _TEXT: dict[str, dict[str, str]] = {
         "graph_note": "Graph: the {n} most-missed words; table: full list.",
         "card_matrix": "Words × engines matrix",
         "card_venn": "Overlap (Venn)",
+        "card_donut": "Composition (pie)",
         "u_universal": "all",
         "u_engine_specific": "one only",
         "u_partial": "several",
@@ -302,6 +304,53 @@ def _variant_block(
     )
 
 
+#: Couleurs des 3 catégories de recouvrement (littéraux oklch, **pas** couleurs
+#: moteur : ce sont des catégories, pas des moteurs identifiés).
+_DONUT_ACCENTS = (
+    "oklch(0.55 0.11 40)",  # tous — clay (matière dure pour tous)
+    "oklch(0.72 0.10 85)",  # plusieurs — butter
+    "oklch(0.62 0.04 230)",  # un seul — bleu-gris doux
+)
+
+
+def _donut_block(
+    payload: WordErrorPayload, columns: list[str], text: Mapping[str, str]
+) -> str:
+    """Carte camembert : part des mots ratés par **tous** / **plusieurs** / **un
+    seul** moteur (proportions — compagnon du Venn). ``""`` si <2 moteurs ou aucun
+    mot (la notion de recouvrement n'a alors pas de sens)."""
+    n_engines = len(columns)
+    if n_engines < 2:
+        return ""
+    every = several = one = 0
+    for word in payload.words:
+        n = len({e.pipeline for e in word.per_engine})
+        if n >= n_engines:
+            every += 1
+        elif n <= 1:
+            one += 1
+        else:
+            several += 1
+    if every + several + one == 0:
+        return ""
+    donut = donut_chart([(float(every), _DONUT_ACCENTS[0]),
+                         (float(several), _DONUT_ACCENTS[1]),
+                         (float(one), _DONUT_ACCENTS[2])])
+    keys = (
+        (text["u_universal"], every, _DONUT_ACCENTS[0]),
+        (text["u_partial"], several, _DONUT_ACCENTS[1]),
+        (text["u_engine_specific"], one, _DONUT_ACCENTS[2]),
+    )
+    legend = " · ".join(
+        f'<span class="donut-key" style="background:{c}"></span> {escape(lbl)} {n}'
+        for lbl, n, c in keys
+    )
+    return (
+        f'<div class="dd-card"><div class="drill-caption">{text["card_donut"]}'
+        f'</div>{donut}<p class="muted donut-legend">{legend}</p></div>'
+    )
+
+
 def _block(
     view: str, payload: WordErrorPayload, order: Mapping[str, int], lang: str
 ) -> str:
@@ -335,11 +384,12 @@ def _block(
         if venn
         else ""
     )
+    donut_card = _donut_block(payload, columns, text)
     visuals = (
         '<div class="dd-flow">'
         f'<div class="dd-card"><div class="drill-caption">{text["card_matrix"]}'
         f'</div>{svg}<p class="muted">{graph_note}</p></div>'
-        f"{venn_card}</div>"
+        f"{venn_card}{donut_card}</div>"
     )
     return (
         f"<h3>{view}{text['subtitle']}</h3>\n"

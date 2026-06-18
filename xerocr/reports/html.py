@@ -418,6 +418,14 @@ _CSS = (
     ".col-bar{fill-opacity:0.85;}"
     ".col-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".col-legend{text-align:center;}"
+    # Camembert (anneau SVG serveur) : parts teintées + trou central couleur fond
+    # (découpe). Légende = pastille + libellé + compte. Centré dans sa carte.
+    ".donut-svg{width:140px;height:140px;display:block;margin:6px auto 4px;}"
+    ".donut-seg{stroke:var(--surface);stroke-width:1;}"
+    ".donut-hole{fill:var(--surface);}"
+    ".donut-legend{text-align:center;}"
+    ".donut-key{display:inline-block;width:9px;height:9px;border-radius:2px;"
+    "vertical-align:middle;margin-right:2px;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

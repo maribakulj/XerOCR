@@ -9,12 +9,24 @@ from xerocr.reports.svg import (
     calibration_curve,
     composition_bar,
     dispersion_strip,
+    donut_chart,
     grouped_columns,
     num,
     radar_chart,
     word_engine_heatmap,
     word_overlap_venn,
 )
+
+
+def test_donut_chart_empty_full_and_segments() -> None:
+    assert donut_chart([]) == ""
+    assert donut_chart([(0.0, "x")]) == ""  # tout à zéro
+    full = donut_chart([(5.0, "oklch(0.55 0.11 40)")])
+    assert "<circle" in full and "donut-hole" in full  # 100 % → cercle + trou
+    multi = donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])
+    assert multi.count('class="donut-seg"') == 3
+    assert "donut-hole" in multi
+    assert multi == donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])  # octet-stable
 
 
 def test_grouped_columns_empty_is_empty() -> None:

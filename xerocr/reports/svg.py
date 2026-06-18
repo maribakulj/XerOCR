@@ -208,6 +208,55 @@ def box_plot(
     )
 
 
+def donut_chart(
+    segments: list[tuple[float, str]],
+    *,
+    size: float = 160.0,
+    hole: float = 0.56,
+) -> str:
+    """Camembert (anneau) : ``segments`` = ``(valeur, couleur)`` ; les parts sont
+    normalisées (somme → cercle complet), tracées dans l'ordre depuis le haut.
+    Le **trou** central est un disque couleur fond (technique de découpe). Une part
+    à 100 % → cercle plein (pas d'arc dégénéré). Déterministe (coords ``num``),
+    zéro JS, ``aria-hidden`` (les comptes vivent dans la légende)."""
+    total = sum(max(0.0, v) for v, _c in segments)
+    if total <= 0:
+        return ""
+    cx = cy = size / 2.0
+    r = size / 2.0 - 2.0
+    parts: list[str] = []
+    angle = -math.pi / 2.0
+    for value, accent in segments:
+        v = max(0.0, value)
+        if v <= 0:
+            continue
+        frac = v / total
+        if frac >= 0.9999:
+            parts.append(
+                f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+                f'class="donut-seg" style="fill:{accent}"/>'
+            )
+            continue
+        a0, a1 = angle, angle + 2.0 * math.pi * frac
+        angle = a1
+        large = 1 if (a1 - a0) > math.pi else 0
+        x0, y0 = cx + math.cos(a0) * r, cy + math.sin(a0) * r
+        x1, y1 = cx + math.cos(a1) * r, cy + math.sin(a1) * r
+        d = (
+            f"M{num(cx)},{num(cy)} L{num(x0)},{num(y0)} "
+            f"A{num(r)},{num(r)} 0 {large} 1 {num(x1)},{num(y1)} Z"
+        )
+        parts.append(f'<path d="{d}" class="donut-seg" style="fill:{accent}"/>')
+    parts.append(
+        f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r * hole)}" '
+        'class="donut-hole"/>'
+    )
+    return (
+        f'<svg viewBox="0 0 {num(size)} {num(size)}" class="donut-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
 def grouped_columns(
     groups: list[str],
     series: list[tuple[str, list[float]]],
@@ -265,6 +314,7 @@ __all__ = [
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",
+    "donut_chart",
     "grouped_columns",
     "num",
     "radar_chart",
