@@ -13,7 +13,17 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.result import PipelineResult, RunResult
 from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.taxonomy import TaxonomySection
+from xerocr.reports.sections.taxonomy import TaxonomySection, _class_label
+
+
+def test_class_labels_rename_other_to_substitution() -> None:
+    # « other » = vraies substitutions (misreads) → nommé « substitution », pas
+    # un fourre-tout ; les autres clés techniques sont localisées.
+    assert _class_label("other", "fr") == "substitution"
+    assert _class_label("other", "en") == "substitution"
+    assert _class_label("visual", "fr") == "confusion visuelle"
+    assert _class_label("case", "fr") == "casse"
+    assert _class_label("inconnu", "fr") == "inconnu"  # clé non répertoriée = brute
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 
@@ -53,8 +63,9 @@ def test_renders_composition_bar_and_legend() -> None:
     assert html is not None
     assert 'class="comp-bar"' in html  # barre empilée SVG
     assert 'class="comp-legend"' in html and 'class="comp-row"' in html
-    assert "visual" in html and "75%" in html  # 3/4 dérivé à la main
-    assert "25%" in html
+    # libellés lisibles : « visual » → « confusion visuelle », « case » → « casse »
+    assert "confusion visuelle" in html and "75%" in html  # 3/4 dérivé à la main
+    assert "casse" in html and "25%" in html
     assert html == TaxonomySection().render(_result(), SectionContext())
 
 

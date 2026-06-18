@@ -49,14 +49,14 @@ def _calibration(
     return None
 
 
-def _composition(result: RunResult, view: str, pipeline: str) -> str:
+def _composition(result: RunResult, view: str, pipeline: str, lang: str) -> str:
     """Composition d'erreurs du moteur (réutilise ``taxonomy.composition_html``)."""
     for analysis in result.analyses:
         payload = analysis.payload
         if analysis.view == view and isinstance(payload, TaxonomyPayload):
             for row in payload.pipelines:
                 if row.pipeline == pipeline:
-                    return composition_html(payload.classes, row)
+                    return composition_html(payload.classes, row, lang)
     return ""
 
 
@@ -153,7 +153,7 @@ class EngineProfileSection:
             if cal is not None
             else ""
         )
-        comp = _composition(result, view, name)
+        comp = _composition(result, view, name, lang)
         comp_block = (
             '<div class="prof-cell"><div class="drill-caption">'
             + localized(lang, "Composition des erreurs", "Error composition")
