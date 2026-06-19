@@ -166,6 +166,55 @@ _SECTION_TAB = {
 }
 
 
+#: Regroupement thématique des sections de l'onglet **« engines »** (riche : ~17
+#: sections). ``(clé, libellé_fr, libellé_en, sections…)`` — un sous-titre pleine
+#: largeur est inséré avant chaque groupe **présent** (cf. ``_panel_body``). Toute
+#: section ``engines`` doit figurer dans un groupe (garde-fou
+#: ``test_engine_groups_cover_engines_tab``) ; sinon elle est rendue à la fin, sans
+#: sous-titre. Pur regroupement visuel (aucun JS, imprimable).
+_ENGINE_GROUPS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    (
+        "compare",
+        "Comparaison des moteurs",
+        "Engine comparison",
+        ("by_engine", "engine_radar", "metric_columns", "rank_bump",
+         "dispersion", "engine_profiles"),
+    ),
+    (
+        "errors",
+        "Familles d'erreurs & analyses fines",
+        "Error families & fine-grained analyses",
+        ("conformity", "structure", "correction", "structured_data", "philology",
+         "textual_fidelity", "lines", "ner", "taxonomy", "calibration"),
+    ),
+    ("economics", "Économie", "Economics", ("economics",)),
+)
+
+
+def _panel_body(tab: str, blocks: list[tuple[str, str]], lang: str) -> str:
+    """Corps d'un panneau : les blocs joints, dans l'ordre. Pour l'onglet riche
+    « engines », on **regroupe** par thème (``_ENGINE_GROUPS``) et on insère un
+    **sous-titre pleine largeur** avant chaque groupe présent (pur balisage, zéro
+    JS, imprimable, sans-JS lisible). Une section engines hors groupe (cas
+    défensif) est rendue à la fin, sans sous-titre, dans son ordre d'origine."""
+    if tab != "engines":
+        return "".join(html for _, html in blocks)
+    by_name = {name: html for name, html in blocks}
+    parts: list[str] = []
+    used: set[str] = set()
+    for _key, fr, en, names in _ENGINE_GROUPS:
+        present = [n for n in names if n in by_name]
+        if not present:
+            continue
+        label = escape(en if lang == "en" else fr)
+        parts.append(f'<h2 class="tab-subhead">{label}</h2>')
+        for n in present:
+            parts.append(by_name[n])
+            used.add(n)
+    parts.extend(html for name, html in blocks if name not in used)
+    return "".join(parts)
+
+
 #: Sections **intrinsèquement larges** (tableaux multi-colonnes, galeries, charts
 #: pleine largeur) : elles prennent toute la largeur dans le flux de cartes
 #: (``column-span:all``). Les autres (petits charts/listes) s'écoulent en colonnes.
@@ -243,15 +292,20 @@ def _tab_layout(
     ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
     (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
     actifs, pas de barre : on empile (une barre d'un onglet est inutile)."""
-    by_tab: dict[str, list[str]] = {t: [] for t in _TAB_ORDER}
+    by_tab: dict[str, list[tuple[str, str]]] = {t: [] for t in _TAB_ORDER}
     trailer: list[str] = []
     for name, html in rendered:
         tab = _SECTION_TAB.get(name)
-        bucket = trailer if tab is None else by_tab[tab]
-        bucket.append(_block(name, html, lang))
+        block = _block(name, html, lang)
+        if tab is None:
+            trailer.append(block)
+        else:
+            by_tab[tab].append((name, block))
     active = [t for t in _TAB_ORDER if by_tab[t]]
     if len(active) < 2:
-        body = "".join("".join(by_tab[t]) for t in active) + "".join(trailer)
+        body = "".join(_panel_body(t, by_tab[t], lang) for t in active) + "".join(
+            trailer
+        )
         return "", body
     labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
     tabs = "".join(
@@ -269,7 +323,7 @@ def _tab_layout(
         f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
         f'aria-labelledby="tab-{t}">'
         f"{_hero(t, i + 1, result, lang) if result is not None else ''}"
-        f'{"".join(by_tab[t])}</div>'
+        f"{_panel_body(t, by_tab[t], lang)}</div>"
         for i, t in enumerate(active)
     )
     return nav, panels + "".join(trailer)

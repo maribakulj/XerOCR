@@ -72,6 +72,10 @@ _CSS = (
     ".tab-panel{display:grid;gap:14px;align-items:start;"
     "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));}"
     ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{grid-column:1/-1;}"
+    # Sous-titre thématique d'un onglet riche : bande pleine largeur, zéro JS.
+    ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"
+    "font-size:13px;letter-spacing:0.08em;text-transform:uppercase;"
+    "color:var(--g-400);margin:10px 2px 0;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
