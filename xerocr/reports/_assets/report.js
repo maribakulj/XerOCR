@@ -189,6 +189,10 @@
         },
       );
     }
+    /* Déclencheur initial (nom de moteur dans le tableau / carte document) :
+       mémorisé pour y ramener l'utilisateur au retour. Pas les liens préc./suiv.
+       internes au panneau. */
+    var lastTrigger = null;
     function showDrill(id) {
       drillPanels.forEach(function (p) {
         p.hidden = p.id !== id;
@@ -196,16 +200,15 @@
       var open = document.getElementById(id);
       if (!open) return;
       restoreFocus();
+      /* Vue focalisée (moteur OU document) : ne garder que le bloc du panneau
+         ouvert dans l'onglet — masque le tableau de classement, les autres
+         sections, le héros. Pour les documents, masque EN PLUS la galerie/liste
+         à l'intérieur de la section. C'est ce qui fait un vrai drill-in (≠ un
+         simple saut vers un bloc en bas). */
       var details = open.closest(".doc-details");
-      if (details && details.parentNode) {
-        /* 1) dans la section documents : ne garder que le conteneur des
-           panneaux (cache la galerie, la liste, la bascule). */
-        hideExcept(details.parentNode, details);
-        /* 2) dans l'onglet : ne garder que la section documents (cache les
-           sections voisines : par-document, qualité d'image, héros). */
-        var block = details.parentNode.closest(".r-block");
-        if (block && block.parentNode) hideExcept(block.parentNode, block);
-      }
+      if (details && details.parentNode) hideExcept(details.parentNode, details);
+      var block = open.closest(".r-block");
+      if (block && block.parentNode) hideExcept(block.parentNode, block);
       open.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     document.addEventListener("click", function (e) {
@@ -217,6 +220,11 @@
         drillPanels.forEach(function (p) {
           p.hidden = true;
         });
+        /* Retour : ramener au déclencheur cliqué (nom de moteur / carte), pas
+           laisser l'utilisateur là où le panneau l'avait fait défiler. */
+        if (lastTrigger) {
+          lastTrigger.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
         return;
       }
       var href = link.getAttribute("href") || "";
@@ -224,6 +232,7 @@
         var target = document.getElementById(href.slice(1));
         if (target && target.classList.contains("drill-panel")) {
           e.preventDefault();
+          if (!link.closest(".drill-panel")) lastTrigger = link;
           showDrill(href.slice(1));
         }
       }
