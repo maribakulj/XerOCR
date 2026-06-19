@@ -54,6 +54,34 @@ def test_radar_renders_one_polygon_per_engine() -> None:
     assert "tesseract" in html and "pero" in html
 
 
+def test_radar_tooltips_absolute_scale_and_accessible() -> None:
+    full = {m: 0.8 for m in _AXIS_METRICS}
+    result = _result((_pipe("tesseract", full), _pipe("pero", dict(full, fca=0.6))))
+    html = EngineRadarSection().render(result, SectionContext())
+    assert html is not None
+    # Sommets cliquables + infobulle valeur brute ET normalisée (auditables).
+    assert "radar-vertex" in html
+    assert "norm." in html and "%" in html
+    # Échelle absolue explicitée (≠ min-max relatif trompeur).
+    assert "absolue" in html
+    assert 'role="img"' in html  # accessible
+
+
+def test_radar_signals_dropped_non_comparable_dimensions() -> None:
+    # ≥3 axes communs (radar rendu) ; ``hallucination`` présent pour un seul
+    # moteur → non comparable → masqué MAIS signalé (jamais comblé par un zéro).
+    shared = {m: 0.8 for m in _AXIS_METRICS if m != "hallucination"}
+    result = _result(
+        (
+            _pipe("tesseract", dict(shared, hallucination=0.1)),
+            _pipe("pero", shared),
+        )
+    )
+    html = EngineRadarSection().render(result, SectionContext())
+    assert html is not None
+    assert "non comparables masquées" in html
+
+
 def test_radar_none_when_too_few_axes() -> None:
     # un seul axe partagé (< 3) → pas de radar.
     result = _result((_pipe("tesseract", {"char_accuracy": 0.8}),))

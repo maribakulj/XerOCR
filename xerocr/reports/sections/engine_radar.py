@@ -51,23 +51,44 @@ class EngineRadarSection:
             for p in pipes
         }
         # Axes retenus : ceux présents pour **tous** les moteurs affichés (sinon le
-        # polygone n'est pas comparable). Radar utile à partir de 3 axes.
+        # polygone n'est pas comparable). Radar utile à partir de 3 axes. Les axes
+        # candidats absents pour au moins un moteur sont **signalés** (note de bas),
+        # jamais comblés par un zéro silencieux.
         axes = [
             ax for ax in _AXES if all(ax[0] in scores[p.pipeline] for p in pipes)
         ]
         if len(axes) < 3:
             return None
+        dropped = [
+            (ax[2] if ctx.lang != "en" else ax[3])
+            for ax in _AXES
+            if ax not in axes and any(ax[0] in scores[p.pipeline] for p in pipes)
+        ]
         labels = [ax[2] if ctx.lang != "en" else ax[3] for ax in axes]
         series: list[tuple[str, list[float]]] = []
         accents: list[str] = []
+        point_titles: list[list[str]] = []
         for p in pipes:
-            values = []
-            for key, invert, _fr, _en in axes:
-                v = scores[p.pipeline][key]
-                values.append(1.0 - v if invert else v)
+            values: list[float] = []
+            tips: list[str] = []
+            for key, invert, fr, en in axes:
+                raw = scores[p.pipeline][key]
+                norm = 1.0 - raw if invert else raw
+                values.append(norm)
+                lbl = fr if ctx.lang != "en" else en
+                # Infobulle : valeur **brute** (% lisible) ET normalisée (auditables).
+                tips.append(f"{lbl} : {raw * 100:.1f} % (norm. {norm:.2f})")
             series.append((p.pipeline, values))
             accents.append(engine_accent(order[p.pipeline]))
-        svg = radar_chart(labels, series, accents=accents)
+            point_titles.append(tips)
+        aria = localized(
+            ctx.lang,
+            "Radar des profils moteur (axes normalisés, plus loin = meilleur)",
+            "Engine profile radar (normalised axes, further = better)",
+        )
+        svg = radar_chart(
+            labels, series, accents=accents, point_titles=point_titles, aria_label=aria
+        )
         if not svg:
             return None
         legend = " · ".join(
@@ -79,18 +100,37 @@ class EngineRadarSection:
         title = localized(ctx.lang, "Profil radar", "Radar profile")
         intro = localized(
             ctx.lang,
-            "Profil multi-métrique par moteur — chaque axe normalisé « plus loin "
-            "= meilleur » ([0,1]). Polygones superposés : la forme révèle les "
-            "forces et faiblesses de chaque moteur.",
-            "Multi-metric profile per engine — each axis normalised 'further = "
-            "better' ([0,1]). Overlaid polygons: the shape reveals each engine's "
-            "strengths and weaknesses.",
+            "Profil multi-métrique par moteur. Chaque axe est une métrique dans "
+            "[0,1] orientée « plus loin = meilleur » (les taux d'erreur sont "
+            "inversés : 1 − valeur) ; l'échelle est <strong>absolue</strong> (pas "
+            "de min-max relatif), donc un petit écart reste un petit écart. "
+            "Survolez un sommet pour la valeur brute et normalisée.",
+            "Multi-metric profile per engine. Each axis is a metric in [0,1] "
+            "oriented 'further = better' (error rates are inverted: 1 − value); "
+            "the scale is <strong>absolute</strong> (no relative min-max), so a "
+            "small gap stays a small gap. Hover a vertex for raw and normalised "
+            "values.",
         )
+        note = ""
+        if dropped:
+            note = (
+                '<p class="muted radar-legend">'
+                + localized(
+                    ctx.lang,
+                    "Dimensions non comparables masquées (absentes pour au moins "
+                    "un moteur) : ",
+                    "Non-comparable dimensions hidden (missing for at least one "
+                    "engine): ",
+                )
+                + escape(", ".join(dropped))
+                + ".</p>\n"
+            )
         return Html(
             f"<h2>{title}</h2>\n"
             f'<p class="muted">{intro}</p>\n'
             f'<div class="radar-wrap">{svg}</div>\n'
             f'<p class="muted radar-legend">{legend}</p>\n'
+            f"{note}"
         )
 
 

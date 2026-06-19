@@ -408,6 +408,8 @@ _CSS = (
     ".radar-spoke{stroke:var(--g-100);stroke-width:1;}"
     ".radar-axis{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".radar-area{fill-opacity:0.13;stroke-width:2;stroke-linejoin:round;}"
+    # Sommet : cible de survol (<title> = valeur brute + normalisée), cerné de fond.
+    ".radar-vertex{fill-opacity:0.95;stroke:var(--surface);stroke-width:1;}"
     ".radar-legend{text-align:center;}"
     # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
     # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.

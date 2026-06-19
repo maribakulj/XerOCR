@@ -113,6 +113,31 @@ def test_radar_chart_one_polygon_per_series_and_deterministic() -> None:
     assert svg == radar_chart(axes, series, accents=accents)  # octet-stable
 
 
+def test_radar_chart_vertex_tooltips_and_accessible_label() -> None:
+    axes = ["Car.", "Mot", "F1"]
+    series = [("tesseract", [0.9, 0.6, 0.7])]
+    tips = [["Car. : 90.0 % (norm. 0.90)", "Mot : 60.0 %", "F1 : 70.0 %"]]
+    svg = radar_chart(
+        axes,
+        series,
+        accents=["var(--fern)"],
+        point_titles=tips,
+        aria_label="Radar des moteurs",
+    )
+    # Un disque de sommet par axe (cible de survol) + infobulle valeur brute.
+    assert svg.count('class="radar-vertex"') == 3
+    assert "<title>Car. : 90.0 % (norm. 0.90)</title>" in svg
+    # Le polygone porte le nom du moteur (survol de l'aire).
+    assert "<title>tesseract</title>" in svg
+    # Accessible (≠ aria-hidden) quand un libellé est fourni.
+    assert 'role="img"' in svg and 'aria-label="Radar des moteurs"' in svg
+    assert 'aria-hidden="true"' not in svg
+    assert svg == radar_chart(  # déterministe
+        axes, series, accents=["var(--fern)"], point_titles=tips,
+        aria_label="Radar des moteurs",
+    )
+
+
 def test_word_overlap_venn_two_engines_regions_and_counts() -> None:
     svg = word_overlap_venn(
         ["A", "B"],
