@@ -46,6 +46,7 @@ _SECTION_LABELS = {
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
     "calibration": "Calibration",
+    "methodology": "Méthodologie",
 }
 
 #: Libellés **EN** des sections (parité de clés avec ``_SECTION_LABELS``) — pour
@@ -77,6 +78,7 @@ _SECTION_LABELS_EN = {
     "diagnostics": "Diagnostics",
     "taxonomy": "Taxonomy",
     "calibration": "Calibration",
+    "methodology": "Methodology",
 }
 
 
@@ -433,6 +435,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.engine_radar import EngineRadarSection
     from xerocr.reports.sections.image_quality import ImageQualitySection
     from xerocr.reports.sections.lines import LinesSection
+    from xerocr.reports.sections.methodology import MethodologySection
     from xerocr.reports.sections.metric_columns import MetricColumnsSection
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
@@ -475,6 +478,7 @@ def default_report_renderer() -> ReportRenderer:
             DiagnosticsSection(),
             TaxonomySection(),
             CalibrationSection(),
+            MethodologySection(),
         )
     )
 
