@@ -256,6 +256,35 @@
     },
   );
 
+  /* 7b) Filtre par strate (galerie documents) : un chip montre les cartes de la
+   *     strate choisie (ou toutes pour "*") et masque les autres, dans la grille
+   *     sœur. Sans JS, les chips sont inertes et toutes les cartes restent
+   *     visibles. On ne masque/affiche que des cartes déjà rendues. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".doc-filter"),
+    function (group) {
+      var scope = group.parentNode;
+      var btns = group.querySelectorAll(".df-btn");
+      Array.prototype.forEach.call(btns, function (btn) {
+        btn.addEventListener("click", function () {
+          var want = btn.getAttribute("data-stratum");
+          Array.prototype.forEach.call(btns, function (b) {
+            var on = b === btn;
+            b.classList.toggle("on", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          Array.prototype.forEach.call(
+            scope.querySelectorAll(".doc-card"),
+            function (card) {
+              card.hidden =
+                want !== "*" && card.getAttribute("data-stratum") !== want;
+            },
+          );
+        });
+      });
+    },
+  );
+
   /* 8) Sélecteur de moteur du diff pleine page (détail document) : un bouton
    *    montre le bloc .dd-fulldiff du moteur, cache les autres (scopé au wrap).
    *    Sans JS, les blocs sont empilés et tous visibles. */

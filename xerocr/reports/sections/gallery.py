@@ -42,6 +42,7 @@ def _card(
     order: dict[str, int],
     idx: int,
     thumb: str | None,
+    stratum: str | None = None,
 ) -> str:
     scored = [c for _, c in entries if c is not None]
     best = min(scored) if scored else None
@@ -63,9 +64,11 @@ def _card(
         if thumb
         else '<div class="doc-preview" aria-hidden="true"></div>'
     )
-    # Carte = lien drill-in vers le détail du document (ancre #doc-<idx>).
+    # Carte = lien drill-in vers le détail du document (ancre #doc-<idx>). Le
+    # ``data-stratum`` (verbatim, échappé) sert au filtre client ; absent → "".
+    strat_attr = f' data-stratum="{escape(stratum)}"' if stratum else ' data-stratum=""'
     return (
-        f'<a class="doc-card" href="#doc-{idx}">{preview}'
+        f'<a class="doc-card" href="#doc-{idx}"{strat_attr}>{preview}'
         f'<div class="dc-id">{escape(doc_id)}</div>'
         f'<div class="dc-rows">{rows}</div></a>'
     )
@@ -88,6 +91,10 @@ class DocumentGallerySection:
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in rows
         )
+        # Strate par document (verbatim ; None si le corpus n'en porte pas).
+        strata = {
+            d.document_id: d.stratum for d in rows if d.stratum is not None
+        }
         cards = "".join(
             _card(
                 doc_id,
@@ -95,9 +102,14 @@ class DocumentGallerySection:
                 order,
                 idx,
                 ctx.images.get(doc_id),
+                strata.get(doc_id),
             )
             for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
         )
+        # Filtre par strate : chips seulement si ≥2 strates réellement présentes
+        # (jamais une catégorie inventée). Sans JS, tout reste visible.
+        present = ordered_unique(s for s in strata.values())
+        filt = self._filter(present, ctx.lang) if len(present) >= 2 else ""
         vlbl = escape(view_label(view, ctx.lang))
         title = localized(
             ctx.lang,
@@ -114,8 +126,28 @@ class DocumentGallerySection:
         return Html(
             f"<h2>{title}</h2>\n"
             f'<p class="muted">{caption}</p>\n'
+            f"{filt}"
             f'<div class="doc-grid">{cards}</div>\n'
         )
+
+    def _filter(self, strata: tuple[str, ...], lang: str) -> str:
+        """Rangée de chips de filtre par strate (réutilise la pilule segmentée).
+
+        Bouton « Toutes » (``data-stratum="*"``) + un bouton par strate présente
+        (libellé verbatim). ``report.js`` masque les cartes hors strate ; sans JS,
+        les boutons sont inertes et toutes les cartes restent visibles."""
+        all_lbl = localized(lang, "Toutes", "All")
+        aria = localized(lang, "Filtrer par strate", "Filter by stratum")
+        chips = (
+            '<button type="button" class="df-btn on" data-stratum="*" '
+            f'aria-pressed="true">{all_lbl}</button>'
+        )
+        for s in strata:
+            chips += (
+                f'<button type="button" class="df-btn" data-stratum="{escape(s)}" '
+                f'aria-pressed="false">{escape(s)}</button>'
+            )
+        return f'<div class="doc-filter" role="group" aria-label="{aria}">{chips}</div>'
 
 
 __all__ = ["DocumentGallerySection"]
