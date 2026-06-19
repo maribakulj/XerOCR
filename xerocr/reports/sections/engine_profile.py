@@ -71,6 +71,78 @@ def _pct(v: float) -> str:
     return f"{v * 100:.1f} %"
 
 
+def _config_block(result: RunResult, name: str, lang: str) -> str:
+    """Config repliable (reproductibilité) : étapes du pipeline + adapter + version
+    déclarée + paramètres, depuis le ``RunManifest``. ``<details>`` natif (zéro JS,
+    imprimable). Omise si le manifeste ne porte pas la spec (ex. données de démo)."""
+    spec = next(
+        (s for s in result.manifest.pipeline_specs if s.name == name), None
+    )
+    if spec is None or not spec.steps:
+        return ""
+    versions = result.manifest.module_versions
+    body = ""
+    for step in spec.steps:
+        ver = escape(versions.get(step.adapter_name, "—"))
+        params = (
+            " · ".join(f"{escape(k)}={escape(str(v))}" for k, v in step.params.items())
+            or "—"
+        )
+        body += (
+            f'<tr><td class="lbl">{escape(step.kind)}</td>'
+            f'<td class="lbl">{escape(step.adapter_name)}</td>'
+            f'<td class="disp">{ver}</td><td class="lbl">{params}</td></tr>'
+        )
+    summ = localized(lang, "Configuration & reproductibilité", "Configuration")
+    th_s = localized(lang, "Étape", "Step")
+    th_a = localized(lang, "Adapter", "Adapter")
+    th_v = localized(lang, "Version", "Version")
+    th_p = localized(lang, "Paramètres", "Parameters")
+    return (
+        f'<details><summary class="muted">{summ}</summary>\n'
+        f'<table class="data compact"><thead><tr><th>{th_s}</th><th>{th_a}</th>'
+        f'<th class="num-cell">{th_v}</th><th>{th_p}</th></tr></thead>'
+        f"<tbody>{body}</tbody></table></details>"
+    )
+
+
+def _stratum_block(result: RunResult, name: str, view: str, lang: str) -> str:
+    """CER moyen par strate (macro-moyenne) — révèle forces/faiblesses du moteur
+    selon le sous-corpus. Rendu seulement si ≥ 2 strates portent des documents
+    notés (jamais une strate inventée). Trié du meilleur au pire."""
+    buckets: dict[str, list[float]] = {}
+    for d in result.documents:
+        if d.pipeline != name or d.view != view or not d.stratum:
+            continue
+        cer = next(
+            (s.value for s in d.scores if s.metric == "cer" and s.value is not None),
+            None,
+        )
+        if cer is not None:
+            buckets.setdefault(d.stratum, []).append(cer)
+    if len(buckets) < 2:
+        return ""
+    rows_data = sorted(
+        ((s, sum(v) / len(v), len(v)) for s, v in buckets.items()),
+        key=lambda r: r[1],
+    )
+    rows = "".join(
+        f'<tr><td class="lbl">{escape(s)}</td><td class="disp">{n}</td>'
+        f'<td class="disp">{_pct(m)}</td></tr>'
+        for s, m, n in rows_data
+    )
+    cap = localized(lang, "Performance par strate", "Performance by stratum")
+    th_n = localized(lang, "n", "n")
+    th_c = localized(lang, "CER moyen ↓", "Mean CER ↓")
+    th_s = localized(lang, "Strate", "Stratum")
+    return (
+        f'<div class="prof-cell"><div class="drill-caption">{cap}</div>'
+        f'<table class="data compact"><thead><tr><th>{th_s}</th>'
+        f'<th class="num-cell">{th_n}</th><th class="num-cell">{th_c}</th></tr>'
+        f"</thead><tbody>{rows}</tbody></table></div>"
+    )
+
+
 class EngineProfileSection:
     """Panneaux profil par moteur (KPIs + CER/document), révélés au clic."""
 
@@ -161,11 +233,13 @@ class EngineProfileSection:
             if comp
             else ""
         )
+        strat_block = _stratum_block(result, name, view, lang)
         extras = (
-            f'<div class="prof-row">{cal_block}{comp_block}</div>'
-            if (cal_block or comp_block)
+            f'<div class="prof-row">{strat_block}{cal_block}{comp_block}</div>'
+            if (strat_block or cal_block or comp_block)
             else ""
         )
+        config = _config_block(result, name, lang)
         back_label = localized(lang, "← retour au tableau", "← back to table")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
@@ -187,7 +261,7 @@ class EngineProfileSection:
             f"<span>{escape(name)}</span>"
             f'<span class="muted drill-pos">{pos_label}</span></div>'
             f'<div class="kpi-band">{"".join(kpis)}</div>'
-            f"{chart}{extras}</div>"
+            f"{chart}{extras}{config}</div>"
         )
 
 
