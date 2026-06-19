@@ -49,7 +49,7 @@ def test_document_structure_and_determinism() -> None:
     # S4.a : le rapport porte le chrome au design (carte gris chaud + en-tête pilule)
     assert 'class="report-board"' in html1
     assert 'class="report-chrome"' in html1
-    assert 'class="r-block sec"' in html1  # chaque section = sa propre carte .sec
+    assert 'class="r-block sec' in html1  # chaque section = sa propre carte .sec
     # trame de points (halftone Xerox) en fond, via data: URI inline
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
     # 3a : widget « comparer un run » (client-side) en pied de rapport.
@@ -169,6 +169,6 @@ def test_view_hero_present_with_eyebrow_and_stats() -> None:
 def test_each_section_is_its_own_card() -> None:
     # Plus de méga-carte : chaque section porte sa propre carte .sec ancrée.
     html = default_report_renderer().render(_result())
-    assert 'class="r-block sec"' in html
+    assert 'class="r-block sec' in html
     # le corps n'est plus enveloppé dans une <section class="sec"> unique
     assert '<main class="report-main"><section class="sec">' not in html

@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import EntityMention, NerPayload, PipelineNer
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -74,8 +74,8 @@ def _block(
     th_recall = localized(lang, "rappel", "recall")
     global_head = localized(
         lang,
-        f"{escape(view)} — entités nommées (IoU ≥ {payload.iou_threshold:.2f})",
-        f"{escape(view)} — named entities (IoU ≥ {payload.iou_threshold:.2f})",
+        f"{view}entités nommées (IoU ≥ {payload.iou_threshold:.2f})",
+        f"{view}named entities (IoU ≥ {payload.iou_threshold:.2f})",
     )
     global_prose = localized(
         lang,
@@ -104,8 +104,8 @@ def _block(
     if category_rows:
         cat_head = localized(
             lang,
-            f"{escape(view)} — F1 par catégorie",
-            f"{escape(view)} — F1 per category",
+            f"{view}F1 par catégorie",
+            f"{view}F1 per category",
         )
         th_category = localized(lang, "catégorie", "category")
         th_support = localized(lang, "support", "support")
@@ -121,8 +121,8 @@ def _block(
         )
     samples_head = localized(
         lang,
-        f"{escape(view)} — entités manquées &amp; hallucinées (échantillon)",
-        f"{escape(view)} — missed &amp; hallucinated entities (sample)",
+        f"{view}entités manquées &amp; hallucinées (échantillon)",
+        f"{view}missed &amp; hallucinated entities (sample)",
     )
     th_missed = localized(lang, "manquées", "missed")
     th_hallucinated = localized(lang, "hallucinées", "hallucinated")
@@ -143,9 +143,13 @@ class NerSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, NerPayload)
         ]

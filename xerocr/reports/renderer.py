@@ -23,13 +23,19 @@ _SECTION_LABELS = {
     "overview": "Vue d'ensemble",
     "corpus_composition": "Composition",
     "by_engine": "Par moteur",
+    "engine_radar": "Profil radar",
+    "metric_columns": "Colonnes métriques",
+    "rank_bump": "Bascule de classement",
     "engine_profiles": "Profils moteur",
     "documents": "Par document",
     "image_quality": "Qualité image",
+    "quality_error": "Qualité × erreur",
     "dispersion": "Dispersion",
     "cross_engine": "Inter-moteurs",
+    "engine_duel": "Duel par document",
     "word_errors": "Carte des mots",
     "conformity": "Conformité HIPE",
+    "structure": "Structure",
     "correction": "Bilan de correction",
     "structured_data": "Données structurées",
     "philology": "Philologie",
@@ -49,12 +55,18 @@ _SECTION_LABELS_EN = {
     "overview": "Overview",
     "corpus_composition": "Composition",
     "by_engine": "By engine",
+    "engine_radar": "Radar profile",
+    "metric_columns": "Metric columns",
+    "rank_bump": "Ranking shift",
     "engine_profiles": "Engine profiles",
     "documents": "By document",
     "image_quality": "Image quality",
+    "quality_error": "Quality × error",
     "dispersion": "Dispersion",
     "cross_engine": "Cross-engine",
+    "engine_duel": "Per-document duel",
     "conformity": "HIPE conformity",
+    "structure": "Layout structure",
     "correction": "Correction balance",
     "structured_data": "Structured data",
     "philology": "Philology",
@@ -128,10 +140,14 @@ _SECTION_TAB = {
     "overview": "overview",
     "corpus_composition": "overview",
     "by_engine": "engines",
+    "engine_radar": "engines",
+    "metric_columns": "engines",
+    "rank_bump": "engines",
     "engine_profiles": "engines",
     "dispersion": "engines",
     "calibration": "engines",
     "conformity": "engines",
+    "structure": "engines",
     "correction": "engines",
     "structured_data": "engines",
     "philology": "engines",
@@ -143,15 +159,29 @@ _SECTION_TAB = {
     "documents": "documents",
     "diagnostics": "documents",
     "image_quality": "documents",
+    "quality_error": "documents",
     "cross_engine": "crosses",
+    "engine_duel": "crosses",
     "word_errors": "crosses",
 }
 
 
+#: Sections **intrinsèquement larges** (tableaux multi-colonnes, galeries, charts
+#: pleine largeur) : elles prennent toute la largeur dans le flux de cartes
+#: (``column-span:all``). Les autres (petits charts/listes) s'écoulent en colonnes.
+_WIDE_SECTIONS: frozenset[str] = frozenset({
+    "synthesis", "overview", "by_engine", "engine_profiles", "conformity",
+    "structured_data", "ner", "lines", "economics", "cross_engine",
+    "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
+    "diagnostics",
+})
+
+
 def _block(name: str, html: str, lang: str) -> str:
     """Une section = sa **propre carte** ``.sec``, région ancrée (``#r-<name>``)."""
+    wide = " r-wide" if name in _WIDE_SECTIONS else ""
     return (
-        f'<section id="r-{escape(name)}" class="r-block sec" '
+        f'<section id="r-{escape(name)}" class="r-block sec{wide}" '
         f'aria-label="{escape(_label(name, lang))}">{html}</section>'
     )
 
@@ -344,12 +374,18 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.dispersion import DispersionSection
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
+    from xerocr.reports.sections.engine_duel import EngineDuelSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
+    from xerocr.reports.sections.engine_radar import EngineRadarSection
     from xerocr.reports.sections.image_quality import ImageQualitySection
     from xerocr.reports.sections.lines import LinesSection
+    from xerocr.reports.sections.metric_columns import MetricColumnsSection
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.philology import PhilologySection
+    from xerocr.reports.sections.quality_error import QualityErrorSection
+    from xerocr.reports.sections.rank_bump import RankBumpSection
+    from xerocr.reports.sections.structure import StructureSection
     from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -362,13 +398,19 @@ def default_report_renderer() -> ReportRenderer:
             OverviewSection(),
             CorpusCompositionSection(),
             EngineSection(),
+            EngineRadarSection(),
+            MetricColumnsSection(),
+            RankBumpSection(),
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),
             ImageQualitySection(),
+            QualityErrorSection(),
             CrossEngineSection(),
             WordErrorsSection(),
+            EngineDuelSection(),
             ConformitySection(),
+            StructureSection(),
             CorrectionSection(),
             StructuredDataSection(),
             PhilologySection(),

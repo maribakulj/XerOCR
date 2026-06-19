@@ -17,11 +17,13 @@ from xerocr.reports.sections.by_document import DocumentSection
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
 
-def _doc(doc_id: str, pipeline: str, cer: float | None) -> RunDocumentResult:
+def _doc(
+    doc_id: str, pipeline: str, cer: float | None, view: str = "text"
+) -> RunDocumentResult:
     return RunDocumentResult(
         document_id=doc_id,
         pipeline=pipeline,
-        view="text",
+        view=view,
         scores=(MetricScore(metric="cer", value=cer, support=1),),
     )
 
@@ -48,20 +50,25 @@ def test_renders_per_document_rows_with_grouping() -> None:
         SectionContext(),
     )
     assert html is not None
-    assert "Vue :" in html  # tables par vue (le titre de vue est dans le héros)
+    # vue unique → pas de libellé « Vue : » (porté par le héros ; pas de ressassage)
+    assert "Vue :" not in html
     # les deux documents et les deux pipelines apparaissent
     for token in ("folio_1", "folio_2", "tesseract", "pero"):
         assert token in html
     # nom de document **groupé** : affiché une seule fois malgré 2 lignes
     assert html.count("folio_1") == 1
-    # data-bar relative au max de la colonne (0.20) : 0.10 → 50 %, 0.20 → 100 %
-    assert 'style="width:50%"' in html
-    assert 'style="width:100%"' in html
+    # teinte relative au max de la colonne (0.20) : 0.10 → 0.5, 0.20 → 1.0
+    assert 'style="--t:0.5"' in html
+    assert 'style="--t:1.0"' in html
 
 
-def test_renders_english_labels() -> None:
+def test_multi_view_shows_localized_view_label() -> None:
+    # >1 vue → le libellé « Vue : » réapparaît pour distinguer les tables ; EN.
     html = DocumentSection().render(
-        _result(_doc("folio_1", "tesseract", 0.10)),
+        _result(
+            _doc("folio_1", "tesseract", 0.10),
+            _doc("folio_1", "tesseract", 0.12, view="diplomatic"),
+        ),
         SectionContext(lang="en"),
     )
     assert html is not None
@@ -69,10 +76,20 @@ def test_renders_english_labels() -> None:
 
 
 def test_none_value_rendered_as_dash() -> None:
-    result = _result(_doc("f", "tesseract", None))
+    # colonne avec données (tesseract 0.10) → gardée ; la valeur None (pero) → « — »
+    # (une colonne *entièrement* None serait masquée — cf. nonempty_metric_indices)
+    result = _result(_doc("f", "tesseract", 0.10), _doc("f", "pero", None))
     html = DocumentSection().render(result, SectionContext())
     assert html is not None
     assert "—" in html
+
+
+def test_all_none_metric_column_is_hidden() -> None:
+    # un métrique sans aucune valeur (tout None) ne doit pas encombrer avec des « — »
+    result = _result(_doc("f", "tesseract", None), _doc("f", "pero", None))
+    html = DocumentSection().render(result, SectionContext())
+    assert html is not None
+    assert "—" not in html  # colonne cer entièrement vide → masquée
 
 
 def test_no_documents_returns_none() -> None:

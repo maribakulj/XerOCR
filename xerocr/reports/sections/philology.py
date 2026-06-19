@@ -17,7 +17,7 @@ from xerocr.evaluation.analysis import (
     RomanNumeralsPayload,
 )
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 #: Statuts romains : clé → libellé lisible bilingue (ordre de rendu).
@@ -94,7 +94,7 @@ def _containment_block(
     header = localized(lang, "catégorie" if by_category else "signe",
                        "category" if by_category else "sign")
     items = "".join(
-        f'<tr><td class="disp">'
+        f'<tr><td class="lbl">'
         f"{escape(_item_label(marker.sign, by_category, lang))}</td>"
         f'<td class="disp">{marker.n_total}</td>'
         f'<td class="disp">{_share(marker.n_strict, marker.n_total)}</td>'
@@ -117,7 +117,7 @@ def _containment_block(
     th_expansion = localized(lang, "avec dév.", "with exp.")
     return (
         f"<h4>{head}</h4>\n"
-        f'<table class="data">\n<thead><tr><th>{header}</th>'
+        f'<table class="data compact">\n<thead><tr><th>{header}</th>'
         f'<th class="num-cell">{th_n}</th><th class="num-cell">{th_strict}</th>'
         f'<th class="num-cell">{th_expansion}</th></tr></thead>\n'
         f"<tbody>{items}</tbody>\n</table>\n"
@@ -126,7 +126,7 @@ def _containment_block(
 
 def _positional_block(row: PipelinePhilology, family: str, lang: str) -> str:
     cats = "".join(
-        f'<tr><td class="disp">'
+        f'<tr><td class="lbl">'
         f"{escape(_item_label(marker.sign, True, lang))}</td>"
         f'<td class="disp">{marker.n_total}</td>'
         f'<td class="disp">{_share(marker.n_strict, marker.n_total)}</td></tr>'
@@ -146,7 +146,7 @@ def _positional_block(row: PipelinePhilology, family: str, lang: str) -> str:
     th_preserved = localized(lang, "préservé", "preserved")
     return (
         f"<h4>{head}</h4>\n"
-        f'<table class="data">\n<thead><tr><th>{th_category}</th>'
+        f'<table class="data compact">\n<thead><tr><th>{th_category}</th>'
         f'<th class="num-cell">{th_n}</th><th class="num-cell">{th_preserved}</th>'
         "</tr></thead>\n"
         f"<tbody>{cats}</tbody>\n</table>\n"
@@ -164,8 +164,8 @@ def _pipeline_block(row: PipelinePhilology, lang: str) -> str:
 def _block(view: str, payload: PhilologyPayload, lang: str) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — marqueurs philologiques",
-        f"{escape(view)} — philological markers",
+        f"{view}marqueurs philologiques",
+        f"{view}philological markers",
     )
     prose = localized(
         lang,
@@ -204,7 +204,7 @@ def _roman_pipeline_block(row: PipelineRomanNumerals, lang: str) -> str:
         "lost": row.lost,
     }
     rows = "".join(
-        f'<tr><td class="disp">{escape(localized(lang, label_fr, label_en))}</td>'
+        f'<tr><td class="lbl">{escape(localized(lang, label_fr, label_en))}</td>'
         f'<td class="disp">{counts[key]}</td>'
         f'<td class="disp">{_share(counts[key], row.n_total)}</td></tr>'
         for key, label_fr, label_en in _ROMAN_STATUS_LABELS
@@ -226,7 +226,7 @@ def _roman_pipeline_block(row: PipelineRomanNumerals, lang: str) -> str:
     th_share = localized(lang, "part", "share")
     return (
         f"<h4>{head}</h4>\n"
-        f'<table class="data">\n<thead><tr><th>{th_status}</th>'
+        f'<table class="data compact">\n<thead><tr><th>{th_status}</th>'
         f'<th class="num-cell">{th_n}</th><th class="num-cell">{th_share}</th>'
         "</tr></thead>\n"
         f"<tbody>{rows}</tbody>\n</table>\n"
@@ -236,8 +236,8 @@ def _roman_pipeline_block(row: PipelineRomanNumerals, lang: str) -> str:
 def _roman_block(view: str, payload: RomanNumeralsPayload, lang: str) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — numéraux romains",
-        f"{escape(view)} — Roman numerals",
+        f"{view}numéraux romains",
+        f"{view}Roman numerals",
     )
     prose = localized(
         lang,
@@ -264,13 +264,15 @@ class PhilologySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         blocks: list[str] = []
         for analysis in result.analyses:
+            label = view_prefix(analysis.view, ctx.lang, multi=multi)
             if isinstance(analysis.payload, PhilologyPayload):
-                blocks.append(_block(analysis.view, analysis.payload, ctx.lang))
+                blocks.append(_block(label, analysis.payload, ctx.lang))
             elif isinstance(analysis.payload, RomanNumeralsPayload):
                 blocks.append(
-                    _roman_block(analysis.view, analysis.payload, ctx.lang)
+                    _roman_block(label, analysis.payload, ctx.lang)
                 )
         if not blocks:
             return None

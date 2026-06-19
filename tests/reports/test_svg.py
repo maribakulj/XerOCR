@@ -4,12 +4,150 @@ from __future__ import annotations
 
 from xerocr.reports.svg import (
     bar_series,
+    box_plot,
+    bubble_chart,
+    bump_chart,
     calibration_curve,
     composition_bar,
     dispersion_strip,
+    donut_chart,
+    dumbbell_rows,
+    grouped_columns,
     num,
+    radar_chart,
     word_engine_heatmap,
+    word_overlap_venn,
 )
+
+
+def test_donut_chart_empty_full_and_segments() -> None:
+    assert donut_chart([]) == ""
+    assert donut_chart([(0.0, "x")]) == ""  # tout à zéro
+    full = donut_chart([(5.0, "oklch(0.55 0.11 40)")])
+    assert "<circle" in full and "donut-hole" in full  # 100 % → cercle + trou
+    multi = donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])
+    assert multi.count('class="donut-seg"') == 3
+    assert "donut-hole" in multi
+    assert multi == donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])  # octet-stable
+
+
+def test_bump_chart_empty_and_lines() -> None:
+    assert bump_chart([], [], accents=[], n_ranks=2) == ""
+    assert bump_chart(["m"], [("e", [1])], accents=["a"], n_ranks=1) == ""  # <2 cols
+    cols = ["CER", "F1"]
+    series = [("e1", [1, 2]), ("e2", [2, 1])]
+    svg = bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
+    assert svg.count('class="bump-line"') == 2
+    assert svg.count('class="bump-dot"') == 4  # 2 séries × 2 colonnes
+    assert "CER" in svg and "F1" in svg
+    assert svg == bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
+
+
+def test_dumbbell_rows_empty_and_links() -> None:
+    assert dumbbell_rows([], scale_max=1.0) == ""
+    rows = [("d1", [(0.1, "a"), (0.3, "b")]), ("d2", [(0.2, "a"), (0.2, "b")])]
+    svg = dumbbell_rows(rows, scale_max=0.4)
+    assert svg.count('class="dumb-dot"') == 4  # 2 points × 2 lignes
+    assert svg.count('class="dumb-link"') == 2  # une liaison par ligne (≥2 points)
+    assert "d1" in svg and "d2" in svg
+    assert svg == dumbbell_rows(rows, scale_max=0.4)  # octet-stable
+
+
+def test_grouped_columns_empty_is_empty() -> None:
+    assert grouped_columns([], [], accents=[]) == ""
+    assert grouped_columns(["A"], [], accents=[]) == ""
+
+
+def test_grouped_columns_one_bar_per_group_series_deterministic() -> None:
+    groups = ["Car.", "Mot"]
+    series = [("e1", [0.5, 0.9]), ("e2", [0.3, 0.7])]
+    accents = ["var(--fern)", "var(--slate)"]
+    svg = grouped_columns(groups, series, accents=accents)
+    assert svg.count('class="col-bar"') == 4  # 2 groupes × 2 séries
+    assert "Car." in svg and "Mot" in svg
+    assert svg == grouped_columns(groups, series, accents=accents)  # octet-stable
+
+
+def test_box_plot_parts_and_deterministic() -> None:
+    svg = box_plot(0.0, 0.1, 0.2, 0.3, 0.5, 0.22, 0.5, accent="var(--fern)")
+    for cls in ("box-whisker", "box-cap", "box-box", "box-med", "box-mean"):
+        assert cls in svg
+    assert svg.startswith("<svg") and 'aria-hidden="true"' in svg
+    assert svg == box_plot(0.0, 0.1, 0.2, 0.3, 0.5, 0.22, 0.5, accent="var(--fern)")
+
+
+def test_bubble_chart_empty_has_frame_no_dots() -> None:
+    svg = bubble_chart([])
+    assert "bubble-frame" in svg
+    assert "bubble-dot" not in svg
+
+
+def test_bubble_chart_one_dot_per_point_round_and_deterministic() -> None:
+    points = [
+        (0.8, 0.1, 100.0, "var(--fern)"),
+        (0.3, 0.9, 400.0, "var(--slate)"),
+        (0.5, 0.5, 250.0, "var(--fern)"),
+    ]
+    svg = bubble_chart(points)
+    assert svg.count('class="bubble-dot"') == 3
+    # pas de preserveAspectRatio=none (bulles rondes, échelle uniforme)
+    assert "preserveAspectRatio" not in svg
+    assert svg == bubble_chart(points)  # octet-stable
+
+
+def test_radar_chart_too_few_axes_is_empty() -> None:
+    assert radar_chart(["A", "B"], [("e", [0.5, 0.5])], accents=["var(--fern)"]) == ""
+    assert radar_chart(["A", "B", "C"], [], accents=[]) == ""
+
+
+def test_radar_chart_one_polygon_per_series_and_deterministic() -> None:
+    axes = ["Car.", "Mot", "F1", "Rech."]
+    series = [("a", [0.9, 0.6, 0.7, 0.8]), ("b", [0.5, 0.5, 0.4, 0.3])]
+    accents = ["var(--fern)", "var(--slate)"]
+    svg = radar_chart(axes, series, accents=accents)
+    # une aire par série + grille (4 anneaux) + libellé d'axe présent.
+    assert svg.count('class="radar-area"') == 2
+    assert svg.count('class="radar-grid"') == 4
+    assert "Rech." in svg
+    assert svg.startswith("<svg") and 'aria-hidden="true"' in svg
+    assert svg == radar_chart(axes, series, accents=accents)  # octet-stable
+
+
+def test_word_overlap_venn_two_engines_regions_and_counts() -> None:
+    svg = word_overlap_venn(
+        ["A", "B"],
+        {frozenset({0}): 5, frozenset({1}): 3, frozenset({0, 1}): 44},
+        accents=["var(--fern)", "var(--slate)"],
+    )
+    assert svg.startswith("<svg") and 'class="venn-svg"' in svg
+    assert svg.count("<circle") == 2
+    assert ">5<" in svg and ">3<" in svg and ">44<" in svg
+    assert ">A<" in svg and ">B<" in svg
+    assert "var(--fern)" in svg and "var(--slate)" in svg
+
+
+def test_word_overlap_venn_three_engines_has_three_circles() -> None:
+    svg = word_overlap_venn(
+        ["A", "B", "C"], {frozenset({0, 1, 2}): 7}, accents=["#a", "#b", "#c"]
+    )
+    assert svg.count("<circle") == 3 and ">7<" in svg
+
+
+def test_word_overlap_venn_skips_zero_regions() -> None:
+    svg = word_overlap_venn(
+        ["A", "B"], {frozenset({0}): 0, frozenset({0, 1}): 9}, accents=["#a", "#b"]
+    )
+    assert ">9<" in svg and ">0<" not in svg
+
+
+def test_word_overlap_venn_beyond_three_is_empty() -> None:
+    assert word_overlap_venn(["A", "B", "C", "D"], {}, accents=["#a"] * 4) == ""
+
+
+def test_word_overlap_venn_is_deterministic() -> None:
+    a = word_overlap_venn(["A", "B"], {frozenset({0}): 2}, accents=["#a", "#b"])
+    b = word_overlap_venn(["A", "B"], {frozenset({0}): 2}, accents=["#a", "#b"])
+    assert a == b
 
 
 def test_bar_series_one_rect_per_value_scaled_to_max() -> None:
@@ -97,6 +235,9 @@ def test_word_engine_heatmap_words_headers_counts_and_teint() -> None:
     )
     assert svg.startswith("<svg") and svg.endswith("</svg>")
     assert 'class="wmap-svg"' in svg and 'aria-hidden="true"' in svg
+    # taille **intrinsèque** posée (width/height) → pas d'étirement à 100 % du
+    # conteneur (2 colonnes : 156 + 30×2 = 216 de large, 18 + 22×2 = 62 de haut).
+    assert 'width="216.00"' in svg and 'height="62.00"' in svg
     assert "prologve" in svg and "roi" in svg  # mots verbatim (lignes)
     assert ">A<" in svg and ">B<" in svg  # en-têtes moteur
     assert ">3<" in svg and ">2<" in svg  # comptes inscrits

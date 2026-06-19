@@ -113,12 +113,13 @@ def test_air_and_hcpr_render_as_columns() -> None:
 def test_renders_english_labels() -> None:
     html = EngineSection().render(_result(), SectionContext(lang="en"))
     assert html is not None
-    assert "Ranking (view:" in html  # <h2>
+    # vue unique → titre sans suffixe de vue (pas de ressassage)
+    assert "Ranking" in html and "(view:" not in html  # <h2>
     assert "<th>Engine</th>" in html  # en-tête de colonne moteur
     assert "Sorted by" in html  # prose de tri
     assert 'title="Profile"' in html  # lien vers le profil moteur
     # Les libellés FR correspondants sont absents.
-    assert "Classement (vue" not in html
+    assert "Classement" not in html
     assert "<th>Moteur</th>" not in html
     assert "Trié par" not in html
     assert 'title="Profil"' not in html

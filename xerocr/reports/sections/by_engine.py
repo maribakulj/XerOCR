@@ -14,12 +14,15 @@ from statistics import median
 
 from xerocr.evaluation.result import PipelineResult, RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import (
     bar_cell,
+    bar_legend,
     col_max,
+    group_header_row,
     metric_th,
+    nonempty_metric_indices,
     ordered_unique,
 )
 
@@ -62,13 +65,14 @@ class EngineSection:
         # Badge moteur (lettre + accent) = identité STABLE, indépendante du rang :
         # ordre canonique = première apparition dans le run (partagé entre sections).
         order = engine_order(p.pipeline for p in result.pipelines)
-        maxes = [col_max([p.aggregate for p in rows], i) for i in range(len(metrics))]
+        keep = nonempty_metric_indices([p.aggregate for p in rows])  # masque tout-« — »
+        maxes = [col_max([p.aggregate for p in rows], i) for i in keep]
         profil_title = localized(ctx.lang, "Profil", "Profile")
         body: list[str] = []
         for position, pipeline in enumerate(ordered, start=1):
             cells = "".join(
-                bar_cell(s, maxes[i], sortable=True)
-                for i, s in enumerate(pipeline.aggregate)
+                bar_cell(pipeline.aggregate[i], maxes[j], sortable=True)
+                for j, i in enumerate(keep)
             )
             vals = _per_doc_values(result.documents, pipeline.pipeline, view, rank)
             disp = (
@@ -85,11 +89,17 @@ class EngineSection:
                 f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
                 f'title="{profil_title}">→</a></td></tr>'
             )
-        header = "".join(metric_th(m, ctx.lang, sortable=True) for m in metrics)
+        display_metrics = [metrics[i] for i in keep]
+        header = "".join(
+            metric_th(m, ctx.lang, sortable=True) for m in display_metrics
+        )
+        # Suffixe de vue seulement si plusieurs vues à distinguer (sinon bruit).
+        multi = len(ordered_unique(p.view for p in result.pipelines)) > 1
+        vlbl = escape(view_label(view, ctx.lang))
         heading = localized(
             ctx.lang,
-            f"Classement (vue : {escape(view)})",
-            f"Ranking (view: {escape(view)})",
+            f"Classement{f' (vue : {vlbl})' if multi else ''}",
+            f"Ranking{f' (view: {vlbl})' if multi else ''}",
         )
         prose = localized(
             ctx.lang,
@@ -107,10 +117,13 @@ class EngineSection:
         return Html(
             f"<h2>{heading}</h2>\n"
             + prose
-            + '<table class="data sortable">\n'
-            f"<thead><tr><th>#</th><th>{th_engine}</th>{header}"
+            + '<div class="table-scroll"><table class="data sortable">\n'
+            "<thead>"
+            + group_header_row(display_metrics, ctx.lang, lead=2, trail=2)
+            + f"<tr><th>#</th><th>{th_engine}</th>{header}"
             f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
-            f"<tbody>{''.join(body)}</tbody>\n</table>\n"
+            f"<tbody>{''.join(body)}</tbody>\n</table></div>\n"
+            + bar_legend(ctx.lang)
         )
 
 

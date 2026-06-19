@@ -10,11 +10,28 @@ from xerocr.evaluation.errors import EvaluationError
 from xerocr.evaluation.metrics.text import (
     cer,
     cer_diplomatic,
+    char_accuracy,
     deletion_rate,
     insertion_rate,
     mer,
     wer,
+    word_accuracy,
 )
+
+
+def test_char_accuracy_is_one_minus_cer_bounded() -> None:
+    assert char_accuracy.fn(_ctx("abc", "abc")).value == 1.0  # parfait → 1
+    # une substitution sur 3 → CER 1/3 → exactitude 2/3
+    assert char_accuracy.fn(_ctx("abc", "abx")).value == pytest.approx(2 / 3)
+    # sortie qui rallonge énormément (CER > 1) → exactitude plancher 0
+    assert char_accuracy.fn(_ctx("a", "xxxxx")).value == 0.0
+    assert char_accuracy.spec.higher_is_better is True
+
+
+def test_word_accuracy_is_one_minus_wer_bounded() -> None:
+    assert word_accuracy.fn(_ctx("a b c", "a b c")).value == 1.0
+    assert word_accuracy.fn(_ctx("a b c", "a b x")).value == pytest.approx(2 / 3)
+    assert word_accuracy.spec.higher_is_better is True
 
 
 def _ctx(reference: object, hypothesis: object) -> DocContext:

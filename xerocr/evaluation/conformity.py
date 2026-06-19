@@ -89,37 +89,47 @@ def conformity_analysis(
     pipelines: Sequence[PipelineResult],
     documents: Sequence[RunDocumentResult],
 ) -> Analysis | None:
-    """Construit le payload ``hipe``, ou ``None`` sans vue de profil ``hipe``.
+    """Construit le payload ``hipe``, ou ``None`` sans vue portant ``cmer``.
 
-    Exige ``cmer`` dans les métriques de la vue ``hipe`` (c'est la métrique de
-    classement du scorer) ; ``wmer`` = la clé interne ``mer`` (mapping de nom à
-    la frontière, jamais de clé jumelle au registre).
+    Ancre = la vue de profil ``hipe`` si présente (avec ``cmer``), **sinon** la
+    première vue portant ``cmer`` (le profil ``standard`` en a) → cMER/wMER
+    micro·macro s'affichent sur **tout** corpus. Les **deltas** de normalisation
+    (norm/heritage) n'ont de sens qu'avec une vraie ancre HIPE + vues
+    brute/heritage : sinon ``None``. ``wmer`` = la clé interne ``mer``.
     """
     hipe_view = _view_with_profile(views, "hipe")
-    if hipe_view is None or "cmer" not in hipe_view.metric_names:
+    if hipe_view is not None and "cmer" not in hipe_view.metric_names:
+        hipe_view = None  # vue hipe sans cmer → inutilisable comme ancre
+    anchor = hipe_view or next(
+        (v for v in views if "cmer" in v.metric_names), None
+    )
+    if anchor is None:
         return None
-    raw_view = _view_with_profile(views, None)
-    heritage_view = _view_with_profile(views, "heritage")
+    # Deltas : seulement si l'ancre est une vraie vue HIPE (comparaison de profils).
+    raw_view = _view_with_profile(views, None) if hipe_view is not None else None
+    heritage_view = (
+        _view_with_profile(views, "heritage") if hipe_view is not None else None
+    )
 
     order: list[str] = []
     for result in pipelines:
-        if result.view == hipe_view.name and result.pipeline not in order:
+        if result.view == anchor.name and result.pipeline not in order:
             order.append(result.pipeline)
     if not order:
         return None
 
     rows: list[PipelineConformity] = []
     for pipeline in order:
-        cmer_values = _per_document(documents, hipe_view.name, pipeline, "cmer")
-        cmer_micro = _micro(pipelines, hipe_view.name, pipeline, "cmer")
+        cmer_values = _per_document(documents, anchor.name, pipeline, "cmer")
+        cmer_micro = _micro(pipelines, anchor.name, pipeline, "cmer")
         rows.append(
             PipelineConformity(
                 pipeline=pipeline,
                 cmer_micro=cmer_micro,
                 cmer_macro=_macro(cmer_values),
-                wmer_micro=_micro(pipelines, hipe_view.name, pipeline, "mer"),
+                wmer_micro=_micro(pipelines, anchor.name, pipeline, "mer"),
                 wmer_macro=_macro(
-                    _per_document(documents, hipe_view.name, pipeline, "mer")
+                    _per_document(documents, anchor.name, pipeline, "mer")
                 ),
                 delta_norm=_delta(pipelines, raw_view, pipeline, cmer_micro),
                 delta_heritage=_delta(
@@ -130,9 +140,9 @@ def conformity_analysis(
         )
     return Analysis(
         scope="corpus",
-        view=hipe_view.name,
+        view=anchor.name,
         payload=ConformityPayload(
-            hipe_view=hipe_view.name,
+            hipe_view=anchor.name,
             raw_view=raw_view.name if raw_view is not None else None,
             heritage_view=heritage_view.name if heritage_view is not None else None,
             pipelines=tuple(rows),

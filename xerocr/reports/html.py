@@ -61,7 +61,13 @@ _CSS = (
     "font-family:var(--mono);font-size:10.5px;}"
     ".chrome-btn:hover{background:rgba(239,237,232,0.18);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
-    ".tab-panel{display:flex;flex-direction:column;gap:14px;}"
+    # Flux de cartes (masonry CSS, sans JS) : le panneau coule ses cartes en
+    # colonnes de ~23rem qui se réagencent selon la largeur ; chaque carte reste
+    # entière (break-inside). Les cartes larges (tableaux, héros) prennent toute
+    # la largeur (column-span). Réempile en 1 colonne sur écran étroit.
+    ".tab-panel{columns:23rem;column-gap:14px;}"
+    ".tab-panel>.r-block,.tab-panel>.view-hero{break-inside:avoid;margin:0 0 14px;}"
+    ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{column-span:all;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
@@ -89,11 +95,26 @@ _CSS = (
     "font-weight:800;font-optical-sizing:auto;letter-spacing:0;"
     "font-variant-numeric:tabular-nums;"
     "line-height:1;color:var(--ink);}"
+    # Grille de tables **côte à côte** : une longue liste est découpée en N
+    # colonnes pour **utiliser la largeur** au lieu de descendre tout en bas
+    # (`--n` posé en inline) ; replie en 1 colonne sur écran étroit.
+    ".tcols{display:grid;grid-template-columns:repeat(var(--n,2),1fr);"
+    "gap:0 26px;align-items:start;}"
+    "@media (max-width:760px){.tcols{grid-template-columns:1fr;}}"
+    ".table-scroll{overflow-x:auto;}"
+    ".table-scroll table.data{min-width:max-content;}"
+    "table.data.compact{width:auto;max-width:540px;}"
+    "table.data td.lbl{text-align:left;color:var(--g-700);}"
     "table.data{width:100%;border-collapse:collapse;font-size:13px;margin:.4rem 0 0;}"
     "table.data th{text-align:left;font-size:10.5px;letter-spacing:0.04em;"
     "text-transform:uppercase;color:var(--g-400);font-weight:500;"
     "padding:8px 14px 10px;border-bottom:1px solid var(--g-100);}"
     "table.data th.num-cell{text-align:right;}"
+    # Super-en-tête de groupe thématique (calque « Par moteur » du canon).
+    "table.data tr.grp-row th{border-bottom:none;padding:8px 14px 0;}"
+    "table.data tr.grp-row th.grp-head{font-size:9.5px;letter-spacing:0.05em;"
+    "text-transform:uppercase;color:var(--g-300);font-weight:600;"
+    "border-bottom:1px solid var(--g-100);}"
     # Tables vivantes : en-tête triable (clic) + définition au survol (E1).
     "table.data th.sortable{cursor:pointer;user-select:none;}"
     "table.data th.sortable:hover{color:var(--ink);}"
@@ -107,9 +128,15 @@ _CSS = (
     "table.data tr:last-child td{border-bottom:none;}"
     "table.data td.databar{position:relative;padding:0;font-family:var(--mono);"
     "font-variant-numeric:tabular-nums;font-size:12px;color:var(--ink);"
-    "border-bottom:1px solid var(--g-50);vertical-align:middle;}"
-    "table.data td.databar .db-fill{position:absolute;top:6px;bottom:6px;left:6px;"
-    "border-radius:8px;background:var(--fern);opacity:0.18;z-index:0;}"
+    "border-bottom:1px solid var(--g-50);vertical-align:middle;"
+    # Teinte de cellule (canon) : fond sauge ∝ position sur l'axe de la colonne
+    # (``--t`` ∈ [0,1], posé par ``bar_cell``). Valeurs proches → teintes proches,
+    # contrairement à l'ancienne barre normalisée qui saturait la cellule.
+    "background:rgba(120,134,107,calc(var(--t,0) * 0.26));}"
+    # Barre fine de base : encore utilisée par image_quality / word_errors (où la
+    # LONGUEUR = score/compte a un sens) — la table de métriques, elle, est teintée.
+    "table.data td.databar .db-fill{position:absolute;left:14px;bottom:5px;height:3px;"
+    "border-radius:2px;background:var(--fern);opacity:0.55;z-index:0;}"
     "table.data td.databar .db-num{position:relative;z-index:1;display:block;"
     "text-align:right;padding:12px 14px;}"
     "table.data td.rank{padding:11px 8px 11px 14px;color:var(--g-400);"
@@ -138,21 +165,101 @@ _CSS = (
     ".doc-card{text-decoration:none;color:inherit;cursor:pointer;}"
     ".doc-card:hover{outline:2px solid var(--fern);outline-offset:2px;}"
     # Détail document (drill-in) : CER par moteur + diff des pires lignes.
-    ".dd-cers{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}"
-    ".dd-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
-    "font-size:12px;color:var(--g-700);}"
-    ".dd-name{flex:1;}.dd-cer{font-variant-numeric:tabular-nums;}"
+    # CER par moteur : grille compacte (badge · nom · valeur) — la valeur suit le
+    # nom dans sa colonne (alignée ET proche), au lieu d'être projetée au bord.
+    ".dd-cers{display:inline-grid;grid-template-columns:auto auto auto;"
+    "gap:5px 10px;align-items:center;margin-bottom:14px;}"
+    ".dd-row{display:contents;}"
+    ".dd-name{font-family:var(--mono);font-size:12px;color:var(--g-700);}"
+    ".dd-cer{font-variant-numeric:tabular-nums;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);text-align:right;}"
     ".dd-row.best .dd-cer{color:var(--fern);font-weight:600;}"
     ".dd-diffs{display:flex;flex-direction:column;gap:12px;}"
     ".dd-diff{background:var(--surface);border-radius:var(--r-md);padding:10px 12px;}"
     ".dd-diff-head{font-size:11px;color:var(--g-500);margin-bottom:6px;"
     "display:flex;align-items:center;gap:6px;}"
-    # Détail document : fac-similé medium à gauche, CER + diff à droite.
-    ".dd-cols{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;}"
-    ".dd-fac{flex:0 0 300px;max-width:100%;}"
-    ".dd-fac-img{width:100%;border-radius:var(--r-md);border:1px solid var(--g-50);"
-    "display:block;}"
-    ".dd-right{flex:1;min-width:260px;}"
+    # Détail document : fac-similé medium EN HAUT, zoomable/pan (molette + glisser).
+    # Bandeau étroit **centré** au-dessus du diff (qui prend toute la largeur en
+    # dessous) — image modeste, le texte respire.
+    ".dd-fac-top{max-width:560px;margin:0 auto 14px;}"
+    # Cartes secondaires du drill-in (CER, heatmap ligne, qualité image…) en flux :
+    # chacune à sa taille, côte à côte, réagencement par largeur (masonry CSS).
+    ".dd-flow{columns:21rem;column-gap:12px;margin-top:14px;}"
+    ".dd-card{break-inside:avoid;margin:0 0 12px;border:1px solid var(--g-50);"
+    "border-radius:var(--r-md);padding:13px 15px;background:var(--surface);}"
+    ".dd-card.dd-wide{column-span:all;}"
+    ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
+    "background:var(--surface);border-radius:var(--r-md);"
+    "border:1px solid var(--g-50);cursor:zoom-in;}"
+    ".dd-fac-img{width:100%;height:100%;object-fit:contain;display:block;"
+    "transform-origin:center center;will-change:transform;user-select:none;}"
+    ".dd-zoom-ctl{position:absolute;top:8px;right:8px;display:flex;gap:4px;}"
+    ".dd-zoom-ctl button{width:26px;height:26px;border:none;border-radius:6px;"
+    "background:rgba(26,25,23,0.72);color:var(--paper);cursor:pointer;font-size:14px;"
+    "line-height:1;display:flex;align-items:center;justify-content:center;}"
+    # Diff côte à côte : 2 colonnes égales, chacune une carte bordée (en-tête +
+    # corps serif scrollable, sauts de ligne respectés).
+    ".dd-sbs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}"
+    ".dd-sbs-col{min-width:0;border:1px solid var(--g-50);border-radius:var(--r-md);"
+    "overflow:hidden;}"
+    ".dd-sbs-col .dd-diff-head{margin:0;padding:7px 12px;background:var(--surface);"
+    "border-bottom:1px solid var(--g-50);}"
+    "@media (max-width:720px){.dd-sbs{grid-template-columns:1fr;}}"
+    # Qualité d'image du document : mini-barres mesurées (recentrées sur le doc).
+    ".dd-iq{margin-bottom:14px;}"
+    ".dd-iq-bars{display:flex;flex-direction:column;gap:5px;}"
+    ".dd-iq-row{display:flex;align-items:center;gap:8px;font-size:12px;"
+    "color:var(--g-700);}"
+    ".dd-iq-lbl{flex:0 0 150px;}"
+    # Primitive partagée : piste de proportion horizontale [0,1]. La coque est
+    # commune (qualité d'image, percentiles, strates) ; l'appelant pose la largeur
+    # du fill (`width:X%`) + sa couleur (classe `lh-*` ou style inline).
+    ".track{flex:1;height:8px;background:var(--surface);border-radius:var(--r-pill);"
+    "overflow:hidden;}"
+    ".track>i{display:block;height:100%;border-radius:inherit;}"
+    ".dd-iq-val{flex:0 0 40px;text-align:right;font-variant-numeric:tabular-nums;}"
+    ".dd-iq-meta{font-size:11px;margin-top:6px;}"
+    # CER ligne par ligne du document : un mini histogramme par moteur (hauteur
+    # ∝ CER), repères début→fin. Une barre = une ligne GT.
+    ".dd-lh{margin-bottom:14px;}"
+    ".dd-lh-rows{display:flex;flex-direction:column;gap:12px;}"
+    ".dd-lh-row{display:flex;align-items:flex-start;gap:8px;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);}"
+    ".dd-lh-plot{flex:1;min-width:0;}"
+    ".dd-lh-bars{display:flex;align-items:flex-end;justify-content:center;"
+    "gap:2px;height:40px;padding-bottom:2px;}"
+    ".dd-lh-bar{flex:1 1 0;min-width:2px;max-width:48px;border-radius:2px 2px 0 0;}"
+    ".dd-lh-axis{display:flex;justify-content:space-between;font-size:10px;"
+    "color:var(--g-400);margin-top:3px;}"
+    ".lh-g{background:var(--fern);}.lh-m{background:#c9a227;}"
+    ".lh-o{background:#c2702f;}.lh-b{background:#a23b3b;}"
+    # Distribution par ligne : par moteur, badges + (carte thermique | percentiles).
+    ".dd-ld-rows{display:flex;flex-direction:column;gap:12px;}"
+    ".dd-ld-row{padding:10px 0;border-top:1px solid var(--g-50);}"
+    ".dd-ld-head{display:flex;align-items:center;flex-wrap:wrap;gap:6px;"
+    "font-family:var(--mono);font-size:12px;color:var(--g-700);margin-bottom:8px;}"
+    ".dd-ld-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}"
+    "@media (max-width:720px){.dd-ld-grid{grid-template-columns:1fr;}}"
+    ".dd-ld-sub{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;"
+    "color:var(--g-400);margin-bottom:5px;}"
+    ".dd-pct-row{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
+    "font-size:11px;color:var(--g-700);margin-bottom:4px;}"
+    ".dd-pct-lbl{flex:0 0 30px;}"
+    ".dd-pct-val{flex:0 0 52px;text-align:right;font-variant-numeric:tabular-nums;}"
+    # Analyse des hallucinations du document : par moteur, indicateurs + blocs.
+    ".dd-hl{margin-bottom:14px;}"
+    ".dd-hl-row{padding:10px 0;border-top:1px solid var(--g-50);}"
+    ".dd-hl-head{display:flex;align-items:center;gap:8px;font-family:var(--mono);"
+    "font-size:12px;color:var(--g-700);margin-bottom:6px;}"
+    ".dd-hl-flag{color:var(--clay,#a23b3b);font-weight:600;font-size:11px;}"
+    # Primitive partagée : pastille (chip) + leur rangée (chips). Petite étiquette
+    # mono sur fond surface ; utilisée pour indicateurs et effectifs.
+    ".chips{display:flex;flex-wrap:wrap;gap:6px;}"
+    ".chip{font-family:var(--mono);font-size:11px;padding:3px 8px;"
+    "background:var(--surface);border-radius:var(--r-pill);color:var(--g-700);}"
+    ".dd-hl-blocks{margin-top:8px;font-size:12px;}"
+    ".dd-hl-block{padding:7px 10px;margin-top:5px;border-radius:var(--r-md);"
+    "background:rgba(229,154,138,0.18);line-height:1.6;word-break:break-word;}"
     # Diff pleine page : sélecteur de moteur (segmenté) + blocs diff (un visible).
     ".dd-fullwrap{margin-top:6px;}"
     ".dd-engine-tabs{display:inline-flex;gap:2px;padding:3px;margin-bottom:10px;"
@@ -163,19 +270,21 @@ _CSS = (
     ".dd-eng-btn .eng-badge{margin-right:0;}"
     ".dd-eng-btn.on{background:var(--ink);color:var(--paper);}"
     ".dd-fulldiff[hidden]{display:none;}"
-    ".dd-fulldiff .diff{max-height:260px;overflow:auto;margin-bottom:10px;}"
-    ".prof-head{display:flex;justify-content:space-between;align-items:center;"
+    ".dd-fulldiff .diff{max-height:360px;overflow-y:auto;padding:11px 13px;"
+    "white-space:pre-wrap;word-break:break-word;"
+    "font-family:Georgia,'Times New Roman',serif;font-size:13px;line-height:1.85;}"
+    ".drill-head{display:flex;justify-content:space-between;align-items:center;"
     "gap:12px;flex-wrap:wrap;margin-bottom:10px;}"
-    ".eng-back{font-family:var(--mono);font-size:12px;text-decoration:none;"
-    "color:var(--g-500);}.eng-back:hover{color:var(--ink);}"
-    ".prof-nav{display:flex;gap:6px;}"
-    ".prof-nav .btn-sm{font-family:var(--mono);font-size:11px;text-decoration:none;"
+    ".drill-back{font-family:var(--mono);font-size:12px;text-decoration:none;"
+    "color:var(--g-500);}.drill-back:hover{color:var(--ink);}"
+    ".drill-nav{display:flex;gap:6px;}"
+    ".drill-nav .btn-sm{font-family:var(--mono);font-size:11px;text-decoration:none;"
     "color:var(--g-500);background:var(--surface);border-radius:var(--r-pill);"
-    "padding:5px 12px;}.prof-nav .btn-sm:hover{color:var(--ink);}"
-    ".prof-title{display:flex;align-items:center;gap:10px;"
+    "padding:5px 12px;}.drill-nav .btn-sm:hover{color:var(--ink);}"
+    ".drill-title{display:flex;align-items:center;gap:10px;"
     "font-family:var(--display);font-weight:800;font-optical-sizing:auto;"
     "font-size:22px;color:var(--ink);margin-bottom:14px;}"
-    ".prof-pos{font-family:var(--mono);font-size:11px;font-weight:400;}"
+    ".drill-pos{font-family:var(--mono);font-size:11px;font-weight:400;}"
     ".kpi-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));"
     "gap:10px;margin-bottom:16px;}"
     ".kpi{background:var(--surface);border-radius:var(--r-md);padding:12px 14px;}"
@@ -183,7 +292,7 @@ _CSS = (
     "text-transform:uppercase;color:var(--g-400);}"
     ".kpi-v{font-family:var(--display);font-weight:800;font-optical-sizing:auto;"
     "font-size:24px;font-variant-numeric:tabular-nums;color:var(--ink);}"
-    ".prof-chart-title{font-size:12px;color:var(--g-500);margin-bottom:6px;}"
+    ".drill-caption{font-size:12px;color:var(--g-500);margin-bottom:6px;}"
     ".bars-svg{width:100%;height:120px;display:block;background:var(--surface);"
     "border-radius:var(--r-md);}"
     ".prof-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;}"
@@ -201,7 +310,7 @@ _CSS = (
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
     "word-break:break-word;vertical-align:top;}"
-    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:line-through;"
+    "del.d-del{background:rgba(229,154,138,0.30);text-decoration:none;"
     "color:var(--ink);}"
     "ins.d-ins{background:rgba(159,195,160,0.38);text-decoration:none;"
     "color:var(--ink);}"
@@ -236,14 +345,9 @@ _CSS = (
     ".strata-head{display:flex;align-items:center;gap:8px;}"
     ".strata-name{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:15px;color:var(--ink);}"
-    ".strata-bar{height:8px;background:var(--g-50);border-radius:var(--r-pill);"
-    "overflow:hidden;}"
-    ".strata-fill{display:block;height:100%;background:var(--fern);opacity:0.55;}"
     ".strata-pct{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:22px;font-variant-numeric:tabular-nums;"
     "color:var(--ink);}"
-    ".preview-chip{font-family:var(--mono);font-size:10px;color:var(--g-500);"
-    "background:var(--surface);border-radius:var(--r-pill);padding:2px 8px;}"
     # Graphe de dispersion CER (SVG serveur, échelle commune) : badge+nom, bande,
     # labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
     ".disp-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"
@@ -258,6 +362,13 @@ _CSS = (
     ".disp-mean{stroke:var(--ink);stroke-width:1.5;}"
     ".disp-labels{grid-column:2;font-size:11px;color:var(--g-500);"
     "font-variant-numeric:tabular-nums;}"
+    # Boîte à moustaches (SVG serveur) : moustaches min→max + capuchons, boîte
+    # interquartile teintée, trait médian (couleur moteur), tick moyenne (encre).
+    ".box-plot{width:100%;height:22px;display:block;}"
+    ".box-whisker,.box-cap{stroke:var(--g-300);stroke-width:1.5;}"
+    ".box-box{fill-opacity:0.32;stroke-width:1.5;}"
+    ".box-med{stroke-width:2;}"
+    ".box-mean{stroke:var(--ink);stroke-width:1;stroke-dasharray:2 2;}"
     # Courbe de calibration (SVG serveur) : diagonale pointillée = parfaite,
     # polyligne + disques = le moteur. Plot carré à gauche, table à droite.
     ".calib-block{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;"
@@ -274,16 +385,75 @@ _CSS = (
     ".comp-bar{width:100%;height:14px;display:block;border-radius:6px;"
     "overflow:hidden;}"
     ".comp-legend{display:flex;flex-direction:column;gap:4px;}"
-    ".comp-row{display:grid;grid-template-columns:14px 1fr auto auto;gap:10px;"
+    # swatch · label · part · compte **groupés à gauche** (spacer 1fr en fin) :
+    # sinon le label en 1fr poussait la valeur au bord droit (illisible en large).
+    ".comp-row{display:grid;grid-template-columns:14px 132px auto auto 1fr;gap:10px;"
     "align-items:center;font-size:12px;}"
     ".comp-sw{width:12px;height:12px;border-radius:3px;}"
     ".comp-label{color:var(--g-700);}"
     ".comp-share{color:var(--ink);font-variant-numeric:tabular-nums;}"
     ".comp-count{color:var(--g-400);font-variant-numeric:tabular-nums;}"
+    # Radar multi-métrique (SVG serveur) : grille concentrique + un polygone teinté
+    # par moteur (superposés). Carré, centré dans sa carte ; légende moteurs sous.
+    ".radar-wrap{max-width:300px;margin:8px auto 4px;}"
+    ".radar-svg{width:100%;height:auto;display:block;}"
+    ".radar-grid{fill:none;stroke:var(--g-100);stroke-width:1;}"
+    ".radar-spoke{stroke:var(--g-100);stroke-width:1;}"
+    ".radar-axis{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".radar-area{fill-opacity:0.13;stroke-width:2;stroke-linejoin:round;}"
+    ".radar-legend{text-align:center;}"
+    # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
+    # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.
+    ".bubble-wrap{max-width:360px;margin:8px auto 4px;}"
+    ".bubble-svg{width:100%;height:auto;display:block;}"
+    ".bubble-frame{fill:none;stroke:var(--g-100);stroke-width:1;}"
+    ".bubble-grid{stroke:var(--g-50);stroke-width:1;stroke-dasharray:3 3;}"
+    ".bubble-dot{fill-opacity:0.34;stroke-width:1;stroke-opacity:0.65;}"
+    ".bubble-legend{text-align:center;}"
+    # Colonnes groupées (SVG serveur) : un groupe de colonnes par métrique, une
+    # colonne par moteur (teinte moteur). Échelle uniforme, libellés sous l'axe.
+    ".col-wrap{max-width:380px;margin:8px auto 4px;}"
+    ".col-svg{width:100%;height:auto;display:block;}"
+    ".col-axis{stroke:var(--g-100);stroke-width:1;}"
+    ".col-bar{fill-opacity:0.85;}"
+    ".col-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".col-legend{text-align:center;}"
+    # Camembert (anneau SVG serveur) : parts teintées + trou central couleur fond
+    # (découpe). Légende = pastille + libellé + compte. Centré dans sa carte.
+    ".donut-svg{width:140px;height:140px;display:block;margin:6px auto 4px;}"
+    ".donut-seg{stroke:var(--surface);stroke-width:1;}"
+    ".donut-hole{fill:var(--surface);}"
+    ".donut-legend{text-align:center;}"
+    ".donut-key{display:inline-block;width:9px;height:9px;border-radius:2px;"
+    "vertical-align:middle;margin-right:2px;}"
+    # Graphe haltère (SVG serveur) : une ligne par document, points = CER par
+    # moteur reliés (min→max). Échelle uniforme, libellé doc à gauche.
+    ".dumb-wrap{max-width:380px;margin:8px auto 4px;}"
+    ".dumb-svg{width:100%;height:auto;display:block;}"
+    ".dumb-link{stroke:var(--g-300);stroke-width:2;}"
+    ".dumb-dot{stroke-width:1;fill-opacity:0.9;}"
+    ".dumb-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".dumb-legend{text-align:center;}"
+    # Bump chart (SVG serveur) : rang moteur par métrique, lignes + points ; les
+    # croisements = inversions de classement. Grille de rangs + libellés métrique.
+    ".bump-wrap{max-width:360px;margin:8px auto 4px;}"
+    ".bump-svg{width:100%;height:auto;display:block;}"
+    ".bump-grid{stroke:var(--g-50);stroke-width:1;}"
+    ".bump-rank,.bump-col{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
+    ".bump-line{fill:none;stroke-width:2.5;stroke-linejoin:round;}"
+    ".bump-dot{stroke-width:1;}"
+    ".bump-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
+    # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par
+    # moteur (faible opacité), compte par région inscrit.
+    ".venn-svg{max-width:340px;height:auto;display:block;margin:.4rem auto .2rem;}"
+    ".venn-circle{fill-opacity:0.13;stroke-width:1.5;}"
+    ".venn-count{font-family:var(--mono);font-size:15px;fill:var(--ink);"
+    "font-variant-numeric:tabular-nums;}"
+    ".venn-label{font-family:var(--mono);font-size:11px;fill:var(--g-500);}"
     ".wmap-svg{max-width:100%;height:auto;display:block;background:var(--surface);"
-    "border-radius:var(--r-md);margin:.4rem 0 0;}"
+    "border-radius:var(--r-md);margin:.4rem auto 0;}"
     ".wmap-word{font-family:var(--mono);font-size:11px;fill:var(--ink);}"
     ".wmap-head{font-family:var(--mono);font-size:10px;fill:var(--g-400);"
     "letter-spacing:0.04em;}"
@@ -308,8 +478,11 @@ _CSS = (
     "font-variant-numeric:tabular-nums;}"
     # Flux mot→forme(s) (#16 sur-normalisation, #17 modernisation) : le mot source
     # (prominent) → la/les forme(s) produite(s) ; chip(s) ± barre (taille = compte).
-    ".wflow{display:flex;flex-direction:column;gap:7px;margin:.4rem 0 1rem;}"
-    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}"
+    # Flux de modernisation en **colonnes journal** (≥ ~23em) au lieu d'une seule
+    # colonne qui descend tout en bas ; chaque ligne reste insécable.
+    ".wflow{columns:23em;column-gap:26px;margin:.4rem 0 1rem;}"
+    ".wf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;"
+    "break-inside:avoid;margin-bottom:7px;}"
     ".wf-word{font-family:var(--mono);font-size:13px;background:var(--surface);"
     "border:1px solid var(--g-50);border-radius:6px;padding:3px 8px;color:var(--ink);}"
     ".wf-src{background:var(--raised);font-weight:600;}"
@@ -436,6 +609,36 @@ def localized(lang: str, fr: str, en: str) -> str:
     return en if lang == "en" else fr
 
 
+#: Libellés humains des vues d'évaluation : nom interne → (FR, EN). **Source
+#: unique** consommée par toutes les sections (fin du « vue : text » brut dans les
+#: titres). Une vue absente d'ici porte déjà un nom lisible (ex. « référence OCR
+#: (pas une vérité-terrain manuelle) ») → affichée telle quelle.
+_VIEW_LABELS: dict[str, tuple[str, str]] = {
+    "text": ("Texte brut", "Plain text"),
+    "diplomatic": ("Transcription diplomatique", "Diplomatic transcription"),
+}
+
+
+def view_label(view: str, lang: str) -> str:
+    """Libellé humain d'une vue d'évaluation (repli sur le nom brut si inconnu).
+
+    Centralise la traduction du **nom interne** de vue (``"text"``) vers un
+    libellé lisible (« Texte brut »). Déterministe (même vue + langue → mêmes
+    octets) ; n'échappe pas (l'appelant échappe au point d'insertion HTML)."""
+    pair = _VIEW_LABELS.get(view)
+    if pair is None:
+        return view
+    return pair[1] if lang == "en" else pair[0]
+
+
+def view_prefix(view: str, lang: str, *, multi: bool) -> str:
+    """Préfixe de titre de bloc « <Libellé de vue> — », **seulement** si le run
+    porte plusieurs vues à distinguer ; sinon ``""`` (le libellé est déjà porté
+    par le héros/onglet → pas de ressassage « Texte brut — » sur chaque section).
+    Déjà échappé (fragment HTML prêt) : l'appelant l'insère tel quel."""
+    return f"{escape(view_label(view, lang))} — " if multi else ""
+
+
 def render_document(
     title: str,
     body: Html,
@@ -480,4 +683,10 @@ def render_document(
     )
 
 
-__all__ = ["escape", "localized", "render_document"]
+__all__ = [
+    "escape",
+    "localized",
+    "render_document",
+    "view_label",
+    "view_prefix",
+]

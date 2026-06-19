@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import EconomicsPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.engine_badges import engine_cell, engine_order
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -23,11 +24,14 @@ def _fmt_int(value: int | None) -> str:
     return "—" if value is None else f"{value}"
 
 
-def _block(view: str, payload: EconomicsPayload, lang: str) -> str:
+def _block(
+    view: str, payload: EconomicsPayload, lang: str, order: dict[str, int]
+) -> str:
     rows: list[str] = []
     for row in payload.pipelines:
+        badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
         rows.append(
-            f'<tr><td class="eng-cell">{escape(row.pipeline)}</td>'
+            f'<tr><td class="eng-cell">{badge}</td>'
             f'<td class="disp">{_fmt(row.cer)}</td>'
             f'<td class="disp">{_fmt(row.duration_seconds, "{:.1f}")}</td>'
             f'<td class="disp">{_fmt_int(row.tokens_in)}</td>'
@@ -101,8 +105,8 @@ def _block(view: str, payload: EconomicsPayload, lang: str) -> str:
         )
     head = localized(
         lang,
-        f"{escape(view)} — coûts &amp; débit",
-        f"{escape(view)} — costs &amp; throughput",
+        f"{view}coûts &amp; débit",
+        f"{view}costs &amp; throughput",
     )
     prose = localized(
         lang,
@@ -160,8 +164,13 @@ class EconomicsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang, order
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, EconomicsPayload)
         ]

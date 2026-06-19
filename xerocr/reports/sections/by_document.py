@@ -13,9 +13,14 @@ from collections.abc import Mapping
 
 from xerocr.evaluation.result import RunDocumentResult, RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    col_max,
+    nonempty_metric_indices,
+    ordered_unique,
+)
 
 
 class DocumentSection:
@@ -33,10 +38,14 @@ class DocumentSection:
             d.pipeline for d in result.documents
         )
         # Titre de vue porté par le héros (renderer) ; ici, les tables par vue.
+        views = ordered_unique(d.view for d in result.documents)
+        multi = len(views) > 1
         parts: list[str] = []
-        for view_name in ordered_unique(d.view for d in result.documents):
+        for view_name in views:
             parts.append(
-                _table_for_view(result.documents, view_name, order, ctx.lang)
+                _table_for_view(
+                    result.documents, view_name, order, ctx.lang, multi=multi
+                )
             )
         return Html("\n".join(parts) + "\n")
 
@@ -46,27 +55,34 @@ def _table_for_view(
     view_name: str,
     order: Mapping[str, int],
     lang: str,
+    *,
+    multi: bool,
 ) -> str:
     rows = [d for d in documents if d.view == view_name]
-    metrics = tuple(score.metric for score in rows[0].scores)
+    keep = nonempty_metric_indices([d.scores for d in rows])  # masque tout-« — »
+    all_metrics = tuple(score.metric for score in rows[0].scores)
+    metrics = [all_metrics[i] for i in keep]
     header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
-    maxes = [col_max([d.scores for d in rows], i) for i in range(len(metrics))]
+    maxes = [col_max([d.scores for d in rows], i) for i in keep]
     body: list[str] = []
     for doc_id in ordered_unique(d.document_id for d in rows):
         doc_rows = [d for d in rows if d.document_id == doc_id]
         for offset, doc in enumerate(doc_rows):
             label = escape(doc_id) if offset == 0 else ""  # groupé : nom 1×
             cells = "".join(
-                bar_cell(score, maxes[i]) for i, score in enumerate(doc.scores)
+                bar_cell(doc.scores[i], maxes[j]) for j, i in enumerate(keep)
             )
             badge = engine_cell(doc.pipeline, order.get(doc.pipeline, 0))
             body.append(
                 f'<tr><td class="eng-cell">{label}</td>'
                 f'<td class="eng-cell">{badge}</td>{cells}</tr>'
             )
-    view_label = localized(lang, "Vue", "View")
+    head = ""
+    if multi:  # libellé de vue seulement s'il y a plusieurs vues à distinguer
+        view_caption = localized(lang, "Vue", "View")
+        head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
     return (
-        f"<h2>{view_label} : {escape(view_name)}</h2>\n"
+        f"{head}"
         f'<table class="data">\n'
         f"<thead><tr><th>Document</th><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body)}</tbody>\n</table>"

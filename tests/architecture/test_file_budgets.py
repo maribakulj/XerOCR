@@ -30,9 +30,22 @@ FILE_BUDGETS: dict[str, int] = {
     # membre par famille de métriques) + ses sous-modèles. La cohésion du
     # contrat prime sur l'éclatement (CLAUDE.md §5.2) — on ne fragmente pas
     # ``AnalysisPayload``. Le fichier grandit **par construction** d'un membre
-    # par famille (axe 2). Budget relevé à la tranche 4f (15ᵉ payload ``ner`` :
-    # 942 LOC) + ~15 %.
-    "evaluation/analysis.py": 1083,
+    # par famille (axe 2). Budget re-basé aux payloads **par document**
+    # (``document_lines`` + ``document_taxonomy``, vue document recentrée :
+    # 1102 LOC) + ~15 %.
+    "evaluation/analysis.py": 1265,
+    # CSS **inline** du rapport autonome : une chaîne `_CSS` unique (contrainte
+    # d'autonomie — aucun fichier externe) + helpers d'assemblage. Cohésion du
+    # design system > éclatement ; grandit avec les composants (axe 2). Budget
+    # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
+    "reports/html.py": 705,
+    # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
+    # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
+    # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu
+    # (coords ``num`` octet-stables, accents passés par l'appelant) > éclatement ;
+    # grandit d'un graphe à la fois (axe 2). Budget re-basé au courant (703 LOC)
+    # + ~15 %.
+    "reports/svg.py": 810,
 }
 
 

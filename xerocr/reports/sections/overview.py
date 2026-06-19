@@ -11,9 +11,18 @@ des métriques.
 from __future__ import annotations
 
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.engine_badges import engine_cell, engine_order
+from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import bar_cell, col_max, ordered_unique
+from xerocr.reports.sections._tables import (
+    bar_cell,
+    bar_legend,
+    col_max,
+    group_header_row,
+    metric_short_label,
+    nonempty_metric_indices,
+    ordered_unique,
+)
 
 
 class OverviewSection:
@@ -33,30 +42,47 @@ class OverviewSection:
             f'<p class="muted">{corpus} : '
             f"{escape(result.manifest.corpus_name)}</p>",
         ]
+        multi = len(views) > 1
         for view_name in views:
-            parts.append(_table_for_view(result, view_name, ctx.lang))
+            parts.append(_table_for_view(result, view_name, ctx.lang, multi=multi))
         return Html("\n".join(parts) + "\n")
 
 
-def _table_for_view(result: RunResult, view_name: str, lang: str) -> str:
+def _table_for_view(
+    result: RunResult, view_name: str, lang: str, *, multi: bool
+) -> str:
     pipelines = [p for p in result.pipelines if p.view == view_name]
-    metrics = tuple(score.metric for score in pipelines[0].aggregate)
-    header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
+    order = engine_order(p.pipeline for p in result.pipelines)
     rows = [p.aggregate for p in pipelines]
-    maxes = [col_max(rows, i) for i in range(len(metrics))]
+    keep = nonempty_metric_indices(rows)  # masque les colonnes tout-« — »
+    all_metrics = tuple(score.metric for score in pipelines[0].aggregate)
+    metrics = [all_metrics[i] for i in keep]
+    header = "".join(
+        f'<th class="num-cell" title="{escape(m)}">'
+        f"{escape(metric_short_label(m))}</th>"
+        for m in metrics
+    )
+    maxes = [col_max(rows, i) for i in keep]
     body_rows: list[str] = []
     for pipeline in pipelines:
         cells = "".join(
-            bar_cell(score, maxes[i]) for i, score in enumerate(pipeline.aggregate)
+            bar_cell(pipeline.aggregate[i], maxes[j]) for j, i in enumerate(keep)
         )
-        body_rows.append(
-            f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>{cells}</tr>'
-        )
-    view_label = localized(lang, "Vue", "View")
+        badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
+        body_rows.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')
+    # Libellé de vue affiché **seulement** s'il y a plusieurs vues à distinguer
+    # (sinon « Métriques par vue » + la ligne corpus suffisent — pas de ressassage).
+    head = ""
+    if multi:
+        view_caption = localized(lang, "Vue", "View")
+        head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
     return (
-        f"<h2>{view_label} : {escape(view_name)}</h2>\n"
-        f'<table class="data">\n<thead><tr><th>Pipeline</th>{header}</tr></thead>\n'
-        f"<tbody>{''.join(body_rows)}</tbody>\n</table>"
+        f"{head}"
+        '<div class="table-scroll">'
+        f'<table class="data">\n<thead>{group_header_row(metrics, lang, lead=1)}'
+        f"<tr><th>Pipeline</th>{header}</tr></thead>\n"
+        f"<tbody>{''.join(body_rows)}</tbody>\n</table></div>\n"
+        f"{bar_legend(lang)}"
     )
 
 

@@ -104,7 +104,14 @@ _CANDIDATES = frozenset({ArtifactType.RAW_TEXT, ArtifactType.CORRECTED_TEXT})
 #: (byte-identique à l'ancienne vue par défaut).
 DEFAULT_METRIC_PROFILE = "standard"
 METRIC_PROFILES: dict[str, tuple[str, ...]] = {
-    "standard": ("cer", "wer", "mer", "searchability", "hallucination", "air"),
+    # ``cmer`` = MER caractère **borné [0,1]** (robuste aux modèles génératifs qui
+    # font dépasser le CER ; cf. metrics/conformity) — calculé sur RAW_TEXT comme
+    # CER, donc exposé d'office au socle (≠ réservé HIPE). Groupé « caractère ».
+    "standard": (
+        "cer", "cmer", "char_accuracy", "word_accuracy", "fca", "wer", "mer",
+        "bow_precision", "bow_recall", "bow_f1",
+        "searchability", "hallucination", "air",
+    ),
     "essentiel": ("cer", "wer", "mer"),
     "philologie": ("cer", "cer_diplo", "mer", "diacritic_err", "mufi_err", "air"),
 }
@@ -137,6 +144,19 @@ def _ocr_view(
         metric_names=metric_names,
         normalization_profile=normalization,
         char_exclude=char_exclude,
+    )
+
+
+def _layout_view() -> EvaluationView:
+    """Vue **structure / mise en page** : note les sorties ``LAYOUT``
+    (segmentation) par **Region-F1** (`region_detection`) + **CER par région**
+    (`region_cer`), sans projection — les métriques prennent le
+    ``CanonicalLayout`` directement. Normalisation/`char_exclude` N/A (géométrie
+    + texte par région). N'est ajoutée que si le corpus porte une GT ``LAYOUT``."""
+    return EvaluationView(
+        name="structure (mise en page)",
+        candidate_types=frozenset({ArtifactType.LAYOUT}),
+        metric_names=("region_detection", "region_cer"),
     )
 
 
@@ -193,6 +213,8 @@ def _views_for_corpus(
         )
     if ArtifactType.REFERENCE_TEXT in gt_types:
         views.append(_reference_view(normalization, char_exclude))
+    if ArtifactType.LAYOUT in gt_types:
+        views.append(_layout_view())
     if not views:
         views.append(
             _ocr_view(

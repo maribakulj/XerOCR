@@ -73,6 +73,15 @@ def _result() -> RunResult:
     )
 
 
+def test_overlap_composition_donut_renders() -> None:
+    html = WordErrorsSection().render(_result(), SectionContext(lang="fr"))
+    assert html is not None
+    assert "Composition (camembert)" in html
+    assert 'class="donut-svg"' in html
+    # 1 mot raté par tous, 2 par un seul moteur → comptes en légende.
+    assert "tous 1" in html and "un seul 2" in html
+
+
 def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     html = WordErrorsSection().render(_result(), SectionContext(lang="fr"))
     assert html is not None
@@ -81,14 +90,17 @@ def test_matrix_and_groups_render_words_verbatim_fr() -> None:
     # Mots de la GT **verbatim**.
     assert "prologve" in html and "roi" in html
     # #3 forme produite : la variante dominante (portée par le payload) est
-    # désormais rendue — la forme produite apparaît, verbatim (rien d'inventé).
+    # rendue avec l'**écart au mot GT surligné** (char_diff → <ins>) — les parties
+    # stables restent verbatim ("prolog"), le caractère changé est marqué.
     assert "forme produite par moteur" in html
-    assert "prologue" in html and "prolog" in html and "roy" in html
+    assert "prolog" in html and 'class="d-ins"' in html
     # #2 recouvrement inter-moteurs + regroupements (libellés FR).
     assert "recouvrement inter-moteurs" in html
     assert "tous" in html and "un seul" in html
     # Comptes de la matrice (total + par moteur).
     assert ">3<" in html and ">2<" in html
+    # Matrice en grille de tables côte à côte (utilise la largeur, R3).
+    assert 'class="tcols"' in html
     # Échappement défensif du mot porteur de « & ».
     assert "m&amp;t" in html
     # Déterminisme bit-à-bit du markup.

@@ -9,7 +9,7 @@ from __future__ import annotations
 from xerocr.evaluation.analysis import CalibrationPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import calibration_curve
 
@@ -19,8 +19,8 @@ def _block(
 ) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — calibration des confidences",
-        f"{escape(view)} — confidence calibration",
+        f"{view}calibration des confidences",
+        f"{view}confidence calibration",
     )
     parts: list[str] = [f"<h3>{head}</h3>\n"]
     parts.append(
@@ -78,8 +78,12 @@ class CalibrationSection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         # Ordre canonique des moteurs (accent stable, partagé avec les sections).
         order = engine_order(p.pipeline for p in result.pipelines)
+        multi = len({a.view for a in result.analyses}) > 1
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang,
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, CalibrationPayload)
         ]

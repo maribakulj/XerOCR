@@ -11,7 +11,8 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import CharConfusion, DiagnosticsPayload, WorstLine
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape
+from xerocr.reports.engine_badges import engine_cell, engine_order
+from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.text_diff import char_diff
 
@@ -50,7 +51,9 @@ def _confusion_chip(pair: CharConfusion, max_count: int) -> str:
     )
 
 
-def _confusion_flow(payload: DiagnosticsPayload, lang: str) -> str:
+def _confusion_flow(
+    payload: DiagnosticsPayload, lang: str, order: dict[str, int]
+) -> str:
     """Flux de confusion (#8) : par moteur, glyphes attendu → produit + fréquence.
 
     Les glyphes sont **prominents** (le symbole *est* la donnée — on juge à l'œil) ;
@@ -62,9 +65,9 @@ def _confusion_flow(payload: DiagnosticsPayload, lang: str) -> str:
             continue
         max_count = block.pairs[0].count  # pairs triées -count → pairs[0] = max
         chips = "".join(_confusion_chip(pair, max_count) for pair in block.pairs)
+        badge = engine_cell(block.pipeline, order.get(block.pipeline, 0))
         groups.append(
-            f'<div class="cf-engine"><span class="cf-eng-name">'
-            f"{escape(block.pipeline)}</span>"
+            f'<div class="cf-engine"><span class="cf-eng-name">{badge}</span>'
             f'<div class="cf-grid">{chips}</div></div>'
         )
     if not groups:
@@ -130,19 +133,22 @@ class DiagnosticsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        order = engine_order(p.pipeline for p in result.pipelines)
+        multi = len({a.view for a in result.analyses}) > 1
         blocks: list[str] = []
         for analysis in result.analyses:
             payload = analysis.payload
             if not isinstance(payload, DiagnosticsPayload):
                 continue
             inner = (
-                _confusion_flow(payload, ctx.lang)
+                _confusion_flow(payload, ctx.lang, order)
                 + _worst_lines_table(payload)
                 + _hardest_table(payload)
             )
             if inner:
                 blocks.append(
-                    f"<h3>{escape(analysis.view)} — où ça casse</h3>\n" + inner
+                    f"<h3>{view_prefix(analysis.view, ctx.lang, multi=multi)}"
+                    "où ça casse</h3>\n" + inner
                 )
         if not blocks:
             return None

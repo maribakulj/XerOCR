@@ -25,6 +25,8 @@ from xerocr.evaluation.conformity import conformity_analysis
 from xerocr.evaluation.context import CrossEngineContext, DocContext
 from xerocr.evaluation.correction import correction_analysis
 from xerocr.evaluation.diagnostics import DiagnosticsCollector
+from xerocr.evaluation.document_hallucination import DocumentHallucinationCollector
+from xerocr.evaluation.document_lines import DocumentLinesCollector
 from xerocr.evaluation.document_texts import DocumentTextsCollector
 from xerocr.evaluation.economics import economics_analysis
 from xerocr.evaluation.errors import EvaluationError
@@ -100,6 +102,7 @@ def evaluate_run(
         series: _Series = {name: {} for name in view.metric_names}
         diagnostics = DiagnosticsCollector()
         taxonomy = TaxonomyCollector()
+        doc_hallucination = DocumentHallucinationCollector()
         doc_texts = DocumentTextsCollector()
         structured = StructuredDataCollector()
         markers = MarkerCollector()
@@ -111,6 +114,7 @@ def evaluate_run(
         # Distribution par ligne : applicable seulement si la normalisation de
         # la vue préserve les sauts de ligne (sonde comportementale).
         lines = LinesCollector(enabled=newline_preserved(view))
+        doc_lines = DocumentLinesCollector(enabled=newline_preserved(view))
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -143,6 +147,12 @@ def evaluate_run(
                         str(text_context.reference),
                         str(text_context.hypothesis),
                     )
+                    doc_hallucination.observe(
+                        pipeline_name,
+                        document.id,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
                     structured.observe(
                         pipeline_name,
                         str(text_context.reference),
@@ -160,6 +170,12 @@ def evaluate_run(
                     )
                     lines.observe(
                         pipeline_name,
+                        str(text_context.reference),
+                        str(text_context.hypothesis),
+                    )
+                    doc_lines.observe(
+                        pipeline_name,
+                        document.id,
                         str(text_context.reference),
                         str(text_context.hypothesis),
                     )
@@ -228,6 +244,9 @@ def evaluate_run(
         taxonomy_analysis = taxonomy.build(view.name)
         if taxonomy_analysis is not None:
             analyses.append(taxonomy_analysis)
+        doc_hallucination_analysis = doc_hallucination.build(view.name)
+        if doc_hallucination_analysis is not None:
+            analyses.append(doc_hallucination_analysis)
         # Post-passe cross-payload : l'inter-moteurs lit les comptages taxonomy
         # de la même vue (zéro re-classification) — cf. ``inter_engine``.
         inter_engine_analysis = inter_engine.build(view.name, taxonomy_analysis)
@@ -251,6 +270,9 @@ def evaluate_run(
         lines_analysis = lines.build(view.name)
         if lines_analysis is not None:
             analyses.append(lines_analysis)
+        doc_lines_analysis = doc_lines.build(view.name)
+        if doc_lines_analysis is not None:
+            analyses.append(doc_lines_analysis)
         entities_analysis = entities.build(view.name)
         if entities_analysis is not None:
             analyses.append(entities_analysis)

@@ -1,9 +1,11 @@
-"""Collecteur de **textes complets** des pires documents (couche 3).
+"""Collecteur de **textes complets** de tous les documents scorés (couche 3).
 
 Mirror de ``DiagnosticsCollector`` : observe (pipeline, doc, ref, hyp, CER) par
-document scoré, puis ``build`` ne garde que les **top-N pires** documents (par CER
-moyen) avec leurs textes **tronqués** → ``DocumentTextsPayload`` borné, qui
-alimente le **diff pleine page** du détail document (rapport). Déterministe.
+document scoré, puis ``build`` embarque **tous** les documents (ordonnés
+pires-d'abord par CER moyen) avec leurs textes (bornés par sûreté) →
+``DocumentTextsPayload``, qui alimente le **diff côte à côte** du détail document
+(rapport). Tous les docs → la vue document montre la transcription complète de
+chacun (pas seulement des pires). Déterministe.
 """
 
 from __future__ import annotations
@@ -11,15 +13,14 @@ from __future__ import annotations
 from statistics import fmean
 
 from xerocr.evaluation.analysis import (
+    _MAX_TEXT_CHARS,
     Analysis,
     DocumentTexts,
     DocumentTextsPayload,
 )
 
-#: Plafond de documents dont on embarque les textes (top-N pires par CER).
-_TOP_DOCUMENTS = 20
-#: Plafond de caractères par texte (aligné sur ``analysis._MAX_TEXT_CHARS``).
-_MAX_CHARS = 8000
+#: Plafond de caractères par texte (borne de sûreté, = ``analysis._MAX_TEXT_CHARS``).
+_MAX_CHARS = _MAX_TEXT_CHARS
 
 
 class DocumentTextsCollector:
@@ -44,7 +45,7 @@ class DocumentTextsCollector:
             self._cers.setdefault(document_id, []).append(cer)
 
     def build(self, view: str) -> Analysis | None:
-        """Payload des **top-N pires** documents (CER moyen ↓), ``None`` si rien."""
+        """Payload de **tous** les documents scorés (CER moyen ↓), ``None`` si rien."""
         if not self._reference:
             return None
 
@@ -52,9 +53,7 @@ class DocumentTextsCollector:
             values = self._cers.get(doc)
             return fmean(values) if values else 0.0
 
-        ranked = sorted(self._reference, key=lambda d: (-_mean_cer(d), d))[
-            :_TOP_DOCUMENTS
-        ]
+        ranked = sorted(self._reference, key=lambda d: (-_mean_cer(d), d))
         documents = tuple(
             DocumentTexts(
                 document_id=doc,

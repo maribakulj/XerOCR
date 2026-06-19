@@ -52,8 +52,8 @@ def test_significant_verdict_and_parsed_columns() -> None:
     )
     assert html is not None
     assert "Significativité" in html
-    # clé éclatée en colonnes Vue / Métrique
-    assert ">text<" in html and ">cer<" in html
+    # clé éclatée en colonnes Vue / Métrique (vue affichée en libellé humain)
+    assert ">Texte brut<" in html and ">cer<" in html
     assert "0.0300" in html
     assert "significatif" in html  # p=0,03 < 0,05
 

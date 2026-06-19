@@ -92,16 +92,17 @@ def test_scope_moved_to_hero_not_readouts() -> None:
     assert 'class="readouts"' not in html
 
 
-def test_data_bars_are_relative_to_column_max() -> None:
+def test_cell_tint_is_relative_to_column_max() -> None:
     html = OverviewSection().render(_two(0.1, 0.2), SectionContext())
     assert html is not None
-    # cer 0.1 vs max 0.2 → 50 % ; 0.2 → 100 % (échelle relative à la colonne)
-    assert 'class="db-fill" style="width:50%"' in html
-    assert 'class="db-fill" style="width:100%"' in html
+    # cer 0.1 vs max 0.2 → teinte 0.5 ; 0.2 → 1.0 (échelle relative à la colonne)
+    assert 'style="--t:0.5"' in html
+    assert 'style="--t:1.0"' in html
 
 
 def test_renders_english_labels() -> None:
     html = OverviewSection().render(_result(0.25), SectionContext(lang="en"))
     assert html is not None
-    assert "Metrics per view" in html and "View :" in html
+    assert "Metrics per view" in html  # titre de section EN
     assert "Métriques par vue" not in html  # bascule de langue effective
+    assert "Vue :" not in html  # vue unique → pas de sous-titre de vue ressassé

@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from xerocr.evaluation.analysis import PipelineTaxonomy, TaxonomyPayload
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_accent, engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.svg import composition_bar
 
@@ -44,7 +44,34 @@ _PROFILE_TEXT: dict[str, dict[str, str]] = {
 }
 
 
-def composition_html(classes: tuple[str, ...], pipeline: PipelineTaxonomy) -> str:
+#: Libellés **lisibles bilingues** des classes d'erreur (la donnée garde ses clés
+#: stables ``CLASSES``). ``other`` = substitutions résiduelles = **vrais misreads**
+#: (ni casse/diacritique/ligature/confusion visuelle) → nommé « substitution »,
+#: pas un fourre-tout « other » : sur de l'OCR fautif, c'est légitimement la classe
+#: dominante (le moteur produit le mauvais mot, pas juste un accent près).
+_CLASS_LABELS: dict[str, tuple[str, str]] = {
+    "segmentation": ("segmentation", "segmentation"),
+    "case": ("casse", "case"),
+    "diacritic": ("diacritique", "diacritic"),
+    "ligature": ("ligature", "ligature"),
+    "visual": ("confusion visuelle", "visual confusion"),
+    "lacuna": ("omission", "omission"),
+    "insertion": ("insertion", "insertion"),
+    "other": ("substitution", "substitution"),
+}
+
+
+def _class_label(key: str, lang: str) -> str:
+    """Libellé lisible d'une classe d'erreur (clé brute si non répertoriée)."""
+    pair = _CLASS_LABELS.get(key)
+    if pair is None:
+        return key
+    return pair[1] if lang == "en" else pair[0]
+
+
+def composition_html(
+    classes: tuple[str, ...], pipeline: PipelineTaxonomy, lang: str = "fr"
+) -> str:
     """Barre empilée + légende pour **un** pipeline (réutilisable : section + profil).
 
     Couleur par classe = palette cyclique partagée, indexée sur l'ordre canonique
@@ -62,7 +89,7 @@ def composition_html(classes: tuple[str, ...], pipeline: PipelineTaxonomy) -> st
     legend = "".join(
         f'<div class="comp-row">'
         f'<span class="comp-sw" style="background:{_c(lbl)}"></span>'
-        f'<span class="comp-label">{escape(lbl)}</span>'
+        f'<span class="comp-label">{escape(_class_label(lbl, lang))}</span>'
         f'<span class="comp-share mono">{cnt / total:.0%}</span>'
         f'<span class="comp-count mono">{cnt}</span></div>'
         for lbl, cnt in present
@@ -113,9 +140,12 @@ def _profile_block(
                 )
             else:
                 cells.append('<td class="databar"><span class="db-num">·</span></td>')
-        rows.append(f'<tr><td class="eng-cell">{escape(cls)}</td>{"".join(cells)}</tr>')
+        rows.append(
+            f'<tr><td class="eng-cell">{escape(_class_label(cls, lang))}</td>'
+            f'{"".join(cells)}</tr>'
+        )
     return (
-        f"<h3>{escape(view)} — {text['title']}</h3>\n"
+        f"<h3>{view}{text['title']}</h3>\n"
         f'<p class="muted">{text["intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["th_class"]}</th>{headers}</tr></thead>\n'
@@ -128,8 +158,8 @@ def _block(
 ) -> str:
     head = localized(
         lang,
-        f"{escape(view)} — composition des erreurs",
-        f"{escape(view)} — error composition",
+        f"{view}composition des erreurs",
+        f"{view}error composition",
     )
     prose = localized(
         lang,
@@ -142,7 +172,7 @@ def _block(
     )
     parts: list[str] = [f"<h3>{head}</h3>\n", prose]
     for pipeline in payload.pipelines:
-        block = composition_html(payload.classes, pipeline)
+        block = composition_html(payload.classes, pipeline, lang)
         if block:
             label = localized(
                 lang,
@@ -163,9 +193,13 @@ class TaxonomySection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, TaxonomyPayload)
         ]

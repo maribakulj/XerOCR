@@ -9,6 +9,8 @@ flottant à précision variable). Les couleurs d'accent sont passées par l'appe
 
 from __future__ import annotations
 
+import math
+
 from xerocr.reports.html import escape
 
 #: Précision fixe des coordonnées SVG (déterminisme inter-plateformes).
@@ -58,14 +60,479 @@ def dispersion_strip(
     )
 
 
+def radar_chart(
+    axes: list[str],
+    series: list[tuple[str, list[float]]],
+    *,
+    accents: list[str],
+    size: float = 260.0,
+) -> str:
+    """Radar (toile d'araignée) multi-métrique : ``axes`` = libellés (chaque axe
+    normalisé « plus loin = meilleur », valeurs dans [0,1]) ; ``series`` =
+    ``(libellé, [valeur par axe])`` ; ``accents`` = couleur par série. Grille
+    concentrique + un polygone par série (superposés). Moins de 3 axes → ``""``
+    (un radar n'a pas de sens). Déterministe (coords ``num``), zéro JS."""
+    n = len(axes)
+    if n < 3 or not series:
+        return ""
+    cx = cy = size / 2.0
+    radius = size / 2.0 - 50.0
+
+    def point(i: int, frac: float) -> tuple[float, float]:
+        angle = -math.pi / 2.0 + 2.0 * math.pi * i / n
+        return (
+            cx + math.cos(angle) * radius * frac,
+            cy + math.sin(angle) * radius * frac,
+        )
+
+    parts: list[str] = []
+    for ring in (0.25, 0.5, 0.75, 1.0):
+        pts = " ".join(
+            f"{num(x)},{num(y)}" for x, y in (point(i, ring) for i in range(n))
+        )
+        parts.append(f'<polygon points="{pts}" class="radar-grid"/>')
+    for i, label in enumerate(axes):
+        ex, ey = point(i, 1.0)
+        parts.append(
+            f'<line x1="{num(cx)}" y1="{num(cy)}" x2="{num(ex)}" y2="{num(ey)}" '
+            'class="radar-spoke"/>'
+        )
+        lx, ly = point(i, 1.13)
+        anchor = "middle" if abs(lx - cx) < 1.0 else ("start" if lx > cx else "end")
+        parts.append(
+            f'<text x="{num(lx)}" y="{num(ly + 3.0)}" class="radar-axis" '
+            f'text-anchor="{anchor}">{escape(label)}</text>'
+        )
+    for s_idx, (_label, values) in enumerate(series):
+        pts = " ".join(
+            f"{num(x)},{num(y)}"
+            for x, y in (
+                point(i, max(0.0, min(values[i], 1.0)))
+                for i in range(min(n, len(values)))
+            )
+        )
+        accent = accents[s_idx] if s_idx < len(accents) else "var(--ink)"
+        parts.append(
+            f'<polygon points="{pts}" class="radar-area" '
+            f'style="fill:{accent};stroke:{accent}"/>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(size)} {num(size)}" class="radar-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
+def bubble_chart(
+    points: list[tuple[float, float, float, str]],
+    *,
+    width: float = 320.0,
+    height: float = 240.0,
+    r_min: float = 3.0,
+    r_max: float = 17.0,
+) -> str:
+    """Nuage de bulles : ``points`` = ``(x, y, taille, couleur)`` avec x, y dans
+    [0,1] (l'appelant normalise/échelonne les axes) ; le **rayon** ∝ √(taille/max)
+    code une 3ᵉ dimension. Origine en **bas-gauche** (y inversé pour l'écran).
+    Cadre clair + repères à mi-axes + bulles teintées translucides (les
+    chevauchements restent lisibles). **Pas** de ``preserveAspectRatio=none`` :
+    l'échelle reste uniforme → les bulles restent rondes. Déterministe (coords
+    ``num``), zéro JS, ``aria-hidden`` (la matière vit dans les tableaux)."""
+    pad = 6.0
+    plot_w, plot_h = width - pad * 2, height - pad * 2
+    frame = (
+        f'<rect x="{num(pad)}" y="{num(pad)}" width="{num(plot_w)}" '
+        f'height="{num(plot_h)}" class="bubble-frame"/>'
+        f'<line x1="{num(pad + plot_w / 2)}" y1="{num(pad)}" '
+        f'x2="{num(pad + plot_w / 2)}" y2="{num(pad + plot_h)}" class="bubble-grid"/>'
+        f'<line x1="{num(pad)}" y1="{num(pad + plot_h / 2)}" '
+        f'x2="{num(pad + plot_w)}" y2="{num(pad + plot_h / 2)}" class="bubble-grid"/>'
+    )
+    size_max = max((s for _x, _y, s, _c in points), default=1.0) or 1.0
+    dots: list[str] = []
+    for x01, y01, size, accent in points:
+        cx = pad + max(0.0, min(x01, 1.0)) * plot_w
+        cy = pad + (1.0 - max(0.0, min(y01, 1.0))) * plot_h
+        r = r_min + (r_max - r_min) * (max(0.0, size) / size_max) ** 0.5
+        dots.append(
+            f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+            f'class="bubble-dot" style="fill:{accent};stroke:{accent}"/>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bubble-svg" '
+        f'aria-hidden="true">{frame}{"".join(dots)}</svg>'
+    )
+
+
+def box_plot(
+    lo: float,
+    q1: float,
+    med: float,
+    q3: float,
+    hi: float,
+    mean: float,
+    scale_max: float,
+    *,
+    accent: str,
+    width: float = 280.0,
+    height: float = 22.0,
+) -> str:
+    """Boîte à moustaches horizontale d'un moteur : moustaches min→max (+ capuchons),
+    boîte interquartile Q1→Q3, trait **médian**, repère **moyenne** (tick). Échelle
+    commune (``scale_max`` partagé) → boîtes comparables entre moteurs. Étirée par
+    CSS (``preserveAspectRatio="none"``). Déterministe (coords ``num``), zéro JS."""
+    s = scale_max or 1.0
+
+    def xv(v: float) -> float:
+        return max(0.0, min(v, s)) / s * width
+
+    mid = height / 2.0
+    box_top, box_h = height * 0.20, height * 0.60
+    cap_top, cap_bot = height * 0.30, height * 0.70
+    box_x, box_w = xv(q1), max(1.0, xv(q3) - xv(q1))
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="box-plot" '
+        'preserveAspectRatio="none" aria-hidden="true">'
+        f'<line x1="{num(xv(lo))}" y1="{num(mid)}" x2="{num(xv(hi))}" '
+        f'y2="{num(mid)}" class="box-whisker"/>'
+        f'<line x1="{num(xv(lo))}" y1="{num(cap_top)}" x2="{num(xv(lo))}" '
+        f'y2="{num(cap_bot)}" class="box-cap"/>'
+        f'<line x1="{num(xv(hi))}" y1="{num(cap_top)}" x2="{num(xv(hi))}" '
+        f'y2="{num(cap_bot)}" class="box-cap"/>'
+        f'<rect x="{num(box_x)}" y="{num(box_top)}" width="{num(box_w)}" '
+        f'height="{num(box_h)}" class="box-box" style="fill:{accent};stroke:{accent}"/>'
+        f'<line x1="{num(xv(med))}" y1="{num(box_top)}" x2="{num(xv(med))}" '
+        f'y2="{num(box_top + box_h)}" class="box-med" style="stroke:{accent}"/>'
+        f'<line x1="{num(xv(mean))}" y1="{num(height * 0.12)}" x2="{num(xv(mean))}" '
+        f'y2="{num(height * 0.88)}" class="box-mean"/>'
+        "</svg>"
+    )
+
+
+def donut_chart(
+    segments: list[tuple[float, str]],
+    *,
+    size: float = 160.0,
+    hole: float = 0.56,
+) -> str:
+    """Camembert (anneau) : ``segments`` = ``(valeur, couleur)`` ; les parts sont
+    normalisées (somme → cercle complet), tracées dans l'ordre depuis le haut.
+    Le **trou** central est un disque couleur fond (technique de découpe). Une part
+    à 100 % → cercle plein (pas d'arc dégénéré). Déterministe (coords ``num``),
+    zéro JS, ``aria-hidden`` (les comptes vivent dans la légende)."""
+    total = sum(max(0.0, v) for v, _c in segments)
+    if total <= 0:
+        return ""
+    cx = cy = size / 2.0
+    r = size / 2.0 - 2.0
+    parts: list[str] = []
+    angle = -math.pi / 2.0
+    for value, accent in segments:
+        v = max(0.0, value)
+        if v <= 0:
+            continue
+        frac = v / total
+        if frac >= 0.9999:
+            parts.append(
+                f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+                f'class="donut-seg" style="fill:{accent}"/>'
+            )
+            continue
+        a0, a1 = angle, angle + 2.0 * math.pi * frac
+        angle = a1
+        large = 1 if (a1 - a0) > math.pi else 0
+        x0, y0 = cx + math.cos(a0) * r, cy + math.sin(a0) * r
+        x1, y1 = cx + math.cos(a1) * r, cy + math.sin(a1) * r
+        d = (
+            f"M{num(cx)},{num(cy)} L{num(x0)},{num(y0)} "
+            f"A{num(r)},{num(r)} 0 {large} 1 {num(x1)},{num(y1)} Z"
+        )
+        parts.append(f'<path d="{d}" class="donut-seg" style="fill:{accent}"/>')
+    parts.append(
+        f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r * hole)}" '
+        'class="donut-hole"/>'
+    )
+    return (
+        f'<svg viewBox="0 0 {num(size)} {num(size)}" class="donut-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
+def bump_chart(
+    columns: list[str],
+    series: list[tuple[str, list[int]]],
+    *,
+    accents: list[str],
+    n_ranks: int,
+    width: float = 340.0,
+    height: float = 180.0,
+) -> str:
+    """Bump chart (bascule de classement) : ``columns`` = étapes en abscisse
+    (libellés en bas), ``series`` = ``(libellé, [rang 1-based par colonne])`` ;
+    rang 1 **en haut**. Polyligne + points par série ; les lignes qui se
+    **croisent** = inversions de classement. Échelle uniforme (points ronds).
+    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
+    n_c = len(columns)
+    if n_c < 2 or not series or n_ranks < 1:
+        return ""
+    pad_l, pad_r, pad_t, pad_b = 22.0, 10.0, 8.0, 20.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    def cx(i: int) -> float:
+        return pad_l + (plot_w * i / (n_c - 1) if n_c > 1 else plot_w / 2.0)
+
+    def cy(rank: int) -> float:
+        return pad_t + (
+            plot_h * (rank - 1) / (n_ranks - 1) if n_ranks > 1 else plot_h / 2.0
+        )
+
+    parts: list[str] = []
+    for r in range(1, n_ranks + 1):
+        y = cy(r)
+        parts.append(
+            f'<line x1="{num(pad_l)}" y1="{num(y)}" x2="{num(pad_l + plot_w)}" '
+            f'y2="{num(y)}" class="bump-grid"/>'
+            f'<text x="{num(pad_l - 6.0)}" y="{num(y + 3.0)}" class="bump-rank" '
+            f'text-anchor="end">{r}</text>'
+        )
+    for i, label in enumerate(columns):
+        parts.append(
+            f'<text x="{num(cx(i))}" y="{num(height - 6.0)}" class="bump-col" '
+            f'text-anchor="middle">{escape(label)}</text>'
+        )
+    for si, (_name, ranks) in enumerate(series):
+        accent = accents[si] if si < len(accents) else "var(--ink)"
+        m = min(n_c, len(ranks))
+        pts = " ".join(f"{num(cx(i))},{num(cy(ranks[i]))}" for i in range(m))
+        parts.append(
+            f'<polyline points="{pts}" class="bump-line" style="stroke:{accent}"/>'
+        )
+        for i in range(m):
+            parts.append(
+                f'<circle cx="{num(cx(i))}" cy="{num(cy(ranks[i]))}" r="4" '
+                f'class="bump-dot" style="fill:{accent};stroke:{accent}"/>'
+            )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bump-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
+def dumbbell_rows(
+    rows: list[tuple[str, list[tuple[float, str]]]],
+    *,
+    scale_max: float,
+    width: float = 340.0,
+    label_w: float = 66.0,
+    row_h: float = 20.0,
+) -> str:
+    """Graphe haltère (dumbbell) : une ligne par ``rows`` = ``(libellé, [(valeur,
+    couleur)])`` ; les points d'une ligne sont reliés (min→max) et posés sur une
+    **échelle commune** (``scale_max``). Pour 2 moteurs = un duel par document ;
+    plus = un dot-plot. Échelle uniforme (points ronds). Déterministe, zéro JS."""
+    if not rows:
+        return ""
+    s = scale_max or 1.0
+    plot_w = width - label_w - 6.0
+    height = row_h * len(rows) + 4.0
+
+    def x(v: float) -> float:
+        return label_w + max(0.0, min(v, s)) / s * plot_w
+
+    parts: list[str] = []
+    for i, (label, dots) in enumerate(rows):
+        cy = row_h * i + row_h / 2.0 + 2.0
+        if len(dots) >= 2:
+            xs = [x(v) for v, _c in dots]
+            parts.append(
+                f'<line x1="{num(min(xs))}" y1="{num(cy)}" x2="{num(max(xs))}" '
+                f'y2="{num(cy)}" class="dumb-link"/>'
+            )
+        for v, accent in dots:
+            parts.append(
+                f'<circle cx="{num(x(v))}" cy="{num(cy)}" r="4" class="dumb-dot" '
+                f'style="fill:{accent};stroke:{accent}"/>'
+            )
+        parts.append(
+            f'<text x="0" y="{num(cy + 3.0)}" class="dumb-label">{escape(label)}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="dumb-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
+def grouped_columns(
+    groups: list[str],
+    series: list[tuple[str, list[float]]],
+    *,
+    accents: list[str],
+    width: float = 360.0,
+    height: float = 190.0,
+) -> str:
+    """Colonnes verticales **groupées** : un groupe par ``groups`` (libellé en bas),
+    une colonne par série dans chaque groupe. ``series`` = ``(libellé, [valeur par
+    groupe])`` avec valeurs dans [0,1] ; ``accents`` = couleur par série. Échelle
+    uniforme (pas de ``preserveAspectRatio=none`` → barres non déformées).
+    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
+    n_g, n_s = len(groups), len(series)
+    if n_g == 0 or n_s == 0:
+        return ""
+    pad_l, pad_r, pad_t, pad_b = 4.0, 4.0, 6.0, 22.0
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+    base_y = pad_t + plot_h
+    group_w = plot_w / n_g
+    inner = group_w * 0.16
+    bar_w = (group_w - inner) / n_s
+    parts: list[str] = [
+        f'<line x1="{num(pad_l)}" y1="{num(base_y)}" x2="{num(pad_l + plot_w)}" '
+        f'y2="{num(base_y)}" class="col-axis"/>'
+    ]
+    for gi, label in enumerate(groups):
+        gx = pad_l + group_w * gi + inner / 2.0
+        for si, (_name, values) in enumerate(series):
+            v = max(0.0, min(values[gi] if gi < len(values) else 0.0, 1.0))
+            bar_h = v * plot_h
+            x = gx + bar_w * si
+            accent = accents[si] if si < len(accents) else "var(--ink)"
+            parts.append(
+                f'<rect x="{num(x)}" y="{num(base_y - bar_h)}" '
+                f'width="{num(bar_w * 0.86)}" height="{num(bar_h)}" '
+                f'class="col-bar" style="fill:{accent}"/>'
+            )
+        lx = pad_l + group_w * gi + group_w / 2.0
+        parts.append(
+            f'<text x="{num(lx)}" y="{num(height - 7.0)}" class="col-label" '
+            f'text-anchor="middle">{escape(label)}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="col-svg" '
+        f'aria-hidden="true">{"".join(parts)}</svg>'
+    )
+
+
 __all__ = [
     "bar_series",
+    "box_plot",
+    "bubble_chart",
+    "bump_chart",
     "calibration_curve",
     "composition_bar",
     "dispersion_strip",
+    "donut_chart",
+    "dumbbell_rows",
+    "grouped_columns",
     "num",
+    "radar_chart",
     "word_engine_heatmap",
+    "word_overlap_venn",
 ]
+
+
+#: Géométrie fixe du Venn à **3** ensembles (le Venn proportionnel à 3 cercles est
+#: un problème ouvert) : ``frozenset`` d'indices → (x, y) où inscrire le compte.
+_VENN3_POS: dict[frozenset[int], tuple[float, float]] = {
+    frozenset({0}): (160.0, 70.0),
+    frozenset({1}): (108.0, 158.0),
+    frozenset({2}): (212.0, 158.0),
+    frozenset({0, 1}): (118.0, 110.0),
+    frozenset({0, 2}): (202.0, 110.0),
+    frozenset({1, 2}): (160.0, 168.0),
+    frozenset({0, 1, 2}): (160.0, 122.0),
+}
+_VENN3_CIRCLES: tuple[tuple[float, float, float], ...] = (
+    (160.0, 100.0, 68.0),
+    (122.0, 150.0, 68.0),
+    (198.0, 150.0, 68.0),
+)
+
+
+def _venn2_proportional(
+    region_counts: dict[frozenset[int], int],
+) -> tuple[
+    tuple[tuple[float, float, float], ...],
+    dict[frozenset[int], tuple[float, float]],
+    float,
+    float,
+]:
+    """Géométrie **proportionnelle** d'un Venn à 2 ensembles : rayon ∝ √|ensemble|
+    (l'**aire** code l'effectif) et distance des centres ∝ (1 − Jaccard) — fort
+    recouvrement → cercles proches, recouvrement nul → cercles tangents.
+    Déterministe (les coordonnées sont arrondies à l'écriture par ``num``)."""
+    a_only = region_counts.get(frozenset({0}), 0)
+    b_only = region_counts.get(frozenset({1}), 0)
+    both = region_counts.get(frozenset({0, 1}), 0)
+    size_a, size_b = a_only + both, b_only + both
+    union = a_only + b_only + both
+    width, height, r_max = 320.0, 200.0, 82.0
+    cy, center = height / 2, width / 2
+    biggest = max(size_a, size_b, 1)
+    r_a = max(14.0, r_max * (size_a / biggest) ** 0.5)
+    r_b = max(14.0, r_max * (size_b / biggest) ** 0.5)
+    # Écart des centres **borné** : ∝ (1 − Jaccard) pour montrer le recouvrement,
+    # mais jamais < 0.50·(r_a+r_b) — sinon, quand les deux moteurs ratent presque
+    # les mêmes mots (Jaccard ≈ 1), les cercles deviennent concentriques et
+    # illisibles. Le **volume** du recouvrement reste lu par le compte central.
+    jaccard = both / union if union else 0.0
+    gap = (r_a + r_b) * (0.50 + 0.45 * (1.0 - jaccard))
+    cx_a, cx_b = center - gap / 2, center + gap / 2
+    circles = ((cx_a, cy, r_a), (cx_b, cy, r_b))
+    pos = {
+        frozenset({0}): (cx_a - r_a * 0.5, cy),
+        frozenset({0, 1}): ((cx_a + cx_b) / 2, cy),
+        frozenset({1}): (cx_b + r_b * 0.5, cy),
+    }
+    return circles, pos, width, height
+
+
+def word_overlap_venn(
+    columns: list[str],
+    region_counts: dict[frozenset[int], int],
+    *,
+    accents: list[str],
+) -> str:
+    """Diagramme de Venn (2 ou 3 moteurs) du **recouvrement** des mots ratés.
+
+    ``columns`` = libellés moteur (lettres) ; ``region_counts`` = ``frozenset``
+    d'indices de moteur → nombre de mots ratés par **exactement** cette
+    combinaison ; ``accents`` = couleur par moteur (alignée sur ``columns``).
+    Cercles teintés (faible opacité) + compte inscrit dans chaque région.
+    Au-delà de 3 moteurs un Venn n'est pas lisible → ``""`` (l'appelant garde la
+    liste). Compagnon **visuel** (``aria-hidden`` ; la matière vit dans la table).
+    Déterministe (coords ``num``), zéro JS."""
+    n = len(columns)
+    if n == 2:
+        circles, pos, width, height = _venn2_proportional(region_counts)
+    elif n == 3:
+        circles, pos, width, height = _VENN3_CIRCLES, _VENN3_POS, 320.0, 240.0
+    else:
+        return ""
+    parts: list[str] = []
+    for i, (cx, cy, r) in enumerate(circles):
+        parts.append(
+            f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
+            f'class="venn-circle" style="fill:{accents[i]};stroke:{accents[i]}"/>'
+        )
+    for i, (cx, _cy, r) in enumerate(circles):
+        ly = circles[i][1] - r - 4 if n == 3 and i == 0 else circles[i][1] - r - 4
+        parts.append(
+            f'<text x="{num(cx)}" y="{num(ly)}" class="venn-label" '
+            f'text-anchor="middle">{escape(columns[i])}</text>'
+        )
+    for region, (x, y) in pos.items():
+        count = region_counts.get(region, 0)
+        if count <= 0:
+            continue
+        parts.append(
+            f'<text x="{num(x)}" y="{num(y)}" class="venn-count" '
+            f'text-anchor="middle">{count}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" width="{num(width)}" '
+        f'height="{num(height)}" class="venn-svg" aria-hidden="true">'
+        f'{"".join(parts)}</svg>'
+    )
 
 
 def bar_series(
@@ -230,6 +697,7 @@ def word_engine_heatmap(
                 f'text-anchor="middle" style="fill:{ink}">{count}</text>'
             )
     return (
-        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="wmap-svg" '
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" '
+        f'width="{num(width)}" height="{num(height)}" class="wmap-svg" '
         f'aria-hidden="true">{"".join(parts)}</svg>'
     )

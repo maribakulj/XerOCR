@@ -275,16 +275,68 @@ class TaxonomyPayload(BaseModel):
     pipelines: tuple[PipelineTaxonomy, ...] = ()
 
 
-#: Plafond de caractères des textes embarqués (borne le payload ; au-delà, tronqué).
-_MAX_TEXT_CHARS = 8000
+class HallucinatedBlock(BaseModel):
+    """Segment contigu de la sortie sans correspondance dans le GT (mots ajoutés)."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    start_token: int = Field(ge=0)
+    end_token: int = Field(ge=0)
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class PipelineHallucination(BaseModel):
+    """Détection d'hallucination d'un pipeline sur **un document**.
+
+    ``anchor_score`` = part des trigrammes de la sortie présents dans le GT (haut
+    = ancré) ; ``length_ratio`` = caractères sortie / GT (>1,2 = signal) ;
+    ``net_insertion_rate`` = mots de la sortie absents du GT / mots sortie ;
+    ``blocks`` = segments inventés affichés. ``is_hallucinating`` = ancrage faible
+    **ou** longueur anormale (seuils = conventions, cf. ``document_hallucination``).
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    anchor_score: float = Field(ge=0, le=1)
+    length_ratio: float = Field(ge=0)
+    net_insertion_rate: float = Field(ge=0, le=1)
+    gt_words: int = Field(ge=0)
+    hyp_words: int = Field(ge=0)
+    is_hallucinating: bool
+    blocks: tuple[HallucinatedBlock, ...] = ()
+
+
+class DocumentHallucination(BaseModel):
+    """Analyse d'hallucination **d'un document**, par pipeline."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    pipelines: tuple[PipelineHallucination, ...] = ()
+
+
+class DocumentHallucinationPayload(BaseModel):
+    """Hallucinations **par document** : ancrage + blocs inventés du détail document."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["document_hallucination"] = "document_hallucination"
+    documents: tuple[DocumentHallucination, ...] = ()
+
+
+#: Plafond de caractères par texte embarqué (borne de sûreté ; une page dense
+#: tient largement dessous — au-delà, tronqué). Le payload porte **tous** les
+#: documents scorés (cf. ``DocumentTextsCollector``), pas seulement les pires.
+_MAX_TEXT_CHARS = 40000
 
 
 class DocumentTexts(BaseModel):
     """Textes complets d'**un** document (vérité-terrain + sortie par moteur).
 
-    Bornés : seuls les **top-N pires documents** sont embarqués, chaque texte
-    tronqué à ``_MAX_TEXT_CHARS``. Normalisés (mêmes représentations que le
-    scoring) → le diff pleine page reflète ce qui est mesuré.
+    Embarqués pour **tous les documents scorés** (ordre pires-d'abord), chaque
+    texte borné à ``_MAX_TEXT_CHARS`` (sûreté). Normalisés (mêmes représentations
+    que le scoring) → le diff côte à côte reflète ce qui est mesuré.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -302,6 +354,29 @@ class DocumentTextsPayload(BaseModel):
 
     kind: Literal["document_texts"] = "document_texts"
     documents: tuple[DocumentTexts, ...] = ()
+
+
+class DocumentLines(BaseModel):
+    """CER **par ligne** d'un document, par pipeline (heatmap recentrée sur le doc).
+
+    ``pipelines`` = ``(pipeline, CER de chaque ligne GT)`` ordonnés par pipeline
+    (déterminisme). Les CER par ligne viennent de l'alignement Levenshtein des
+    lignes (``aligned_line_cers``) — mêmes lignes que le scoring.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    pipelines: tuple[tuple[str, tuple[float, ...]], ...] = ()
+
+
+class DocumentLinesPayload(BaseModel):
+    """CER par ligne **par document** : heatmap positionnelle du détail document."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["document_lines"] = "document_lines"
+    documents: tuple[DocumentLines, ...] = ()
 
 
 class PipelineConformity(BaseModel):
@@ -967,7 +1042,9 @@ AnalysisPayload = Annotated[
     | DiagnosticsPayload
     | CalibrationPayload
     | TaxonomyPayload
+    | DocumentHallucinationPayload
     | DocumentTextsPayload
+    | DocumentLinesPayload
     | ConformityPayload
     | CorrectionPayload
     | StructuredDataPayload

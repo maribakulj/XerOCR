@@ -8,8 +8,16 @@ from xerocr.domain.run import RunManifest
 from xerocr.evaluation.analysis import (
     Analysis,
     DiagnosticsPayload,
+    DocumentHallucination,
+    DocumentHallucinationPayload,
+    DocumentImageQuality,
+    DocumentLines,
+    DocumentLinesPayload,
     DocumentTexts,
     DocumentTextsPayload,
+    HallucinatedBlock,
+    ImageQualityPayload,
+    PipelineHallucination,
     WorstLine,
 )
 from xerocr.evaluation.result import (
@@ -90,8 +98,10 @@ def test_facsimile_shown_when_provided() -> None:
     ctx = SectionContext(facsimiles={"folio_1": "data:image/jpeg;base64,ZZZ"})
     html = DocumentDetailSection().render(_result(), ctx)
     assert html is not None
-    assert 'class="dd-cols"' in html  # 2 colonnes (fac-similé | CER/diff)
+    assert 'class="dd-fac-top"' in html  # fac-similé en haut (pleine largeur)
+    assert 'class="dd-fac-zoom"' in html  # conteneur zoomable/pan
     assert 'class="dd-fac-img" src="data:image/jpeg;base64,ZZZ"' in html
+    assert 'data-zoom="in"' in html and 'data-zoom="reset"' in html  # contrôles zoom
     # un doc sans fac-similé reste en pleine largeur (pas d'image vide)
     plain = DocumentDetailSection().render(_result(), SectionContext())
     assert plain is not None and "dd-fac-img" not in plain
@@ -116,9 +126,127 @@ def test_full_page_diff_with_engine_selector() -> None:
     assert "page complète" in html  # diff pleine page (≠ pires lignes)
     assert 'class="dd-engine-tabs' in html  # sélecteur de moteur
     assert html.count('class="dd-fulldiff"') == 2  # un bloc par moteur
+    assert html.count('class="dd-sbs"') == 2  # GT | sortie côte à côte par moteur
     assert "Vérité terrain" in html and "Sortie ·" in html
     # le diff caractère est marqué (insertion/suppression)
     assert 'class="d-ins"' in html or 'class="d-del"' in html
+
+
+def test_image_quality_block_recentred_on_document() -> None:
+    base = _result()
+    iq = ImageQualityPayload(
+        documents=(
+            DocumentImageQuality(
+                document_id="folio_1", sharpness=0.72, noise=0.10, contrast=0.60,
+                rotation_degrees=-1.3, quality_score=0.68, tier="medium",
+            ),
+        ),
+        mean_quality=0.68, mean_sharpness=0.72, mean_noise=0.10, mean_contrast=0.60,
+        n_good=0, n_medium=1, n_poor=0,
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=iq),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-iq"' in html  # bloc qualité d'image du doc
+    assert "Netteté" in html and 'class="track"' in html  # barres mesurées (primitive)
+    assert "-1.3°" in html  # inclinaison de CE doc
+    # un doc sans mesure (folio_2) ne porte pas le bloc (dégradé propre)
+    assert html.count('class="dd-iq"') == 1
+
+
+def test_line_heatmap_recentred_on_document() -> None:
+    base = _result()
+    dl = DocumentLinesPayload(
+        documents=(
+            DocumentLines(
+                document_id="folio_1",
+                pipelines=(("tesseract", (0.0, 0.20, 0.5)), ("pero", (0.0, 0.0, 0.1))),
+            ),
+        )
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dl),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-lh"' in html  # distribution par ligne du doc
+    assert "dd-lh-bar lh-g" in html and "dd-lh-bar lh-b" in html  # carte thermique
+    assert "height:4px" in html and "height:22px" in html  # hauteur ∝ CER (0.0 / 0.5)
+    assert html.count('class="dd-ld-row"') == 2  # une distribution par moteur
+    assert 'class="dd-pct-row"' in html and "p99" in html  # percentiles CER
+    assert "Gini" in html and "CER≥30 %" in html  # badges de distribution
+
+
+def test_line_heatmap_is_wide_card_image_quality_flows() -> None:
+    base = _result()
+    dl = DocumentLinesPayload(
+        documents=(
+            DocumentLines(document_id="folio_1", pipelines=(("tesseract", (0.1,)),)),
+        )
+    )
+    iq = ImageQualityPayload(
+        documents=(
+            DocumentImageQuality(
+                document_id="folio_1", sharpness=0.7, noise=0.1, contrast=0.6,
+                rotation_degrees=0.0, quality_score=0.6, tier="medium",
+            ),
+        ),
+        mean_quality=0.6, mean_sharpness=0.7, mean_noise=0.1, mean_contrast=0.6,
+        n_good=0, n_medium=1, n_poor=0,
+    )
+    result = base.model_copy(
+        update={
+            "analyses": (
+                Analysis(scope="corpus", view="text", payload=dl),
+                Analysis(scope="corpus", view="text", payload=iq),
+            )
+        }
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    # Flux de cartes : la distribution par ligne (large) prend toute la largeur
+    # (dd-wide) ; la qualité d'image est une petite carte qui s'écoule au-dessus.
+    assert 'class="dd-card dd-wide"' in html
+    assert 'class="dd-lh"' in html and 'class="dd-iq"' in html
+    assert html.index('class="dd-iq"') < html.index('dd-card dd-wide')
+
+
+def test_hallucination_block_recentred_on_document() -> None:
+    base = _result()
+    dh = DocumentHallucinationPayload(
+        documents=(
+            DocumentHallucination(
+                document_id="folio_1",
+                pipelines=(
+                    PipelineHallucination(
+                        pipeline="tesseract",
+                        anchor_score=0.20,
+                        length_ratio=1.35,
+                        net_insertion_rate=0.45,
+                        gt_words=36,
+                        hyp_words=42,
+                        is_hallucinating=True,
+                        blocks=(
+                            HallucinatedBlock(
+                                start_token=0, end_token=5, text="durch beflhuß vom san"
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+        )
+    )
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dh),)}
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert 'class="dd-hl"' in html  # analyse hallucination du doc
+    assert "Ancrage 20 %" in html and "Insertion nette 45 %" in html  # indicateurs
+    assert 'class="dd-hl-flag"' in html  # drapeau hallucination détectée
+    assert "durch beflhuß vom san" in html  # bloc halluciné affiché
 
 
 def test_none_without_documents() -> None:

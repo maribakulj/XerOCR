@@ -168,18 +168,52 @@
     document.querySelectorAll(".drill-panel"),
   );
   if (drillPanels.length) {
+    /* Vue document focalisée : quand un détail document s'ouvre, on masque tout
+       SAUF ce document — la galerie/liste/bascule (mêmes parents que les
+       panneaux) ET les autres blocs de l'onglet (par-document, qualité d'image).
+       restoreFocus() rétablit exactement ce qu'on avait masqué. */
+    function hideExcept(parent, keep) {
+      Array.prototype.forEach.call(parent.children, function (c) {
+        if (c !== keep && !c.hidden) {
+          c.hidden = true;
+          c.classList.add("doc-focus-hidden");
+        }
+      });
+    }
+    function restoreFocus() {
+      Array.prototype.forEach.call(
+        document.querySelectorAll(".doc-focus-hidden"),
+        function (el) {
+          el.hidden = false;
+          el.classList.remove("doc-focus-hidden");
+        },
+      );
+    }
     function showDrill(id) {
       drillPanels.forEach(function (p) {
         p.hidden = p.id !== id;
       });
       var open = document.getElementById(id);
-      if (open) open.scrollIntoView({ behavior: "smooth", block: "start" });
+      if (!open) return;
+      restoreFocus();
+      var details = open.closest(".doc-details");
+      if (details && details.parentNode) {
+        /* 1) dans la section documents : ne garder que le conteneur des
+           panneaux (cache la galerie, la liste, la bascule). */
+        hideExcept(details.parentNode, details);
+        /* 2) dans l'onglet : ne garder que la section documents (cache les
+           sections voisines : par-document, qualité d'image, héros). */
+        var block = details.parentNode.closest(".r-block");
+        if (block && block.parentNode) hideExcept(block.parentNode, block);
+      }
+      open.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     document.addEventListener("click", function (e) {
       var link = e.target.closest && e.target.closest("a");
       if (!link) return;
       if (link.classList.contains("drill-back")) {
         e.preventDefault();
+        restoreFocus();
         drillPanels.forEach(function (p) {
           p.hidden = true;
         });
@@ -246,6 +280,77 @@
           show(btn.getAttribute("data-engine"));
         });
       });
+    },
+  );
+
+  /* 9) Fac-similé zoomable/pan (détail document) : molette = zoom, glisser =
+   *    déplacer, boutons +/−/⤢. Chaque image garde son propre état (zoom z,
+   *    décalage ox/oy). Sans JS, l'image s'affiche à taille medium, statique. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".dd-fac-zoom"),
+    function (box) {
+      var img = box.querySelector(".dd-fac-img");
+      if (!img) return;
+      var z = 1,
+        ox = 0,
+        oy = 0,
+        drag = null;
+      function apply() {
+        img.style.transform =
+          "scale(" + z + ") translate(" + ox + "px," + oy + "px)";
+        box.style.cursor = z > 1 ? "grab" : "zoom-in";
+      }
+      function zoom(factor) {
+        z = Math.max(1, Math.min(5, z * factor));
+        if (z === 1) {
+          ox = 0;
+          oy = 0;
+        }
+        apply();
+      }
+      box.addEventListener(
+        "wheel",
+        function (e) {
+          e.preventDefault();
+          zoom(e.deltaY < 0 ? 1.15 : 0.87);
+        },
+        { passive: false },
+      );
+      box.addEventListener("mousedown", function (e) {
+        if (z <= 1 || (e.target.closest && e.target.closest("[data-zoom]"))) return;
+        e.preventDefault();
+        drag = { x: e.clientX - ox * z, y: e.clientY - oy * z };
+        box.style.cursor = "grabbing";
+      });
+      document.addEventListener("mousemove", function (e) {
+        if (!drag) return;
+        ox = (e.clientX - drag.x) / z;
+        oy = (e.clientY - drag.y) / z;
+        apply();
+      });
+      document.addEventListener("mouseup", function () {
+        if (drag) {
+          drag = null;
+          apply();
+        }
+      });
+      Array.prototype.forEach.call(
+        box.querySelectorAll("[data-zoom]"),
+        function (btn) {
+          btn.addEventListener("click", function () {
+            var k = btn.getAttribute("data-zoom");
+            if (k === "in") zoom(1.25);
+            else if (k === "out") zoom(0.8);
+            else {
+              z = 1;
+              ox = 0;
+              oy = 0;
+              apply();
+            }
+          });
+        },
+      );
+      apply();
     },
   );
 })();

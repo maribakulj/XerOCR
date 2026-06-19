@@ -12,11 +12,16 @@ def test_default_metrics_registration_is_idempotent() -> None:
     register_default_metrics(registry)
     assert registry.names() == (
         "air",
+        "bow_f1",
+        "bow_precision",
+        "bow_recall",
         "cer",
         "cer_diplo",
+        "char_accuracy",
         "cmer",
         "del_rate",
         "diacritic_err",
+        "fca",
         "hallucination",
         "ins_rate",
         "mer",
@@ -28,6 +33,7 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "region_detection",
         "searchability",
         "wer",
+        "word_accuracy",
     )
 
 
@@ -42,14 +48,20 @@ def test_get_and_select_by_input_types() -> None:
     )
     assert {metric.name for metric in selected} == {
         "air",
+        "bow_f1",
+        "bow_precision",
+        "bow_recall",
         "cer",
         "cer_diplo",
+        "char_accuracy",
         "cmer",
         "del_rate",
         "diacritic_err",
+        "fca",
         "hallucination",
         "ins_rate",
         "wer",
+        "word_accuracy",
         "mer",
         "mufi_err",
         "numseq_strict",

@@ -27,7 +27,7 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.result import RunResult
 from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized
+from xerocr.reports.html import escape, localized, view_label, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 
@@ -101,9 +101,9 @@ def _inference_block(
         )
     head = localized(
         lang,
-        f"<h3>{escape(view)} · {escape(payload.metric)} — rangs &amp; IC "
+        f"<h3>{view}{escape(payload.metric)} — rangs &amp; IC "
         f"(n={payload.n_documents})</h3>\n",
-        f"<h3>{escape(view)} · {escape(payload.metric)} — ranks &amp; CI "
+        f"<h3>{view}{escape(payload.metric)} — ranks &amp; CI "
         f"(n={payload.n_documents})</h3>\n",
     )
     th_pipeline = localized(lang, "Pipeline", "Pipeline")
@@ -181,9 +181,9 @@ def _complementarity_block(
         )
     head = localized(
         lang,
-        f"<h3>{escape(view)} — complémentarité des moteurs "
+        f"<h3>{view}complémentarité des moteurs "
         f"(oracle, n={comp.n_documents} documents)</h3>\n",
-        f"<h3>{escape(view)} — engine complementarity "
+        f"<h3>{view}engine complementarity "
         f"(oracle, n={comp.n_documents} documents)</h3>\n",
     )
     prose = localized(
@@ -259,9 +259,9 @@ def _divergence_block(
         )
     head = localized(
         lang,
-        f"<h3>{escape(view)} — divergence des profils d'erreurs "
+        f"<h3>{view}divergence des profils d'erreurs "
         "(Jensen-Shannon)</h3>\n",
-        f"<h3>{escape(view)} — divergence of error profiles "
+        f"<h3>{view}divergence of error profiles "
         "(Jensen-Shannon)</h3>\n",
     )
     prose = localized(
@@ -291,21 +291,23 @@ def _inter_engine_blocks(
     result: RunResult, order: Mapping[str, int], lang: str
 ) -> str:
     """Blocs complémentarité + divergence de chaque payload ``inter_engine``."""
+    multi = len({a.view for a in result.analyses}) > 1
     blocks: list[str] = []
     for analysis in result.analyses:
         payload = analysis.payload
         if not isinstance(payload, InterEnginePayload):
             continue
+        label = view_prefix(analysis.view, lang, multi=multi)
         if payload.complementarity is not None:
             blocks.append(
                 _complementarity_block(
-                    analysis.view, payload.complementarity, order, lang
+                    label, payload.complementarity, order, lang
                 )
             )
         if payload.taxonomy_divergence is not None:
             blocks.append(
                 _divergence_block(
-                    analysis.view, payload.taxonomy_divergence, order, lang
+                    label, payload.taxonomy_divergence, order, lang
                 )
             )
     return "".join(blocks)
@@ -330,7 +332,7 @@ class CrossEngineSection:
                 view, metric = _split_key(score.metric)
                 label, css = _verdict(score.value, lang)
                 body.append(
-                    f'<tr><td class="eng-cell">{escape(view)}</td>'
+                    f'<tr><td class="eng-cell">{escape(view_label(view, lang))}</td>'
                     f'<td class="eng-cell">{escape(metric)}</td>'
                     f'<td class="disp">{_format_p(score.value)}</td>'
                     f'<td class="disp">{score.support}</td>'
@@ -354,8 +356,13 @@ class CrossEngineSection:
                 f"<th>{th_verdict}</th></tr></thead>\n"
                 f"<tbody>{''.join(body)}</tbody>\n</table>\n"
             )
+        # Préfixe « <vue> · » devant la métrique, seulement si plusieurs vues.
+        multi = len({a.view for a in result.analyses}) > 1
         blocks = "".join(
-            _inference_block(analysis.view, analysis.payload, order, lang)
+            _inference_block(
+                f"{escape(view_label(analysis.view, lang))} · " if multi else "",
+                analysis.payload, order, lang,
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, InferencePayload)
         )

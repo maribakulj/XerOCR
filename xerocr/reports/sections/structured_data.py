@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import StructuredDataPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.html import escape, localized
+from xerocr.reports.engine_badges import engine_cell, engine_order
+from xerocr.reports.html import escape, localized, view_prefix
 from xerocr.reports.section import Html, SectionContext
 
 _CATEGORY_LABELS = {
@@ -27,9 +28,12 @@ def _category_label(category: str, lang: str) -> str:
     return localized(lang, pair[0], pair[1])
 
 
-def _block(view: str, payload: StructuredDataPayload, lang: str) -> str:
+def _block(
+    view: str, payload: StructuredDataPayload, lang: str, order: dict[str, int]
+) -> str:
     rows: list[str] = []
     for pipeline in payload.pipelines:
+        badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
         for item in pipeline.categories:
             lost = (
                 f'<span class="muted">{escape(", ".join(item.lost))}</span>'
@@ -37,7 +41,7 @@ def _block(view: str, payload: StructuredDataPayload, lang: str) -> str:
                 else "—"
             )
             rows.append(
-                f'<tr><td class="eng-cell">{escape(pipeline.pipeline)}</td>'
+                f'<tr><td class="eng-cell">{badge}</td>'
                 f'<td class="eng-cell">'
                 f"{escape(_category_label(item.category, lang))}</td>"
                 f'<td class="disp">{item.n_total}</td>'
@@ -47,8 +51,8 @@ def _block(view: str, payload: StructuredDataPayload, lang: str) -> str:
             )
     head = localized(
         lang,
-        f"{escape(view)} — séquences numériques",
-        f"{escape(view)} — numeric sequences",
+        f"{view}séquences numériques",
+        f"{view}numeric sequences",
     )
     prose = localized(
         lang,
@@ -86,8 +90,13 @@ class StructuredDataSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
+        order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang, order
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, StructuredDataPayload)
         ]

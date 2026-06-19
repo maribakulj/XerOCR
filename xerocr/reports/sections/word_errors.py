@@ -22,10 +22,16 @@ from collections.abc import Mapping
 
 from xerocr.evaluation.analysis import WordError, WordErrorPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports.engine_badges import engine_cell, engine_letter, engine_order
-from xerocr.reports.html import escape
+from xerocr.reports.engine_badges import (
+    engine_accent,
+    engine_cell,
+    engine_letter,
+    engine_order,
+)
+from xerocr.reports.html import escape, view_prefix
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.svg import word_engine_heatmap
+from xerocr.reports.svg import donut_chart, word_engine_heatmap, word_overlap_venn
+from xerocr.reports.text_diff import char_diff
 
 #: Lignes de la heatmap **visuelle** (les mots les plus ratés) — la table porte la
 #: liste complète du payload (≤ 50). Borne la hauteur du graphe.
@@ -63,6 +69,9 @@ _TEXT: dict[str, dict[str, str]] = {
         "th_total": "total",
         "th_group": "recoupement",
         "graph_note": "Graphe : les {n} mots les plus ratés ; table : liste complète.",
+        "card_matrix": "Matrice mots × moteurs",
+        "card_venn": "Recouvrement (Venn)",
+        "card_donut": "Composition (camembert)",
         "u_universal": "tous",
         "u_engine_specific": "un seul",
         "u_partial": "plusieurs",
@@ -103,6 +112,9 @@ _TEXT: dict[str, dict[str, str]] = {
         "th_total": "total",
         "th_group": "overlap",
         "graph_note": "Graph: the {n} most-missed words; table: full list.",
+        "card_matrix": "Words × engines matrix",
+        "card_venn": "Overlap (Venn)",
+        "card_donut": "Composition (pie)",
         "u_universal": "all",
         "u_engine_specific": "one only",
         "u_partial": "several",
@@ -145,6 +157,48 @@ def _matrix_row(
         f'<tr><td class="eng-cell">{escape(word.word)}</td>{cells}'
         f'<td class="disp">{word.total_errors}</td>'
         f'<td class="verdict">{escape(text[f"u_{word.group}"])}</td></tr>'
+    )
+
+
+def _matrix_grid(
+    words: tuple[WordError, ...],
+    header_cells: str,
+    columns: list[str],
+    text: Mapping[str, str],
+) -> str:
+    """Matrice mots × moteurs en **N tables côte à côte** (utilise la largeur).
+
+    La liste (triée par sévérité) est découpée en colonnes journal (~16 lignes /
+    colonne, plafond 3) au lieu d'un seul tableau qui descend tout en bas pendant
+    que la droite reste vide. Replie en 1 colonne sur écran étroit (CSS)."""
+    n = min(3, max(1, -(-len(words) // 16)))
+    size = -(-len(words) // n)  # lignes par colonne (ceil)
+    head = f"<thead><tr>{header_cells}</tr></thead>"
+    tables: list[str] = []
+    for c in range(n):
+        chunk = words[c * size : (c + 1) * size]
+        if not chunk:
+            continue
+        rows = "".join(_matrix_row(word, columns, text) for word in chunk)
+        tables.append(f'<table class="data">\n{head}\n<tbody>{rows}</tbody>\n</table>')
+    return f'<div class="tcols" style="--n:{len(tables)}">{"".join(tables)}</div>\n'
+
+
+def _venn_svg(payload: WordErrorPayload, order: Mapping[str, int]) -> str:
+    """Venn (2-3 moteurs) du recouvrement des mots ratés — compagnon visuel,
+    rendu en carte à part (à côté de la matrice). ``""`` au-delà de 3 moteurs."""
+    columns = _columns(payload, order)
+    col_pos = {name: i for i, name in enumerate(columns)}
+    region_counts: dict[frozenset[int], int] = {}
+    for word in payload.words:
+        region = frozenset(
+            col_pos[e.pipeline] for e in word.per_engine if e.pipeline in col_pos
+        )
+        region_counts[region] = region_counts.get(region, 0) + 1
+    return word_overlap_venn(
+        [engine_letter(order.get(name, 0)) for name in columns],
+        region_counts,
+        accents=[engine_accent(order.get(name, 0)) for name in columns],
     )
 
 
@@ -195,7 +249,7 @@ def _overlap_block(
             f'<td class="muted">{sample}{more}</td></tr>'
         )
     return (
-        f"<h3>{escape(view)} — {text['overlap_subtitle']}</h3>\n"
+        f"<h3>{view}{text['overlap_subtitle']}</h3>\n"
         f'<p class="muted">{text["overlap_intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["legend"]}</th>'
@@ -203,6 +257,15 @@ def _overlap_block(
         f'<th>{text["th_samples"]}</th></tr></thead>\n'
         f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
     )
+
+
+def _produced_cell(gt: str, variant: str, empty: str) -> str:
+    """Cellule « forme produite » : écart au mot GT **surligné** (nature de la
+    confusion, ex. ``ist`` → ``i[f]t``). ``∅`` (mot supprimé) reste en sourdine."""
+    if variant == empty:
+        return f'<td class="disp"><span class="muted">{escape(empty)}</span></td>'
+    _, hyp_html = char_diff(gt, variant)
+    return f'<td class="disp">{hyp_html}</td>'
 
 
 def _variant_block(
@@ -216,7 +279,7 @@ def _variant_block(
 
     Rend la ``variant`` (forme produite dominante) **déjà portée** par le payload
     pour les mots les plus durs — ``maistre`` → ``maitre``/``maistrc`` (``∅`` =
-    supprimé). Verbatim, aucune invention.
+    supprimé), l'**écart au mot GT surligné**. Verbatim, aucune invention.
     """
     headers = "".join(
         f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
@@ -226,18 +289,65 @@ def _variant_block(
     for word in payload.words[:_VARIANT_ROWS]:
         produced = {engine.pipeline: engine.variant for engine in word.per_engine}
         cells = "".join(
-            f'<td class="disp">{escape(produced[name])}</td>'
+            _produced_cell(word.word, produced[name], "∅")
             if name in produced
             else f'<td class="disp">{text["empty"]}</td>'
             for name in columns
         )
         rows.append(f'<tr><td class="eng-cell">{escape(word.word)}</td>{cells}</tr>')
     return (
-        f"<h3>{escape(view)} — {text['variant_subtitle']}</h3>\n"
+        f"<h3>{view}{text['variant_subtitle']}</h3>\n"
         f'<p class="muted">{text["variant_intro"]}</p>\n'
         '<table class="data">\n'
         f'<thead><tr><th>{text["th_word"]}</th>{headers}</tr></thead>\n'
         f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
+    )
+
+
+#: Couleurs des 3 catégories de recouvrement (littéraux oklch, **pas** couleurs
+#: moteur : ce sont des catégories, pas des moteurs identifiés).
+_DONUT_ACCENTS = (
+    "oklch(0.55 0.11 40)",  # tous — clay (matière dure pour tous)
+    "oklch(0.72 0.10 85)",  # plusieurs — butter
+    "oklch(0.62 0.04 230)",  # un seul — bleu-gris doux
+)
+
+
+def _donut_block(
+    payload: WordErrorPayload, columns: list[str], text: Mapping[str, str]
+) -> str:
+    """Carte camembert : part des mots ratés par **tous** / **plusieurs** / **un
+    seul** moteur (proportions — compagnon du Venn). ``""`` si <2 moteurs ou aucun
+    mot (la notion de recouvrement n'a alors pas de sens)."""
+    n_engines = len(columns)
+    if n_engines < 2:
+        return ""
+    every = several = one = 0
+    for word in payload.words:
+        n = len({e.pipeline for e in word.per_engine})
+        if n >= n_engines:
+            every += 1
+        elif n <= 1:
+            one += 1
+        else:
+            several += 1
+    if every + several + one == 0:
+        return ""
+    donut = donut_chart([(float(every), _DONUT_ACCENTS[0]),
+                         (float(several), _DONUT_ACCENTS[1]),
+                         (float(one), _DONUT_ACCENTS[2])])
+    keys = (
+        (text["u_universal"], every, _DONUT_ACCENTS[0]),
+        (text["u_partial"], several, _DONUT_ACCENTS[1]),
+        (text["u_engine_specific"], one, _DONUT_ACCENTS[2]),
+    )
+    legend = " · ".join(
+        f'<span class="donut-key" style="background:{c}"></span> {escape(lbl)} {n}'
+        for lbl, n, c in keys
+    )
+    return (
+        f'<div class="dd-card"><div class="drill-caption">{text["card_donut"]}'
+        f'</div>{donut}<p class="muted donut-legend">{legend}</p></div>'
     )
 
 
@@ -259,19 +369,34 @@ def _block(
         f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
         for name in columns
     )
-    body = "".join(_matrix_row(word, columns, text) for word in payload.words)
+    header_cells = (
+        f'<th>{text["th_word"]}</th>{headers}'
+        f'<th class="num-cell">{text["th_total"]}</th>'
+        f'<th>{text["th_group"]}</th>'
+    )
     graph_note = text["graph_note"].format(n=min(_HEATMAP_ROWS, len(payload.words)))
+    # Compagnons visuels (matrice mots×moteurs + Venn) en **cartes à leur taille,
+    # côte à côte** — au lieu d'une heatmap étroite qui flotte dans la largeur.
+    venn = _venn_svg(payload, order)
+    venn_card = (
+        f'<div class="dd-card"><div class="drill-caption">{text["card_venn"]}'
+        f"</div>{venn}</div>"
+        if venn
+        else ""
+    )
+    donut_card = _donut_block(payload, columns, text)
+    visuals = (
+        '<div class="dd-flow">'
+        f'<div class="dd-card"><div class="drill-caption">{text["card_matrix"]}'
+        f'</div>{svg}<p class="muted">{graph_note}</p></div>'
+        f"{venn_card}{donut_card}</div>"
+    )
     return (
-        f"<h3>{escape(view)} — {text['subtitle']}</h3>\n"
+        f"<h3>{view}{text['subtitle']}</h3>\n"
         f'<p class="muted">{text["intro"]}</p>\n'
         f'<p class="muted">{text["legend"]} : {legend}</p>\n'
-        f"{svg}\n"
-        f'<p class="muted">{graph_note}</p>\n'
-        '<table class="data">\n'
-        f'<thead><tr><th>{text["th_word"]}</th>{headers}'
-        f'<th class="num-cell">{text["th_total"]}</th>'
-        f'<th>{text["th_group"]}</th></tr></thead>\n'
-        f"<tbody>{body}</tbody>\n</table>\n"
+        f"{visuals}"
+        + _matrix_grid(payload.words, header_cells, columns, text)
         + _overlap_block(view, payload, order, text)
         + _variant_block(view, payload, columns, order, text)
         + f'<p class="muted">{text["caveats"]}</p>\n'
@@ -285,9 +410,13 @@ class WordErrorsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
         blocks = [
-            _block(analysis.view, analysis.payload, order, ctx.lang)
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, order, ctx.lang
+            )
             for analysis in result.analyses
             if isinstance(analysis.payload, WordErrorPayload)
         ]

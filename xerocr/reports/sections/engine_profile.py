@@ -49,14 +49,14 @@ def _calibration(
     return None
 
 
-def _composition(result: RunResult, view: str, pipeline: str) -> str:
+def _composition(result: RunResult, view: str, pipeline: str, lang: str) -> str:
     """Composition d'erreurs du moteur (réutilise ``taxonomy.composition_html``)."""
     for analysis in result.analyses:
         payload = analysis.payload
         if analysis.view == view and isinstance(payload, TaxonomyPayload):
             for row in payload.pipelines:
                 if row.pipeline == pipeline:
-                    return composition_html(payload.classes, row)
+                    return composition_html(payload.classes, row, lang)
     return ""
 
 
@@ -137,7 +137,7 @@ class EngineProfileSection:
             f'<span class="muted">· {len(cer_vals)} docs, sorted</span>',
         )
         chart = (
-            '<div class="prof-chart"><div class="prof-chart-title">'
+            '<div class="prof-chart"><div class="drill-caption">'
             + localized(lang, "CER par document ", "CER per document ")
             + f"{chart_caption}</div>"
             f"{bar_series(cer_vals, accent=engine_accent(idx))}</div>"
@@ -147,15 +147,15 @@ class EngineProfileSection:
         # Calibration + composition du moteur (réutilise les builders U2b/U2c),
         # en 2 colonnes ; chaque bloc n'apparaît que si sa donnée est présente.
         cal_block = (
-            '<div class="prof-cell"><div class="prof-chart-title">'
+            '<div class="prof-cell"><div class="drill-caption">'
             + localized(lang, "Courbe de calibration", "Calibration curve")
             + f"</div>{cal[1]}</div>"
             if cal is not None
             else ""
         )
-        comp = _composition(result, view, name)
+        comp = _composition(result, view, name, lang)
         comp_block = (
-            '<div class="prof-cell"><div class="prof-chart-title">'
+            '<div class="prof-cell"><div class="drill-caption">'
             + localized(lang, "Composition des erreurs", "Error composition")
             + f"</div>{comp}</div>"
             if comp
@@ -177,15 +177,15 @@ class EngineProfileSection:
         return (
             f'<div class="drill-panel eng-profile" id="engine-{idx}" hidden '
             f'role="region" aria-label="{escape(name)}">'
-            '<div class="prof-head">'
+            '<div class="drill-head">'
             f'<a class="drill-back" href="#">{back_label}</a>'
-            '<div class="prof-nav">'
+            '<div class="drill-nav">'
             f'<a class="btn-sm" href="#engine-{prev_idx}">{prev_label}</a>'
             f'<a class="btn-sm" href="#engine-{next_idx}">{next_label}</a></div></div>'
-            f'<div class="prof-title"><span class="eng-badge" '
+            f'<div class="drill-title"><span class="eng-badge" '
             f'style="--badge:{engine_accent(idx)}">{engine_letter(idx)}</span>'
             f"<span>{escape(name)}</span>"
-            f'<span class="muted prof-pos">{pos_label}</span></div>'
+            f'<span class="muted drill-pos">{pos_label}</span></div>'
             f'<div class="kpi-band">{"".join(kpis)}</div>'
             f"{chart}{extras}</div>"
         )

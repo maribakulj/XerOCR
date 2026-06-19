@@ -133,12 +133,27 @@ def test_conformity_payload_hand_values(tmp_path: Path) -> None:
     assert row.n_missing == 1
 
 
-def test_no_hipe_view_means_no_payload(tmp_path: Path) -> None:
-    result = _run(tmp_path, (_view("raw", None, ("cmer",)),))
+def test_cmer_view_without_hipe_still_produces_payload(tmp_path: Path) -> None:
+    # Dégating : une vue portant ``cmer`` (sans profil HIPE) sert d'ancre →
+    # cMER/wMER micro·macro sur tout corpus ; deltas None (pas de vues à comparer).
+    result = _run(tmp_path, (_view("raw", None, ("cmer", "mer")),))
+    payload = _payload(result)
+    assert payload is not None
+    assert payload.hipe_view == "raw"
+    assert payload.raw_view is None and payload.heritage_view is None
+    row = payload.pipelines[0]
+    assert row.cmer_micro is not None and row.cmer_macro is not None
+    assert row.delta_norm is None and row.delta_heritage is None
+
+
+def test_no_cmer_anywhere_means_no_payload(tmp_path: Path) -> None:
+    # Plus de cmer du tout (ni vue hipe, ni vue standard) → pas d'ancre → None.
+    result = _run(tmp_path, (_view("raw", None, ("cer",)),))
     assert _payload(result) is None
 
 
-def test_hipe_view_without_cmer_means_no_payload(tmp_path: Path) -> None:
+def test_hipe_view_without_cmer_falls_back_or_none(tmp_path: Path) -> None:
+    # Vue hipe sans cmer + aucune autre vue cmer → None (inutilisable comme ancre).
     result = _run(tmp_path, (_view("hipe", "hipe", ("cer",)),))
     assert _payload(result) is None
 
