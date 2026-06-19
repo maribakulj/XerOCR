@@ -68,6 +68,19 @@ def test_engines_ranked_by_cer_ascending() -> None:
     assert 'class="eng-badge"' in html
 
 
+def test_engine_name_is_clickable_link_to_its_profile() -> None:
+    # Le NOM du moteur (cellule eng-cell) est un lien vers son profil drill-in
+    # (#engine-N) — cliquer le moteur ouvre son analyse, pas seulement une flèche.
+    html = EngineSection().render(_result(), SectionContext())
+    assert html is not None
+    # un lien par moteur, ancré sur le panneau profil (ordre canonique : A=fast? non,
+    # fast/slow : « slow » apparaît d'abord dans pipelines → engine-0, fast → engine-1)
+    assert '<td class="eng-cell"><a href="#engine-' in html
+    assert html.count('<td class="eng-cell"><a href="#engine-') == 2
+    # plus de colonne « flèche » résiduelle (le nom porte l'affordance)
+    assert "eng-open" not in html and "eng-link" not in html
+
+
 def test_table_is_sortable_with_def_headers() -> None:
     # Tables vivantes : table triable, en-têtes de métrique avec def au survol,
     # cellules porteuses de la clé de tri.

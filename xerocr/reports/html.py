@@ -165,9 +165,9 @@ _CSS = (
     ".sig-tie{background:rgba(214,176,90,0.32);color:var(--g-700);}"
     # Profil moteur (drill-in) : panneaux cachés, révélés au clic (report.js) ou
     # via :target (sans JS). Bande KPI + graphe CER/document.
-    ".eng-link{padding:11px 8px;}"
-    ".eng-open{text-decoration:none;color:var(--g-300);font-family:var(--mono);}"
-    ".eng-open:hover{color:var(--fern);}"
+    # Nom du moteur = lien vers son profil (couleur conservée, souligné au survol).
+    ".eng-cell a{color:inherit;text-decoration:none;cursor:pointer;}"
+    ".eng-cell a:hover{text-decoration:underline;text-decoration-color:var(--fern);}"
     ".drill-panel[hidden]{display:none;}"
     ".drill-panel:target{display:block;}"
     ".doc-card{text-decoration:none;color:inherit;cursor:pointer;}"

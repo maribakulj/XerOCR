@@ -82,12 +82,13 @@ class EngineSection:
             )
             idx = order.get(pipeline.pipeline, 0)
             badge = engine_cell(pipeline.pipeline, idx)
+            # Le **nom du moteur** est le lien vers son profil drill-in (#engine-N) :
+            # cliquer le moteur ouvre son analyse détaillée (≠ une petite flèche).
             body.append(
                 f'<tr><td class="rank">{position}</td>'
-                f'<td class="eng-cell">{badge}</td>{cells}'
-                f'<td class="disp">{disp}</td>'
-                f'<td class="eng-link"><a class="eng-open" href="#engine-{idx}" '
-                f'title="{profil_title}">→</a></td></tr>'
+                f'<td class="eng-cell"><a href="#engine-{idx}" '
+                f'title="{profil_title}">{badge}</a></td>{cells}'
+                f'<td class="disp">{disp}</td></tr>'
             )
         display_metrics = [metrics[i] for i in keep]
         header = "".join(
@@ -119,9 +120,9 @@ class EngineSection:
             + prose
             + '<div class="table-scroll"><table class="data sortable">\n'
             "<thead>"
-            + group_header_row(display_metrics, ctx.lang, lead=2, trail=2)
+            + group_header_row(display_metrics, ctx.lang, lead=2, trail=1)
             + f"<tr><th>#</th><th>{th_engine}</th>{header}"
-            f'<th class="num-cell">{th_dispersion}</th><th></th></tr></thead>\n'
+            f'<th class="num-cell">{th_dispersion}</th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table></div>\n"
             + bar_legend(ctx.lang)
         )
