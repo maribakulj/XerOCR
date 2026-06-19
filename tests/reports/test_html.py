@@ -2,7 +2,32 @@
 
 from __future__ import annotations
 
-from xerocr.reports.html import localized, view_label
+from xerocr.reports.html import _CSS, localized, view_label
+
+
+def test_card_layout_uses_grid_not_columns_masonry() -> None:
+    """Garde-fou anti-régression du chevauchement de cartes.
+
+    La cause racine des cartes qui se chevauchaient était le masonry CSS
+    ``columns`` (le flux ``column-span:all`` cassait l'empilement). La grille
+    explicite (``display:grid`` + ``align-items:start``) pose des rangées
+    intrinsèques sans chevauchement. Ce test verrouille le choix structurel.
+    """
+    # Les conteneurs de cartes sont des grilles, pas des flux multi-colonnes.
+    assert ".tab-panel{display:grid;" in _CSS
+    assert ".dd-flow{display:grid;" in _CSS
+    assert "align-items:start;" in _CSS
+    grid_cols = "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));"
+    assert grid_cols in _CSS
+    # Les cartes larges s'étendent sur toute la grille (≠ column-span:all).
+    assert ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{grid-column:1/-1;}" in _CSS
+    assert ".dd-card.dd-wide{grid-column:1/-1;}" in _CSS
+    # Plus aucun masonry ``columns``/``column-span`` sur les conteneurs de cartes
+    # (le masonry ``columns`` reste légitime pour les listes-journal de texte
+    # court — ``.wflow`` — mais jamais pour les cartes).
+    assert ".tab-panel{columns:" not in _CSS
+    assert ".dd-flow{columns:" not in _CSS
+    assert "column-span:all" not in _CSS
 
 
 def test_localized_picks_language() -> None:
