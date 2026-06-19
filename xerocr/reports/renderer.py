@@ -87,20 +87,21 @@ def _label(name: str, lang: str = "fr") -> str:
     return table.get(name, name)
 
 
-#: Onglets du rapport (IA en 4 vues — cf. DECISION_RAPPORT_INTERACTIF.md).
-_TAB_ORDER = ("overview", "engines", "documents", "crosses")
+#: Onglets du rapport (IA par **unité d'analyse** : corpus → moteur → document).
+#: « Croisements » a été fondu dans « Par moteur » : comparer tous les moteurs
+#: (classement, radar, significativité, recouvrement) EST une analyse moteur ;
+#: un onglet séparé dédoublait la taxonomie (cf. DECISION_RAPPORT_INTERACTIF.md).
+_TAB_ORDER = ("overview", "engines", "documents")
 _TAB_LABELS = {
     "fr": {
         "overview": "Vue d'ensemble",
         "engines": "Par moteur",
         "documents": "Par document",
-        "crosses": "Croisements",
     },
     "en": {
         "overview": "Overview",
         "engines": "Engines",
         "documents": "Documents",
-        "crosses": "Crosses",
     },
 }
 _TABLIST_LABEL = {"fr": "Onglets du rapport", "en": "Report tabs"}
@@ -119,10 +120,6 @@ _HERO_TEXT = {
             "Par document",
             "Chaque document du corpus, avec son CER par moteur.",
         ),
-        "crosses": (
-            "Croisements",
-            "Significativité statistique des écarts entre moteurs.",
-        ),
     },
     "en": {
         "overview": (
@@ -131,7 +128,6 @@ _HERO_TEXT = {
         ),
         "engines": ("By engine", "Engine comparison across all computed metrics."),
         "documents": ("By document", "Each corpus document, with its per-engine CER."),
-        "crosses": ("Crosses", "Statistical significance of engine differences."),
     },
 }
 _HERO_EYEBROW = {"fr": "VUE", "en": "VIEW"}
@@ -162,9 +158,11 @@ _SECTION_TAB = {
     "diagnostics": "documents",
     "image_quality": "documents",
     "quality_error": "documents",
-    "cross_engine": "crosses",
-    "engine_duel": "crosses",
-    "word_errors": "crosses",
+    # « Croisements » fondu dans « Par moteur » : comparer les moteurs entre eux
+    # (significativité, recouvrement) appartient à l'analyse moteur.
+    "cross_engine": "engines",
+    "engine_duel": "engines",
+    "word_errors": "engines",
 }
 
 
@@ -181,6 +179,12 @@ _ENGINE_GROUPS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
         "Engine comparison",
         ("by_engine", "engine_radar", "metric_columns", "rank_bump",
          "dispersion", "engine_profiles"),
+    ),
+    (
+        "crosses",
+        "Significativité & recouvrement",
+        "Significance & overlap",
+        ("cross_engine", "engine_duel", "word_errors"),
     ),
     (
         "errors",
@@ -255,8 +259,6 @@ def _hero_stats(tab: str, result: RunResult, lang: str) -> list[tuple[int, str]]
         return [(n_eng, eng), (n_met, met), (n_docs, docs)]
     if tab == "documents":
         return [(n_docs, docs)]
-    if tab == "crosses":
-        return [(n_eng, eng)]
     return []
 
 
