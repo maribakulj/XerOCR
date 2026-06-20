@@ -212,7 +212,7 @@ _CSS = (
     # corps serif scrollable, sauts de ligne respectés).
     ".dd-sbs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}"
     ".dd-sbs-col{min-width:0;border:1px solid var(--g-50);border-radius:var(--r-md);"
-    "overflow:hidden;}"
+    "background:var(--raised);overflow:hidden;}"
     ".dd-sbs-col .dd-diff-head{margin:0;padding:7px 12px;background:var(--surface);"
     "border-bottom:1px solid var(--g-50);}"
     "@media (max-width:720px){.dd-sbs{grid-template-columns:1fr;}}"
