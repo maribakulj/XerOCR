@@ -69,6 +69,8 @@ _CSS = (
     ".tab-master{display:grid;gap:14px;align-items:start;"
     "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));}"
     ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}"
+    # min-width:0 : l'item de grille n'élargit pas sa piste (anti-débordement).
+    ".tab-master>.r-block{min-width:0;}"
     ".tab-master[hidden],.tab-detail[hidden]{display:none;}"
     # Sous-titre thématique d'un onglet riche : bande pleine largeur, zéro JS.
     ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"

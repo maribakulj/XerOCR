@@ -106,16 +106,18 @@ def _block(payload: ImageQualityPayload, lang: str) -> str:
     th_skew = localized(lang, "inclinaison", "skew")
     th_quality = localized(lang, "qualité", "quality")
     th_tier = localized(lang, "palier", "tier")
+    # Table large (7 colonnes) : enveloppée dans ``.table-scroll`` → scroll
+    # horizontal plutôt que débordement sur la carte voisine en colonne étroite.
     return (
         f"{intro}"
         f"{summary}"
-        f'<table class="data">\n<thead><tr><th>{th_doc}</th>'
+        f'<div class="table-scroll"><table class="data">\n<thead><tr><th>{th_doc}</th>'
         f'<th class="num-cell">{th_sharp}</th>'
         f'<th class="num-cell">{th_contrast}</th>'
         f'<th class="num-cell">{th_noise}</th>'
         f'<th class="num-cell">{th_skew}</th>'
         f'<th class="num-cell">{th_quality}</th><th>{th_tier}</th></tr></thead>\n'
-        f"<tbody>{rows}</tbody>\n</table>\n"
+        f"<tbody>{rows}</tbody>\n</table></div>\n"
     )
 
 

@@ -241,7 +241,7 @@ _WIDE_SECTIONS: frozenset[str] = frozenset({
     "synthesis", "overview", "by_engine", "engine_profiles", "conformity",
     "structured_data", "ner", "lines", "economics", "cross_engine",
     "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
-    "diagnostics",
+    "diagnostics", "image_quality",
 })
 
 
