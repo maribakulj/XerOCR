@@ -12,6 +12,7 @@ from xerocr.reports.renderer import (
     ReportRenderer,
     _label,
     _panel_body,
+    _panel_inner,
     _tab_layout,
     default_report_renderer,
 )
@@ -113,15 +114,36 @@ def test_tab_layout_groups_and_suppresses_bar_below_two() -> None:
 
 
 def test_engine_groups_cover_every_engines_section() -> None:
-    # Garde-fou : toute section de l'onglet « engines » figure dans un groupe
-    # thématique (sinon elle serait rendue sans sous-titre). Empêche qu'un ajout
-    # futur de section passe à la trappe du regroupement.
-    engines = {name for name, tab in _SECTION_TAB.items() if tab == "engines"}
+    # Garde-fou : toute section **maître** de l'onglet « engines » figure dans un
+    # groupe thématique (sinon rendue sans sous-titre). La section **détail**
+    # (engine_profiles) vit dans .tab-detail, hors flux maître → exclue du contrôle.
+    from xerocr.reports.renderer import _DETAIL_SECTION
+
+    detail = set(_DETAIL_SECTION.values())
+    engines = {
+        name
+        for name, tab in _SECTION_TAB.items()
+        if tab == "engines" and name not in detail
+    }
     grouped = {n for _key, _fr, _en, names in _ENGINE_GROUPS for n in names}
     assert engines <= grouped, f"sections engines non groupées : {engines - grouped}"
     # Pas de doublon entre groupes (une section = un seul groupe).
     flat = [n for _k, _f, _e, names in _ENGINE_GROUPS for n in names]
     assert len(flat) == len(set(flat))
+
+
+def test_panel_inner_splits_master_and_detail() -> None:
+    # La section détail (engine_profiles) va dans .tab-detail (brute), pas dans le
+    # flux maître .tab-master (qui porte la liste/comparaison wrappée en cartes).
+    blocks = [("by_engine", "<b>RANK</b>"), ("engine_profiles", "<i>PROFILES</i>")]
+    html = _panel_inner("engines", blocks, "fr", "<h>HERO</h>")
+    assert 'class="tab-master"' in html and 'class="tab-detail"' in html
+    master, _, detail = html.partition('<div class="tab-detail"')
+    assert "RANK" in master and "HERO" in master and "PROFILES" not in master
+    assert "PROFILES" in detail
+    # Un onglet sans section détail → pas de conteneur détail.
+    plain = _panel_inner("overview", [("synthesis", "<x>S</x>")], "fr", "")
+    assert 'class="tab-detail"' not in plain and 'class="tab-master"' in plain
 
 
 def test_panel_body_inserts_subheads_for_engines_only() -> None:

@@ -397,7 +397,7 @@ class DocumentDetailSection:
         if lh_block:
             sec_cards.append(f'<div class="dd-card dd-wide">{lh_block}</div>')
         body = f'{top}<div class="dd-flow">{"".join(sec_cards)}</div>'
-        back = localized(lang, "← retour à la galerie", "← back to gallery")
+        back = localized(lang, "← Tous les documents", "← All documents")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
         pos = localized(

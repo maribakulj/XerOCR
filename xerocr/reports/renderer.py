@@ -27,6 +27,7 @@ _SECTION_LABELS = {
     "metric_columns": "Colonnes métriques",
     "rank_bump": "Bascule de classement",
     "engine_profiles": "Profils moteur",
+    "document_details": "Détail document",
     "documents": "Par document",
     "image_quality": "Qualité image",
     "quality_error": "Qualité × erreur",
@@ -60,6 +61,7 @@ _SECTION_LABELS_EN = {
     "metric_columns": "Metric columns",
     "rank_bump": "Ranking shift",
     "engine_profiles": "Engine profiles",
+    "document_details": "Document detail",
     "documents": "By document",
     "image_quality": "Image quality",
     "quality_error": "Quality × error",
@@ -155,6 +157,7 @@ _SECTION_TAB = {
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
+    "document_details": "documents",
     "diagnostics": "documents",
     "image_quality": "documents",
     "quality_error": "documents",
@@ -163,6 +166,16 @@ _SECTION_TAB = {
     "cross_engine": "engines",
     "engine_duel": "engines",
     "word_errors": "engines",
+}
+
+#: Section « **détail** » de chaque onglet maître/détail : elle n'est PAS rendue
+#: dans le flux maître (liste/comparaison) mais dans un conteneur ``.tab-detail``
+#: séparé que ``report.js`` **échange** avec le maître au clic (vraie navigation
+#: liste → page, ≠ ancre dans le même défilement). Les autres onglets n'ont pas
+#: de détail.
+_DETAIL_SECTION: dict[str, str] = {
+    "engines": "engine_profiles",
+    "documents": "document_details",
 }
 
 
@@ -178,7 +191,7 @@ _ENGINE_GROUPS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
         "Comparaison des moteurs",
         "Engine comparison",
         ("by_engine", "engine_radar", "metric_columns", "rank_bump",
-         "dispersion", "engine_profiles"),
+         "dispersion"),
     ),
     (
         "crosses",
@@ -282,6 +295,25 @@ def _hero(tab: str, num: int, result: RunResult, lang: str) -> str:
     )
 
 
+def _panel_inner(tab: str, blocks: list[tuple[str, str]], lang: str, hero: str) -> str:
+    """Corps d'un onglet en **maître/détail** : la vue **maître** (héros + sections
+    de liste/comparaison, wrappées en cartes ``.sec``) et la vue **détail** (la
+    section ``_DETAIL_SECTION`` brute — fiches moteur/document) dans deux conteneurs
+    ``.tab-master`` / ``.tab-detail`` que ``report.js`` **échange** au clic (vraie
+    page, ≠ ancre). Sans JS, les deux restent visibles (les fiches via ``:target``)."""
+    detail_name = _DETAIL_SECTION.get(tab)
+    master_blocks = [(n, _block(n, h, lang)) for n, h in blocks if n != detail_name]
+    detail_raw = next((h for n, h in blocks if n == detail_name), "")
+    body = _panel_body(tab, master_blocks, lang)
+    master = f'<div class="tab-master">{hero}{body}</div>'
+    detail = (
+        f'<div class="tab-detail" data-tab="{escape(tab)}">{detail_raw}</div>'
+        if detail_raw
+        else ""
+    )
+    return master + detail
+
+
 def _tab_layout(
     rendered: list[tuple[str, str]],
     lang: str,
@@ -300,14 +332,13 @@ def _tab_layout(
     trailer: list[str] = []
     for name, html in rendered:
         tab = _SECTION_TAB.get(name)
-        block = _block(name, html, lang)
         if tab is None:
-            trailer.append(block)
+            trailer.append(_block(name, html, lang))
         else:
-            by_tab[tab].append((name, block))
+            by_tab[tab].append((name, html))  # html brut (maître/détail au montage)
     active = [t for t in _TAB_ORDER if by_tab[t]]
     if len(active) < 2:
-        body = "".join(_panel_body(t, by_tab[t], lang) for t in active) + "".join(
+        body = "".join(_panel_inner(t, by_tab[t], lang, "") for t in active) + "".join(
             trailer
         )
         return "", body
@@ -323,11 +354,15 @@ def _tab_layout(
         f'aria-label="{escape(_TABLIST_LABEL.get(lang, _TABLIST_LABEL["fr"]))}">'
         f"{tabs}</nav>"
     )
+    def _one_panel(i: int, t: str) -> str:
+        hero = _hero(t, i + 1, result, lang) if result is not None else ""
+        return (
+            f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
+            f'aria-labelledby="tab-{t}">{_panel_inner(t, by_tab[t], lang, hero)}</div>'
+        )
+
     panels = "".join(
-        f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
-        f'aria-labelledby="tab-{t}">'
-        f"{_hero(t, i + 1, result, lang) if result is not None else ''}"
-        f"{_panel_body(t, by_tab[t], lang)}</div>"
+        _one_panel(i, t)
         for i, t in enumerate(active)
     )
     return nav, panels + "".join(trailer)
@@ -430,6 +465,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
+    from xerocr.reports.sections.document_detail import DocumentDetailSection
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_duel import EngineDuelSection
@@ -463,6 +499,7 @@ def default_report_renderer() -> ReportRenderer:
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),
+            DocumentDetailSection(),
             ImageQualitySection(),
             QualityErrorSection(),
             CrossEngineSection(),

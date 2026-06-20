@@ -76,7 +76,7 @@ def test_one_hidden_panel_per_document_with_anchor() -> None:
     assert html is not None
     assert html.count('class="drill-panel doc-detail"') == 2  # un par document
     assert 'id="doc-0"' in html and 'id="doc-1"' in html  # ancres (≡ ordre galerie)
-    assert "← retour à la galerie" in html
+    assert "← Tous les documents" in html
 
 
 def test_panel_shows_cer_per_engine() -> None:
@@ -265,4 +265,4 @@ def test_renders_english_labels() -> None:
     assert html is not None
     assert "CER per engine" in html and "CER par moteur" not in html
     assert "Worst lines" in html and "Pires lignes" not in html
-    assert "← back to gallery" in html and "← retour à la galerie" not in html
+    assert "← All documents" in html and "← Tous les documents" not in html

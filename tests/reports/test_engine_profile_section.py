@@ -63,7 +63,7 @@ def test_one_hidden_panel_per_engine_with_anchor() -> None:
     assert html.count('class="drill-panel eng-profile"') == 2  # un panneau/moteur
     assert 'id="engine-0"' in html and 'id="engine-1"' in html  # ancres drill-in
     assert html.count('hidden role="region"') == 2  # cachés par défaut (au clic)
-    assert "← retour au tableau" in html  # retour dispo dans chaque panneau
+    assert "← Tous les moteurs" in html  # fil d'Ariane vers la liste, par panneau
 
 
 def test_panel_has_kpi_band_and_cer_chart() -> None:
@@ -207,13 +207,11 @@ def test_deterministic() -> None:
 def test_renders_english_labels() -> None:
     html = EngineProfileSection().render(_result(), SectionContext(lang="en"))
     assert html is not None
-    # libellés EN introduits…
-    assert "Engine profile" in html
-    assert "← back to table" in html
+    # libellés EN introduits… (section détail : fil d'Ariane, pas d'en-tête de section)
+    assert "← All engines" in html
     assert "CER per document " in html
     assert "engine 1 of 2" in html
     # … et leurs équivalents FR absents
-    assert "Profil moteur" not in html
-    assert "← retour au tableau" not in html
+    assert "← Tous les moteurs" not in html
     assert "CER par document " not in html
     assert "moteur 1 sur 2" not in html

@@ -162,19 +162,10 @@ class EngineProfileSection:
             self._panel(result, view, name, order, engines, pos, ctx.lang)
             for pos, name in enumerate(engines)
         )
-        return Html(
-            f"<h2>{localized(ctx.lang, 'Profil moteur', 'Engine profile')}</h2>\n"
-            '<p class="muted">'
-            + localized(
-                ctx.lang,
-                "Cliquer un moteur dans le tableau ci-dessus pour "
-                "ouvrir son profil détaillé.",
-                "Click an engine in the table above to "
-                "open its detailed profile.",
-            )
-            + "</p>\n"
-            f'<div class="eng-profiles">{panels}</div>\n'
-        )
+        # Section **détail** (vue page d'un moteur) : pas d'en-tête « cliquer un
+        # moteur… » (le maître = le tableau de classement est la liste cliquable ;
+        # le routeur échange maître↔détail). Chaque panneau porte son fil d'Ariane.
+        return Html(f'<div class="eng-profiles">{panels}</div>\n')
 
     def _panel(
         self,
@@ -240,7 +231,7 @@ class EngineProfileSection:
             else ""
         )
         config = _config_block(result, name, lang)
-        back_label = localized(lang, "← retour au tableau", "← back to table")
+        back_label = localized(lang, "← Tous les moteurs", "← All engines")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
         pos_label = localized(

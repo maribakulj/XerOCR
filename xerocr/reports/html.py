@@ -61,17 +61,15 @@ _CSS = (
     "font-family:var(--mono);font-size:10.5px;}"
     ".chrome-btn:hover{background:rgba(239,237,232,0.18);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
-    # Grille de cartes (CSS Grid, sans JS) : pistes auto-ajustées de ~23rem
-    # (``auto-fill`` + ``minmax``), ``align-items:start`` → chaque carte a sa
-    # **hauteur intrinsèque** (jamais étirée, jamais de chevauchement : la grille
-    # pose des rangées explicites, ≠ l'ancien ``columns`` masonry dont le flux
-    # ``column-span`` cassait l'empilement). L'ordre du DOM = l'ordre de lecture
-    # (remplissage rangée par rangée). ``min(100%,23rem)`` → repli propre en 1
-    # colonne sur écran étroit, sans débordement horizontal. Les cartes larges
-    # (tableaux, héros) prennent toute la largeur (``grid-column:1/-1``).
-    ".tab-panel{display:grid;gap:14px;align-items:start;"
+    # Grille de cartes (CSS Grid, sans JS) sur la **vue maître** (.tab-master) :
+    # pistes auto-ajustées ~23rem, hauteur intrinsèque (pas de chevauchement),
+    # ordre DOM = ordre de lecture, repli 1 colonne. Larges = grid-column:1/-1.
+    # L'onglet (.tab-panel) n'est qu'un conteneur maître/détail ; le détail
+    # (.tab-detail) est une pile pleine largeur ; ``[hidden]`` masque une vue.
+    ".tab-master{display:grid;gap:14px;align-items:start;"
     "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));}"
-    ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{grid-column:1/-1;}"
+    ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}"
+    ".tab-master[hidden],.tab-detail[hidden]{display:none;}"
     # Sous-titre thématique d'un onglet riche : bande pleine largeur, zéro JS.
     ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"
     "font-size:13px;letter-spacing:0.08em;text-transform:uppercase;"

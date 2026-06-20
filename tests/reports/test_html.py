@@ -14,13 +14,14 @@ def test_card_layout_uses_grid_not_columns_masonry() -> None:
     intrinsèques sans chevauchement. Ce test verrouille le choix structurel.
     """
     # Les conteneurs de cartes sont des grilles, pas des flux multi-colonnes.
-    assert ".tab-panel{display:grid;" in _CSS
+    # La grille porte sur la vue maître (.tab-master), pas l'onglet (maître+détail).
+    assert ".tab-master{display:grid;" in _CSS
     assert ".dd-flow{display:grid;" in _CSS
     assert "align-items:start;" in _CSS
     grid_cols = "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));"
     assert grid_cols in _CSS
     # Les cartes larges s'étendent sur toute la grille (≠ column-span:all).
-    assert ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{grid-column:1/-1;}" in _CSS
+    assert ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}" in _CSS
     assert ".dd-card.dd-wide{grid-column:1/-1;}" in _CSS
     # Plus aucun masonry ``columns``/``column-span`` sur les conteneurs de cartes
     # (le masonry ``columns`` reste légitime pour les listes-journal de texte

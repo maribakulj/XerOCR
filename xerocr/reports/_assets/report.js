@@ -161,70 +161,68 @@
     },
   );
 
-  /* 6) Drill-in générique (profil moteur, détail document) : un lien dont la
-   *    cible est un .drill-panel le révèle et masque les autres ; « ← retour »
-   *    (.drill-back) les masque tous. Sans JS, le panneau s'affiche via :target. */
+  /* 6) Routeur MAÎTRE/DÉTAIL (profil moteur, détail document) : chaque onglet a
+   *    une vue maître (.tab-master : liste/comparaison) et une vue détail
+   *    (.tab-detail : fiches). Cliquer un moteur/document ÉCHANGE les deux (vraie
+   *    « page », ≠ ancre dans le même défilement) : on cache le maître, on montre
+   *    le détail avec UNE seule fiche, on remonte en haut. Le fil d'Ariane
+   *    (.drill-back) rétablit le maître et ramène au déclencheur cliqué. Sans JS :
+   *    maître + détail empilés, la fiche ciblée s'ouvre via :target. */
   var drillPanels = Array.prototype.slice.call(
     document.querySelectorAll(".drill-panel"),
   );
   if (drillPanels.length) {
-    /* Vue document focalisée : quand un détail document s'ouvre, on masque tout
-       SAUF ce document — la galerie/liste/bascule (mêmes parents que les
-       panneaux) ET les autres blocs de l'onglet (par-document, qualité d'image).
-       restoreFocus() rétablit exactement ce qu'on avait masqué. */
-    function hideExcept(parent, keep) {
-      Array.prototype.forEach.call(parent.children, function (c) {
-        if (c !== keep && !c.hidden) {
-          c.hidden = true;
-          c.classList.add("doc-focus-hidden");
-        }
-      });
+    /* Au chargement : masquer toutes les vues détail → seul le maître s'affiche. */
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".tab-detail"),
+      function (d) {
+        d.hidden = true;
+      },
+    );
+    /* Déclencheur initial (nom de moteur / carte document) mémorisé par onglet,
+       pour y ramener au retour. Les liens préc./suiv. (dans une fiche) n'écrasent
+       pas le déclencheur. */
+    var lastTrigger = {};
+    function openDetail(id, link) {
+      var panel = document.getElementById(id);
+      if (!panel) return;
+      var tabPanel = panel.closest(".tab-panel") || document;
+      var master = tabPanel.querySelector
+        ? tabPanel.querySelector(".tab-master")
+        : null;
+      var detail = panel.closest(".tab-detail");
+      /* une seule fiche visible dans la vue détail de cet onglet */
+      if (detail) {
+        Array.prototype.forEach.call(
+          detail.querySelectorAll(".drill-panel"),
+          function (p) {
+            p.hidden = p.id !== id;
+          },
+        );
+        detail.hidden = false;
+      }
+      if (master) master.hidden = true;
+      if (link && tabPanel.id) lastTrigger[tabPanel.id] = link;
+      var top = detail || panel;
+      if (top.scrollIntoView) top.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    function restoreFocus() {
-      Array.prototype.forEach.call(
-        document.querySelectorAll(".doc-focus-hidden"),
-        function (el) {
-          el.hidden = false;
-          el.classList.remove("doc-focus-hidden");
-        },
-      );
-    }
-    /* Déclencheur initial (nom de moteur dans le tableau / carte document) :
-       mémorisé pour y ramener l'utilisateur au retour. Pas les liens préc./suiv.
-       internes au panneau. */
-    var lastTrigger = null;
-    function showDrill(id) {
-      drillPanels.forEach(function (p) {
-        p.hidden = p.id !== id;
-      });
-      var open = document.getElementById(id);
-      if (!open) return;
-      restoreFocus();
-      /* Vue focalisée (moteur OU document) : ne garder que le bloc du panneau
-         ouvert dans l'onglet — masque le tableau de classement, les autres
-         sections, le héros. Pour les documents, masque EN PLUS la galerie/liste
-         à l'intérieur de la section. C'est ce qui fait un vrai drill-in (≠ un
-         simple saut vers un bloc en bas). */
-      var details = open.closest(".doc-details");
-      if (details && details.parentNode) hideExcept(details.parentNode, details);
-      var block = open.closest(".r-block");
-      if (block && block.parentNode) hideExcept(block.parentNode, block);
-      open.scrollIntoView({ behavior: "smooth", block: "start" });
+    function closeDetail(backLink) {
+      var tabPanel = backLink.closest(".tab-panel");
+      if (!tabPanel) return;
+      var master = tabPanel.querySelector(".tab-master");
+      var detail = tabPanel.querySelector(".tab-detail");
+      if (detail) detail.hidden = true;
+      if (master) master.hidden = false;
+      var trig = lastTrigger[tabPanel.id];
+      if (trig) trig.scrollIntoView({ behavior: "smooth", block: "center" });
+      else if (master) master.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     document.addEventListener("click", function (e) {
       var link = e.target.closest && e.target.closest("a");
       if (!link) return;
       if (link.classList.contains("drill-back")) {
         e.preventDefault();
-        restoreFocus();
-        drillPanels.forEach(function (p) {
-          p.hidden = true;
-        });
-        /* Retour : ramener au déclencheur cliqué (nom de moteur / carte), pas
-           laisser l'utilisateur là où le panneau l'avait fait défiler. */
-        if (lastTrigger) {
-          lastTrigger.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
+        closeDetail(link);
         return;
       }
       var href = link.getAttribute("href") || "";
@@ -232,8 +230,7 @@
         var target = document.getElementById(href.slice(1));
         if (target && target.classList.contains("drill-panel")) {
           e.preventDefault();
-          if (!link.closest(".drill-panel")) lastTrigger = link;
-          showDrill(href.slice(1));
+          openDetail(href.slice(1), link.closest(".drill-panel") ? null : link);
         }
       }
     });
