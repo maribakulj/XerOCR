@@ -21,7 +21,8 @@ def test_card_layout_uses_grid_not_columns_masonry() -> None:
     grid_cols = "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));"
     assert grid_cols in _CSS
     # Les cartes larges s'étendent sur toute la grille (≠ column-span:all).
-    assert ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}" in _CSS
+    wide_rule = ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}"
+    assert wide_rule in _CSS
     assert ".dd-card.dd-wide{grid-column:1/-1;}" in _CSS
     # Plus aucun masonry ``columns``/``column-span`` sur les conteneurs de cartes
     # (le masonry ``columns`` reste légitime pour les listes-journal de texte
