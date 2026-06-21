@@ -76,6 +76,15 @@ _CSS = (
     ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"
     "font-size:13px;letter-spacing:0.08em;text-transform:uppercase;"
     "color:var(--g-400);margin:10px 2px 0;}"
+    # Modes (Rapport/Explorer) : empilés sans JS, ``[hidden]`` masque l'inactif.
+    # Spine = sommaire collant horizontal (ancres de groupe) en tête de mode.
+    ".mode[hidden]{display:none;}"
+    ".spine{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;"
+    "gap:4px 14px;padding:8px 2px;margin-bottom:6px;background:var(--paper);"
+    "border-bottom:1px solid var(--g-50);}"
+    ".spine-link{font-family:var(--sans);font-size:12px;color:var(--g-500);"
+    "text-decoration:none;white-space:nowrap;}"
+    ".spine-link:hover{color:var(--ink);}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"

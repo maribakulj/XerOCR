@@ -184,11 +184,14 @@
        pour y ramener au retour. Les liens préc./suiv. (dans une fiche) n'écrasent
        pas le déclencheur. */
     var lastTrigger = {};
-    function swap(tabPanel, master, detail, link, fromInside) {
+    function modeKey(scope) {
+      var m = scope && scope.closest ? scope.closest(".mode") : null;
+      return m && m.id ? m.id : "_";
+    }
+    function swap(scope, master, detail, link, fromInside) {
       if (detail) detail.hidden = false;
       if (master) master.hidden = true;
-      if (link && !fromInside && tabPanel && tabPanel.id)
-        lastTrigger[tabPanel.id] = link;
+      if (link && !fromInside && scope) lastTrigger[modeKey(scope)] = link;
       var top = detail || master;
       if (top && top.scrollIntoView)
         top.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -197,9 +200,9 @@
     function openDetail(id, link) {
       var panel = document.getElementById(id);
       if (!panel) return;
-      var tabPanel = panel.closest(".tab-panel") || document;
-      var master = tabPanel.querySelector
-        ? tabPanel.querySelector(".tab-master")
+      var scope = panel.closest(".drill-scope") || document;
+      var master = scope.querySelector
+        ? scope.querySelector(".tab-master")
         : null;
       var detail = panel.closest(".tab-detail");
       if (detail) {
@@ -210,7 +213,7 @@
           },
         );
       }
-      swap(tabPanel, master, detail, link, !!link.closest(".drill-panel"));
+      swap(scope, master, detail, link, !!link.closest(".drill-panel"));
     }
     /* Détail DOCUMENT : fiche rendue par le serveur dans un <template> inerte,
        CLONÉE à la demande dans un unique conteneur vivant → DOM borné même à
@@ -224,23 +227,23 @@
       wireEngineTabs(live);
       wireFacZoom(live);
       var detail = live.closest(".tab-detail");
-      var tabPanel = detail ? detail.closest(".tab-panel") : null;
-      var master = tabPanel ? tabPanel.querySelector(".tab-master") : null;
+      var scope = detail ? detail.closest(".drill-scope") : null;
+      var master = scope ? scope.querySelector(".tab-master") : null;
       var fromInside = !!(
         link.closest(".doc-detail-live") || link.closest(".drill-panel")
       );
-      swap(tabPanel, master, detail, link, fromInside);
+      swap(scope, master, detail, link, fromInside);
     }
     function closeDetail(backLink) {
-      var tabPanel = backLink.closest(".tab-panel");
-      if (!tabPanel) return;
-      var master = tabPanel.querySelector(".tab-master");
-      var detail = tabPanel.querySelector(".tab-detail");
+      var scope = backLink.closest(".drill-scope");
+      if (!scope) return;
+      var master = scope.querySelector(".tab-master");
+      var detail = scope.querySelector(".tab-detail");
       if (detail) detail.hidden = true;
       var live = detail && detail.querySelector(".doc-detail-live");
       if (live) live.replaceChildren(); /* libère la fiche clonée */
       if (master) master.hidden = false;
-      var trig = lastTrigger[tabPanel.id];
+      var trig = lastTrigger[modeKey(scope)];
       if (trig) trig.scrollIntoView({ behavior: "smooth", block: "center" });
       else if (master) master.scrollIntoView({ behavior: "smooth", block: "start" });
     }

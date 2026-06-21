@@ -81,144 +81,47 @@ def _label(name: str, lang: str = "fr") -> str:
     return table.get(name, name)
 
 
-#: Onglets du rapport (IA par **unité d'analyse** : corpus → moteur → document).
-#: « Croisements » a été fondu dans « Par moteur » : comparer tous les moteurs
-#: (classement, radar, significativité, recouvrement) EST une analyse moteur ;
-#: un onglet séparé dédoublait la taxonomie (cf. DECISION_RAPPORT_INTERACTIF.md).
-_TAB_ORDER = ("overview", "engines", "documents")
-_TAB_LABELS = {
-    "fr": {
-        "overview": "Vue d'ensemble",
-        "engines": "Par moteur",
-        "documents": "Par document",
-    },
-    "en": {
-        "overview": "Overview",
-        "engines": "Engines",
-        "documents": "Documents",
-    },
+#: Deux **modes** d'interaction (≠ onglets par sujet) : « Rapport » (document
+#: défilant, lecture/impression) et « Explorer » (triage des documents). La bascule
+#: vit dans le chrome (réutilise la barre ``.report-tabs`` → ancres ``#mode-*``).
+_MODE_ORDER = ("rapport", "explorer")
+_MODE_LABELS = {
+    "fr": {"rapport": "Rapport", "explorer": "Explorer"},
+    "en": {"rapport": "Report", "explorer": "Explorer"},
 }
-_TABLIST_LABEL = {"fr": "Onglets du rapport", "en": "Report tabs"}
-#: Héros par vue : ``(titre, description)`` localisés (eyebrow + stats dérivés).
-_HERO_TEXT = {
-    "fr": {
-        "overview": (
-            "Vue d'ensemble du run",
-            "Métadonnées du benchmark, composition du corpus et moteurs exécutés.",
-        ),
-        "engines": (
-            "Par moteur",
-            "Comparaison des moteurs sur l'ensemble des métriques calculées.",
-        ),
-        "documents": (
-            "Par document",
-            "Chaque document du corpus, avec son CER par moteur.",
-        ),
-    },
-    "en": {
-        "overview": (
-            "Run overview",
-            "Benchmark metadata, corpus composition and engines run.",
-        ),
-        "engines": ("By engine", "Engine comparison across all computed metrics."),
-        "documents": ("By document", "Each corpus document, with its per-engine CER."),
-    },
-}
-_HERO_EYEBROW = {"fr": "VUE", "en": "VIEW"}
-#: Section → onglet. Une section absente de la table (ex. ``glossary``) est rendue
-#: **après** les panneaux, hors onglets (matière de référence, toujours visible).
-_SECTION_TAB = {
-    "synthesis": "overview",
-    "overview": "overview",
-    "corpus_composition": "overview",
-    "by_engine": "engines",
-    "engine_radar": "engines",
-    "engine_profiles": "engines",
-    "dispersion": "engines",
-    "calibration": "engines",
-    "conformity": "engines",
-    "structure": "engines",
-    "correction": "engines",
-    "structured_data": "engines",
-    "philology": "engines",
-    "textual_fidelity": "engines",
-    "lines": "engines",
-    "ner": "engines",
-    "economics": "engines",
-    "taxonomy": "engines",
-    "documents": "documents",
-    "document_details": "documents",
-    "diagnostics": "documents",
-    # « Croisements » fondu dans « Par moteur » : comparer les moteurs entre eux
-    # (significativité, recouvrement) appartient à l'analyse moteur.
-    "cross_engine": "engines",
-    "engine_duel": "engines",
-    "word_errors": "engines",
-}
+_MODE_SWITCH_LABEL = {"fr": "Mode de lecture", "en": "Reading mode"}
+_SPINE_LABEL = {"fr": "Sommaire", "en": "Contents"}
 
-#: Section « **détail** » de chaque onglet maître/détail : elle n'est PAS rendue
-#: dans le flux maître (liste/comparaison) mais dans un conteneur ``.tab-detail``
-#: séparé que ``report.js`` **échange** avec le maître au clic (vraie navigation
-#: liste → page, ≠ ancre dans le même défilement). Les autres onglets n'ont pas
-#: de détail.
-_DETAIL_SECTION: dict[str, str] = {
-    "engines": "engine_profiles",
-    "documents": "document_details",
-}
-
-
-#: Regroupement thématique des sections de l'onglet **« engines »** (riche : ~17
-#: sections). ``(clé, libellé_fr, libellé_en, sections…)`` — un sous-titre pleine
-#: largeur est inséré avant chaque groupe **présent** (cf. ``_panel_body``). Toute
-#: section ``engines`` doit figurer dans un groupe (garde-fou
-#: ``test_engine_groups_cover_engines_tab``) ; sinon elle est rendue à la fin, sans
-#: sous-titre. Pur regroupement visuel (aucun JS, imprimable).
-_ENGINE_GROUPS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
-    (
-        "compare",
-        "Comparaison des moteurs",
-        "Engine comparison",
-        ("by_engine", "engine_radar", "dispersion"),
-    ),
-    (
-        "crosses",
-        "Significativité & recouvrement",
-        "Significance & overlap",
-        ("cross_engine", "engine_duel", "word_errors"),
-    ),
-    (
-        "errors",
-        "Familles d'erreurs & analyses fines",
-        "Error families & fine-grained analyses",
-        ("conformity", "structure", "correction", "structured_data", "philology",
-         "textual_fidelity", "lines", "ner", "taxonomy", "calibration"),
-    ),
-    ("economics", "Économie", "Economics", ("economics",)),
+#: Groupes ordonnés ``(mode, clé, fr, en, sections…)``. Chaque groupe présent
+#: ouvre un sous-titre ancré (``#grp-<clé>``) que le spine du mode référence. Une
+#: section hors de tout groupe et non-détail est rendue en **pied** (annexe, ex.
+#: ``methodology``). Garde-fou : ``test_groups_cover_grouped_sections``.
+_GROUPS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
+    ("rapport", "key", "Mesures clés", "Key measures",
+     ("synthesis", "overview", "corpus_composition")),
+    ("rapport", "compare", "Comparaison", "Engine comparison",
+     ("by_engine", "engine_radar", "dispersion")),
+    ("rapport", "crosses", "Significativité & recouvrement", "Significance & overlap",
+     ("cross_engine", "engine_duel", "word_errors")),
+    ("rapport", "errors", "Familles d'erreurs & analyses fines",
+     "Error families & fine-grained analyses",
+     ("conformity", "structure", "correction", "structured_data", "philology",
+      "textual_fidelity", "lines", "ner", "taxonomy", "calibration")),
+    ("rapport", "economics", "Économie", "Economics", ("economics",)),
+    ("explorer", "documents", "Documents", "Documents", ("documents",)),
+    ("explorer", "diagnostic", "Diagnostic", "Diagnostics", ("diagnostics",)),
 )
 
+#: Section **détail** (maître/détail) de chaque mode : rendue dans un conteneur
+#: ``.tab-detail`` que ``report.js`` échange au clic (≠ ancre). Hors groupes.
+_DETAIL_OF_MODE = {"rapport": "engine_profiles", "explorer": "document_details"}
 
-def _panel_body(tab: str, blocks: list[tuple[str, str]], lang: str) -> str:
-    """Corps d'un panneau : les blocs joints, dans l'ordre. Pour l'onglet riche
-    « engines », on **regroupe** par thème (``_ENGINE_GROUPS``) et on insère un
-    **sous-titre pleine largeur** avant chaque groupe présent (pur balisage, zéro
-    JS, imprimable, sans-JS lisible). Une section engines hors groupe (cas
-    défensif) est rendue à la fin, sans sous-titre, dans son ordre d'origine."""
-    if tab != "engines":
-        return "".join(html for _, html in blocks)
-    by_name = {name: html for name, html in blocks}
-    parts: list[str] = []
-    used: set[str] = set()
-    for _key, fr, en, names in _ENGINE_GROUPS:
-        present = [n for n in names if n in by_name]
-        if not present:
-            continue
-        label = escape(en if lang == "en" else fr)
-        parts.append(f'<h2 class="tab-subhead">{label}</h2>')
-        for n in present:
-            parts.append(by_name[n])
-            used.add(n)
-    parts.extend(html for name, html in blocks if name not in used)
-    return "".join(parts)
+#: Index inverse section → mode (groupes + détails). Sert au pied (annexe) et au
+#: garde-fou de couverture.
+_SECTION_MODE: dict[str, str] = {
+    **{name: mode for mode, _k, _fr, _en, names in _GROUPS for name in names},
+    **{detail: mode for mode, detail in _DETAIL_OF_MODE.items()},
+}
 
 
 #: Sections **intrinsèquement larges** (tableaux multi-colonnes, galeries, charts
@@ -241,118 +144,89 @@ def _block(name: str, html: str, lang: str) -> str:
     )
 
 
-def _hero_stats(tab: str, result: RunResult, lang: str) -> list[tuple[int, str]]:
-    """Readouts de portée du **héros**, dérivés du ``RunResult`` (réels, pas figés)."""
-    n_docs = result.manifest.n_documents
-    n_eng = len({p.pipeline for p in result.pipelines})
-    n_met = len({s.metric for p in result.pipelines for s in p.aggregate})
-    n_strata = len({d.stratum for d in result.documents if d.stratum})
-    en = lang == "en"
-    docs, eng = "documents", ("engines" if en else "moteurs")
-    met = "metrics" if en else "métriques"
-    strata_lbl = "strata" if en else "strates"
-    if tab == "overview":
-        base = [(n_docs, docs), (n_eng, eng)]
-        # « N strates » seulement si le corpus en porte (jamais un faux compteur).
-        return base + [(n_strata, strata_lbl)] if n_strata else base
-    if tab == "engines":
-        return [(n_eng, eng), (n_met, met), (n_docs, docs)]
-    if tab == "documents":
-        return [(n_docs, docs)]
-    return []
-
-
-def _hero(tab: str, num: int, result: RunResult, lang: str) -> str:
-    """Bande **héros** d'un onglet : eyebrow « VUE 0n · NOM » + titre + desc + stats."""
-    labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
-    title, desc = _HERO_TEXT.get(lang, _HERO_TEXT["fr"])[tab]
-    eyebrow = f"{_HERO_EYEBROW.get(lang, 'VUE')} {num:02d} · {labels[tab]}"
-    stats = "".join(
-        f'<div class="hero-stat"><div class="v">{v}</div>'
-        f'<div class="k">{escape(k)}</div></div>'
-        for v, k in _hero_stats(tab, result, lang)
+def _spine(links: list[tuple[str, str]], lang: str) -> str:
+    """Sommaire collant d'un mode : liens ancrés vers les sous-titres de groupe."""
+    if not links:
+        return ""
+    items = "".join(
+        f'<a class="spine-link" href="#{gid}">{label}</a>' for gid, label in links
     )
-    stats_html = f'<div class="view-hero-stats">{stats}</div>' if stats else ""
-    return (
-        '<div class="view-hero"><div>'
-        f'<div class="view-hero-eyebrow">{escape(eyebrow)}</div>'
-        f'<div class="view-hero-name">{escape(title)}</div>'
-        f'<div class="view-hero-desc">{escape(desc)}</div>'
-        f"</div>{stats_html}</div>"
-    )
+    aria = escape(_SPINE_LABEL.get(lang, _SPINE_LABEL["fr"]))
+    return f'<nav class="spine" aria-label="{aria}">{items}</nav>'
 
 
-def _panel_inner(tab: str, blocks: list[tuple[str, str]], lang: str, hero: str) -> str:
-    """Corps d'un onglet en **maître/détail** : la vue **maître** (héros + sections
-    de liste/comparaison, wrappées en cartes ``.sec``) et la vue **détail** (la
-    section ``_DETAIL_SECTION`` brute — fiches moteur/document) dans deux conteneurs
-    ``.tab-master`` / ``.tab-detail`` que ``report.js`` **échange** au clic (vraie
-    page, ≠ ancre). Sans JS, les deux restent visibles (les fiches via ``:target``)."""
-    detail_name = _DETAIL_SECTION.get(tab)
-    master_blocks = [(n, _block(n, h, lang)) for n, h in blocks if n != detail_name]
-    detail_raw = next((h for n, h in blocks if n == detail_name), "")
-    body = _panel_body(tab, master_blocks, lang)
-    master = f'<div class="tab-master">{hero}{body}</div>'
+def _mode_body(
+    mode: str, by_name: dict[str, str], lang: str
+) -> tuple[str, list[tuple[str, str]]]:
+    """Corps d'un mode : maître groupé (sous-titres ancrés, cartes ``.sec``) +
+    détail (``_DETAIL_OF_MODE``) brut dans ``.tab-detail``, le tout dans un
+    ``.drill-scope`` (unité maître/détail échangée par ``report.js``). ``("", [])``
+    si le mode n'a aucune section. Renvoie aussi les ancres pour le spine."""
+    detail_name = _DETAIL_OF_MODE.get(mode, "")
+    parts: list[str] = []
+    spine_links: list[tuple[str, str]] = []
+    for m, key, fr, en, names in _GROUPS:
+        if m != mode:
+            continue
+        present = [n for n in names if n in by_name and n != detail_name]
+        if not present:
+            continue
+        label = escape(en if lang == "en" else fr)
+        gid = f"grp-{escape(key)}"
+        parts.append(f'<h2 class="tab-subhead" id="{gid}">{label}</h2>')
+        spine_links.append((gid, label))
+        parts.extend(_block(n, by_name[n], lang) for n in present)
+    detail_raw = by_name.get(detail_name, "") if detail_name else ""
+    if not parts and not detail_raw:
+        return "", []
+    master = f'<div class="tab-master">{"".join(parts)}</div>'
     detail = (
-        f'<div class="tab-detail" data-tab="{escape(tab)}">{detail_raw}</div>'
+        f'<div class="tab-detail" data-mode="{escape(mode)}">{detail_raw}</div>'
         if detail_raw
         else ""
     )
-    return master + detail
+    return f'<div class="drill-scope">{master}{detail}</div>', spine_links
 
 
-def _tab_layout(
-    rendered: list[tuple[str, str]],
-    lang: str,
-    *,
-    result: RunResult | None = None,
-) -> tuple[str, str]:
-    """Regroupe les sections en **4 onglets** → ``(barre_onglets, corps_panneaux)``.
+def _mode_layout(rendered: list[tuple[str, str]], lang: str) -> tuple[str, str]:
+    """Compose les sections en **2 modes** → ``(bascule, corps)``.
 
-    La **barre** part dans le chrome ; le **corps** (panneaux) dans ``<main>``.
-    Chaque panneau s'ouvre sur un **héros de vue** (si ``result`` fourni). Sans JS,
-    tous les panneaux restent empilés et visibles (= le rapport plat) ;
-    ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
-    (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
-    actifs, pas de barre : on empile (une barre d'un onglet est inutile)."""
-    by_tab: dict[str, list[tuple[str, str]]] = {t: [] for t in _TAB_ORDER}
-    trailer: list[str] = []
-    for name, html in rendered:
-        tab = _SECTION_TAB.get(name)
-        if tab is None:
-            trailer.append(_block(name, html, lang))
-        else:
-            by_tab[tab].append((name, html))  # html brut (maître/détail au montage)
-    active = [t for t in _TAB_ORDER if by_tab[t]]
-    if len(active) < 2:
-        body = "".join(_panel_inner(t, by_tab[t], lang, "") for t in active) + "".join(
-            trailer
+    La **bascule** (réutilise ``.report-tabs`` → ancres ``#mode-*``) part dans le
+    chrome ; le **corps** (modes empilés) dans ``<main>``. Chaque mode porte un
+    spine collant + son maître/détail. Sans JS, les deux modes restent visibles
+    (rapport plat) ; ``report.js`` n'en montre qu'un. Sous 2 modes actifs, pas de
+    bascule. Sections hors mode (ex. ``methodology``) → **pied**, hors modes."""
+    by_name = dict(rendered)
+    mlabels = _MODE_LABELS.get(lang, _MODE_LABELS["fr"])
+    modes: list[tuple[str, str]] = []
+    for mode in _MODE_ORDER:
+        body, links = _mode_body(mode, by_name, lang)
+        if not body:
+            continue
+        section = (
+            f'<section class="mode" id="mode-{mode}" '
+            f'aria-label="{escape(mlabels[mode])}">'
+            f'{_spine(links, lang)}<div class="mode-body">{body}</div></section>'
         )
-        return "", body
-    labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
-    tabs = "".join(
-        f'<a id="tab-{t}" class="report-tab{" on" if i == 0 else ""}" role="tab" '
-        f'href="#panel-{t}" aria-controls="panel-{t}" '
-        f'aria-selected="{"true" if i == 0 else "false"}">{escape(labels[t])}</a>'
-        for i, t in enumerate(active)
+        modes.append((mode, section))
+    trailer = "".join(
+        _block(n, h, lang) for n, h in rendered if n not in _SECTION_MODE
+    )
+    corps = "".join(html for _m, html in modes) + trailer
+    if len(modes) < 2:
+        return "", corps
+    switch = "".join(
+        f'<a id="msw-{m}" class="report-tab{" on" if i == 0 else ""}" role="tab" '
+        f'href="#mode-{m}" aria-controls="mode-{m}" '
+        f'aria-selected="{"true" if i == 0 else "false"}">{escape(mlabels[m])}</a>'
+        for i, (m, _html) in enumerate(modes)
     )
     nav = (
-        f'<nav class="report-tabs" role="tablist" '
-        f'aria-label="{escape(_TABLIST_LABEL.get(lang, _TABLIST_LABEL["fr"]))}">'
-        f"{tabs}</nav>"
+        f'<nav class="report-tabs mode-switch" role="tablist" '
+        f'aria-label="{escape(_MODE_SWITCH_LABEL.get(lang, _MODE_SWITCH_LABEL["fr"]))}'
+        f'">{switch}</nav>'
     )
-    def _one_panel(i: int, t: str) -> str:
-        hero = _hero(t, i + 1, result, lang) if result is not None else ""
-        return (
-            f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
-            f'aria-labelledby="tab-{t}">{_panel_inner(t, by_tab[t], lang, hero)}</div>'
-        )
-
-    panels = "".join(
-        _one_panel(i, t)
-        for i, t in enumerate(active)
-    )
-    return nav, panels + "".join(trailer)
+    return nav, corps
 
 
 def _data_href(text: str, mime: str) -> str:
@@ -423,9 +297,9 @@ class ReportRenderer:
             html = section.render(result, ctx)
             if html is not None:
                 rendered.append((section.name, html))
-        # IA en 4 onglets : barre (→ chrome) + panneaux (→ corps). Enrichissement
-        # progressif : sections rendues serveur ; ``report.js`` bascule l'affichage.
-        tabs, body = _tab_layout(rendered, lang, result=result)
+        # 2 modes (Rapport/Explorer) : bascule (→ chrome) + corps (→ main).
+        # Sections rendues serveur ; ``report.js`` bascule l'affichage.
+        switch, body = _mode_layout(rendered, lang)
         # Glossaire = périphérie (chrome) : dialog (vide si aucune métrique connue
         # n'a d'entrée) + lien-ancre dans la barre d'actions.
         gloss_dialog = glossary_dialog(known, lang)
@@ -437,7 +311,7 @@ class ReportRenderer:
             compare_widget(result) + gloss_dialog + inline_script("report.js")
         )
         return render_document(
-            title, Html(body), footer=footer, lang=lang, tabs=tabs, meta=meta
+            title, Html(body), footer=footer, lang=lang, tabs=switch, meta=meta
         )
 
 

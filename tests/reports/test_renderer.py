@@ -1,19 +1,24 @@
-"""Renderer : structure du document, déterminisme, no-orphan."""
+"""Renderer : structure 2-modes (Rapport/Explorer), déterminisme, no-orphan."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
 from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
+from xerocr.evaluation.result import (
+    MetricScore,
+    PipelineResult,
+    RunDocumentResult,
+    RunResult,
+)
 from xerocr.reports.renderer import (
-    _ENGINE_GROUPS,
-    _SECTION_TAB,
+    _DETAIL_OF_MODE,
+    _GROUPS,
+    _SECTION_MODE,
     ReportRenderer,
     _label,
-    _panel_body,
-    _panel_inner,
-    _tab_layout,
+    _mode_body,
+    _mode_layout,
     default_report_renderer,
 )
 from xerocr.reports.section import Html, SectionContext
@@ -25,10 +30,18 @@ def _result() -> RunResult:
     manifest = RunManifest(
         run_id="r",
         corpus_name="demo",
-        n_documents=1,
+        n_documents=2,
         code_version="1.0",
         started_at=FIXED,
         completed_at=FIXED,
+    )
+    # Documents présents → le mode Explorer est actif (les deux modes → bascule).
+    docs = tuple(
+        RunDocumentResult(
+            document_id=f"d{i}", pipeline="p", view="text",
+            scores=(MetricScore(metric="cer", value=(i % 2) / 10, support=1),),
+        )
+        for i in range(2)
     )
     return RunResult(
         manifest=manifest,
@@ -39,6 +52,7 @@ def _result() -> RunResult:
                 aggregate=(MetricScore(metric="cer", value=0.1, support=1),),
             ),
         ),
+        documents=docs,
     )
 
 
@@ -48,26 +62,22 @@ def test_document_structure_and_determinism() -> None:
     html2 = renderer.render(_result())
     assert html1 == html2  # octet-stable
     assert html1.startswith("<!DOCTYPE html>")
-    assert "<title>" in html1
-    assert "</html>" in html1
-    # S4.a : le rapport porte le chrome au design (carte gris chaud + en-tête pilule)
+    assert "<title>" in html1 and "</html>" in html1
     assert 'class="report-board"' in html1
     assert 'class="report-chrome"' in html1
     assert 'class="r-block sec' in html1  # chaque section = sa propre carte .sec
-    # trame de points (halftone Xerox) en fond, via data: URI inline
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
-    # 3a : widget « comparer un run » (client-side) en pied de rapport.
     assert 'id="xerocr-compare-btn"' in html1
-    # 3a : badge moteur (lettre + accent) devant le nom du moteur.
     assert 'class="eng-badge"' in html1
-    # IA 4 onglets : barre de tabs + panneaux ARIA ; régions de section ancrées.
-    assert 'class="report-tabs"' in html1
+    # 2 modes : bascule (réutilise .report-tabs) + sections « Rapport » et « Explorer »
+    assert 'class="report-tabs mode-switch"' in html1
     assert 'role="tablist"' in html1
-    assert 'role="tabpanel"' in html1
-    assert 'id="panel-engines"' in html1  # onglet « Par moteur »
-    assert 'id="r-by_engine"' in html1  # région ancrée (dans son panneau)
-    assert 'aria-selected="true"' in html1  # 1er onglet actif
-    # autonome : aucune ressource externe (ni @import, ni CDN https, ni <link>)
+    assert 'id="mode-rapport"' in html1 and 'id="mode-explorer"' in html1
+    assert 'class="spine"' in html1  # sommaire collant du mode
+    assert 'class="drill-scope"' in html1  # unité maître/détail
+    assert 'id="r-by_engine"' in html1  # région de section ancrée
+    assert 'aria-selected="true"' in html1
+    # autonome : aucune ressource externe
     assert "@import" not in html1
     assert "https://" not in html1
     assert "<link" not in html1
@@ -91,143 +101,109 @@ class _Always:
 
 def test_no_orphan_skips_section_with_unmet_requires() -> None:
     html = ReportRenderer((_NeedsWer(), _Always())).render(_result())
-    # On vérifie le **markup** rendu, pas une sous-chaîne nue : depuis que le
-    # rapport incorpore ses polices (base64), "WER"/"ALWAYS" apparaissent par
-    # hasard dans le data-URI. "<p>…</p>" ne peut pas (pas de "<" en base64).
     assert "<p>ALWAYS</p>" in html  # requires=() rendu
     assert "<p>WER</p>" not in html  # requires=("wer",) sauté (seul cer présent)
 
 
-def test_tab_layout_groups_and_suppresses_bar_below_two() -> None:
-    # _tab_layout → (barre_onglets, corps_panneaux). La barre part dans le chrome.
-    # 0-1 onglet actif → pas de barre (sections empilées) ; ≥ 2 → barre + panneaux.
-    assert _tab_layout([], "fr") == ("", "")
-    tabs_one, body_one = _tab_layout([("overview", "<p>O</p>")], "fr")
-    assert tabs_one == ""  # un seul onglet : barre inutile
-    assert 'id="r-overview"' in body_one  # section quand même rendue (empilée)
-    rendered = [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>")]
-    tabs, body = _tab_layout(rendered, "fr")
-    assert 'class="report-tabs"' in tabs and 'role="tablist"' in tabs
-    assert 'id="panel-overview"' in body and 'id="panel-engines"' in body
-    assert 'role="tabpanel"' in body
-    assert tabs.count('aria-selected="true"') == 1  # exactement un onglet actif
+def test_mode_layout_switch_and_modes() -> None:
+    # _mode_layout → (bascule, corps). Vide → rien.
+    assert _mode_layout([], "fr") == ("", "")
+    # Un seul mode actif → pas de bascule, corps rendu.
+    sw1, body1 = _mode_layout([("by_engine", "<p>E</p>")], "fr")
+    assert sw1 == "" and 'id="mode-rapport"' in body1 and 'id="r-by_engine"' in body1
+    # Deux modes → bascule (.report-tabs) + les deux modes + spine + drill-scope.
+    sw, body = _mode_layout(
+        [("by_engine", "<p>E</p>"), ("documents", "<p>D</p>")], "fr"
+    )
+    assert 'class="report-tabs mode-switch"' in sw and 'role="tablist"' in sw
+    assert 'href="#mode-rapport"' in sw and 'href="#mode-explorer"' in sw
+    assert sw.count('aria-selected="true"') == 1  # un seul mode actif au départ
+    assert 'id="mode-rapport"' in body and 'id="mode-explorer"' in body
+    assert 'class="spine"' in body and 'class="drill-scope"' in body
 
 
-def test_engine_groups_cover_every_engines_section() -> None:
-    # Garde-fou : toute section **maître** de l'onglet « engines » figure dans un
-    # groupe thématique (sinon rendue sans sous-titre). La section **détail**
-    # (engine_profiles) vit dans .tab-detail, hors flux maître → exclue du contrôle.
-    from xerocr.reports.renderer import _DETAIL_SECTION
-
-    detail = set(_DETAIL_SECTION.values())
-    engines = {
-        name
-        for name, tab in _SECTION_TAB.items()
-        if tab == "engines" and name not in detail
+def test_mode_body_groups_detail_and_spine() -> None:
+    by_name = {
+        "by_engine": "<b>RANK</b>",
+        "engine_profiles": "<i>PROF</i>",
+        "economics": "<i>EC</i>",
     }
-    grouped = {n for _key, _fr, _en, names in _ENGINE_GROUPS for n in names}
-    assert engines <= grouped, f"sections engines non groupées : {engines - grouped}"
-    # Pas de doublon entre groupes (une section = un seul groupe).
-    flat = [n for _k, _f, _e, names in _ENGINE_GROUPS for n in names]
-    assert len(flat) == len(set(flat))
-
-
-def test_panel_inner_splits_master_and_detail() -> None:
-    # La section détail (engine_profiles) va dans .tab-detail (brute), pas dans le
-    # flux maître .tab-master (qui porte la liste/comparaison wrappée en cartes).
-    blocks = [("by_engine", "<b>RANK</b>"), ("engine_profiles", "<i>PROFILES</i>")]
-    html = _panel_inner("engines", blocks, "fr", "<h>HERO</h>")
-    assert 'class="tab-master"' in html and 'class="tab-detail"' in html
-    master, _, detail = html.partition('<div class="tab-detail"')
-    assert "RANK" in master and "HERO" in master and "PROFILES" not in master
-    assert "PROFILES" in detail
-    # Un onglet sans section détail → pas de conteneur détail.
-    plain = _panel_inner("overview", [("synthesis", "<x>S</x>")], "fr", "")
-    assert 'class="tab-detail"' not in plain and 'class="tab-master"' in plain
-
-
-def test_panel_body_inserts_subheads_for_engines_only() -> None:
-    blocks = [("by_engine", "<i>BE</i>"), ("economics", "<i>EC</i>")]
-    eng = _panel_body("engines", blocks, "fr")
-    # Sous-titres thématiques pleine largeur, dans l'ordre des groupes.
-    assert '<h2 class="tab-subhead">Comparaison des moteurs</h2>' in eng
-    assert '<h2 class="tab-subhead">Économie</h2>' in eng
-    assert eng.index("Comparaison des moteurs") < eng.index("Économie")
+    body, links = _mode_body("rapport", by_name, "fr")
+    assert 'class="tab-master"' in body and 'class="tab-detail"' in body
+    master, _, detail = body.partition('<div class="tab-detail"')
+    assert "RANK" in master and "PROF" not in master  # détail hors flux maître
+    assert "PROF" in detail
+    head = '<h2 class="tab-subhead" id="grp-compare">Comparaison</h2>'
+    assert head in master
+    assert ("grp-compare", "Comparaison") in links
+    assert ("grp-economics", "Économie") in links
+    assert master.index("grp-compare") < master.index("grp-economics")
     # EN localisé.
-    assert "Engine comparison" in _panel_body("engines", blocks, "en")
-    # Les autres onglets ne reçoivent AUCUN sous-titre (jointure simple).
-    other = _panel_body("documents", blocks, "fr")
-    assert "tab-subhead" not in other
-    assert other == "<i>BE</i><i>EC</i>"
+    en_body, _ = _mode_body("rapport", by_name, "en")
+    assert "Engine comparison" in en_body
 
 
-def test_panel_body_groups_present_sections_skips_empty_groups() -> None:
-    # Seul un groupe présent → un seul sous-titre ; groupes vides omis.
-    eng = _panel_body("engines", [("economics", "<i>EC</i>")], "fr")
-    assert eng.count("tab-subhead") == 1
-    assert "Économie" in eng and "Comparaison des moteurs" not in eng
+def test_mode_body_empty_mode_returns_nothing() -> None:
+    assert _mode_body("explorer", {"by_engine": "x"}, "fr") == ("", [])
 
 
-def test_tab_labels_are_localized() -> None:
-    rendered = [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>")]
-    tabs_fr, _ = _tab_layout(rendered, "fr")
-    assert "Par moteur" in tabs_fr  # libellé FR (sans apostrophe)
-    tabs_en, _ = _tab_layout(rendered, "en")
-    assert "Overview" in tabs_en and "Engines" in tabs_en
+def test_groups_cover_sections_no_duplicates() -> None:
+    # Pas de doublon entre groupes ; _SECTION_MODE = groupes ∪ détails.
+    grouped = [n for _m, _k, _f, _e, names in _GROUPS for n in names]
+    assert len(grouped) == len(set(grouped))
+    details = set(_DETAIL_OF_MODE.values())
+    assert set(grouped) | details == set(_SECTION_MODE)
 
 
-def test_unmapped_section_renders_after_panels() -> None:
-    # Une section non mappée à un onglet → rendue hors onglets, après les panneaux.
-    _, body = _tab_layout(
-        [("overview", "<p>O</p>"), ("by_engine", "<p>E</p>"), ("notes", "<p>N</p>")],
+def test_mode_labels_are_localized() -> None:
+    pair = [("by_engine", "<p>E</p>"), ("documents", "<p>D</p>")]
+    sw_fr, _ = _mode_layout(pair, "fr")
+    assert "Rapport" in sw_fr and "Explorer" in sw_fr
+    sw_en, _ = _mode_layout(pair, "en")
+    assert "Report" in sw_en and "Explorer" in sw_en
+
+
+def test_unmapped_section_renders_after_modes() -> None:
+    # Une section hors mode (ex. methodology/notes) → pied, après les modes.
+    _, body = _mode_layout(
+        [("by_engine", "<p>E</p>"), ("documents", "<p>D</p>"), ("notes", "<p>N</p>")],
         "fr",
     )
     assert 'id="r-notes"' in body
-    assert body.index('id="r-notes"') > body.index('id="panel-engines"')
+    assert body.index('id="r-notes"') > body.index('id="mode-explorer"')
+
+
+def test_methodology_is_trailer_not_in_a_mode() -> None:
+    # methodology n'est dans aucun groupe → rendu en pied (annexe).
+    assert "methodology" not in _SECTION_MODE
 
 
 def test_glossary_is_a_chrome_dialog_not_a_section() -> None:
-    # Le glossaire est de la périphérie : dialog (footer) + lien-ancre du chrome,
-    # plus une section bas-de-page.
     html = default_report_renderer().render(_result())
     assert '<dialog id="glossary-dialog"' in html
-    assert 'href="#glossary-dialog"' in html  # entrée « Glossaire » dans le chrome
-    assert 'id="r-glossary"' not in html  # plus de section
+    assert 'href="#glossary-dialog"' in html
+    assert 'id="r-glossary"' not in html
 
 
 def test_label_falls_back_to_raw_name() -> None:
-    assert _label("by_engine") == "Par moteur"  # libellé FR connu (défaut)
-    assert _label("by_engine", "en") == "By engine"  # libellé EN (aria ?lang=en)
-    assert _label("inconnue") == "inconnue"  # repli : nom brut
-    assert _label("inconnue", "en") == "inconnue"  # repli EN aussi
+    assert _label("by_engine") == "Par moteur"
+    assert _label("by_engine", "en") == "By engine"
+    assert _label("inconnue") == "inconnue"
+    assert _label("inconnue", "en") == "inconnue"
 
 
 def test_chrome_meta_and_exports_present() -> None:
-    # Chrome : méta de run (docs/moteurs) + exports CSV/JSON en data: (offline).
     html = default_report_renderer().render(_result())
     assert 'class="chrome-meta"' in html
-    assert "docs" in html and "moteurs" in html  # libellés méta FR
-    assert 'download="r.csv"' in html  # run_id="r"
+    assert "docs" in html and "moteurs" in html
+    assert 'download="r.csv"' in html
     assert 'href="data:text/csv' in html
     assert 'download="r.json"' in html
     assert 'href="data:application/json' in html
-    # autonomie : les exports sont des data: URI, aucune ressource réseau
     assert "https://" not in html
 
 
-def test_view_hero_present_with_eyebrow_and_stats() -> None:
-    # Chaque panneau s'ouvre sur un héros : eyebrow « VUE 0n · … » + titre + stats.
-    html = default_report_renderer().render(_result())
-    assert 'class="view-hero"' in html
-    assert 'class="view-hero-eyebrow"' in html
-    assert 'class="view-hero-name"' in html
-    assert "VUE 01" in html  # numérotation de vue (overview = 1ʳᵉ)
-    assert 'class="hero-stat"' in html  # readouts de portée dans le héros
-
-
 def test_each_section_is_its_own_card() -> None:
-    # Plus de méga-carte : chaque section porte sa propre carte .sec ancrée.
     html = default_report_renderer().render(_result())
     assert 'class="r-block sec' in html
-    # le corps n'est plus enveloppé dans une <section class="sec"> unique
     assert '<main class="report-main"><section class="sec">' not in html
