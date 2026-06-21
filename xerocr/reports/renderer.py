@@ -19,7 +19,7 @@ from xerocr.reports.section import Html, Section, SectionContext
 
 #: Libellés FR des sections pour le sommaire (deeplinks) ; repli = nom brut.
 _SECTION_LABELS = {
-    "synthesis": "Synthèse",
+    "key_measures": "Mesures clés",
     "overview": "Vue d'ensemble",
     "corpus_composition": "Composition",
     "by_engine": "Par moteur",
@@ -49,7 +49,7 @@ _SECTION_LABELS = {
 #: Libellés **EN** des sections (parité de clés avec ``_SECTION_LABELS``) — pour
 #: l'``aria-label`` des blocs quand le rapport est rendu en anglais (``?lang=en``).
 _SECTION_LABELS_EN = {
-    "synthesis": "Synthesis",
+    "key_measures": "Key measures",
     "overview": "Overview",
     "corpus_composition": "Composition",
     "by_engine": "By engine",
@@ -98,7 +98,7 @@ _SPINE_LABEL = {"fr": "Sommaire", "en": "Contents"}
 #: ``methodology``). Garde-fou : ``test_groups_cover_grouped_sections``.
 _GROUPS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
     ("rapport", "key", "Mesures clés", "Key measures",
-     ("synthesis", "overview", "corpus_composition")),
+     ("key_measures", "overview", "corpus_composition")),
     ("rapport", "compare", "Comparaison", "Engine comparison",
      ("by_engine", "engine_radar", "dispersion")),
     ("rapport", "crosses", "Significativité & recouvrement", "Significance & overlap",
@@ -128,7 +128,7 @@ _SECTION_MODE: dict[str, str] = {
 #: pleine largeur) : elles prennent toute la largeur dans le flux de cartes
 #: (``column-span:all``). Les autres (petits charts/listes) s'écoulent en colonnes.
 _WIDE_SECTIONS: frozenset[str] = frozenset({
-    "synthesis", "overview", "by_engine", "engine_profiles", "conformity",
+    "key_measures", "overview", "by_engine", "engine_profiles", "conformity",
     "structured_data", "ner", "lines", "economics", "cross_engine",
     "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
     "diagnostics",
@@ -332,6 +332,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.engine_duel import EngineDuelSection
     from xerocr.reports.sections.engine_profile import EngineProfileSection
     from xerocr.reports.sections.engine_radar import EngineRadarSection
+    from xerocr.reports.sections.key_measures import KeyMeasuresSection
     from xerocr.reports.sections.lines import LinesSection
     from xerocr.reports.sections.methodology import MethodologySection
     from xerocr.reports.sections.ner import NerSection
@@ -339,14 +340,13 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.philology import PhilologySection
     from xerocr.reports.sections.structure import StructureSection
     from xerocr.reports.sections.structured_data import StructuredDataSection
-    from xerocr.reports.sections.synthesis import SynthesisSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
     from xerocr.reports.sections.textual_fidelity import TextualFidelitySection
     from xerocr.reports.sections.word_errors import WordErrorsSection
 
     return ReportRenderer(
         (
-            SynthesisSection(),
+            KeyMeasuresSection(),
             OverviewSection(),
             CorpusCompositionSection(),
             EngineSection(),

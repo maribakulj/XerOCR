@@ -66,3 +66,21 @@ def test_metric_th_unknown_metric_has_no_definition() -> None:
 
 def test_metric_th_localized_definition() -> None:
     assert "word error rate" in metric_th("wer", "en")  # def EN au survol
+
+
+def test_nonempty_metric_indices_masks_hidden_metrics() -> None:
+    # ``mer`` est calculé mais masqué de l'affichage (redondant avec WER) :
+    # il ne figure pas dans les indices de colonnes, contrairement à cer/wer.
+    from xerocr.evaluation.result import MetricScore
+    from xerocr.reports.sections._tables import nonempty_metric_indices
+
+    rows = [
+        (
+            MetricScore(metric="cer", value=0.1, support=1),
+            MetricScore(metric="mer", value=0.2, support=1),
+            MetricScore(metric="wer", value=0.3, support=1),
+        )
+    ]
+    keep = nonempty_metric_indices(rows)
+    kept_metrics = {rows[0][i].metric for i in keep}
+    assert kept_metrics == {"cer", "wer"}  # mer retiré, cer/wer gardés

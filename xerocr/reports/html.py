@@ -440,6 +440,13 @@ _CSS = (
     ".dumb-dot{stroke-width:1;fill-opacity:0.9;}"
     ".dumb-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".dumb-legend{text-align:center;}"
+    # Dot plot classé (SVG serveur) : par moteur, moustache d'IC 95 % + point à la
+    # moyenne, axe commun. Montre l'écart ET son incertitude, sans verdict.
+    ".dot-svg{width:100%;max-width:340px;height:auto;display:block;margin:6px 0;}"
+    ".dot-axis{stroke:var(--g-100);stroke-width:1;}"
+    ".dot-ci{stroke-width:2.5;stroke-linecap:round;opacity:0.55;}"
+    ".dot-pt{stroke:var(--paper);stroke-width:1;}"
+    ".dot-lbl{font-family:var(--mono);font-size:10px;fill:var(--g-500);}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

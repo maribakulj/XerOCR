@@ -554,3 +554,52 @@ def word_engine_heatmap(
         f'width="{num(width)}" height="{num(height)}" class="wmap-svg" '
         f'aria-hidden="true">{"".join(parts)}</svg>'
     )
+
+
+def dot_plot_ci(
+    rows: list[tuple[str, str, float, float, float]],
+    scale_max: float,
+    *,
+    width: float = 320.0,
+    row_h: float = 22.0,
+    pad_left: float = 22.0,
+) -> str:
+    """Dot plot **classé** : par ligne ``(lettre, accent, moyenne, IC bas, IC haut)``,
+    une moustache d'IC + un point à la moyenne sur un axe **commun** ``[0, scale_max]``.
+
+    L'appelant trie (ordre = rendu). Échelle partagée → comparaison directe ;
+    l'IC (bootstrap 95 %, calculé en couche evaluation) **montre** l'incertitude
+    sans la trancher. Déterministe (coords ``num``), zéro JS, ``aria-hidden`` (la
+    matière vit dans la table)."""
+    n = len(rows)
+    if n == 0:
+        return (
+            f'<svg viewBox="0 0 {num(width)} 12" class="dot-svg" '
+            'aria-hidden="true"></svg>'
+        )
+    s = scale_max or 1.0
+    height = row_h * n + 16
+    plot_w = width - pad_left - 8
+
+    def x(v: float) -> float:
+        return pad_left + max(0.0, min(v / s, 1.0)) * plot_w
+
+    axis_y = height - 10
+    parts = [
+        f'<line x1="{num(pad_left)}" y1="{num(axis_y)}" x2="{num(pad_left + plot_w)}" '
+        f'y2="{num(axis_y)}" class="dot-axis"/>'
+    ]
+    for i, (letter, accent, mean, lo, hi) in enumerate(rows):
+        cy = 8.0 + i * row_h + row_h / 2
+        parts.append(
+            f'<line x1="{num(x(lo))}" y1="{num(cy)}" x2="{num(x(hi))}" '
+            f'y2="{num(cy)}" class="dot-ci" style="stroke:{accent}"/>'
+            f'<circle cx="{num(x(mean))}" cy="{num(cy)}" r="4" '
+            f'class="dot-pt" style="fill:{accent}"/>'
+            f'<text x="2" y="{num(cy + 3.5)}" class="dot-lbl">{escape(letter)}</text>'
+        )
+    return (
+        f'<svg viewBox="0 0 {num(width)} {num(height)}" width="{num(width)}" '
+        f'height="{num(height)}" class="dot-svg" aria-hidden="true">'
+        f'{"".join(parts)}</svg>'
+    )
