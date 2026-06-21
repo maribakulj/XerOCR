@@ -127,7 +127,10 @@ class DocumentGallerySection:
             f"<h2>{title}</h2>\n"
             f'<p class="muted">{caption}</p>\n'
             f"{filt}"
-            f'<div class="doc-grid">{cards}</div>\n'
+            # ``data-paginate`` : toutes les cartes restent présentes (rien retiré) ;
+            # ``report.js`` n'en affiche qu'une page à la fois (+ pager). Sans JS,
+            # tout s'affiche (autonome). Compose avec le filtre par strate.
+            f'<div class="doc-grid" data-paginate="60">{cards}</div>\n'
         )
 
     def _filter(self, strata: tuple[str, ...], lang: str) -> str:

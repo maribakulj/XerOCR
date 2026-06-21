@@ -111,7 +111,8 @@ def _block(payload: ImageQualityPayload, lang: str) -> str:
     return (
         f"{intro}"
         f"{summary}"
-        f'<div class="table-scroll"><table class="data">\n<thead><tr><th>{th_doc}</th>'
+        f'<div class="table-scroll"><table class="data" data-paginate="50">\n'
+        f"<thead><tr><th>{th_doc}</th>"
         f'<th class="num-cell">{th_sharp}</th>'
         f'<th class="num-cell">{th_contrast}</th>'
         f'<th class="num-cell">{th_noise}</th>'

@@ -81,9 +81,12 @@ def _table_for_view(
     if multi:  # libellé de vue seulement s'il y a plusieurs vues à distinguer
         view_caption = localized(lang, "Vue", "View")
         head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
+    # ``data-paginate`` : toutes les lignes restent présentes (rien retiré) ;
+    # ``report.js`` n'affiche qu'une page de lignes à la fois (+ pager). Sans JS,
+    # toute la table s'affiche (autonome, imprimable).
     return (
         f"{head}"
-        f'<table class="data">\n'
+        f'<table class="data" data-paginate="50">\n'
         f"<thead><tr><th>Document</th><th>Pipeline</th>{header}</tr></thead>\n"
         f"<tbody>{''.join(body)}</tbody>\n</table>"
     )
