@@ -24,7 +24,6 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.lines import gini, percentile
 from xerocr.evaluation.result import RunResult
-from xerocr.reports._doc_highlights import notable_documents
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
@@ -285,11 +284,7 @@ class DocumentDetailSection:
             return None
         view = ordered_unique(d.view for d in result.documents)[0]
         rows = [d for d in result.documents if d.view == view]
-        # **Mêmes** documents notables et **même ordre** que la galerie (repli
-        # identique) → les ancres ``#doc-<idx>`` des cartes pointent la bonne fiche.
-        doc_ids = list(notable_documents(result, view).ordered_ids) or list(
-            ordered_unique(d.document_id for d in rows)
-        )
+        doc_ids = list(ordered_unique(d.document_id for d in rows))
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in rows
         )

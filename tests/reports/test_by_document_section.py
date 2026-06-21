@@ -1,5 +1,4 @@
-"""Section by-document : distribution de difficulté (tout le corpus) + table des
-documents notables, bornée (invariant d'échelle), vide → ``None``."""
+"""Section by-document : groupage par document, data-bars, vide → ``None``."""
 
 from __future__ import annotations
 
@@ -12,7 +11,6 @@ from xerocr.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports._doc_highlights import HIGHLIGHTS_PER_GROUP
 from xerocr.reports.section import SectionContext
 from xerocr.reports.sections.by_document import DocumentSection
 
@@ -42,65 +40,56 @@ def _result(*documents: RunDocumentResult) -> RunResult:
     return RunResult(manifest=manifest, documents=documents)
 
 
-def test_renders_distribution_and_notable_table() -> None:
+def test_renders_per_document_rows_with_grouping() -> None:
     html = DocumentSection().render(
         _result(
             _doc("folio_1", "tesseract", 0.10),
             _doc("folio_1", "pero", 0.05),
-            _doc("folio_2", "tesseract", 0.40),
-            _doc("folio_2", "pero", 0.20),
+            _doc("folio_2", "tesseract", 0.20),
         ),
         SectionContext(),
     )
     assert html is not None
-    # (1) distribution : histogramme couvrant tout le corpus
-    assert "Distribution de la difficulté" in html
-    assert "bars-svg" in html
-    assert "2 documents" in html
-    # (2) table des documents notables (exemples), avec catégorie
-    assert "Documents notables" in html
-    for token in ("folio_1", "folio_2", "tesseract", "pero", "catégorie"):
+    # vue unique → pas de libellé « Vue : » (porté par le héros ; pas de ressassage)
+    assert "Vue :" not in html
+    # les deux documents et les deux pipelines apparaissent
+    for token in ("folio_1", "folio_2", "tesseract", "pero"):
         assert token in html
+    # nom de document **groupé** : affiché une seule fois malgré 2 lignes
+    assert html.count("folio_1") == 1
+    # teinte relative au max de la colonne (0.20) : 0.10 → 0.5, 0.20 → 1.0
+    assert 'style="--t:0.5"' in html
+    assert 'style="--t:1.0"' in html
 
 
-def test_returns_none_without_cer() -> None:
-    # aucun CER par document → rien à distribuer ni à classer (no-orphan)
-    result = _result(_doc("f", "tesseract", None), _doc("f", "pero", None))
-    assert DocumentSection().render(result, SectionContext()) is None
-
-
-def test_notable_table_is_bounded_at_scale() -> None:
-    # 500 documents → la table reste bornée (≤ 3 groupes × HIGHLIGHTS_PER_GROUP) et
-    # la distribution reste UN seul histogramme : invariant d'échelle.
-    docs = [
-        _doc(f"d{i:04d}", eng, (i % 97) / 100.0)
-        for i in range(500)
-        for eng in ("tesseract", "pero")
-    ]
-    html = DocumentSection().render(_result(*docs), SectionContext())
-    assert html is not None
-    body_rows = html.count("<tr>")
-    assert 0 < body_rows <= 3 * HIGHLIGHTS_PER_GROUP
-    assert html.count("bars-svg") == 1  # une seule distribution
-    assert "500 documents" in html
-
-
-def test_english_labels() -> None:
+def test_multi_view_shows_localized_view_label() -> None:
+    # >1 vue → le libellé « Vue : » réapparaît pour distinguer les tables ; EN.
     html = DocumentSection().render(
-        _result(_doc("f1", "tesseract", 0.10), _doc("f2", "tesseract", 0.30)),
+        _result(
+            _doc("folio_1", "tesseract", 0.10),
+            _doc("folio_1", "tesseract", 0.12, view="diplomatic"),
+        ),
         SectionContext(lang="en"),
     )
     assert html is not None
-    assert "Difficulty distribution" in html and "Distribution de la" not in html
-    assert "Notable documents" in html
+    assert "View :" in html and "Vue :" not in html
 
 
-def test_is_deterministic_and_escapes_ids() -> None:
-    result = _result(_doc("<x>", "tesseract", 0.20), _doc("ok", "tesseract", 0.05))
+def test_none_value_rendered_as_dash() -> None:
+    # colonne avec données (tesseract 0.10) → gardée ; la valeur None (pero) → « — »
+    # (une colonne *entièrement* None serait masquée — cf. nonempty_metric_indices)
+    result = _result(_doc("f", "tesseract", 0.10), _doc("f", "pero", None))
     html = DocumentSection().render(result, SectionContext())
     assert html is not None
-    assert "<x>" not in html and "&lt;x&gt;" in html
-    assert html == DocumentSection().render(result, SectionContext())
+    assert "—" in html
+
+
+def test_all_none_metric_column_is_hidden() -> None:
+    # un métrique sans aucune valeur (tout None) ne doit pas encombrer avec des « — »
+    result = _result(_doc("f", "tesseract", None), _doc("f", "pero", None))
+    html = DocumentSection().render(result, SectionContext())
+    assert html is not None
+    assert "—" not in html  # colonne cer entièrement vide → masquée
 
 
 def test_no_documents_returns_none() -> None:
@@ -112,6 +101,7 @@ def test_no_documents_returns_none() -> None:
         started_at=FIXED,
         completed_at=FIXED,
     )
+    # des pipelines mais aucun détail par-document → section absente (no-orphan)
     result = RunResult(
         manifest=manifest,
         pipelines=(PipelineResult(pipeline="t", view="text"),),

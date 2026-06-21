@@ -13,17 +13,13 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import DocumentImageQuality, ImageQualityPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports._doc_highlights import HIGHLIGHTS_PER_GROUP, histogram
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.svg import bar_series
 
 #: Libellés FR des paliers (les clés du payload restent en anglais — contrat).
 _TIER_LABELS = {"good": "bon", "medium": "moyen", "poor": "faible"}
 #: Libellés EN des paliers (mêmes clés de payload — contrat inchangé).
 _TIER_LABELS_EN = {"good": "good", "medium": "medium", "poor": "poor"}
-#: Classes de l'histogramme qualité (constant → distribution invariante d'échelle).
-_N_BINS = 24
 
 
 def _tier_label(tier: str, lang: str) -> str:
@@ -54,31 +50,9 @@ def _document_row(row: DocumentImageQuality, lang: str) -> str:
     )
 
 
-def _histogram_block(payload: ImageQualityPayload, lang: str) -> str:
-    """Histogramme du score de qualité — couvre **tout** le corpus (invariant)."""
-    counts = histogram([d.quality_score for d in payload.documents], _N_BINS)
-    caption = localized(
-        lang,
-        f'<span class="muted">{len(payload.documents)} images · distribution du '
-        f"score de qualité ({_N_BINS} classes, gauche = dégradée)</span>",
-        f'<span class="muted">{len(payload.documents)} images · quality score '
-        f"distribution ({_N_BINS} bins, left = degraded)</span>",
-    )
-    return (
-        '<div class="prof-chart"><div class="drill-caption">'
-        f'{caption}</div>{bar_series(counts, accent="var(--ink)")}</div>\n'
-    )
-
-
 def _block(payload: ImageQualityPayload, lang: str) -> str:
-    # Table bornée : les ``_WORST`` scans les plus dégradés (score croissant) — les
-    # actionnables. La distribution (histogramme) couvre l'ensemble ; rien n'est
-    # caché. Invariant d'échelle (≤ ``_WORST`` lignes à 20 ou 6000 images).
-    worst = sorted(payload.documents, key=lambda d: (d.quality_score, d.document_id))
-    shown = worst[: HIGHLIGHTS_PER_GROUP]
-    rows = "".join(_document_row(row, lang) for row in shown)
+    rows = "".join(_document_row(row, lang) for row in payload.documents)
     n = len(payload.documents)
-    hidden = n - len(shown)
     intro = localized(
         lang,
         '<p class="muted">La qualité d\'image est une propriété du <strong>corpus'
@@ -132,24 +106,11 @@ def _block(payload: ImageQualityPayload, lang: str) -> str:
     th_skew = localized(lang, "inclinaison", "skew")
     th_quality = localized(lang, "qualité", "quality")
     th_tier = localized(lang, "palier", "tier")
-    worst_note = localized(
-        lang,
-        f'<p class="muted">Les <strong>{len(shown)}</strong> images les plus '
-        f"dégradées (score le plus faible)"
-        + (f" · {hidden} autres non listées" if hidden > 0 else "")
-        + " — la distribution ci-dessus couvre l'ensemble.</p>\n",
-        f'<p class="muted">The <strong>{len(shown)}</strong> most degraded images '
-        f"(lowest score)"
-        + (f" · {hidden} more not listed" if hidden > 0 else "")
-        + " — the distribution above covers the whole corpus.</p>\n",
-    )
     # Table large (7 colonnes) : enveloppée dans ``.table-scroll`` → scroll
     # horizontal plutôt que débordement sur la carte voisine en colonne étroite.
     return (
         f"{intro}"
         f"{summary}"
-        f"{_histogram_block(payload, lang)}"
-        f"{worst_note}"
         f'<div class="table-scroll"><table class="data">\n<thead><tr><th>{th_doc}</th>'
         f'<th class="num-cell">{th_sharp}</th>'
         f'<th class="num-cell">{th_contrast}</th>'

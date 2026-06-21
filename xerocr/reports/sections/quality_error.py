@@ -1,12 +1,10 @@
-"""Section qualité × erreur : **densité 2D** qualité d'image × CER (couche 7).
+"""Section qualité × erreur : nuage de bulles document (couche 7).
 
-**X** = score de qualité de l'image, **Y** = CER (toutes combinaisons document ×
-moteur confondues). Au lieu d'une bulle par point — qui explose à grand corpus —
-les points sont **binnés en grille** : une bulle par cellule occupée, **taille ∝
-nombre de points**. Le nuage est ainsi **invariant d'échelle** (même allure et même
-poids à 20 ou 6000 documents, au plus ``_GRID²`` bulles). Révèle si les
-numérisations dégradées (gauche) tirent le CER vers le haut. Pure présentation :
-lit le payload ``image_quality`` (par document) + les CER du ``RunResult`` (aucun
+Une bulle par (document, moteur) : **X** = score de qualité de l'image, **Y** =
+CER du moteur sur ce document, **taille** ∝ nombre de caractères (volume), couleur
+= moteur. Révèle si les numérisations dégradées (gauche) tirent le CER vers le
+haut, et quels gros documents sont durs. Pure présentation : lit le payload
+``image_quality`` (par document) + les CER par document du ``RunResult`` (aucun
 recalcul), rendu SVG serveur déterministe, zéro JS.
 """
 
@@ -14,15 +12,13 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import ImageQualityPayload
 from xerocr.evaluation.result import RunResult
-from xerocr.reports._doc_highlights import density_grid
-from xerocr.reports.html import localized
+from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
+from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
 from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.svg import bubble_chart
 
 _METRIC = "cer"
-#: Côté de la grille de densité (constant → nombre de bulles borné, invariant).
-_GRID = 24
 
 
 def _quality_by_doc(result: RunResult, view: str) -> dict[str, float]:
@@ -40,7 +36,7 @@ def _quality_by_doc(result: RunResult, view: str) -> dict[str, float]:
 
 
 class QualityErrorSection:
-    """Densité 2D qualité d'image × CER (document × moteur binnés en grille)."""
+    """Nuage de bulles qualité d'image × CER × volume, par document et moteur."""
 
     name = "quality_error"
     requires: tuple[str, ...] = ()
@@ -52,43 +48,55 @@ class QualityErrorSection:
         quality = _quality_by_doc(result, view)
         if not quality:
             return None
-        # (qualité, CER) par (document, moteur) mesuré — tous moteurs confondus.
-        raw: list[tuple[float, float]] = []
+        order = engine_order(p.pipeline for p in result.pipelines)
+        engines = sorted(
+            {p.pipeline for p in result.pipelines if p.view == view},
+            key=lambda n: order[n],
+        )
+        # (quality, cer, support, accent) par (document, moteur) mesuré.
+        raw: list[tuple[float, float, float, str]] = []
         for doc in result.documents:
-            if doc.view != view:
+            if doc.view != view or doc.pipeline not in order:
                 continue
             q = quality.get(doc.document_id)
             if q is None:
                 continue
+            accent = engine_accent(order[doc.pipeline])
             for score in doc.scores:
                 if score.metric == _METRIC and score.value is not None:
-                    raw.append((q, score.value))
+                    raw.append((q, score.value, float(score.support or 0), accent))
         if not raw:
             return None
-        # Échelle Y commune : 0 (bas) → max CER (haut), pour exploiter la hauteur
-        # quand tous les CER sont faibles. Le max est inscrit dans la légende.
-        cer_max = max(cer for _q, cer in raw) or 1.0
-        cells = density_grid([(q, cer / cer_max) for q, cer in raw], _GRID, _GRID)
-        points = [(cx, cy, count, "var(--ink)") for cx, cy, count in cells]
+        # Échelle Y commune : 0 (en bas) → max CER (en haut), pour exploiter la
+        # hauteur quand tous les CER sont faibles. Le max est inscrit dans la légende.
+        cer_max = max((cer for _q, cer, _s, _c in raw), default=0.0) or 1.0
+        points = [
+            (q, cer / cer_max, support, accent) for q, cer, support, accent in raw
+        ]
         svg = bubble_chart(points)
+        legend = " · ".join(
+            f'<span class="eng-badge" style="--badge:{engine_accent(order[name])}">'
+            f"{engine_letter(order[name])}</span> {escape(name)}"
+            for name in engines
+        )
         title = localized(ctx.lang, "Qualité × erreur", "Quality × error")
         intro = localized(
             ctx.lang,
-            f"Densité de {len(raw)} couples document × moteur — <strong>X</strong> : "
-            "qualité de l'image (gauche = dégradée) ; <strong>Y</strong> : CER (bas = "
-            f"0, haut = {cer_max * 100:.0f} %) ; <strong>taille</strong> de la bulle ∝ "
-            "nombre de couples dans la cellule. Haut-gauche = scans durs ; bas-droite "
-            "= faciles. Invariant d'échelle (grille binnée).",
-            f"Density of {len(raw)} document × engine pairs — <strong>X</strong>: "
-            "image quality (left = degraded); <strong>Y</strong>: CER (bottom = 0, top "
-            f"= {cer_max * 100:.0f} %); bubble <strong>size</strong> ∝ pairs in the "
-            "cell. Top-left = hard scans; bottom-right = easy. Scale-invariant (binned "
-            "grid).",
+            "Une bulle par document et moteur — <strong>X</strong> : qualité de "
+            "l'image (gauche = dégradée) ; <strong>Y</strong> : CER (bas = 0, haut "
+            f"= {cer_max * 100:.0f} %) ; <strong>taille</strong> ∝ nombre de "
+            "caractères. Les bulles en haut à gauche = scans durs ; en bas à "
+            "droite = faciles.",
+            "One bubble per document and engine — <strong>X</strong>: image "
+            "quality (left = degraded); <strong>Y</strong>: CER (bottom = 0, top = "
+            f"{cer_max * 100:.0f} %); <strong>size</strong> ∝ character count. "
+            "Bubbles top-left = hard scans; bottom-right = easy.",
         )
         return Html(
             f"<h2>{title}</h2>\n"
             f'<p class="muted">{intro}</p>\n'
             f'<div class="bubble-wrap">{svg}</div>\n'
+            f'<p class="muted bubble-legend">{legend}</p>\n'
         )
 
 

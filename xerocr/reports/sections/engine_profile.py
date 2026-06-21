@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import CalibrationPayload, TaxonomyPayload
 from xerocr.evaluation.result import PipelineResult, RunResult
-from xerocr.reports._doc_highlights import histogram
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
@@ -21,9 +20,6 @@ from xerocr.reports.sections.taxonomy import composition_html
 from xerocr.reports.svg import bar_series, calibration_curve
 
 _METRIC = "cer"
-#: Classes de l'histogramme de CER par document (constant → graphe invariant
-#: d'échelle : 24 barres que le moteur ait été évalué sur 20 ou 6000 documents).
-_N_BINS = 24
 
 
 def _per_doc_cer(result: RunResult, pipeline: str, view: str) -> list[float]:
@@ -197,20 +193,17 @@ class EngineProfileSection:
         cal = _calibration(result, view, name)
         if cal is not None:
             kpis.append(_kpi("ece", _pct(cal[0])))
-        cer_vals = _per_doc_cer(result, name, view)
+        cer_vals = sorted(_per_doc_cer(result, name, view))
         chart_caption = localized(
             lang,
-            f'<span class="muted">· distribution sur {len(cer_vals)} docs '
-            f"({_N_BINS} classes, gauche = faible CER)</span>",
-            f'<span class="muted">· distribution over {len(cer_vals)} docs '
-            f"({_N_BINS} bins, left = low CER)</span>",
+            f'<span class="muted">· {len(cer_vals)} docs, triés</span>',
+            f'<span class="muted">· {len(cer_vals)} docs, sorted</span>',
         )
         chart = (
             '<div class="prof-chart"><div class="drill-caption">'
             + localized(lang, "CER par document ", "CER per document ")
             + f"{chart_caption}</div>"
-            f"{bar_series(histogram(cer_vals, _N_BINS), accent=engine_accent(idx))}"
-            "</div>"
+            f"{bar_series(cer_vals, accent=engine_accent(idx))}</div>"
             if cer_vals
             else ""
         )

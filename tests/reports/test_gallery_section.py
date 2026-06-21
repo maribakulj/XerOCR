@@ -61,7 +61,7 @@ def test_renders_card_per_document_with_cer_and_badges() -> None:
     )
     html = DocumentGallerySection().render(result, SectionContext())
     assert html is not None
-    assert "Documents notables" in html  # galerie des notables, pas « tous »
+    assert "Galerie des documents" in html
     assert 'class="doc-grid"' in html
     assert "doc1" in html and "doc2" in html
     assert "doc-preview" in html  # aperçu synthétique (zéro image)
@@ -83,9 +83,9 @@ def test_renders_english_labels() -> None:
     result = _result(_doc("doc1", "tesseract", 0.20))
     html = DocumentGallerySection().render(result, SectionContext(lang="en"))
     assert html is not None
-    assert "Notable documents" in html and "Documents notables" not in html
-    assert "Examples — hardest" in html
-    assert "Exemples — les plus" not in html
+    assert "Document gallery" in html and "Galerie des documents" not in html
+    assert "Preview + CER per engine" in html
+    assert "Aperçu + CER par moteur" not in html
 
 
 def _doc_s(
