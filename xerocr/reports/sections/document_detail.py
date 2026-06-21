@@ -288,8 +288,16 @@ class DocumentDetailSection:
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in rows
         )
-        panels = "".join(
-            self._panel(
+        # Chaque fiche est rendue **par le serveur** (déterministe) mais dans un
+        # ``<template>`` **inerte** : le navigateur ne la peint pas et ne charge
+        # pas son fac-similé tant que ``report.js`` ne la clone pas, au clic, dans
+        # l'unique conteneur vivant ``.doc-detail-live``. → DOM borné même à 5000
+        # docs (une seule fiche vivante). Tous les documents restent présents et
+        # atteignables ; sans JS, les fiches ne s'affichent pas (dégradation). Les
+        # ancres ``#doc-<idx>`` restent alignées avec les cartes de la galerie.
+        templates = "".join(
+            f'<template data-doc="{idx}">'
+            + self._panel(
                 result,
                 view,
                 doc_id,
@@ -299,9 +307,13 @@ class DocumentDetailSection:
                 ctx.facsimiles.get(doc_id),
                 ctx.lang,
             )
+            + "</template>"
             for idx, doc_id in enumerate(doc_ids)
         )
-        return Html(f'<div class="doc-details">{panels}</div>')
+        return Html(
+            '<div class="doc-detail-live" role="region" aria-live="polite"></div>'
+            f'<div class="doc-details" hidden>{templates}</div>'
+        )
 
     def _panel(
         self,
@@ -397,7 +409,7 @@ class DocumentDetailSection:
         if lh_block:
             sec_cards.append(f'<div class="dd-card dd-wide">{lh_block}</div>')
         body = f'{top}<div class="dd-flow">{"".join(sec_cards)}</div>'
-        back = localized(lang, "← retour à la galerie", "← back to gallery")
+        back = localized(lang, "← Tous les documents", "← All documents")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
         pos = localized(
@@ -406,7 +418,7 @@ class DocumentDetailSection:
             f"document {idx + 1} of {total}",
         )
         return (
-            f'<div class="drill-panel doc-detail" id="doc-{idx}" hidden '
+            f'<div class="drill-panel doc-detail" id="doc-{idx}" '
             f'role="region" aria-label="{escape(doc_id)}">'
             '<div class="drill-head">'
             f'<a class="drill-back" href="#">{back}</a>'

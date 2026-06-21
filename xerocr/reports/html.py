@@ -61,13 +61,21 @@ _CSS = (
     "font-family:var(--mono);font-size:10.5px;}"
     ".chrome-btn:hover{background:rgba(239,237,232,0.18);}"
     ".report-main{display:flex;flex-direction:column;gap:14px;}"
-    # Flux de cartes (masonry CSS, sans JS) : le panneau coule ses cartes en
-    # colonnes de ~23rem qui se réagencent selon la largeur ; chaque carte reste
-    # entière (break-inside). Les cartes larges (tableaux, héros) prennent toute
-    # la largeur (column-span). Réempile en 1 colonne sur écran étroit.
-    ".tab-panel{columns:23rem;column-gap:14px;}"
-    ".tab-panel>.r-block,.tab-panel>.view-hero{break-inside:avoid;margin:0 0 14px;}"
-    ".tab-panel>.view-hero,.tab-panel>.r-block.r-wide{column-span:all;}"
+    # Grille de cartes (CSS Grid, sans JS) sur la **vue maître** (.tab-master) :
+    # pistes auto-ajustées ~23rem, hauteur intrinsèque (pas de chevauchement),
+    # ordre DOM = ordre de lecture, repli 1 colonne. Larges = grid-column:1/-1.
+    # L'onglet (.tab-panel) n'est qu'un conteneur maître/détail ; le détail
+    # (.tab-detail) est une pile pleine largeur ; ``[hidden]`` masque une vue.
+    ".tab-master{display:grid;gap:14px;align-items:start;"
+    "grid-template-columns:repeat(auto-fill,minmax(min(100%,23rem),1fr));}"
+    ".tab-master>.view-hero,.tab-master>.r-block.r-wide{grid-column:1/-1;}"
+    # min-width:0 : l'item de grille n'élargit pas sa piste (anti-débordement).
+    ".tab-master>.r-block{min-width:0;}"
+    ".tab-master[hidden],.tab-detail[hidden]{display:none;}"
+    # Sous-titre thématique d'un onglet riche : bande pleine largeur, zéro JS.
+    ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"
+    "font-size:13px;letter-spacing:0.08em;text-transform:uppercase;"
+    "color:var(--g-400);margin:10px 2px 0;}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
@@ -157,9 +165,9 @@ _CSS = (
     ".sig-tie{background:rgba(214,176,90,0.32);color:var(--g-700);}"
     # Profil moteur (drill-in) : panneaux cachés, révélés au clic (report.js) ou
     # via :target (sans JS). Bande KPI + graphe CER/document.
-    ".eng-link{padding:11px 8px;}"
-    ".eng-open{text-decoration:none;color:var(--g-300);font-family:var(--mono);}"
-    ".eng-open:hover{color:var(--fern);}"
+    # Nom du moteur = lien vers son profil (couleur conservée, souligné au survol).
+    ".eng-cell a{color:inherit;text-decoration:none;cursor:pointer;}"
+    ".eng-cell a:hover{text-decoration:underline;text-decoration-color:var(--fern);}"
     ".drill-panel[hidden]{display:none;}"
     ".drill-panel:target{display:block;}"
     ".doc-card{text-decoration:none;color:inherit;cursor:pointer;}"
@@ -182,12 +190,15 @@ _CSS = (
     # Bandeau étroit **centré** au-dessus du diff (qui prend toute la largeur en
     # dessous) — image modeste, le texte respire.
     ".dd-fac-top{max-width:560px;margin:0 auto 14px;}"
-    # Cartes secondaires du drill-in (CER, heatmap ligne, qualité image…) en flux :
-    # chacune à sa taille, côte à côte, réagencement par largeur (masonry CSS).
-    ".dd-flow{columns:21rem;column-gap:12px;margin-top:14px;}"
-    ".dd-card{break-inside:avoid;margin:0 0 12px;border:1px solid var(--g-50);"
+    # Cartes secondaires du drill-in (CER, heatmap ligne, qualité image…) en
+    # grille : chacune à sa hauteur intrinsèque, pistes auto-ajustées de ~21rem,
+    # ``align-items:start`` (pas d'étirement ni de chevauchement, ≠ l'ancien
+    # masonry ``columns``). Repli 1 colonne en deçà de 21rem.
+    ".dd-flow{display:grid;gap:12px;margin-top:14px;align-items:start;"
+    "grid-template-columns:repeat(auto-fill,minmax(min(100%,21rem),1fr));}"
+    ".dd-card{border:1px solid var(--g-50);"
     "border-radius:var(--r-md);padding:13px 15px;background:var(--surface);}"
-    ".dd-card.dd-wide{column-span:all;}"
+    ".dd-card.dd-wide{grid-column:1/-1;}"
     ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
     "background:var(--surface);border-radius:var(--r-md);"
     "border:1px solid var(--g-50);cursor:zoom-in;}"
@@ -201,7 +212,7 @@ _CSS = (
     # corps serif scrollable, sauts de ligne respectés).
     ".dd-sbs{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;}"
     ".dd-sbs-col{min-width:0;border:1px solid var(--g-50);border-radius:var(--r-md);"
-    "overflow:hidden;}"
+    "background:var(--raised);overflow:hidden;}"
     ".dd-sbs-col .dd-diff-head{margin:0;padding:7px 12px;background:var(--surface);"
     "border-bottom:1px solid var(--g-50);}"
     "@media (max-width:720px){.dd-sbs{grid-template-columns:1fr;}}"
@@ -298,14 +309,14 @@ _CSS = (
     ".prof-row{display:flex;gap:22px;flex-wrap:wrap;margin-top:16px;}"
     ".prof-cell{flex:1;min-width:240px;}"
     # Bascule galerie ⇄ liste (vue Documents) : pilule à 2 boutons, sur la charte.
-    ".view-toggle{display:inline-flex;gap:2px;padding:3px;background:var(--surface);"
-    "border-radius:var(--r-pill);margin-bottom:8px;}"
-    ".vt-btn{font-family:var(--mono);font-size:11px;border:none;cursor:pointer;"
+    ".view-toggle,.doc-filter{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;"
+    "background:var(--surface);border-radius:var(--r-pill);margin-bottom:8px;}"
+    ".vt-btn,.df-btn{font-family:var(--mono);font-size:11px;border:none;cursor:pointer;"
     "background:transparent;color:var(--g-500);padding:6px 14px;"
     "border-radius:var(--r-pill);}"
-    ".vt-btn:hover{color:var(--ink);}"
-    ".vt-btn.on{background:var(--ink);color:var(--paper);}"
-    ".doc-view[hidden]{display:none;}"
+    ".vt-btn:hover,.df-btn:hover{color:var(--ink);}"
+    ".vt-btn.on,.df-btn.on{background:var(--ink);color:var(--paper);}"
+    ".doc-view[hidden],.doc-card[hidden]{display:none;}"
     # Cellule de diff GT↔hypothèse (drill-in) : texte surligné, retour à la ligne.
     "table.data td.diff{padding:11px 14px;font-family:var(--mono);font-size:12px;"
     "color:var(--g-700);border-bottom:1px solid var(--g-50);white-space:pre-wrap;"
@@ -401,6 +412,8 @@ _CSS = (
     ".radar-spoke{stroke:var(--g-100);stroke-width:1;}"
     ".radar-axis{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".radar-area{fill-opacity:0.13;stroke-width:2;stroke-linejoin:round;}"
+    # Sommet : cible de survol (<title> = valeur brute + normalisée), cerné de fond.
+    ".radar-vertex{fill-opacity:0.95;stroke:var(--surface);stroke-width:1;}"
     ".radar-legend{text-align:center;}"
     # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
     # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.

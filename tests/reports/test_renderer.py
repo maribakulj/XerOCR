@@ -7,8 +7,12 @@ from datetime import UTC, datetime
 from xerocr.domain.run import RunManifest
 from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
 from xerocr.reports.renderer import (
+    _ENGINE_GROUPS,
+    _SECTION_TAB,
     ReportRenderer,
     _label,
+    _panel_body,
+    _panel_inner,
     _tab_layout,
     default_report_renderer,
 )
@@ -107,6 +111,61 @@ def test_tab_layout_groups_and_suppresses_bar_below_two() -> None:
     assert 'id="panel-overview"' in body and 'id="panel-engines"' in body
     assert 'role="tabpanel"' in body
     assert tabs.count('aria-selected="true"') == 1  # exactement un onglet actif
+
+
+def test_engine_groups_cover_every_engines_section() -> None:
+    # Garde-fou : toute section **maître** de l'onglet « engines » figure dans un
+    # groupe thématique (sinon rendue sans sous-titre). La section **détail**
+    # (engine_profiles) vit dans .tab-detail, hors flux maître → exclue du contrôle.
+    from xerocr.reports.renderer import _DETAIL_SECTION
+
+    detail = set(_DETAIL_SECTION.values())
+    engines = {
+        name
+        for name, tab in _SECTION_TAB.items()
+        if tab == "engines" and name not in detail
+    }
+    grouped = {n for _key, _fr, _en, names in _ENGINE_GROUPS for n in names}
+    assert engines <= grouped, f"sections engines non groupées : {engines - grouped}"
+    # Pas de doublon entre groupes (une section = un seul groupe).
+    flat = [n for _k, _f, _e, names in _ENGINE_GROUPS for n in names]
+    assert len(flat) == len(set(flat))
+
+
+def test_panel_inner_splits_master_and_detail() -> None:
+    # La section détail (engine_profiles) va dans .tab-detail (brute), pas dans le
+    # flux maître .tab-master (qui porte la liste/comparaison wrappée en cartes).
+    blocks = [("by_engine", "<b>RANK</b>"), ("engine_profiles", "<i>PROFILES</i>")]
+    html = _panel_inner("engines", blocks, "fr", "<h>HERO</h>")
+    assert 'class="tab-master"' in html and 'class="tab-detail"' in html
+    master, _, detail = html.partition('<div class="tab-detail"')
+    assert "RANK" in master and "HERO" in master and "PROFILES" not in master
+    assert "PROFILES" in detail
+    # Un onglet sans section détail → pas de conteneur détail.
+    plain = _panel_inner("overview", [("synthesis", "<x>S</x>")], "fr", "")
+    assert 'class="tab-detail"' not in plain and 'class="tab-master"' in plain
+
+
+def test_panel_body_inserts_subheads_for_engines_only() -> None:
+    blocks = [("by_engine", "<i>BE</i>"), ("economics", "<i>EC</i>")]
+    eng = _panel_body("engines", blocks, "fr")
+    # Sous-titres thématiques pleine largeur, dans l'ordre des groupes.
+    assert '<h2 class="tab-subhead">Comparaison des moteurs</h2>' in eng
+    assert '<h2 class="tab-subhead">Économie</h2>' in eng
+    assert eng.index("Comparaison des moteurs") < eng.index("Économie")
+    # EN localisé.
+    assert "Engine comparison" in _panel_body("engines", blocks, "en")
+    # Les autres onglets ne reçoivent AUCUN sous-titre (jointure simple).
+    other = _panel_body("documents", blocks, "fr")
+    assert "tab-subhead" not in other
+    assert other == "<i>BE</i><i>EC</i>"
+
+
+def test_panel_body_groups_present_sections_skips_empty_groups() -> None:
+    # Seul un groupe présent → un seul sous-titre ; groupes vides omis.
+    eng = _panel_body("engines", [("economics", "<i>EC</i>")], "fr")
+    assert eng.count("tab-subhead") == 1
+    assert "Économie" in eng and "Comparaison des moteurs" not in eng
 
 
 def test_tab_labels_are_localized() -> None:

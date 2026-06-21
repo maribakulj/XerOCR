@@ -63,7 +63,7 @@ def test_one_hidden_panel_per_engine_with_anchor() -> None:
     assert html.count('class="drill-panel eng-profile"') == 2  # un panneau/moteur
     assert 'id="engine-0"' in html and 'id="engine-1"' in html  # ancres drill-in
     assert html.count('hidden role="region"') == 2  # cachés par défaut (au clic)
-    assert "← retour au tableau" in html  # retour dispo dans chaque panneau
+    assert "← Tous les moteurs" in html  # fil d'Ariane vers la liste, par panneau
 
 
 def test_panel_has_kpi_band_and_cer_chart() -> None:
@@ -124,6 +124,70 @@ def test_profile_includes_calibration_and_composition_when_present() -> None:
     assert "8.0 %" in html  # ECE en KPI (réutilise les builders U2b/U2c)
 
 
+def _doc_s(doc_id: str, pipeline: str, cer: float, stratum: str) -> RunDocumentResult:
+    return RunDocumentResult(
+        document_id=doc_id, pipeline=pipeline, view="text",
+        scores=(MetricScore(metric="cer", value=cer, support=1),), stratum=stratum,
+    )
+
+
+def test_profile_shows_per_stratum_cer_when_multiple_strata() -> None:
+    from xerocr.evaluation.result import RunResult as _RR
+
+    base = _result()
+    docs = (
+        _doc_s("d1", "tesseract", 0.10, "presse"),
+        _doc_s("d2", "tesseract", 0.40, "manuscrit"),
+        _doc_s("d3", "tesseract", 0.20, "presse"),
+    )
+    result = _RR(manifest=base.manifest, pipelines=base.pipelines, documents=docs)
+    html = EngineProfileSection().render(result, SectionContext())
+    assert html is not None
+    assert "Performance par strate" in html
+    assert "presse" in html and "manuscrit" in html
+    # macro-moyenne presse = (0.10+0.20)/2 = 15.0 % ; manuscrit = 40.0 %
+    assert "15.0 %" in html and "40.0 %" in html
+    # une seule strate → pas de bloc (jamais inventé)
+    one = _RR(
+        manifest=base.manifest, pipelines=base.pipelines,
+        documents=(_doc_s("d1", "tesseract", 0.1, "presse"),),
+    )
+    assert "Performance par strate" not in (
+        EngineProfileSection().render(one, SectionContext()) or ""
+    )
+
+
+def test_profile_config_details_from_manifest() -> None:
+    from xerocr.domain.artifacts import ArtifactType
+    from xerocr.domain.pipeline import PipelineSpec, PipelineStep
+
+    base = _result()
+    spec = PipelineSpec(
+        name="tesseract",
+        steps=(
+            PipelineStep(
+                id="ocr", kind="ocr", adapter_name="tesseract:fra",
+                params={"psm": 6}, input_types=(ArtifactType.IMAGE,),
+                output_types=(ArtifactType.RAW_TEXT,),
+            ),
+        ),
+    )
+    manifest = base.manifest.model_copy(
+        update={"pipeline_specs": (spec,), "module_versions": {"tesseract:fra": "5.3"}}
+    )
+    result = base.model_copy(update={"manifest": manifest})
+    html = EngineProfileSection().render(result, SectionContext())
+    assert html is not None
+    assert "<details>" in html and "Configuration" in html  # disclosure natif
+    assert "tesseract:fra" in html  # adapter
+    assert "5.3" in html  # version déclarée (reproductibilité)
+    assert "psm=6" in html  # paramètre
+    # données de démo (sans spec) → pas de bloc config
+    assert "<details>" not in (
+        EngineProfileSection().render(_result(), SectionContext()) or ""
+    )
+
+
 def test_none_without_pipelines() -> None:
     manifest = RunManifest(
         run_id="r", corpus_name="demo", n_documents=0,
@@ -143,13 +207,11 @@ def test_deterministic() -> None:
 def test_renders_english_labels() -> None:
     html = EngineProfileSection().render(_result(), SectionContext(lang="en"))
     assert html is not None
-    # libellés EN introduits…
-    assert "Engine profile" in html
-    assert "← back to table" in html
+    # libellés EN introduits… (section détail : fil d'Ariane, pas d'en-tête de section)
+    assert "← All engines" in html
     assert "CER per document " in html
     assert "engine 1 of 2" in html
     # … et leurs équivalents FR absents
-    assert "Profil moteur" not in html
-    assert "← retour au tableau" not in html
+    assert "← Tous les moteurs" not in html
     assert "CER par document " not in html
     assert "moteur 1 sur 2" not in html

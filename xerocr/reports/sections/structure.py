@@ -68,10 +68,11 @@ class StructureSection:
         )
         return Html(
             f"<h2>{title}</h2>\n{prose}"
-            f'<table class="data">\n<thead><tr><th>{th_pipeline}</th>'
+            f'<div class="table-scroll"><table class="data">\n'
+            f"<thead><tr><th>{th_pipeline}</th>"
             f'<th class="num-cell">{th_f1}</th>'
             f'<th class="num-cell">{th_cer}</th></tr></thead>\n'
-            f"<tbody>{body}</tbody>\n</table>\n"
+            f"<tbody>{body}</tbody>\n</table></div>\n"
         )
 
 

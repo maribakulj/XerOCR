@@ -66,12 +66,17 @@ def radar_chart(
     *,
     accents: list[str],
     size: float = 260.0,
+    point_titles: list[list[str]] | None = None,
+    aria_label: str = "",
 ) -> str:
     """Radar (toile d'araignée) multi-métrique : ``axes`` = libellés (chaque axe
     normalisé « plus loin = meilleur », valeurs dans [0,1]) ; ``series`` =
     ``(libellé, [valeur par axe])`` ; ``accents`` = couleur par série. Grille
-    concentrique + un polygone par série (superposés). Moins de 3 axes → ``""``
-    (un radar n'a pas de sens). Déterministe (coords ``num``), zéro JS."""
+    concentrique + un polygone par série (superposés) + **disques de sommet** à
+    infobulle native (``<title>`` = ``point_titles[s][i]``, p. ex. « Caractère :
+    92.0 % (norm. 0.92) »). Moins de 3 axes → ``""`` (un radar n'a pas de sens).
+    ``aria_label`` rend le graphe **accessible** (``role="img"`` ≠ ``aria-hidden``) :
+    la légende des moteurs vit hors SVG. Déterministe (coords ``num``), zéro JS."""
     n = len(axes)
     if n < 3 or not series:
         return ""
@@ -103,22 +108,40 @@ def radar_chart(
             f'<text x="{num(lx)}" y="{num(ly + 3.0)}" class="radar-axis" '
             f'text-anchor="{anchor}">{escape(label)}</text>'
         )
-    for s_idx, (_label, values) in enumerate(series):
-        pts = " ".join(
-            f"{num(x)},{num(y)}"
-            for x, y in (
-                point(i, max(0.0, min(values[i], 1.0)))
-                for i in range(min(n, len(values)))
-            )
-        )
+    for s_idx, (s_label, values) in enumerate(series):
         accent = accents[s_idx] if s_idx < len(accents) else "var(--ink)"
+        coords = [
+            point(i, max(0.0, min(values[i], 1.0)))
+            for i in range(min(n, len(values)))
+        ]
+        pts = " ".join(f"{num(x)},{num(y)}" for x, y in coords)
         parts.append(
             f'<polygon points="{pts}" class="radar-area" '
-            f'style="fill:{accent};stroke:{accent}"/>'
+            f'style="fill:{accent};stroke:{accent}"><title>{escape(s_label)}</title>'
+            "</polygon>"
         )
+        # Disques de sommet : cible de survol + infobulle (valeur brute + normalisée).
+        tips = (
+            point_titles[s_idx]
+            if point_titles and s_idx < len(point_titles)
+            else None
+        )
+        for i, (x, y) in enumerate(coords):
+            title = (
+                f"<title>{escape(tips[i])}</title>" if tips and i < len(tips) else ""
+            )
+            parts.append(
+                f'<circle cx="{num(x)}" cy="{num(y)}" r="3" class="radar-vertex" '
+                f'style="fill:{accent}">{title}</circle>'
+            )
+    role = (
+        f'role="img" aria-label="{escape(aria_label)}"'
+        if aria_label
+        else 'aria-hidden="true"'
+    )
     return (
         f'<svg viewBox="0 0 {num(size)} {num(size)}" class="radar-svg" '
-        f'aria-hidden="true">{"".join(parts)}</svg>'
+        f'{role}>{"".join(parts)}</svg>'
     )
 
 

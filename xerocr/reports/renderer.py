@@ -27,6 +27,7 @@ _SECTION_LABELS = {
     "metric_columns": "Colonnes métriques",
     "rank_bump": "Bascule de classement",
     "engine_profiles": "Profils moteur",
+    "document_details": "Détail document",
     "documents": "Par document",
     "image_quality": "Qualité image",
     "quality_error": "Qualité × erreur",
@@ -46,6 +47,7 @@ _SECTION_LABELS = {
     "diagnostics": "Diagnostic",
     "taxonomy": "Taxonomie",
     "calibration": "Calibration",
+    "methodology": "Méthodologie",
 }
 
 #: Libellés **EN** des sections (parité de clés avec ``_SECTION_LABELS``) — pour
@@ -59,6 +61,7 @@ _SECTION_LABELS_EN = {
     "metric_columns": "Metric columns",
     "rank_bump": "Ranking shift",
     "engine_profiles": "Engine profiles",
+    "document_details": "Document detail",
     "documents": "By document",
     "image_quality": "Image quality",
     "quality_error": "Quality × error",
@@ -77,6 +80,7 @@ _SECTION_LABELS_EN = {
     "diagnostics": "Diagnostics",
     "taxonomy": "Taxonomy",
     "calibration": "Calibration",
+    "methodology": "Methodology",
 }
 
 
@@ -85,20 +89,21 @@ def _label(name: str, lang: str = "fr") -> str:
     return table.get(name, name)
 
 
-#: Onglets du rapport (IA en 4 vues — cf. DECISION_RAPPORT_INTERACTIF.md).
-_TAB_ORDER = ("overview", "engines", "documents", "crosses")
+#: Onglets du rapport (IA par **unité d'analyse** : corpus → moteur → document).
+#: « Croisements » a été fondu dans « Par moteur » : comparer tous les moteurs
+#: (classement, radar, significativité, recouvrement) EST une analyse moteur ;
+#: un onglet séparé dédoublait la taxonomie (cf. DECISION_RAPPORT_INTERACTIF.md).
+_TAB_ORDER = ("overview", "engines", "documents")
 _TAB_LABELS = {
     "fr": {
         "overview": "Vue d'ensemble",
         "engines": "Par moteur",
         "documents": "Par document",
-        "crosses": "Croisements",
     },
     "en": {
         "overview": "Overview",
         "engines": "Engines",
         "documents": "Documents",
-        "crosses": "Crosses",
     },
 }
 _TABLIST_LABEL = {"fr": "Onglets du rapport", "en": "Report tabs"}
@@ -117,10 +122,6 @@ _HERO_TEXT = {
             "Par document",
             "Chaque document du corpus, avec son CER par moteur.",
         ),
-        "crosses": (
-            "Croisements",
-            "Significativité statistique des écarts entre moteurs.",
-        ),
     },
     "en": {
         "overview": (
@@ -129,7 +130,6 @@ _HERO_TEXT = {
         ),
         "engines": ("By engine", "Engine comparison across all computed metrics."),
         "documents": ("By document", "Each corpus document, with its per-engine CER."),
-        "crosses": ("Crosses", "Statistical significance of engine differences."),
     },
 }
 _HERO_EYEBROW = {"fr": "VUE", "en": "VIEW"}
@@ -157,13 +157,81 @@ _SECTION_TAB = {
     "economics": "engines",
     "taxonomy": "engines",
     "documents": "documents",
+    "document_details": "documents",
     "diagnostics": "documents",
     "image_quality": "documents",
     "quality_error": "documents",
-    "cross_engine": "crosses",
-    "engine_duel": "crosses",
-    "word_errors": "crosses",
+    # « Croisements » fondu dans « Par moteur » : comparer les moteurs entre eux
+    # (significativité, recouvrement) appartient à l'analyse moteur.
+    "cross_engine": "engines",
+    "engine_duel": "engines",
+    "word_errors": "engines",
 }
+
+#: Section « **détail** » de chaque onglet maître/détail : elle n'est PAS rendue
+#: dans le flux maître (liste/comparaison) mais dans un conteneur ``.tab-detail``
+#: séparé que ``report.js`` **échange** avec le maître au clic (vraie navigation
+#: liste → page, ≠ ancre dans le même défilement). Les autres onglets n'ont pas
+#: de détail.
+_DETAIL_SECTION: dict[str, str] = {
+    "engines": "engine_profiles",
+    "documents": "document_details",
+}
+
+
+#: Regroupement thématique des sections de l'onglet **« engines »** (riche : ~17
+#: sections). ``(clé, libellé_fr, libellé_en, sections…)`` — un sous-titre pleine
+#: largeur est inséré avant chaque groupe **présent** (cf. ``_panel_body``). Toute
+#: section ``engines`` doit figurer dans un groupe (garde-fou
+#: ``test_engine_groups_cover_engines_tab``) ; sinon elle est rendue à la fin, sans
+#: sous-titre. Pur regroupement visuel (aucun JS, imprimable).
+_ENGINE_GROUPS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    (
+        "compare",
+        "Comparaison des moteurs",
+        "Engine comparison",
+        ("by_engine", "engine_radar", "metric_columns", "rank_bump",
+         "dispersion"),
+    ),
+    (
+        "crosses",
+        "Significativité & recouvrement",
+        "Significance & overlap",
+        ("cross_engine", "engine_duel", "word_errors"),
+    ),
+    (
+        "errors",
+        "Familles d'erreurs & analyses fines",
+        "Error families & fine-grained analyses",
+        ("conformity", "structure", "correction", "structured_data", "philology",
+         "textual_fidelity", "lines", "ner", "taxonomy", "calibration"),
+    ),
+    ("economics", "Économie", "Economics", ("economics",)),
+)
+
+
+def _panel_body(tab: str, blocks: list[tuple[str, str]], lang: str) -> str:
+    """Corps d'un panneau : les blocs joints, dans l'ordre. Pour l'onglet riche
+    « engines », on **regroupe** par thème (``_ENGINE_GROUPS``) et on insère un
+    **sous-titre pleine largeur** avant chaque groupe présent (pur balisage, zéro
+    JS, imprimable, sans-JS lisible). Une section engines hors groupe (cas
+    défensif) est rendue à la fin, sans sous-titre, dans son ordre d'origine."""
+    if tab != "engines":
+        return "".join(html for _, html in blocks)
+    by_name = {name: html for name, html in blocks}
+    parts: list[str] = []
+    used: set[str] = set()
+    for _key, fr, en, names in _ENGINE_GROUPS:
+        present = [n for n in names if n in by_name]
+        if not present:
+            continue
+        label = escape(en if lang == "en" else fr)
+        parts.append(f'<h2 class="tab-subhead">{label}</h2>')
+        for n in present:
+            parts.append(by_name[n])
+            used.add(n)
+    parts.extend(html for name, html in blocks if name not in used)
+    return "".join(parts)
 
 
 #: Sections **intrinsèquement larges** (tableaux multi-colonnes, galeries, charts
@@ -173,7 +241,7 @@ _WIDE_SECTIONS: frozenset[str] = frozenset({
     "synthesis", "overview", "by_engine", "engine_profiles", "conformity",
     "structured_data", "ner", "lines", "economics", "cross_engine",
     "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
-    "diagnostics",
+    "diagnostics", "image_quality",
 })
 
 
@@ -204,8 +272,6 @@ def _hero_stats(tab: str, result: RunResult, lang: str) -> list[tuple[int, str]]
         return [(n_eng, eng), (n_met, met), (n_docs, docs)]
     if tab == "documents":
         return [(n_docs, docs)]
-    if tab == "crosses":
-        return [(n_eng, eng)]
     return []
 
 
@@ -229,6 +295,25 @@ def _hero(tab: str, num: int, result: RunResult, lang: str) -> str:
     )
 
 
+def _panel_inner(tab: str, blocks: list[tuple[str, str]], lang: str, hero: str) -> str:
+    """Corps d'un onglet en **maître/détail** : la vue **maître** (héros + sections
+    de liste/comparaison, wrappées en cartes ``.sec``) et la vue **détail** (la
+    section ``_DETAIL_SECTION`` brute — fiches moteur/document) dans deux conteneurs
+    ``.tab-master`` / ``.tab-detail`` que ``report.js`` **échange** au clic (vraie
+    page, ≠ ancre). Sans JS, les deux restent visibles (les fiches via ``:target``)."""
+    detail_name = _DETAIL_SECTION.get(tab)
+    master_blocks = [(n, _block(n, h, lang)) for n, h in blocks if n != detail_name]
+    detail_raw = next((h for n, h in blocks if n == detail_name), "")
+    body = _panel_body(tab, master_blocks, lang)
+    master = f'<div class="tab-master">{hero}{body}</div>'
+    detail = (
+        f'<div class="tab-detail" data-tab="{escape(tab)}">{detail_raw}</div>'
+        if detail_raw
+        else ""
+    )
+    return master + detail
+
+
 def _tab_layout(
     rendered: list[tuple[str, str]],
     lang: str,
@@ -243,15 +328,19 @@ def _tab_layout(
     ``report.js`` n'affiche qu'un panneau à la fois. Les onglets sont des **ancres**
     (``href="#panel-<t>"``) → navigation native même sans JS. Sous 2 onglets
     actifs, pas de barre : on empile (une barre d'un onglet est inutile)."""
-    by_tab: dict[str, list[str]] = {t: [] for t in _TAB_ORDER}
+    by_tab: dict[str, list[tuple[str, str]]] = {t: [] for t in _TAB_ORDER}
     trailer: list[str] = []
     for name, html in rendered:
         tab = _SECTION_TAB.get(name)
-        bucket = trailer if tab is None else by_tab[tab]
-        bucket.append(_block(name, html, lang))
+        if tab is None:
+            trailer.append(_block(name, html, lang))
+        else:
+            by_tab[tab].append((name, html))  # html brut (maître/détail au montage)
     active = [t for t in _TAB_ORDER if by_tab[t]]
     if len(active) < 2:
-        body = "".join("".join(by_tab[t]) for t in active) + "".join(trailer)
+        body = "".join(_panel_inner(t, by_tab[t], lang, "") for t in active) + "".join(
+            trailer
+        )
         return "", body
     labels = _TAB_LABELS.get(lang, _TAB_LABELS["fr"])
     tabs = "".join(
@@ -265,11 +354,15 @@ def _tab_layout(
         f'aria-label="{escape(_TABLIST_LABEL.get(lang, _TABLIST_LABEL["fr"]))}">'
         f"{tabs}</nav>"
     )
+    def _one_panel(i: int, t: str) -> str:
+        hero = _hero(t, i + 1, result, lang) if result is not None else ""
+        return (
+            f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
+            f'aria-labelledby="tab-{t}">{_panel_inner(t, by_tab[t], lang, hero)}</div>'
+        )
+
     panels = "".join(
-        f'<div class="tab-panel" id="panel-{t}" role="tabpanel" '
-        f'aria-labelledby="tab-{t}">'
-        f"{_hero(t, i + 1, result, lang) if result is not None else ''}"
-        f'{"".join(by_tab[t])}</div>'
+        _one_panel(i, t)
         for i, t in enumerate(active)
     )
     return nav, panels + "".join(trailer)
@@ -372,6 +465,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.cross_engine import CrossEngineSection
     from xerocr.reports.sections.diagnostics import DiagnosticsSection
     from xerocr.reports.sections.dispersion import DispersionSection
+    from xerocr.reports.sections.document_detail import DocumentDetailSection
     from xerocr.reports.sections.documents import DocumentsSection
     from xerocr.reports.sections.economics import EconomicsSection
     from xerocr.reports.sections.engine_duel import EngineDuelSection
@@ -379,6 +473,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.engine_radar import EngineRadarSection
     from xerocr.reports.sections.image_quality import ImageQualitySection
     from xerocr.reports.sections.lines import LinesSection
+    from xerocr.reports.sections.methodology import MethodologySection
     from xerocr.reports.sections.metric_columns import MetricColumnsSection
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
@@ -404,6 +499,7 @@ def default_report_renderer() -> ReportRenderer:
             EngineProfileSection(),
             DispersionSection(),
             DocumentsSection(),
+            DocumentDetailSection(),
             ImageQualitySection(),
             QualityErrorSection(),
             CrossEngineSection(),
@@ -421,6 +517,7 @@ def default_report_renderer() -> ReportRenderer:
             DiagnosticsSection(),
             TaxonomySection(),
             CalibrationSection(),
+            MethodologySection(),
         )
     )
 

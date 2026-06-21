@@ -71,12 +71,37 @@ def _result(*, with_worst: bool = False) -> RunResult:
     )
 
 
-def test_one_hidden_panel_per_document_with_anchor() -> None:
+def test_one_template_per_document_plus_live_container() -> None:
     html = DocumentDetailSection().render(_result(), SectionContext())
     assert html is not None
-    assert html.count('class="drill-panel doc-detail"') == 2  # un par document
-    assert 'id="doc-0"' in html and 'id="doc-1"' in html  # ancres (≡ ordre galerie)
-    assert "← retour à la galerie" in html
+    # Chaque fiche est dans un <template> inerte (clonée à la demande par report.js)
+    # → DOM borné à grande échelle, fac-similés chargés seulement à l'ouverture.
+    assert html.count("<template data-doc=") == 2  # une par document
+    assert 'data-doc="0"' in html and 'data-doc="1"' in html  # ≡ ordre galerie
+    assert html.count('class="drill-panel doc-detail"') == 2  # fiche rendue serveur
+    assert 'class="doc-detail-live"' in html  # conteneur vivant unique (cible clone)
+    assert " hidden " not in html.split("doc-detail-live")[0]  # live non caché
+    assert "← Tous les documents" in html
+
+
+def test_keeps_all_documents_as_templates_at_scale() -> None:
+    # Tous les documents restent atteignables (un <template> chacun) ; rien retiré.
+    manifest = RunManifest(
+        run_id="r", corpus_name="demo", n_documents=300,
+        code_version="1.0", started_at=FIXED, completed_at=FIXED,
+    )
+    docs = tuple(
+        _doc(f"doc{i:04d}", "tesseract", (i % 100) / 100.0) for i in range(300)
+    )
+    result = RunResult(
+        manifest=manifest,
+        pipelines=(PipelineResult(pipeline="tesseract", view="text"),),
+        documents=docs,
+    )
+    html = DocumentDetailSection().render(result, SectionContext())
+    assert html is not None
+    assert html.count("<template data-doc=") == 300  # les 300 fiches présentes
+    assert 'data-doc="299"' in html
 
 
 def test_panel_shows_cer_per_engine() -> None:
@@ -265,4 +290,4 @@ def test_renders_english_labels() -> None:
     assert html is not None
     assert "CER per engine" in html and "CER par moteur" not in html
     assert "Worst lines" in html and "Pires lignes" not in html
-    assert "← back to gallery" in html and "← retour à la galerie" not in html
+    assert "← All documents" in html and "← Tous les documents" not in html

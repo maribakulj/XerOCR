@@ -161,71 +161,113 @@
     },
   );
 
-  /* 6) Drill-in générique (profil moteur, détail document) : un lien dont la
-   *    cible est un .drill-panel le révèle et masque les autres ; « ← retour »
-   *    (.drill-back) les masque tous. Sans JS, le panneau s'affiche via :target. */
+  /* 6) Routeur MAÎTRE/DÉTAIL (profil moteur, détail document) : chaque onglet a
+   *    une vue maître (.tab-master : liste/comparaison) et une vue détail
+   *    (.tab-detail : fiches). Cliquer un moteur/document ÉCHANGE les deux (vraie
+   *    « page », ≠ ancre dans le même défilement) : on cache le maître, on montre
+   *    le détail avec UNE seule fiche, on remonte en haut. Le fil d'Ariane
+   *    (.drill-back) rétablit le maître et ramène au déclencheur cliqué. Sans JS :
+   *    maître + détail empilés, la fiche ciblée s'ouvre via :target. */
   var drillPanels = Array.prototype.slice.call(
     document.querySelectorAll(".drill-panel"),
   );
-  if (drillPanels.length) {
-    /* Vue document focalisée : quand un détail document s'ouvre, on masque tout
-       SAUF ce document — la galerie/liste/bascule (mêmes parents que les
-       panneaux) ET les autres blocs de l'onglet (par-document, qualité d'image).
-       restoreFocus() rétablit exactement ce qu'on avait masqué. */
-    function hideExcept(parent, keep) {
-      Array.prototype.forEach.call(parent.children, function (c) {
-        if (c !== keep && !c.hidden) {
-          c.hidden = true;
-          c.classList.add("doc-focus-hidden");
-        }
-      });
+  var hasDocTemplates = !!document.querySelector("template[data-doc]");
+  if (drillPanels.length || hasDocTemplates) {
+    /* Au chargement : masquer toutes les vues détail → seul le maître s'affiche. */
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".tab-detail"),
+      function (d) {
+        d.hidden = true;
+      },
+    );
+    /* Déclencheur initial (nom de moteur / carte document) mémorisé par onglet,
+       pour y ramener au retour. Les liens préc./suiv. (dans une fiche) n'écrasent
+       pas le déclencheur. */
+    var lastTrigger = {};
+    function swap(tabPanel, master, detail, link, fromInside) {
+      if (detail) detail.hidden = false;
+      if (master) master.hidden = true;
+      if (link && !fromInside && tabPanel && tabPanel.id)
+        lastTrigger[tabPanel.id] = link;
+      var top = detail || master;
+      if (top && top.scrollIntoView)
+        top.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    function restoreFocus() {
-      Array.prototype.forEach.call(
-        document.querySelectorAll(".doc-focus-hidden"),
-        function (el) {
-          el.hidden = false;
-          el.classList.remove("doc-focus-hidden");
-        },
-      );
-    }
-    function showDrill(id) {
-      drillPanels.forEach(function (p) {
-        p.hidden = p.id !== id;
-      });
-      var open = document.getElementById(id);
-      if (!open) return;
-      restoreFocus();
-      var details = open.closest(".doc-details");
-      if (details && details.parentNode) {
-        /* 1) dans la section documents : ne garder que le conteneur des
-           panneaux (cache la galerie, la liste, la bascule). */
-        hideExcept(details.parentNode, details);
-        /* 2) dans l'onglet : ne garder que la section documents (cache les
-           sections voisines : par-document, qualité d'image, héros). */
-        var block = details.parentNode.closest(".r-block");
-        if (block && block.parentNode) hideExcept(block.parentNode, block);
+    /* Profil MOTEUR : fiches pré-rendues (peu nombreuses) → on révèle par id. */
+    function openDetail(id, link) {
+      var panel = document.getElementById(id);
+      if (!panel) return;
+      var tabPanel = panel.closest(".tab-panel") || document;
+      var master = tabPanel.querySelector
+        ? tabPanel.querySelector(".tab-master")
+        : null;
+      var detail = panel.closest(".tab-detail");
+      if (detail) {
+        Array.prototype.forEach.call(
+          detail.querySelectorAll(".drill-panel"),
+          function (p) {
+            p.hidden = p.id !== id;
+          },
+        );
       }
-      open.scrollIntoView({ behavior: "smooth", block: "start" });
+      swap(tabPanel, master, detail, link, !!link.closest(".drill-panel"));
+    }
+    /* Détail DOCUMENT : fiche rendue par le serveur dans un <template> inerte,
+       CLONÉE à la demande dans un unique conteneur vivant → DOM borné même à
+       5000 docs, fac-similés chargés seulement à l'ouverture. On recâble les
+       comportements internes de la fiche (sélecteur de moteur, zoom) après clonage. */
+    function openDocDetail(idx, link) {
+      var tpl = document.querySelector('template[data-doc="' + idx + '"]');
+      var live = document.querySelector(".doc-detail-live");
+      if (!tpl || !live) return;
+      live.replaceChildren(tpl.content.cloneNode(true));
+      wireEngineTabs(live);
+      wireFacZoom(live);
+      var detail = live.closest(".tab-detail");
+      var tabPanel = detail ? detail.closest(".tab-panel") : null;
+      var master = tabPanel ? tabPanel.querySelector(".tab-master") : null;
+      var fromInside = !!(
+        link.closest(".doc-detail-live") || link.closest(".drill-panel")
+      );
+      swap(tabPanel, master, detail, link, fromInside);
+    }
+    function closeDetail(backLink) {
+      var tabPanel = backLink.closest(".tab-panel");
+      if (!tabPanel) return;
+      var master = tabPanel.querySelector(".tab-master");
+      var detail = tabPanel.querySelector(".tab-detail");
+      if (detail) detail.hidden = true;
+      var live = detail && detail.querySelector(".doc-detail-live");
+      if (live) live.replaceChildren(); /* libère la fiche clonée */
+      if (master) master.hidden = false;
+      var trig = lastTrigger[tabPanel.id];
+      if (trig) trig.scrollIntoView({ behavior: "smooth", block: "center" });
+      else if (master) master.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     document.addEventListener("click", function (e) {
       var link = e.target.closest && e.target.closest("a");
       if (!link) return;
       if (link.classList.contains("drill-back")) {
         e.preventDefault();
-        restoreFocus();
-        drillPanels.forEach(function (p) {
-          p.hidden = true;
-        });
+        closeDetail(link);
         return;
       }
       var href = link.getAttribute("href") || "";
-      if (href.charAt(0) === "#" && href.length > 1) {
-        var target = document.getElementById(href.slice(1));
-        if (target && target.classList.contains("drill-panel")) {
-          e.preventDefault();
-          showDrill(href.slice(1));
-        }
+      if (href.charAt(0) !== "#" || href.length <= 1) return;
+      var id = href.slice(1);
+      /* lien document #doc-N → clone du <template> correspondant */
+      if (
+        /^doc-\d+$/.test(id) &&
+        document.querySelector('template[data-doc="' + id.slice(4) + '"]')
+      ) {
+        e.preventDefault();
+        openDocDetail(id.slice(4), link);
+        return;
+      }
+      var target = document.getElementById(id);
+      if (target && target.classList.contains("drill-panel")) {
+        e.preventDefault();
+        openDetail(id, link);
       }
     });
   }
@@ -256,11 +298,134 @@
     },
   );
 
+  /* 7b) Filtre par strate (galerie documents) : un chip marque les cartes de la
+   *     strate choisie (ou toutes pour "*") via data-filtered, et le paginateur
+   *     sœur réaffiche la page 1 du sous-ensemble. Sans paginateur (cas dégradé),
+   *     on masque directement. Sans JS, chips inertes, toutes cartes visibles. */
+  Array.prototype.forEach.call(
+    document.querySelectorAll(".doc-filter"),
+    function (group) {
+      var scope = group.parentNode;
+      var grid = scope.querySelector(".doc-grid");
+      var btns = group.querySelectorAll(".df-btn");
+      Array.prototype.forEach.call(btns, function (btn) {
+        btn.addEventListener("click", function () {
+          var want = btn.getAttribute("data-stratum");
+          Array.prototype.forEach.call(btns, function (b) {
+            var on = b === btn;
+            b.classList.toggle("on", on);
+            b.setAttribute("aria-pressed", on ? "true" : "false");
+          });
+          Array.prototype.forEach.call(
+            scope.querySelectorAll(".doc-card"),
+            function (card) {
+              var keep =
+                want === "*" || card.getAttribute("data-stratum") === want;
+              card.setAttribute("data-filtered", keep ? "0" : "1");
+            },
+          );
+          if (grid && grid._paginator) grid._paginator.reset();
+          else
+            Array.prototype.forEach.call(
+              scope.querySelectorAll(".doc-card"),
+              function (card) {
+                card.hidden = card.getAttribute("data-filtered") === "1";
+              },
+            );
+        });
+      });
+    },
+  );
+
+  /* 10) Pagination des longues listes (galerie, tables) — SANS rien retirer :
+   *     [data-paginate=N] garde tous les items dans le document mais n'en affiche
+   *     que N à la fois (page courante) + un pager. Compose avec le filtre par
+   *     strate (items data-filtered="1" exclus de la pagination). Sans JS, pas de
+   *     pager → tout reste visible (autonome, imprimable). On ne masque/affiche
+   *     que des items déjà rendus. */
+  function makePaginator(host) {
+    var size = parseInt(host.getAttribute("data-paginate"), 10) || 60;
+    var isTable = !!host.tBodies && host.tBodies[0];
+    function items() {
+      var kids = isTable ? host.tBodies[0].rows : host.children;
+      return Array.prototype.filter.call(kids, function (el) {
+        return el.nodeType === 1 && !el.classList.contains("pager");
+      });
+    }
+    var page = 0;
+    var pager = document.createElement("div");
+    pager.className = "pager";
+    pager.style.cssText =
+      "display:flex;gap:.5rem;align-items:center;justify-content:center;" +
+      "margin:.75rem 0;flex-wrap:wrap";
+    var prev = document.createElement("button");
+    var next = document.createElement("button");
+    var label = document.createElement("span");
+    prev.type = next.type = "button";
+    prev.className = next.className = "df-btn";
+    prev.textContent = "‹";
+    next.textContent = "›";
+    label.className = "muted";
+    pager.appendChild(prev);
+    pager.appendChild(label);
+    pager.appendChild(next);
+    host.parentNode.insertBefore(pager, host.nextSibling);
+    function render() {
+      var all = items();
+      var active = all.filter(function (el) {
+        return el.getAttribute("data-filtered") !== "1";
+      });
+      var pages = Math.max(1, Math.ceil(active.length / size));
+      page = Math.min(Math.max(page, 0), pages - 1);
+      var start = page * size;
+      all.forEach(function (el) {
+        if (el.getAttribute("data-filtered") === "1") {
+          el.hidden = true;
+          return;
+        }
+        var ai = active.indexOf(el);
+        el.hidden = !(ai >= start && ai < start + size);
+      });
+      label.textContent = "page " + (page + 1) + " / " + pages + " · " + active.length;
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+      pager.hidden = active.length <= size;
+    }
+    function go(delta) {
+      page += delta;
+      render();
+      if (host.scrollIntoView)
+        host.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    prev.addEventListener("click", function () {
+      go(-1);
+    });
+    next.addEventListener("click", function () {
+      go(1);
+    });
+    render();
+    return {
+      render: render,
+      reset: function () {
+        page = 0;
+        render();
+      },
+    };
+  }
+  Array.prototype.forEach.call(
+    document.querySelectorAll("[data-paginate]"),
+    function (host) {
+      host._paginator = makePaginator(host);
+    },
+  );
+
   /* 8) Sélecteur de moteur du diff pleine page (détail document) : un bouton
    *    montre le bloc .dd-fulldiff du moteur, cache les autres (scopé au wrap).
-   *    Sans JS, les blocs sont empilés et tous visibles. */
-  Array.prototype.forEach.call(
-    document.querySelectorAll(".dd-engine-tabs"),
+   *    Sans JS, les blocs sont empilés et tous visibles. Fonction (re)câblable
+   *    sur une racine : appelée au chargement, puis sur chaque fiche clonée. */
+  function wireEngineTabs(root) {
+    Array.prototype.forEach.call(
+    root.querySelectorAll(".dd-engine-tabs"),
     function (tabs) {
       var wrap = tabs.parentNode;
       var btns = tabs.querySelectorAll(".dd-eng-btn");
@@ -281,13 +446,16 @@
         });
       });
     },
-  );
+    );
+  }
 
   /* 9) Fac-similé zoomable/pan (détail document) : molette = zoom, glisser =
    *    déplacer, boutons +/−/⤢. Chaque image garde son propre état (zoom z,
-   *    décalage ox/oy). Sans JS, l'image s'affiche à taille medium, statique. */
-  Array.prototype.forEach.call(
-    document.querySelectorAll(".dd-fac-zoom"),
+   *    décalage ox/oy). Sans JS, l'image s'affiche à taille medium, statique.
+   *    Fonction (re)câblable sur une racine (chargement, puis fiche clonée). */
+  function wireFacZoom(root) {
+    Array.prototype.forEach.call(
+    root.querySelectorAll(".dd-fac-zoom"),
     function (box) {
       var img = box.querySelector(".dd-fac-img");
       if (!img) return;
@@ -352,5 +520,11 @@
       );
       apply();
     },
-  );
+    );
+  }
+
+  /* Câblage initial des comportements de fiche sur le document (les fiches
+     document, en <template>, seront recâblées à l'ouverture par openDocDetail). */
+  wireEngineTabs(document);
+  wireFacZoom(document);
 })();

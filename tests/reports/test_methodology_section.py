@@ -1,0 +1,125 @@
+"""Section méthodologie & reproductibilité : appendice toujours visible."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+from xerocr.domain.artifacts import ArtifactType
+from xerocr.domain.evaluation import EvaluationView
+from xerocr.domain.run import RunManifest
+from xerocr.evaluation.result import (
+    MetricScore,
+    PipelineResult,
+    RunDocumentResult,
+    RunResult,
+)
+from xerocr.reports.section import Section, SectionContext
+from xerocr.reports.sections.methodology import MethodologySection
+
+FIXED = datetime(2026, 6, 1, tzinfo=UTC)
+
+
+def _manifest(**kw: object) -> RunManifest:
+    base: dict[str, object] = dict(
+        run_id="r", corpus_name="BNL-presse", n_documents=3,
+        code_version="0.9.0", started_at=FIXED, completed_at=FIXED,
+    )
+    base.update(kw)
+    return RunManifest(**base)  # type: ignore[arg-type]
+
+
+def _result(manifest: RunManifest, *, docs: int = 0) -> RunResult:
+    pipelines = (
+        PipelineResult(
+            pipeline="tesseract", view="text",
+            aggregate=(MetricScore(metric="cer", value=0.2, support=docs or 1),),
+        ),
+    )
+    documents = tuple(
+        RunDocumentResult(
+            document_id=f"d{i}", pipeline="tesseract", view="text",
+            scores=(MetricScore(metric="cer", value=0.2, support=1),),
+        )
+        for i in range(docs)
+    )
+    return RunResult(manifest=manifest, pipelines=pipelines, documents=documents)
+
+
+def test_satisfies_protocol_and_always_renders() -> None:
+    section = MethodologySection()
+    assert isinstance(section, Section)
+    html = section.render(_result(_manifest()), SectionContext())
+    assert html is not None  # toujours présent (le manifeste existe toujours)
+
+
+def test_shows_corpus_engines_metrics_date_version() -> None:
+    html = MethodologySection().render(_result(_manifest()), SectionContext())
+    assert html is not None
+    assert "Méthodologie & reproductibilité" in html
+    assert "BNL-presse" in html  # corpus
+    assert "tesseract" in html  # moteur
+    assert "cer" in html  # métrique calculée
+    assert "2026-06-01" in html  # date
+    assert "0.9.0" in html  # version du code
+    # convention anti-zéro explicitée
+    assert "jamais interprétée comme zéro" in html
+
+
+def test_evaluated_count_shown_when_differs_from_corpus_size() -> None:
+    # corpus = 3, 2 documents réellement notés → « évalués : 2 » affiché
+    html = MethodologySection().render(_result(_manifest(), docs=2), SectionContext())
+    assert html is not None
+    assert "évalués : 2" in html
+
+
+def test_view_metadata_normalisation_ignored_dims_warnings() -> None:
+    view = EvaluationView(
+        name="text",
+        description="Texte brut projeté",
+        candidate_types=frozenset({ArtifactType.RAW_TEXT}),
+        normalization_profile="presse_xixe",
+        char_exclude="¤",
+        metric_names=("cer", "wer"),
+        ignored_dimensions=("mise en page", "couleur"),
+        warnings=("OCR seul, pas de structure",),
+    )
+    html = MethodologySection().render(
+        _result(_manifest(view_specs=(view,))), SectionContext()
+    )
+    assert html is not None
+    assert "Vues d" in html  # « Vues d'évaluation »
+    assert "presse_xixe" in html  # profil de normalisation
+    assert "¤" in html  # caractères exclus
+    assert "mise en page" in html  # ce que la comparaison ne dit pas
+    assert "OCR seul, pas de structure" in html  # avertissement
+
+
+def test_environment_locks_in_details_when_present_absent_otherwise() -> None:
+    rich = _manifest(
+        system_binaries_lock={"tesseract": "5.3.4"},
+        dependencies_lock={"jiwer": "3.0.4"},
+        module_versions={"tesseract:fra": "1.0"},
+    )
+    html = MethodologySection().render(_result(rich), SectionContext())
+    assert html is not None
+    assert "<details>" in html and "5.3.4" in html and "jiwer" in html
+    # manifeste nu → pas de bloc environnement ni <details>
+    bare = MethodologySection().render(_result(_manifest()), SectionContext())
+    assert bare is not None and "<details>" not in bare
+
+
+def test_escapes_and_is_deterministic() -> None:
+    m = _manifest(corpus_name="<corpus>")
+    html = MethodologySection().render(_result(m), SectionContext())
+    assert html is not None
+    assert "<corpus>" not in html and "&lt;corpus&gt;" in html
+    assert html == MethodologySection().render(_result(m), SectionContext())
+
+
+def test_english_labels() -> None:
+    html = MethodologySection().render(
+        _result(_manifest()), SectionContext(lang="en")
+    )
+    assert html is not None
+    assert "Methodology & reproducibility" in html
+    assert "Méthodologie" not in html

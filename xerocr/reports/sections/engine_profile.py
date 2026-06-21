@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from xerocr.evaluation.analysis import CalibrationPayload, TaxonomyPayload
 from xerocr.evaluation.result import PipelineResult, RunResult
+from xerocr.reports._binning import histogram
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
@@ -20,6 +21,9 @@ from xerocr.reports.sections.taxonomy import composition_html
 from xerocr.reports.svg import bar_series, calibration_curve
 
 _METRIC = "cer"
+#: Classes de l'histogramme de CER par document (constant → graphe borné, même
+#: forme que le moteur ait été évalué sur 20 ou 6000 documents).
+_N_BINS = 24
 
 
 def _per_doc_cer(result: RunResult, pipeline: str, view: str) -> list[float]:
@@ -71,6 +75,78 @@ def _pct(v: float) -> str:
     return f"{v * 100:.1f} %"
 
 
+def _config_block(result: RunResult, name: str, lang: str) -> str:
+    """Config repliable (reproductibilité) : étapes du pipeline + adapter + version
+    déclarée + paramètres, depuis le ``RunManifest``. ``<details>`` natif (zéro JS,
+    imprimable). Omise si le manifeste ne porte pas la spec (ex. données de démo)."""
+    spec = next(
+        (s for s in result.manifest.pipeline_specs if s.name == name), None
+    )
+    if spec is None or not spec.steps:
+        return ""
+    versions = result.manifest.module_versions
+    body = ""
+    for step in spec.steps:
+        ver = escape(versions.get(step.adapter_name, "—"))
+        params = (
+            " · ".join(f"{escape(k)}={escape(str(v))}" for k, v in step.params.items())
+            or "—"
+        )
+        body += (
+            f'<tr><td class="lbl">{escape(step.kind)}</td>'
+            f'<td class="lbl">{escape(step.adapter_name)}</td>'
+            f'<td class="disp">{ver}</td><td class="lbl">{params}</td></tr>'
+        )
+    summ = localized(lang, "Configuration & reproductibilité", "Configuration")
+    th_s = localized(lang, "Étape", "Step")
+    th_a = localized(lang, "Adapter", "Adapter")
+    th_v = localized(lang, "Version", "Version")
+    th_p = localized(lang, "Paramètres", "Parameters")
+    return (
+        f'<details><summary class="muted">{summ}</summary>\n'
+        f'<table class="data compact"><thead><tr><th>{th_s}</th><th>{th_a}</th>'
+        f'<th class="num-cell">{th_v}</th><th>{th_p}</th></tr></thead>'
+        f"<tbody>{body}</tbody></table></details>"
+    )
+
+
+def _stratum_block(result: RunResult, name: str, view: str, lang: str) -> str:
+    """CER moyen par strate (macro-moyenne) — révèle forces/faiblesses du moteur
+    selon le sous-corpus. Rendu seulement si ≥ 2 strates portent des documents
+    notés (jamais une strate inventée). Trié du meilleur au pire."""
+    buckets: dict[str, list[float]] = {}
+    for d in result.documents:
+        if d.pipeline != name or d.view != view or not d.stratum:
+            continue
+        cer = next(
+            (s.value for s in d.scores if s.metric == "cer" and s.value is not None),
+            None,
+        )
+        if cer is not None:
+            buckets.setdefault(d.stratum, []).append(cer)
+    if len(buckets) < 2:
+        return ""
+    rows_data = sorted(
+        ((s, sum(v) / len(v), len(v)) for s, v in buckets.items()),
+        key=lambda r: r[1],
+    )
+    rows = "".join(
+        f'<tr><td class="lbl">{escape(s)}</td><td class="disp">{n}</td>'
+        f'<td class="disp">{_pct(m)}</td></tr>'
+        for s, m, n in rows_data
+    )
+    cap = localized(lang, "Performance par strate", "Performance by stratum")
+    th_n = localized(lang, "n", "n")
+    th_c = localized(lang, "CER moyen ↓", "Mean CER ↓")
+    th_s = localized(lang, "Strate", "Stratum")
+    return (
+        f'<div class="prof-cell"><div class="drill-caption">{cap}</div>'
+        f'<table class="data compact"><thead><tr><th>{th_s}</th>'
+        f'<th class="num-cell">{th_n}</th><th class="num-cell">{th_c}</th></tr>'
+        f"</thead><tbody>{rows}</tbody></table></div>"
+    )
+
+
 class EngineProfileSection:
     """Panneaux profil par moteur (KPIs + CER/document), révélés au clic."""
 
@@ -90,19 +166,10 @@ class EngineProfileSection:
             self._panel(result, view, name, order, engines, pos, ctx.lang)
             for pos, name in enumerate(engines)
         )
-        return Html(
-            f"<h2>{localized(ctx.lang, 'Profil moteur', 'Engine profile')}</h2>\n"
-            '<p class="muted">'
-            + localized(
-                ctx.lang,
-                "Cliquer un moteur dans le tableau ci-dessus pour "
-                "ouvrir son profil détaillé.",
-                "Click an engine in the table above to "
-                "open its detailed profile.",
-            )
-            + "</p>\n"
-            f'<div class="eng-profiles">{panels}</div>\n'
-        )
+        # Section **détail** (vue page d'un moteur) : pas d'en-tête « cliquer un
+        # moteur… » (le maître = le tableau de classement est la liste cliquable ;
+        # le routeur échange maître↔détail). Chaque panneau porte son fil d'Ariane.
+        return Html(f'<div class="eng-profiles">{panels}</div>\n')
 
     def _panel(
         self,
@@ -130,17 +197,20 @@ class EngineProfileSection:
         cal = _calibration(result, view, name)
         if cal is not None:
             kpis.append(_kpi("ece", _pct(cal[0])))
-        cer_vals = sorted(_per_doc_cer(result, name, view))
+        cer_vals = _per_doc_cer(result, name, view)
         chart_caption = localized(
             lang,
-            f'<span class="muted">· {len(cer_vals)} docs, triés</span>',
-            f'<span class="muted">· {len(cer_vals)} docs, sorted</span>',
+            f'<span class="muted">· distribution sur {len(cer_vals)} docs '
+            f"({_N_BINS} classes, gauche = faible CER)</span>",
+            f'<span class="muted">· distribution over {len(cer_vals)} docs '
+            f"({_N_BINS} bins, left = low CER)</span>",
         )
         chart = (
             '<div class="prof-chart"><div class="drill-caption">'
             + localized(lang, "CER par document ", "CER per document ")
             + f"{chart_caption}</div>"
-            f"{bar_series(cer_vals, accent=engine_accent(idx))}</div>"
+            f"{bar_series(histogram(cer_vals, _N_BINS), accent=engine_accent(idx))}"
+            "</div>"
             if cer_vals
             else ""
         )
@@ -161,12 +231,14 @@ class EngineProfileSection:
             if comp
             else ""
         )
+        strat_block = _stratum_block(result, name, view, lang)
         extras = (
-            f'<div class="prof-row">{cal_block}{comp_block}</div>'
-            if (cal_block or comp_block)
+            f'<div class="prof-row">{strat_block}{cal_block}{comp_block}</div>'
+            if (strat_block or cal_block or comp_block)
             else ""
         )
-        back_label = localized(lang, "← retour au tableau", "← back to table")
+        config = _config_block(result, name, lang)
+        back_label = localized(lang, "← Tous les moteurs", "← All engines")
         prev_label = localized(lang, "← précédent", "← previous")
         next_label = localized(lang, "suivant →", "next →")
         pos_label = localized(
@@ -187,7 +259,7 @@ class EngineProfileSection:
             f"<span>{escape(name)}</span>"
             f'<span class="muted drill-pos">{pos_label}</span></div>'
             f'<div class="kpi-band">{"".join(kpis)}</div>'
-            f"{chart}{extras}</div>"
+            f"{chart}{extras}{config}</div>"
         )
 
 
