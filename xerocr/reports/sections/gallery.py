@@ -1,16 +1,18 @@
-"""Section **galerie** des documents (couche 7) — présentation visuelle au design.
+"""Section **galerie** des documents notables (couche 7) — visuel au design.
 
-≠ la table ``by_document`` (détail dense) : une **carte par document** avec un
-**aperçu de page synthétique** (lignes monochromes sur ``--paper``, dans la charte
-du rapport — pas de placeholder coloré, le travers évité), l'identifiant, et le
-**CER de chaque moteur** via les badges A→E (le meilleur du document surligné en
-``--fern``). 100 % données déjà présentes (``RunResult.documents``), **zéro image**,
-autonome. Server-side, déterministe.
+Une **carte par document notable** (les plus difficiles / discordants / faciles,
+cf. ``_doc_highlights``) — **pas** une carte par document : la galerie est
+invariante d'échelle (même rendu à 20 ou 6000 documents). Chaque carte porte un
+**aperçu de page synthétique** (lignes monochromes sur ``--paper`` — pas de
+placeholder coloré), l'identifiant, et le **CER de chaque moteur** via les badges
+A→E (le meilleur du document surligné en ``--fern``). 100 % données déjà présentes
+(``RunResult.documents``), **zéro image**, autonome. Server-side, déterministe.
 """
 
 from __future__ import annotations
 
 from xerocr.evaluation.result import MetricScore, RunResult
+from xerocr.reports._doc_highlights import notable_documents
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized, view_label
 from xerocr.reports.section import Html, SectionContext
@@ -75,7 +77,7 @@ def _card(
 
 
 class DocumentGallerySection:
-    """Galerie visuelle : une carte par document (aperçu synthétique + CER/badges)."""
+    """Galerie visuelle des documents **notables** (aperçu + CER/badges)."""
 
     name = "documents_gallery"
     requires: tuple[str, ...] = ()
@@ -87,6 +89,11 @@ class DocumentGallerySection:
         view = views[0]
         multi = len(views) > 1
         rows = [d for d in result.documents if d.view == view]
+        # Sous-ensemble **notable** (cardinalité fixe) — galerie invariante d'échelle.
+        # Repli : si aucun CER (donc aucun notable), on prend les documents tels
+        # quels (corpus minuscule sans métrique de classement) afin de ne rien cacher.
+        notable = notable_documents(result, view).ordered_ids
+        doc_ids = list(notable) or list(ordered_unique(d.document_id for d in rows))
         # Ordre canonique des moteurs (badge stable, partagé avec les autres sections).
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in rows
@@ -104,24 +111,29 @@ class DocumentGallerySection:
                 ctx.images.get(doc_id),
                 strata.get(doc_id),
             )
-            for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
+            for idx, doc_id in enumerate(doc_ids)
         )
         # Filtre par strate : chips seulement si ≥2 strates réellement présentes
-        # (jamais une catégorie inventée). Sans JS, tout reste visible.
-        present = ordered_unique(s for s in strata.values())
+        # **parmi les cartes affichées** (jamais une catégorie inventée). Sans JS,
+        # tout reste visible.
+        shown = set(doc_ids)
+        present = ordered_unique(
+            s for d, s in strata.items() if d in shown and s is not None
+        )
         filt = self._filter(present, ctx.lang) if len(present) >= 2 else ""
         vlbl = escape(view_label(view, ctx.lang))
         title = localized(
             ctx.lang,
-            f"Galerie des documents{f' (vue : {vlbl})' if multi else ''}",
-            f"Document gallery{f' (view: {vlbl})' if multi else ''}",
+            f"Documents notables{f' (vue : {vlbl})' if multi else ''}",
+            f"Notable documents{f' (view: {vlbl})' if multi else ''}",
         )
         caption = localized(
             ctx.lang,
-            "Aperçu + CER par moteur "
-            "(pastille de couleur ; meilleur du document surligné).",
-            "Preview + CER per engine "
-            "(colour dot; best of the document highlighted).",
+            "Exemples — les plus difficiles, les plus discordants entre moteurs, les "
+            "plus faciles (aperçu + CER par moteur, meilleur surligné). La "
+            "distribution complète du corpus est en mode Liste.",
+            "Examples — hardest, most engine-divergent, easiest (preview + CER per "
+            "engine, best highlighted). The full corpus distribution is in List view.",
         )
         return Html(
             f"<h2>{title}</h2>\n"

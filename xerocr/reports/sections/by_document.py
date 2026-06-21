@@ -1,92 +1,144 @@
-"""Section by-document : le détail **par-document** de ``RunResult`` rendu en
-tables au design — une par vue, documents groupés, data-bars. Couche 7.
+"""Section by-document : **distribution** de difficulté (tout le corpus) + table
+des documents **notables** (couche 7).
 
-Surface une donnée **réelle déjà calculée** (``RunResult.documents``) jusqu'ici
-**sans consommateur** dans le rapport ; aucune métrique inventée (note d'archi
-du design). Génériques : affiche les métriques par-doc présentes, quelles
-qu'elles soient.
+Invariant d'échelle : ne liste **jamais** un document par ligne. Montre (1) la
+distribution du CER moyen par document — couvre 100 % du corpus, même allure à 20
+ou 6000 documents — et (2) une table des **documents notables** (les plus
+difficiles, les plus discordants entre moteurs, les plus faciles), de cardinalité
+fixe : des exemples, **pas** une troncature (la distribution représente
+l'ensemble). Remplace l'ancienne table exhaustive, dépendante de l'échelle.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-
-from xerocr.evaluation.result import RunDocumentResult, RunResult
-from xerocr.reports.engine_badges import engine_cell, engine_order
-from xerocr.reports.html import escape, localized, view_label
-from xerocr.reports.section import Html, SectionContext
-from xerocr.reports.sections._tables import (
-    bar_cell,
-    col_max,
-    nonempty_metric_indices,
-    ordered_unique,
+from xerocr.evaluation.result import MetricScore, RunResult
+from xerocr.reports._doc_highlights import (
+    histogram,
+    notable_documents,
+    per_doc_mean_cer,
 )
+from xerocr.reports.engine_badges import engine_cell, engine_order
+from xerocr.reports.html import escape, localized
+from xerocr.reports.section import Html, SectionContext
+from xerocr.reports.sections._tables import bar_cell, ordered_unique
+from xerocr.reports.svg import bar_series
+
+#: Nombre de classes de l'histogramme de difficulté (constant → invariant d'échelle).
+_N_BINS = 24
+#: Libellés de la catégorie primaire d'un document notable.
+_GROUP_FR = {"worst": "difficile", "divergent": "discordant", "best": "facile"}
+_GROUP_EN = {"worst": "hard", "divergent": "divergent", "best": "easy"}
 
 
 class DocumentSection:
-    """Détail par-document : une table par vue (document × pipeline × métriques)."""
+    """Distribution de la difficulté par document + table des documents notables."""
 
     name = "by_document"
-    requires: tuple[str, ...] = ()  # générique ; absent si aucun détail par-doc
+    requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         if not result.documents:
             return None
-        # Ordre canonique des moteurs (badge stable) : première apparition dans
-        # le run ; repli sur l'ordre des documents si aucun agrégat.
+        view = ordered_unique(d.view for d in result.documents)[0]
+        means = per_doc_mean_cer(result, view)
+        if not means:
+            return None  # aucun CER par document → rien à distribuer (no-orphan)
+        lang = ctx.lang
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
-            d.pipeline for d in result.documents
+            d.pipeline for d in result.documents if d.view == view
         )
-        # Titre de vue porté par le héros (renderer) ; ici, les tables par vue.
-        views = ordered_unique(d.view for d in result.documents)
-        multi = len(views) > 1
-        parts: list[str] = []
-        for view_name in views:
-            parts.append(
-                _table_for_view(
-                    result.documents, view_name, order, ctx.lang, multi=multi
-                )
-            )
-        return Html("\n".join(parts) + "\n")
+        return Html(
+            self._distribution(means, lang)
+            + self._notable_table(result, view, order, lang)
+        )
 
+    @staticmethod
+    def _distribution(means: dict[str, float], lang: str) -> str:
+        """Histogramme du CER moyen par document — couvre **tout** le corpus."""
+        counts = histogram(list(means.values()), _N_BINS)
+        n = len(means)
+        lo = min(means.values()) * 100
+        hi = max(means.values()) * 100
+        caption = localized(
+            lang,
+            f'<span class="muted">{n} documents · CER moyen par document de '
+            f"{lo:.1f} % à {hi:.1f} % ({_N_BINS} classes, gauche = facile)</span>",
+            f'<span class="muted">{n} documents · per-document mean CER from '
+            f"{lo:.1f} % to {hi:.1f} % ({_N_BINS} bins, left = easy)</span>",
+        )
+        title = localized(
+            lang,
+            "Distribution de la difficulté",
+            "Difficulty distribution",
+        )
+        return (
+            f"<h3>{title}</h3>\n"
+            f'<div class="prof-chart"><div class="drill-caption">{caption}</div>'
+            f'{bar_series(counts, accent="var(--ink)")}</div>\n'
+        )
 
-def _table_for_view(
-    documents: tuple[RunDocumentResult, ...],
-    view_name: str,
-    order: Mapping[str, int],
-    lang: str,
-    *,
-    multi: bool,
-) -> str:
-    rows = [d for d in documents if d.view == view_name]
-    keep = nonempty_metric_indices([d.scores for d in rows])  # masque tout-« — »
-    all_metrics = tuple(score.metric for score in rows[0].scores)
-    metrics = [all_metrics[i] for i in keep]
-    header = "".join(f'<th class="num-cell">{escape(m)}</th>' for m in metrics)
-    maxes = [col_max([d.scores for d in rows], i) for i in keep]
-    body: list[str] = []
-    for doc_id in ordered_unique(d.document_id for d in rows):
-        doc_rows = [d for d in rows if d.document_id == doc_id]
-        for offset, doc in enumerate(doc_rows):
-            label = escape(doc_id) if offset == 0 else ""  # groupé : nom 1×
+    def _notable_table(
+        self, result: RunResult, view: str, order: dict[str, int], lang: str
+    ) -> str:
+        """Table des documents notables : id, catégorie, CER par moteur (data-bar)."""
+        hl = notable_documents(result, view)
+        ordered = hl.ordered_ids
+        if not ordered:
+            return ""
+        engines = [n for n in sorted(order, key=lambda e: order[e])]
+        # CER (MetricScore) par (document, moteur) pour la vue.
+        cer: dict[tuple[str, str], MetricScore] = {}
+        for doc in result.documents:
+            if doc.view != view:
+                continue
+            for score in doc.scores:
+                if score.metric == "cer":
+                    cer[(doc.document_id, doc.pipeline)] = score
+        col_max = max(
+            (
+                s.value
+                for (_doc, _eng), s in cer.items()
+                if _doc in set(ordered) and s.value is not None
+            ),
+            default=0.0,
+        )
+        groups = _GROUP_EN if lang == "en" else _GROUP_FR
+        header = "".join(
+            f'<th class="num-cell">{engine_cell(name, order.get(name, 0))}</th>'
+            for name in engines
+        )
+        body: list[str] = []
+        for doc_id in ordered:
+            tag = groups.get(hl.group_of(doc_id), "")
             cells = "".join(
-                bar_cell(doc.scores[i], maxes[j]) for j, i in enumerate(keep)
+                bar_cell(cer[(doc_id, name)], col_max)
+                if (doc_id, name) in cer and cer[(doc_id, name)].value is not None
+                else '<td class="disp muted">—</td>'
+                for name in engines
             )
-            badge = engine_cell(doc.pipeline, order.get(doc.pipeline, 0))
             body.append(
-                f'<tr><td class="eng-cell">{label}</td>'
-                f'<td class="eng-cell">{badge}</td>{cells}</tr>'
+                f'<tr><td class="eng-cell">{escape(doc_id)}</td>'
+                f'<td class="muted">{escape(tag)}</td>{cells}</tr>'
             )
-    head = ""
-    if multi:  # libellé de vue seulement s'il y a plusieurs vues à distinguer
-        view_caption = localized(lang, "Vue", "View")
-        head = f"<h2>{view_caption} : {escape(view_label(view_name, lang))}</h2>\n"
-    return (
-        f"{head}"
-        f'<table class="data">\n'
-        f"<thead><tr><th>Document</th><th>Pipeline</th>{header}</tr></thead>\n"
-        f"<tbody>{''.join(body)}</tbody>\n</table>"
-    )
+        th_doc = localized(lang, "Document", "Document")
+        th_cat = localized(lang, "catégorie", "category")
+        title = localized(lang, "Documents notables", "Notable documents")
+        intro = localized(
+            lang,
+            '<p class="muted">Exemples (cardinalité fixe) : les plus '
+            "<strong>difficiles</strong>, les plus <strong>discordants</strong> entre "
+            "moteurs, les plus <strong>faciles</strong>. Rien n'est masqué : la "
+            "distribution ci-dessus couvre tout le corpus.</p>\n",
+            '<p class="muted">Examples (fixed count): <strong>hardest</strong>, most '
+            "engine-<strong>divergent</strong>, <strong>easiest</strong>. Nothing is "
+            "hidden: the distribution above covers the whole corpus.</p>\n",
+        )
+        return (
+            f"<h3>{title}</h3>\n{intro}"
+            f'<table class="data">\n'
+            f"<thead><tr><th>{th_doc}</th><th>{th_cat}</th>{header}</tr></thead>\n"
+            f"<tbody>{''.join(body)}</tbody>\n</table>\n"
+        )
 
 
 __all__ = ["DocumentSection"]

@@ -68,14 +68,36 @@ def _result(*, with_quality: bool) -> RunResult:
     )
 
 
-def test_bubbles_one_per_doc_and_engine() -> None:
+def test_density_bubbles_binned() -> None:
     html = QualityErrorSection().render(_result(with_quality=True), SectionContext())
     assert html is not None
     assert "bubble-svg" in html
-    # 2 docs × 2 moteurs = 4 bulles
+    # 4 couples (doc×moteur) dans des cellules distinctes → 4 bulles. La densité est
+    # bornée par la grille (≤ _GRID²), pas par le nombre de points → invariant.
     assert html.count('class="bubble-dot"') == 4
     assert "Qualité × erreur" in html
-    assert "tesseract" in html and "pero" in html
+    # Densité = moteurs poolés : plus de légende par moteur (accent neutre).
+    assert "4 couples" in html
+    assert "var(--ink)" in html
+
+
+def test_density_is_scale_invariant_in_bubble_count() -> None:
+    # Beaucoup de documents → le nombre de bulles reste borné par la grille (24²),
+    # pas par le nombre de couples : preuve d'invariance d'échelle.
+    manifest = RunManifest(
+        run_id="r", corpus_name="demo", n_documents=400,
+        code_version="1.0", started_at=FIXED, completed_at=FIXED,
+    )
+    pipelines = (PipelineResult(pipeline="tesseract", view="text"),)
+    docs = tuple(_doc(f"d{i}", "tesseract", (i % 50) / 100.0) for i in range(400))
+    iq = _iq(*[f"d{i}" for i in range(400)])
+    result = RunResult(
+        manifest=manifest, pipelines=pipelines, documents=docs,
+        analyses=(Analysis(scope="corpus", view="text", payload=iq),),
+    )
+    html = QualityErrorSection().render(result, SectionContext())
+    assert html is not None
+    assert html.count('class="bubble-dot"') <= 24 * 24  # borné par la grille
 
 
 def test_none_without_image_quality_payload() -> None:
