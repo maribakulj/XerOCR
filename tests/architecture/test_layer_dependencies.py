@@ -136,11 +136,10 @@ def test_adapters_imports_are_allowed():
 
 
 #: evaluation parle domain + formats + scipy (Wilcoxon/Friedman) + rapidfuzz
-#: (alignement caractère de diacritic_err) + numpy/PIL (qualité d'image 4d.1 :
-#: numpy pour les maths — garanti via scipy ; PIL pour décoder l'image, extra
-#: ``[images]``, import paresseux dans ``image_quality``) ; jiwer/shapely
-#: s'ajouteront à la tranche qui les introduit.
-EVAL_ALLOWED_EXT = ALLOWED_EXT | {"scipy", "rapidfuzz", "numpy", "PIL"}
+#: (alignement caractère de diacritic_err) + numpy (FCA hongrois, percentiles
+#: lines) ; jiwer/shapely s'ajouteront à la tranche qui les introduit. ``PIL``
+#: retiré : la qualité d'image (seul consommateur) a été supprimée.
+EVAL_ALLOWED_EXT = ALLOWED_EXT | {"scipy", "rapidfuzz", "numpy"}
 
 
 def test_evaluation_imports_are_allowed():

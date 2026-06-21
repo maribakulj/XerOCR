@@ -10,13 +10,11 @@ from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
     DocumentHallucination,
     DocumentHallucinationPayload,
-    DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
     DocumentTexts,
     DocumentTextsPayload,
     HallucinatedBlock,
-    ImageQualityPayload,
     PipelineHallucination,
     WorstLine,
 )
@@ -157,29 +155,6 @@ def test_full_page_diff_with_engine_selector() -> None:
     assert 'class="d-ins"' in html or 'class="d-del"' in html
 
 
-def test_image_quality_block_recentred_on_document() -> None:
-    base = _result()
-    iq = ImageQualityPayload(
-        documents=(
-            DocumentImageQuality(
-                document_id="folio_1", sharpness=0.72, noise=0.10, contrast=0.60,
-                rotation_degrees=-1.3, quality_score=0.68, tier="medium",
-            ),
-        ),
-        mean_quality=0.68, mean_sharpness=0.72, mean_noise=0.10, mean_contrast=0.60,
-        n_good=0, n_medium=1, n_poor=0,
-    )
-    result = base.model_copy(
-        update={"analyses": (Analysis(scope="corpus", view="text", payload=iq),)}
-    )
-    html = DocumentDetailSection().render(result, SectionContext())
-    assert html is not None
-    assert 'class="dd-iq"' in html  # bloc qualité d'image du doc
-    assert "Netteté" in html and 'class="track"' in html  # barres mesurées (primitive)
-    assert "-1.3°" in html  # inclinaison de CE doc
-    # un doc sans mesure (folio_2) ne porte pas le bloc (dégradé propre)
-    assert html.count('class="dd-iq"') == 1
-
 
 def test_line_heatmap_recentred_on_document() -> None:
     base = _result()
@@ -203,39 +178,6 @@ def test_line_heatmap_recentred_on_document() -> None:
     assert 'class="dd-pct-row"' in html and "p99" in html  # percentiles CER
     assert "Gini" in html and "CER≥30 %" in html  # badges de distribution
 
-
-def test_line_heatmap_is_wide_card_image_quality_flows() -> None:
-    base = _result()
-    dl = DocumentLinesPayload(
-        documents=(
-            DocumentLines(document_id="folio_1", pipelines=(("tesseract", (0.1,)),)),
-        )
-    )
-    iq = ImageQualityPayload(
-        documents=(
-            DocumentImageQuality(
-                document_id="folio_1", sharpness=0.7, noise=0.1, contrast=0.6,
-                rotation_degrees=0.0, quality_score=0.6, tier="medium",
-            ),
-        ),
-        mean_quality=0.6, mean_sharpness=0.7, mean_noise=0.1, mean_contrast=0.6,
-        n_good=0, n_medium=1, n_poor=0,
-    )
-    result = base.model_copy(
-        update={
-            "analyses": (
-                Analysis(scope="corpus", view="text", payload=dl),
-                Analysis(scope="corpus", view="text", payload=iq),
-            )
-        }
-    )
-    html = DocumentDetailSection().render(result, SectionContext())
-    assert html is not None
-    # Flux de cartes : la distribution par ligne (large) prend toute la largeur
-    # (dd-wide) ; la qualité d'image est une petite carte qui s'écoule au-dessus.
-    assert 'class="dd-card dd-wide"' in html
-    assert 'class="dd-lh"' in html and 'class="dd-iq"' in html
-    assert html.index('class="dd-iq"') < html.index('dd-card dd-wide')
 
 
 def test_hallucination_block_recentred_on_document() -> None:

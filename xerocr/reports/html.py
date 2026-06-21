@@ -415,22 +415,6 @@ _CSS = (
     # Sommet : cible de survol (<title> = valeur brute + normalisée), cerné de fond.
     ".radar-vertex{fill-opacity:0.95;stroke:var(--surface);stroke-width:1;}"
     ".radar-legend{text-align:center;}"
-    # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
-    # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.
-    ".bubble-wrap{max-width:360px;margin:8px auto 4px;}"
-    ".bubble-svg{width:100%;height:auto;display:block;}"
-    ".bubble-frame{fill:none;stroke:var(--g-100);stroke-width:1;}"
-    ".bubble-grid{stroke:var(--g-50);stroke-width:1;stroke-dasharray:3 3;}"
-    ".bubble-dot{fill-opacity:0.34;stroke-width:1;stroke-opacity:0.65;}"
-    ".bubble-legend{text-align:center;}"
-    # Colonnes groupées (SVG serveur) : un groupe de colonnes par métrique, une
-    # colonne par moteur (teinte moteur). Échelle uniforme, libellés sous l'axe.
-    ".col-wrap{max-width:380px;margin:8px auto 4px;}"
-    ".col-svg{width:100%;height:auto;display:block;}"
-    ".col-axis{stroke:var(--g-100);stroke-width:1;}"
-    ".col-bar{fill-opacity:0.85;}"
-    ".col-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
-    ".col-legend{text-align:center;}"
     # Camembert (anneau SVG serveur) : parts teintées + trou central couleur fond
     # (découpe). Légende = pastille + libellé + compte. Centré dans sa carte.
     ".donut-svg{width:140px;height:140px;display:block;margin:6px auto 4px;}"
@@ -447,15 +431,6 @@ _CSS = (
     ".dumb-dot{stroke-width:1;fill-opacity:0.9;}"
     ".dumb-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".dumb-legend{text-align:center;}"
-    # Bump chart (SVG serveur) : rang moteur par métrique, lignes + points ; les
-    # croisements = inversions de classement. Grille de rangs + libellés métrique.
-    ".bump-wrap{max-width:360px;margin:8px auto 4px;}"
-    ".bump-svg{width:100%;height:auto;display:block;}"
-    ".bump-grid{stroke:var(--g-50);stroke-width:1;}"
-    ".bump-rank,.bump-col{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
-    ".bump-line{fill:none;stroke-width:2.5;stroke-linejoin:round;}"
-    ".bump-dot{stroke-width:1;}"
-    ".bump-legend{text-align:center;}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par

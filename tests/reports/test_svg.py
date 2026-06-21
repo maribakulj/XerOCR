@@ -5,14 +5,11 @@ from __future__ import annotations
 from xerocr.reports.svg import (
     bar_series,
     box_plot,
-    bubble_chart,
-    bump_chart,
     calibration_curve,
     composition_bar,
     dispersion_strip,
     donut_chart,
     dumbbell_rows,
-    grouped_columns,
     num,
     radar_chart,
     word_engine_heatmap,
@@ -31,17 +28,6 @@ def test_donut_chart_empty_full_and_segments() -> None:
     assert multi == donut_chart([(3.0, "a"), (1.0, "b"), (1.0, "c")])  # octet-stable
 
 
-def test_bump_chart_empty_and_lines() -> None:
-    assert bump_chart([], [], accents=[], n_ranks=2) == ""
-    assert bump_chart(["m"], [("e", [1])], accents=["a"], n_ranks=1) == ""  # <2 cols
-    cols = ["CER", "F1"]
-    series = [("e1", [1, 2]), ("e2", [2, 1])]
-    svg = bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
-    assert svg.count('class="bump-line"') == 2
-    assert svg.count('class="bump-dot"') == 4  # 2 séries × 2 colonnes
-    assert "CER" in svg and "F1" in svg
-    assert svg == bump_chart(cols, series, accents=["a", "b"], n_ranks=2)
-
 
 def test_dumbbell_rows_empty_and_links() -> None:
     assert dumbbell_rows([], scale_max=1.0) == ""
@@ -53,19 +39,6 @@ def test_dumbbell_rows_empty_and_links() -> None:
     assert svg == dumbbell_rows(rows, scale_max=0.4)  # octet-stable
 
 
-def test_grouped_columns_empty_is_empty() -> None:
-    assert grouped_columns([], [], accents=[]) == ""
-    assert grouped_columns(["A"], [], accents=[]) == ""
-
-
-def test_grouped_columns_one_bar_per_group_series_deterministic() -> None:
-    groups = ["Car.", "Mot"]
-    series = [("e1", [0.5, 0.9]), ("e2", [0.3, 0.7])]
-    accents = ["var(--fern)", "var(--slate)"]
-    svg = grouped_columns(groups, series, accents=accents)
-    assert svg.count('class="col-bar"') == 4  # 2 groupes × 2 séries
-    assert "Car." in svg and "Mot" in svg
-    assert svg == grouped_columns(groups, series, accents=accents)  # octet-stable
 
 
 def test_box_plot_parts_and_deterministic() -> None:
@@ -76,23 +49,6 @@ def test_box_plot_parts_and_deterministic() -> None:
     assert svg == box_plot(0.0, 0.1, 0.2, 0.3, 0.5, 0.22, 0.5, accent="var(--fern)")
 
 
-def test_bubble_chart_empty_has_frame_no_dots() -> None:
-    svg = bubble_chart([])
-    assert "bubble-frame" in svg
-    assert "bubble-dot" not in svg
-
-
-def test_bubble_chart_one_dot_per_point_round_and_deterministic() -> None:
-    points = [
-        (0.8, 0.1, 100.0, "var(--fern)"),
-        (0.3, 0.9, 400.0, "var(--slate)"),
-        (0.5, 0.5, 250.0, "var(--fern)"),
-    ]
-    svg = bubble_chart(points)
-    assert svg.count('class="bubble-dot"') == 3
-    # pas de preserveAspectRatio=none (bulles rondes, échelle uniforme)
-    assert "preserveAspectRatio" not in svg
-    assert svg == bubble_chart(points)  # octet-stable
 
 
 def test_radar_chart_too_few_axes_is_empty() -> None:

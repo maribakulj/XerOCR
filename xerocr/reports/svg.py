@@ -145,47 +145,6 @@ def radar_chart(
     )
 
 
-def bubble_chart(
-    points: list[tuple[float, float, float, str]],
-    *,
-    width: float = 320.0,
-    height: float = 240.0,
-    r_min: float = 3.0,
-    r_max: float = 17.0,
-) -> str:
-    """Nuage de bulles : ``points`` = ``(x, y, taille, couleur)`` avec x, y dans
-    [0,1] (l'appelant normalise/échelonne les axes) ; le **rayon** ∝ √(taille/max)
-    code une 3ᵉ dimension. Origine en **bas-gauche** (y inversé pour l'écran).
-    Cadre clair + repères à mi-axes + bulles teintées translucides (les
-    chevauchements restent lisibles). **Pas** de ``preserveAspectRatio=none`` :
-    l'échelle reste uniforme → les bulles restent rondes. Déterministe (coords
-    ``num``), zéro JS, ``aria-hidden`` (la matière vit dans les tableaux)."""
-    pad = 6.0
-    plot_w, plot_h = width - pad * 2, height - pad * 2
-    frame = (
-        f'<rect x="{num(pad)}" y="{num(pad)}" width="{num(plot_w)}" '
-        f'height="{num(plot_h)}" class="bubble-frame"/>'
-        f'<line x1="{num(pad + plot_w / 2)}" y1="{num(pad)}" '
-        f'x2="{num(pad + plot_w / 2)}" y2="{num(pad + plot_h)}" class="bubble-grid"/>'
-        f'<line x1="{num(pad)}" y1="{num(pad + plot_h / 2)}" '
-        f'x2="{num(pad + plot_w)}" y2="{num(pad + plot_h / 2)}" class="bubble-grid"/>'
-    )
-    size_max = max((s for _x, _y, s, _c in points), default=1.0) or 1.0
-    dots: list[str] = []
-    for x01, y01, size, accent in points:
-        cx = pad + max(0.0, min(x01, 1.0)) * plot_w
-        cy = pad + (1.0 - max(0.0, min(y01, 1.0))) * plot_h
-        r = r_min + (r_max - r_min) * (max(0.0, size) / size_max) ** 0.5
-        dots.append(
-            f'<circle cx="{num(cx)}" cy="{num(cy)}" r="{num(r)}" '
-            f'class="bubble-dot" style="fill:{accent};stroke:{accent}"/>'
-        )
-    return (
-        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bubble-svg" '
-        f'aria-hidden="true">{frame}{"".join(dots)}</svg>'
-    )
-
-
 def box_plot(
     lo: float,
     q1: float,
@@ -280,67 +239,6 @@ def donut_chart(
     )
 
 
-def bump_chart(
-    columns: list[str],
-    series: list[tuple[str, list[int]]],
-    *,
-    accents: list[str],
-    n_ranks: int,
-    width: float = 340.0,
-    height: float = 180.0,
-) -> str:
-    """Bump chart (bascule de classement) : ``columns`` = étapes en abscisse
-    (libellés en bas), ``series`` = ``(libellé, [rang 1-based par colonne])`` ;
-    rang 1 **en haut**. Polyligne + points par série ; les lignes qui se
-    **croisent** = inversions de classement. Échelle uniforme (points ronds).
-    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
-    n_c = len(columns)
-    if n_c < 2 or not series or n_ranks < 1:
-        return ""
-    pad_l, pad_r, pad_t, pad_b = 22.0, 10.0, 8.0, 20.0
-    plot_w = width - pad_l - pad_r
-    plot_h = height - pad_t - pad_b
-
-    def cx(i: int) -> float:
-        return pad_l + (plot_w * i / (n_c - 1) if n_c > 1 else plot_w / 2.0)
-
-    def cy(rank: int) -> float:
-        return pad_t + (
-            plot_h * (rank - 1) / (n_ranks - 1) if n_ranks > 1 else plot_h / 2.0
-        )
-
-    parts: list[str] = []
-    for r in range(1, n_ranks + 1):
-        y = cy(r)
-        parts.append(
-            f'<line x1="{num(pad_l)}" y1="{num(y)}" x2="{num(pad_l + plot_w)}" '
-            f'y2="{num(y)}" class="bump-grid"/>'
-            f'<text x="{num(pad_l - 6.0)}" y="{num(y + 3.0)}" class="bump-rank" '
-            f'text-anchor="end">{r}</text>'
-        )
-    for i, label in enumerate(columns):
-        parts.append(
-            f'<text x="{num(cx(i))}" y="{num(height - 6.0)}" class="bump-col" '
-            f'text-anchor="middle">{escape(label)}</text>'
-        )
-    for si, (_name, ranks) in enumerate(series):
-        accent = accents[si] if si < len(accents) else "var(--ink)"
-        m = min(n_c, len(ranks))
-        pts = " ".join(f"{num(cx(i))},{num(cy(ranks[i]))}" for i in range(m))
-        parts.append(
-            f'<polyline points="{pts}" class="bump-line" style="stroke:{accent}"/>'
-        )
-        for i in range(m):
-            parts.append(
-                f'<circle cx="{num(cx(i))}" cy="{num(cy(ranks[i]))}" r="4" '
-                f'class="bump-dot" style="fill:{accent};stroke:{accent}"/>'
-            )
-    return (
-        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="bump-svg" '
-        f'aria-hidden="true">{"".join(parts)}</svg>'
-    )
-
-
 def dumbbell_rows(
     rows: list[tuple[str, list[tuple[float, str]]]],
     *,
@@ -383,74 +281,6 @@ def dumbbell_rows(
         f'<svg viewBox="0 0 {num(width)} {num(height)}" class="dumb-svg" '
         f'aria-hidden="true">{"".join(parts)}</svg>'
     )
-
-
-def grouped_columns(
-    groups: list[str],
-    series: list[tuple[str, list[float]]],
-    *,
-    accents: list[str],
-    width: float = 360.0,
-    height: float = 190.0,
-) -> str:
-    """Colonnes verticales **groupées** : un groupe par ``groups`` (libellé en bas),
-    une colonne par série dans chaque groupe. ``series`` = ``(libellé, [valeur par
-    groupe])`` avec valeurs dans [0,1] ; ``accents`` = couleur par série. Échelle
-    uniforme (pas de ``preserveAspectRatio=none`` → barres non déformées).
-    Déterministe (coords ``num``), zéro JS, ``aria-hidden``."""
-    n_g, n_s = len(groups), len(series)
-    if n_g == 0 or n_s == 0:
-        return ""
-    pad_l, pad_r, pad_t, pad_b = 4.0, 4.0, 6.0, 22.0
-    plot_w = width - pad_l - pad_r
-    plot_h = height - pad_t - pad_b
-    base_y = pad_t + plot_h
-    group_w = plot_w / n_g
-    inner = group_w * 0.16
-    bar_w = (group_w - inner) / n_s
-    parts: list[str] = [
-        f'<line x1="{num(pad_l)}" y1="{num(base_y)}" x2="{num(pad_l + plot_w)}" '
-        f'y2="{num(base_y)}" class="col-axis"/>'
-    ]
-    for gi, label in enumerate(groups):
-        gx = pad_l + group_w * gi + inner / 2.0
-        for si, (_name, values) in enumerate(series):
-            v = max(0.0, min(values[gi] if gi < len(values) else 0.0, 1.0))
-            bar_h = v * plot_h
-            x = gx + bar_w * si
-            accent = accents[si] if si < len(accents) else "var(--ink)"
-            parts.append(
-                f'<rect x="{num(x)}" y="{num(base_y - bar_h)}" '
-                f'width="{num(bar_w * 0.86)}" height="{num(bar_h)}" '
-                f'class="col-bar" style="fill:{accent}"/>'
-            )
-        lx = pad_l + group_w * gi + group_w / 2.0
-        parts.append(
-            f'<text x="{num(lx)}" y="{num(height - 7.0)}" class="col-label" '
-            f'text-anchor="middle">{escape(label)}</text>'
-        )
-    return (
-        f'<svg viewBox="0 0 {num(width)} {num(height)}" class="col-svg" '
-        f'aria-hidden="true">{"".join(parts)}</svg>'
-    )
-
-
-__all__ = [
-    "bar_series",
-    "box_plot",
-    "bubble_chart",
-    "bump_chart",
-    "calibration_curve",
-    "composition_bar",
-    "dispersion_strip",
-    "donut_chart",
-    "dumbbell_rows",
-    "grouped_columns",
-    "num",
-    "radar_chart",
-    "word_engine_heatmap",
-    "word_overlap_venn",
-]
 
 
 #: Géométrie fixe du Venn à **3** ensembles (le Venn proportionnel à 3 cercles est
