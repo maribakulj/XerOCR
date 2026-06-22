@@ -150,12 +150,6 @@
             h.setAttribute("aria-sort", "none");
           });
           th.setAttribute("aria-sort", asc ? "ascending" : "descending");
-          /* renuméroter la colonne de rang (#) selon le nouvel ordre */
-          var n = 1;
-          Array.prototype.forEach.call(tbody.rows, function (r) {
-            var rk = r.querySelector("td.rank");
-            if (rk) rk.textContent = String(n++);
-          });
         });
       });
     },

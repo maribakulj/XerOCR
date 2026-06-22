@@ -1,11 +1,12 @@
-"""Section by-engine : **classement** des moteurs sur la vue primaire + **dispersion**
-du taux d'erreur par-document. Couche 7.
+"""Section by-engine : **comparaison** des moteurs sur la vue primaire +
+**dispersion** du taux d'erreur par-document. Couche 7.
 
-Distinct de l'overview (tables descriptives, une par vue) : ici **une** table
-**triée** — le verdict « quel moteur gagne » — plus l'**étendue** (min · médiane ·
+Distinct de l'overview (tables descriptives, une par vue) : ici **une** table de
+toutes les familles de métriques, **ordonnée** par CER croissant (un tri, pas un
+verdict — aucun rang ordinal n'est attribué), plus l'**étendue** (min · médiane ·
 max) du CER sur les documents, c.-à-d. la **fiabilité** que l'agrégat masque (et
-que ni l'overview ni le par-document ne donnent). Métriques **réelles** seulement
-(cer/wer/mer) ; un classement chiffré n'est pas de la prose (narratif supprimé).
+que ni l'overview ni le par-document ne donnent). On expose les chiffres ;
+l'utilisateur interprète (aucun gagnant déclaré — cf. ``key_measures`` §6/§12).
 """
 
 from __future__ import annotations
@@ -41,7 +42,7 @@ def _per_doc_values(
 
 
 class EngineSection:
-    """Classement des moteurs (vue primaire) + dispersion par-document du CER."""
+    """Comparaison des moteurs (vue primaire) + dispersion par-document du CER."""
 
     name = "by_engine"
     requires: tuple[str, ...] = ()
@@ -54,11 +55,11 @@ class EngineSection:
         metrics = tuple(s.metric for s in rows[0].aggregate)
         if not metrics:
             return None
-        rank = "cer" if "cer" in metrics else metrics[0]
-        rank_idx = metrics.index(rank)
+        sort_metric = "cer" if "cer" in metrics else metrics[0]
+        sort_idx = metrics.index(sort_metric)
 
         def _key(p: PipelineResult) -> tuple[bool, float, str]:
-            value = p.aggregate[rank_idx].value
+            value = p.aggregate[sort_idx].value
             return (value is None, value if value is not None else 0.0, p.pipeline)
 
         ordered = sorted(rows, key=_key)
@@ -69,12 +70,16 @@ class EngineSection:
         maxes = [col_max([p.aggregate for p in rows], i) for i in keep]
         profil_title = localized(ctx.lang, "Profil", "Profile")
         body: list[str] = []
-        for position, pipeline in enumerate(ordered, start=1):
+        # Lignes ordonnées par CER croissant (un **tri** lisible, pas un rang
+        # ordinal attribué : aucune colonne « # », aucun gagnant désigné).
+        for pipeline in ordered:
             cells = "".join(
                 bar_cell(pipeline.aggregate[i], maxes[j], sortable=True)
                 for j, i in enumerate(keep)
             )
-            vals = _per_doc_values(result.documents, pipeline.pipeline, view, rank)
+            vals = _per_doc_values(
+                result.documents, pipeline.pipeline, view, sort_metric
+            )
             disp = (
                 f"{min(vals):.3f} · {median(vals):.3f} · {max(vals):.3f}"
                 if vals
@@ -85,8 +90,7 @@ class EngineSection:
             # Le **nom du moteur** est le lien vers son profil drill-in (#engine-N) :
             # cliquer le moteur ouvre son analyse détaillée (≠ une petite flèche).
             body.append(
-                f'<tr><td class="rank">{position}</td>'
-                f'<td class="eng-cell"><a href="#engine-{idx}" '
+                f'<tr><td class="eng-cell"><a href="#engine-{idx}" '
                 f'title="{profil_title}">{badge}</a></td>{cells}'
                 f'<td class="disp">{disp}</td></tr>'
             )
@@ -99,19 +103,19 @@ class EngineSection:
         vlbl = escape(view_label(view, ctx.lang))
         heading = localized(
             ctx.lang,
-            f"Classement{f' (vue : {vlbl})' if multi else ''}",
-            f"Ranking{f' (view: {vlbl})' if multi else ''}",
+            f"Comparaison des moteurs{f' (vue : {vlbl})' if multi else ''}",
+            f"Engine comparison{f' (view: {vlbl})' if multi else ''}",
         )
         prose = localized(
             ctx.lang,
-            f'<p class="muted">Trié par {escape(rank)} ↑ · dispersion = '
-            f"{escape(rank)} min · médiane · max par document. "
-            "Cliquer un en-tête de métrique pour trier ; survoler pour la "
-            "définition.</p>\n",
-            f'<p class="muted">Sorted by {escape(rank)} ↑ · dispersion = '
-            f"{escape(rank)} min · median · max per document. "
-            "Click a metric header to sort; hover for the "
-            "definition.</p>\n",
+            f'<p class="muted">Ordonné par {escape(sort_metric)} ↑ (un tri, pas un '
+            f"rang attribué) · dispersion = {escape(sort_metric)} min · médiane · "
+            "max par document. Cliquer un en-tête de métrique pour réordonner ; "
+            "survoler pour la définition. Aucun gagnant n'est déclaré.</p>\n",
+            f'<p class="muted">Ordered by {escape(sort_metric)} ↑ (a sort, not an '
+            f"assigned rank) · dispersion = {escape(sort_metric)} min · median · "
+            "max per document. Click a metric header to reorder; hover for the "
+            "definition. No winner is declared.</p>\n",
         )
         th_engine = localized(ctx.lang, "Moteur", "Engine")
         th_dispersion = localized(ctx.lang, "dispersion", "dispersion")
@@ -120,8 +124,8 @@ class EngineSection:
             + prose
             + '<div class="table-scroll"><table class="data sortable">\n'
             "<thead>"
-            + group_header_row(display_metrics, ctx.lang, lead=2, trail=1)
-            + f"<tr><th>#</th><th>{th_engine}</th>{header}"
+            + group_header_row(display_metrics, ctx.lang, lead=1, trail=1)
+            + f"<tr><th>{th_engine}</th>{header}"
             f'<th class="num-cell">{th_dispersion}</th></tr></thead>\n'
             f"<tbody>{''.join(body)}</tbody>\n</table></div>\n"
             + bar_legend(ctx.lang)
