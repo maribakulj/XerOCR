@@ -106,10 +106,9 @@ _GROUPS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
     ("rapport", "errors", "Familles d'erreurs & analyses fines",
      "Error families & fine-grained analyses",
      ("conformity", "structure", "correction", "structured_data", "philology",
-      "textual_fidelity", "lines", "ner", "taxonomy", "calibration")),
+      "textual_fidelity", "lines", "ner", "taxonomy", "calibration", "diagnostics")),
     ("rapport", "economics", "Économie", "Economics", ("economics",)),
     ("explorer", "documents", "Documents", "Documents", ("documents",)),
-    ("explorer", "diagnostic", "Diagnostic", "Diagnostics", ("diagnostics",)),
 )
 
 #: Section **détail** (maître/détail) de chaque mode : rendue dans un conteneur

@@ -539,6 +539,54 @@
     );
   }
 
+  /* 11) Scroll-spy du sommaire collant (spine) : surligne le lien du groupe en
+     cours de lecture. On observe les sous-titres (.tab-subhead[id]) ; l'actif est
+     le dernier dont le haut a franchi une bande sous le spine. Enrichissement
+     progressif (sans JS / sans IntersectionObserver : liens normaux, rien de
+     cassé). Seuls les sous-titres du mode VISIBLE comptent (offsetParent non nul
+     → un mode caché en display:none est ignoré). */
+  if (window.IntersectionObserver) {
+    var spineLinks = {};
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".spine-link"),
+      function (a) {
+        var href = a.getAttribute("href") || "";
+        if (href.charAt(0) === "#") spineLinks[href.slice(1)] = a;
+      },
+    );
+    var subheads = Array.prototype.slice.call(
+      document.querySelectorAll(".tab-subhead[id]"),
+    );
+    if (subheads.length && Object.keys(spineLinks).length) {
+      var markActive = function () {
+        var activeId = null;
+        subheads.forEach(function (h) {
+          if (h.offsetParent === null) return; /* mode caché → ignoré */
+          if (h.getBoundingClientRect().top <= 80) activeId = h.id;
+        });
+        if (activeId === null) {
+          /* aucun franchi (haut de page) : le premier visible fait l'actif */
+          for (var i = 0; i < subheads.length; i++) {
+            if (subheads[i].offsetParent !== null) {
+              activeId = subheads[i].id;
+              break;
+            }
+          }
+        }
+        Object.keys(spineLinks).forEach(function (id) {
+          spineLinks[id].classList.toggle("on", id === activeId);
+        });
+      };
+      var spy = new IntersectionObserver(markActive, {
+        threshold: [0, 1],
+      });
+      subheads.forEach(function (h) {
+        spy.observe(h);
+      });
+      markActive();
+    }
+  }
+
   /* Câblage initial des comportements de fiche sur le document (les fiches
      document, en <template>, seront recâblées à l'ouverture par openDocDetail). */
   wireEngineTabs(document);
