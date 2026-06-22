@@ -162,8 +162,7 @@ def _mode_body(
     ``.drill-scope`` (unité maître/détail échangée par ``report.js``). ``("", [])``
     si le mode n'a aucune section. Renvoie aussi les ancres pour le spine."""
     detail_name = _DETAIL_OF_MODE.get(mode, "")
-    parts: list[str] = []
-    spine_links: list[tuple[str, str]] = []
+    groups: list[tuple[str, str, list[str]]] = []
     for m, key, fr, en, names in _GROUPS:
         if m != mode:
             continue
@@ -171,9 +170,17 @@ def _mode_body(
         if not present:
             continue
         label = escape(en if lang == "en" else fr)
-        gid = f"grp-{escape(key)}"
-        parts.append(f'<h2 class="tab-subhead" id="{gid}">{label}</h2>')
-        spine_links.append((gid, label))
+        groups.append((f"grp-{escape(key)}", label, present))
+    # Un seul groupe présent → son sous-titre (et un sommaire à un seul lien) font
+    # double emploi avec le nom du mode : on les omet, les sections s'écoulent
+    # directement. Plusieurs groupes → sous-titres ancrés + spine collant.
+    show_heads = len(groups) > 1
+    parts: list[str] = []
+    spine_links: list[tuple[str, str]] = []
+    for gid, label, present in groups:
+        if show_heads:
+            parts.append(f'<h2 class="tab-subhead" id="{gid}">{label}</h2>')
+            spine_links.append((gid, label))
         parts.extend(_block(n, by_name[n], lang) for n in present)
     detail_raw = by_name.get(detail_name, "") if detail_name else ""
     if not parts and not detail_raw:

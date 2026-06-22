@@ -111,7 +111,7 @@ def test_mode_layout_switch_and_modes() -> None:
     # Un seul mode actif → pas de bascule, corps rendu.
     sw1, body1 = _mode_layout([("by_engine", "<p>E</p>")], "fr")
     assert sw1 == "" and 'id="mode-rapport"' in body1 and 'id="r-by_engine"' in body1
-    # Deux modes → bascule (.report-tabs) + les deux modes + spine + drill-scope.
+    # Deux modes → bascule (.report-tabs) + les deux modes + drill-scope.
     sw, body = _mode_layout(
         [("by_engine", "<p>E</p>"), ("documents", "<p>D</p>")], "fr"
     )
@@ -119,7 +119,15 @@ def test_mode_layout_switch_and_modes() -> None:
     assert 'href="#mode-rapport"' in sw and 'href="#mode-explorer"' in sw
     assert sw.count('aria-selected="true"') == 1  # un seul mode actif au départ
     assert 'id="mode-rapport"' in body and 'id="mode-explorer"' in body
-    assert 'class="spine"' in body and 'class="drill-scope"' in body
+    assert 'class="drill-scope"' in body
+    # Un seul groupe par mode → ni sous-titre ni sommaire (redondant avec le nom
+    # du mode).
+    assert 'class="spine"' not in body and 'class="tab-subhead"' not in body
+    # ≥ 2 groupes dans un mode → le sommaire collant + les sous-titres reviennent.
+    _, body2 = _mode_layout(
+        [("by_engine", "<p>E</p>"), ("economics", "<p>C</p>")], "fr"
+    )
+    assert 'class="spine"' in body2 and 'class="tab-subhead"' in body2
 
 
 def test_mode_body_groups_detail_and_spine() -> None:
