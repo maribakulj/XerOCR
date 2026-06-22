@@ -346,6 +346,8 @@ _CSS = (
     ".doc-preview-img img{width:100%;height:100%;object-fit:cover;display:block;}"
     ".doc-card .dc-id{font-family:var(--mono);font-size:12px;font-weight:600;"
     "color:var(--ink);word-break:break-all;}"
+    ".dc-anom{margin-left:5px;color:var(--clay,#a23b3b);font-weight:400;}"
+    ".anom-legend{font-size:11px;margin:6px 0 2px;}"
     ".dc-rows{display:flex;flex-direction:column;gap:4px;}"
     ".dc-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);"
     "font-size:11px;color:var(--g-500);}"
