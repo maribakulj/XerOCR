@@ -36,6 +36,7 @@ _SECTION_LABELS = {
     "correction": "Bilan de correction",
     "structured_data": "Données structurées",
     "philology": "Philologie",
+    "preservation": "Préservation patrimoniale",
     "textual_fidelity": "Fidélité textuelle",
     "lines": "Par ligne",
     "ner": "Entités nommées",
@@ -65,6 +66,7 @@ _SECTION_LABELS_EN = {
     "correction": "Correction balance",
     "structured_data": "Structured data",
     "philology": "Philology",
+    "preservation": "Heritage preservation",
     "textual_fidelity": "Textual fidelity",
     "lines": "Per line",
     "ner": "Named entities",
@@ -105,8 +107,10 @@ _GROUPS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
      ("cross_engine", "engine_duel", "word_errors")),
     ("rapport", "errors", "Familles d'erreurs & analyses fines",
      "Error families & fine-grained analyses",
-     ("conformity", "structure", "correction", "structured_data", "philology",
+     ("structure", "correction", "structured_data",
       "textual_fidelity", "lines", "ner", "taxonomy", "calibration")),
+    ("rapport", "heritage", "Signaux patrimoniaux", "Heritage signals",
+     ("preservation", "philology", "conformity")),
     ("rapport", "economics", "Économie", "Economics", ("economics",)),
     ("explorer", "documents", "Documents", "Documents", ("documents",)),
     ("explorer", "diagnostic", "Diagnostic", "Diagnostics", ("diagnostics",)),
@@ -338,6 +342,7 @@ def default_report_renderer() -> ReportRenderer:
     from xerocr.reports.sections.ner import NerSection
     from xerocr.reports.sections.overview import OverviewSection
     from xerocr.reports.sections.philology import PhilologySection
+    from xerocr.reports.sections.preservation import PreservationSection
     from xerocr.reports.sections.structure import StructureSection
     from xerocr.reports.sections.structured_data import StructuredDataSection
     from xerocr.reports.sections.taxonomy import TaxonomySection
@@ -362,6 +367,7 @@ def default_report_renderer() -> ReportRenderer:
             StructureSection(),
             CorrectionSection(),
             StructuredDataSection(),
+            PreservationSection(),
             PhilologySection(),
             TextualFidelitySection(),
             LinesSection(),
