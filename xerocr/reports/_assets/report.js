@@ -166,7 +166,8 @@
     document.querySelectorAll(".drill-panel"),
   );
   var hasDocTemplates = !!document.querySelector("template[data-doc]");
-  if (drillPanels.length || hasDocTemplates) {
+  var hasDocIsland = !!document.getElementById("xerocr-doc-data");
+  if (drillPanels.length || hasDocTemplates || hasDocIsland) {
     /* Au chargement : masquer toutes les vues détail → seul le maître s'affiche. */
     Array.prototype.forEach.call(
       document.querySelectorAll(".tab-detail"),
@@ -213,13 +214,96 @@
        CLONÉE à la demande dans un unique conteneur vivant → DOM borné même à
        5000 docs, fac-similés chargés seulement à l'ouverture. On recâble les
        comportements internes de la fiche (sélecteur de moteur, zoom) après clonage. */
+    /* Îlot de données compact (drill-in B) : lu une fois, paresseusement. Porte
+       l'ordre canonique des moteurs + le CER par document → sert à RECONSTRUIRE
+       la fiche légère des documents non signalés (qui n'ont pas de <template>). */
+    var docIsland;
+    function docData() {
+      if (docIsland === undefined) {
+        var el = document.getElementById("xerocr-doc-data");
+        try {
+          docIsland = el ? JSON.parse(el.textContent) || {} : {};
+        } catch (err) {
+          docIsland = {};
+        }
+      }
+      return docIsland;
+    }
+    /* Fiche LÉGÈRE bâtie côté client depuis l'îlot (textContent partout → zéro
+       injection) : tête (retour + préc./suiv.), titre, note, CER par moteur. */
+    function buildLightPanel(idx) {
+      var data = docData();
+      var docs = data.docs || [];
+      var d = docs[idx];
+      if (!d) return null;
+      var L = data.labels || {};
+      var engines = data.engines || [];
+      var total = docs.length;
+      var cers = d.cer || [];
+      var best = null;
+      for (var i = 0; i < cers.length; i++)
+        if (cers[i] != null && (best == null || cers[i] < best)) best = cers[i];
+      function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text != null) n.textContent = text;
+        return n;
+      }
+      var panel = el("div", "drill-panel doc-detail");
+      panel.id = "doc-" + idx;
+      panel.setAttribute("role", "region");
+      var head = el("div", "drill-head");
+      head.appendChild(el("a", "drill-back", L.back || "←")).href = "#";
+      var nav = el("div", "drill-nav");
+      var prev = el("a", "btn-sm", L.prev || "←");
+      prev.href = "#doc-" + ((idx - 1 + total) % total);
+      var next = el("a", "btn-sm", L.next || "→");
+      next.href = "#doc-" + ((idx + 1) % total);
+      nav.appendChild(prev);
+      nav.appendChild(next);
+      head.appendChild(nav);
+      panel.appendChild(head);
+      var title = el("div", "drill-title");
+      title.appendChild(el("span", null, d.id));
+      var pos = (L.pos || "{i}/{n}")
+        .replace("{i}", idx + 1)
+        .replace("{n}", total);
+      title.appendChild(el("span", "muted drill-pos", pos));
+      panel.appendChild(title);
+      if (L.light) panel.appendChild(el("p", "muted", L.light));
+      var card = el("div", "dd-card");
+      card.appendChild(el("div", "drill-caption", L.cer || "CER"));
+      var box = el("div", "dd-cers");
+      for (var j = 0; j < engines.length; j++) {
+        var v = j < cers.length ? cers[j] : null;
+        var row = el("div", "dd-row" + (v != null && v === best ? " best" : ""));
+        row.appendChild(el("span", "dd-name", engines[j]));
+        row.appendChild(
+          el("span", "dd-cer", v == null ? "—" : (v * 100).toFixed(1) + " %"),
+        );
+        box.appendChild(row);
+      }
+      card.appendChild(box);
+      var flow = el("div", "dd-flow");
+      flow.appendChild(card);
+      panel.appendChild(flow);
+      return panel;
+    }
     function openDocDetail(idx, link) {
-      var tpl = document.querySelector('template[data-doc="' + idx + '"]');
       var live = document.querySelector(".doc-detail-live");
-      if (!tpl || !live) return;
-      live.replaceChildren(tpl.content.cloneNode(true));
-      wireEngineTabs(live);
-      wireFacZoom(live);
+      if (!live) return;
+      var tpl = document.querySelector('template[data-doc="' + idx + '"]');
+      if (tpl) {
+        /* Document signalé : fiche riche pré-rendue, clonée (fac-similé, diff). */
+        live.replaceChildren(tpl.content.cloneNode(true));
+        wireEngineTabs(live);
+        wireFacZoom(live);
+      } else {
+        /* Document non signalé : fiche légère reconstruite depuis l'îlot. */
+        var node = buildLightPanel(idx);
+        if (!node) return;
+        live.replaceChildren(node);
+      }
       var detail = live.closest(".tab-detail");
       var scope = detail ? detail.closest(".drill-scope") : null;
       var master = scope ? scope.querySelector(".tab-master") : null;
@@ -252,10 +336,12 @@
       var href = link.getAttribute("href") || "";
       if (href.charAt(0) !== "#" || href.length <= 1) return;
       var id = href.slice(1);
-      /* lien document #doc-N → clone du <template> correspondant */
+      /* lien document #doc-N → fiche riche (<template>) si signalé, sinon fiche
+         légère reconstruite depuis l'îlot. On intercepte dès que l'un existe. */
       if (
         /^doc-\d+$/.test(id) &&
-        document.querySelector('template[data-doc="' + id.slice(4) + '"]')
+        (document.querySelector('template[data-doc="' + id.slice(4) + '"]') ||
+          (docData().docs && docData().docs.length))
       ) {
         e.preventDefault();
         openDocDetail(id.slice(4), link);

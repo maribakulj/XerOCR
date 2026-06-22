@@ -10,6 +10,8 @@ profil moteur (``.drill-panel`` + ``report.js``) ; sans JS, ``:target``.
 
 from __future__ import annotations
 
+import json
+
 from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
     DocumentHallucination,
@@ -22,6 +24,7 @@ from xerocr.evaluation.analysis import (
 )
 from xerocr.evaluation.lines import gini, percentile
 from xerocr.evaluation.result import RunResult
+from xerocr.reports._anomaly import compute_anomalies
 from xerocr.reports.engine_badges import engine_accent, engine_letter, engine_order
 from xerocr.reports.html import escape, localized
 from xerocr.reports.section import Html, SectionContext
@@ -29,6 +32,16 @@ from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.text_diff import char_diff
 
 _METRIC = "cer"
+
+
+def _safe_json(data: object) -> str:
+    """JSON ASCII, ``<``/``>``/``&`` échappés (anti-rupture de ``</script>``)."""
+    return (
+        json.dumps(data, ensure_ascii=True, separators=(",", ":"))
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+    )
 
 
 def _doc_lines(result: RunResult, doc_id: str) -> DocumentLines | None:
@@ -244,31 +257,67 @@ class DocumentDetailSection:
         order = engine_order(p.pipeline for p in result.pipelines) or engine_order(
             d.pipeline for d in rows
         )
-        # Chaque fiche est rendue **par le serveur** (déterministe) mais dans un
-        # ``<template>`` **inerte** : le navigateur ne la peint pas et ne charge
-        # pas son fac-similé tant que ``report.js`` ne la clone pas, au clic, dans
-        # l'unique conteneur vivant ``.doc-detail-live``. → DOM borné même à 5000
-        # docs (une seule fiche vivante). Tous les documents restent présents et
-        # atteignables ; sans JS, les fiches ne s'affichent pas (dégradation). Les
-        # ancres ``#doc-<idx>`` restent alignées avec les cartes de la galerie.
+        # Drill-in « B » (octets ET DOM bornés). Le DOM seul était déjà borné (une
+        # fiche vivante clonée à la demande), mais à 5000 docs la **taille du
+        # fichier** explosait : 5000 fiches riches sérialisées. Ici seules les
+        # fiches des documents **signalés** (anomalies, même critère que la
+        # galerie) sont rendues par le serveur dans un ``<template>`` inerte ; les
+        # autres sont reconstruites **côté client** depuis l'îlot de données compact
+        # (CER par moteur), sans octets par-document de fiche riche. Tous les
+        # documents restent atteignables (``#doc-<idx>``, mêmes index que la
+        # galerie) ; sans JS, ni fiche riche ni fiche légère (dégradation).
+        flagged, _cutoffs = compute_anomalies(result, view)
         templates = "".join(
             f'<template data-doc="{idx}">'
             + self._panel(
-                result,
-                view,
-                doc_id,
-                idx,
-                doc_ids,
-                order,
-                ctx.facsimiles.get(doc_id),
-                ctx.lang,
+                result, view, doc_id, idx, doc_ids, order,
+                ctx.facsimiles.get(doc_id), ctx.lang,
             )
             + "</template>"
             for idx, doc_id in enumerate(doc_ids)
+            if doc_id in flagged
         )
+        island = self._island(result, view, doc_ids, ctx.lang)
         return Html(
             '<div class="doc-detail-live" role="region" aria-live="polite"></div>'
-            f'<div class="doc-details" hidden>{templates}</div>'
+            f'<div class="doc-details" hidden>{templates}</div>{island}'
+        )
+
+    @staticmethod
+    def _island(
+        result: RunResult, view: str, doc_ids: list[str], lang: str
+    ) -> str:
+        """Îlot compact (``type="application/json"``, inerte) pour la **fiche
+        légère** des documents non signalés : ordre canonique des moteurs + CER
+        par document, aligné, + libellés localisés (le JS reste agnostique de la
+        langue). Que des **nombres et identifiants** → octets bornés à 5000 docs."""
+        engines = [
+            name for name, _i in sorted(
+                engine_order(p.pipeline for p in result.pipelines).items(),
+                key=lambda kv: kv[1],
+            )
+        ]
+        docs: list[dict[str, object]] = []
+        for doc_id in doc_ids:
+            cers = dict(_doc_cer(result, doc_id, view))
+            docs.append({"id": doc_id, "cer": [cers.get(e) for e in engines]})
+        labels = {
+            "back": localized(lang, "← Tous les documents", "← All documents"),
+            "prev": localized(lang, "← précédent", "← previous"),
+            "next": localized(lang, "suivant →", "next →"),
+            "cer": localized(lang, "CER par moteur", "CER per engine"),
+            "pos": localized(lang, "document {i} sur {n}", "document {i} of {n}"),
+            "light": localized(
+                lang,
+                "Fiche légère (document non signalé) — la fiche détaillée "
+                "(fac-similé, diff) est réservée aux documents signalés.",
+                "Light card (unflagged document) — the detailed card "
+                "(facsimile, diff) is reserved for flagged documents.",
+            ),
+        }
+        payload = _safe_json({"engines": engines, "docs": docs, "labels": labels})
+        return (
+            f'<script id="xerocr-doc-data" type="application/json">{payload}</script>'
         )
 
     def _panel(
