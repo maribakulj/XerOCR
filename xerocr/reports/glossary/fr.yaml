@@ -186,25 +186,28 @@ ner_f1:
     aussi) ; appariement par recouvrement de spans (IoU ≥ 0,5), pas par sens.
 
 hallucination:
-  title: "Indice d'hallucination"
+  title: "Texte non ancré (trigrammes)"
   definition: >-
-    Signal dérivé du surplus de texte produit sans appui dans la référence
-    (insertions massives, répétitions), typique d'un LLM qui « comble ».
+    Part des trigrammes de caractères de l'hypothèse **absents** de la
+    référence (1 − ancrage n-gramme). Plus haut = plus de texte produit
+    sans appui dans le GT.
   measures: >-
-    Le risque que la sortie contienne du texte plausible mais inventé,
-    absent du document source.
+    La quantité de texte produit sans correspondance dans le document
+    source — un signal mesuré, pas une preuve d'« hallucination »
+    intentionnelle.
   limits: >-
-    Indicateur, pas une preuve : une insertion légitime (texte réellement
-    présent mais hors GT) peut le faire monter.
+    Mesure de surface : une insertion légitime (texte réellement présent
+    mais hors GT) la fait monter ; n'établit aucune intention du modèle.
 
 searchability:
-  title: "Indice de recherchabilité"
+  title: "Rappel plein-texte (Lev ≤ 2)"
   definition: >-
-    Estimation de la part du texte qui resterait retrouvable par une
-    recherche plein-texte malgré les erreurs de transcription.
+    Part des mots de la référence retrouvés dans l'hypothèse à distance de
+    Levenshtein ≤ 2 (recherche plein-texte tolérante, appariement
+    multi-ensemble).
   measures: >-
-    L'utilité pratique de la sortie pour l'indexation et la recherche,
-    au-delà du CER brut.
+    Combien de mots du GT resteraient retrouvables par une recherche
+    tolérante malgré les erreurs de transcription.
   limits: >-
     Heuristique d'usage : ne remplace pas une évaluation de rappel sur des
     requêtes réelles.

@@ -143,8 +143,17 @@ def _hallucination_block(
     Le plus parlant quand un moteur **invente** du texte (mauvaise langue, VLM/LLM) :
     ancrage faible / insertion nette élevée + les **blocs hallucinés affichés**.
     Lecture seule du payload (aucun recalcul)."""
-    title = localized(lang, "Analyse des hallucinations", "Hallucination analysis")
-    flag = localized(lang, "⚠ hallucination détectée", "⚠ hallucination detected")
+    # Pas de verdict « hallucination » (qui prête une intention au modèle) : on
+    # nomme le **fait mesuré** — du texte inséré sans contrepartie dans le GT — et
+    # on **montre les blocs** en preuve (le critère est sous les yeux).
+    title = localized(
+        lang,
+        "Texte inséré sans appui dans le GT",
+        "Inserted text unsupported by GT",
+    )
+    flag = localized(
+        lang, "⚠ bloc inséré sans appui GT", "⚠ inserted block unsupported by GT"
+    )
     anchor_l = localized(lang, "Ancrage", "Anchoring")
     ratio_l = localized(lang, "Ratio longueur", "Length ratio")
     netins_l = localized(lang, "Insertion nette", "Net insertion")
