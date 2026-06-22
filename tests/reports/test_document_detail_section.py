@@ -37,24 +37,6 @@ def _doc(doc_id: str, pipeline: str, cer: float) -> RunDocumentResult:
     )
 
 
-def _flag(doc_id: str) -> Analysis:
-    """Signale un document (bloc inséré sans appui GT) → il reçoit une fiche
-    RICHE (drill-in B) ; les non-signalés n'ont qu'une fiche légère."""
-    return Analysis(
-        scope="corpus", view="text",
-        payload=DocumentHallucinationPayload(documents=(
-            DocumentHallucination(document_id=doc_id, pipelines=(
-                PipelineHallucination(
-                    pipeline="tesseract", anchor_score=0.2, length_ratio=2.0,
-                    net_insertion_rate=0.5, gt_words=10, hyp_words=20,
-                    is_hallucinating=True,
-                    blocks=(HallucinatedBlock(start_token=0, end_token=3, text="a b c"),),
-                ),
-            )),
-        )),
-    )
-
-
 def _result(*, with_worst: bool = False) -> RunResult:
     manifest = RunManifest(
         run_id="r", corpus_name="demo", n_documents=2,
@@ -64,8 +46,7 @@ def _result(*, with_worst: bool = False) -> RunResult:
         _doc("folio_1", "tesseract", 0.20), _doc("folio_1", "pero", 0.10),
         _doc("folio_2", "tesseract", 0.30),
     )
-    # folio_1 est signalé (fiche riche) ; folio_2 ne l'est pas (fiche légère).
-    analyses: tuple[Analysis, ...] = (_flag("folio_1"),)
+    analyses = ()
     if with_worst:
         payload = DiagnosticsPayload(
             metric="cer",
@@ -76,7 +57,7 @@ def _result(*, with_worst: bool = False) -> RunResult:
                 ),
             ),
         )
-        analyses = (*analyses, Analysis(scope="corpus", view="text", payload=payload))
+        analyses = (Analysis(scope="corpus", view="text", payload=payload),)
     return RunResult(
         manifest=manifest,
         pipelines=(
@@ -88,31 +69,28 @@ def _result(*, with_worst: bool = False) -> RunResult:
     )
 
 
-def test_rich_template_only_for_flagged_plus_island() -> None:
-    # Drill-in B : fiche riche (serveur, <template> inerte) UNIQUEMENT pour les
-    # documents signalés (folio_1) → octets bornés ; les autres → fiche légère
-    # reconstruite côté client depuis l'îlot. DOM borné (une fiche vivante).
+def test_one_template_per_document_plus_live_container() -> None:
     html = DocumentDetailSection().render(_result(), SectionContext())
     assert html is not None
-    assert html.count("<template data-doc=") == 1  # seul folio_1 (signalé)
-    assert 'data-doc="0"' in html  # folio_1 = index 0 (≡ ordre galerie)
-    assert html.count('class="drill-panel doc-detail"') == 1  # 1 fiche riche serveur
+    # Chaque fiche est dans un <template> inerte (clonée à la demande par report.js)
+    # → DOM borné à grande échelle, fac-similés chargés seulement à l'ouverture.
+    assert html.count("<template data-doc=") == 2  # une par document
+    assert 'data-doc="0"' in html and 'data-doc="1"' in html  # ≡ ordre galerie
+    assert html.count('class="drill-panel doc-detail"') == 2  # fiche rendue serveur
     assert 'class="doc-detail-live"' in html  # conteneur vivant unique (cible clone)
     assert " hidden " not in html.split("doc-detail-live")[0]  # live non caché
-    # Îlot compact : TOUS les documents y figurent → atteignables en fiche légère.
-    assert 'id="xerocr-doc-data"' in html
-    assert '"folio_1"' in html and '"folio_2"' in html
+    assert "← Tous les documents" in html
 
 
-def test_bytes_bounded_island_carries_all_docs_at_scale() -> None:
-    # 300 docs, aucun signalé (CER uniforme → pas d'outlier, pas de désaccord) :
-    # ZÉRO fiche riche (octets bornés). Tous restent atteignables via l'îlot, où
-    # ne figurent que des nombres/identifiants → sortie petite (≠ 300 fiches).
+def test_keeps_all_documents_as_templates_at_scale() -> None:
+    # Tous les documents restent atteignables (un <template> chacun) ; rien retiré.
     manifest = RunManifest(
         run_id="r", corpus_name="demo", n_documents=300,
         code_version="1.0", started_at=FIXED, completed_at=FIXED,
     )
-    docs = tuple(_doc(f"doc{i:04d}", "tesseract", 0.10) for i in range(300))
+    docs = tuple(
+        _doc(f"doc{i:04d}", "tesseract", (i % 100) / 100.0) for i in range(300)
+    )
     result = RunResult(
         manifest=manifest,
         pipelines=(PipelineResult(pipeline="tesseract", view="text"),),
@@ -120,10 +98,8 @@ def test_bytes_bounded_island_carries_all_docs_at_scale() -> None:
     )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
-    assert html.count("<template data-doc=") == 0  # aucune fiche riche
-    assert 'id="xerocr-doc-data"' in html
-    assert '"doc0299"' in html  # le 300e doc est dans l'îlot (atteignable)
-    assert len(html) < 60_000  # borne d'octets (≠ 300 fiches riches sérialisées)
+    assert html.count("<template data-doc=") == 300  # les 300 fiches présentes
+    assert 'data-doc="299"' in html
 
 
 def test_panel_shows_cer_per_engine() -> None:
@@ -165,9 +141,9 @@ def test_full_page_diff_with_engine_selector() -> None:
             ),
         )
     )
-    result = base.model_copy(update={"analyses": (
-        _flag("folio_1"), Analysis(scope="corpus", view="text", payload=texts),
-    )})
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=texts),)}
+    )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
     assert "page complète" in html  # diff pleine page (≠ pires lignes)
@@ -190,9 +166,9 @@ def test_line_heatmap_recentred_on_document() -> None:
             ),
         )
     )
-    result = base.model_copy(update={"analyses": (
-        _flag("folio_1"), Analysis(scope="corpus", view="text", payload=dl),
-    )})
+    result = base.model_copy(
+        update={"analyses": (Analysis(scope="corpus", view="text", payload=dl),)}
+    )
     html = DocumentDetailSection().render(result, SectionContext())
     assert html is not None
     assert 'class="dd-lh"' in html  # distribution par ligne du doc
