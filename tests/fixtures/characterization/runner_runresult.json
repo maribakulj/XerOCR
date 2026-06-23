@@ -1,0 +1,1435 @@
+{
+  "schema_version": 2,
+  "manifest": {
+    "run_id": "char",
+    "corpus_name": "char-corpus",
+    "n_documents": 6,
+    "pipeline_specs": [
+      {
+        "name": "alpha",
+        "description": "",
+        "initial_inputs": [
+          "image"
+        ],
+        "steps": []
+      },
+      {
+        "name": "beta",
+        "description": "",
+        "initial_inputs": [
+          "image"
+        ],
+        "steps": []
+      },
+      {
+        "name": "gamma",
+        "description": "",
+        "initial_inputs": [
+          "image"
+        ],
+        "steps": []
+      }
+    ],
+    "adapter_kwargs": {},
+    "view_specs": [],
+    "code_version": "char-1.0",
+    "started_at": "2026-01-01T00:00:00Z",
+    "completed_at": "2026-01-01T00:00:00Z",
+    "dependencies_lock": {},
+    "system_binaries_lock": {},
+    "module_versions": {},
+    "metadata": {}
+  },
+  "pipelines": [
+    {
+      "pipeline": "alpha",
+      "view": "text",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 6
+        }
+      ]
+    },
+    {
+      "pipeline": "beta",
+      "view": "text",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 6
+        }
+      ]
+    },
+    {
+      "pipeline": "gamma",
+      "view": "text",
+      "aggregate": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 6
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "document_id": "d0",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d1",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d2",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d3",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d4",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d5",
+      "pipeline": "alpha",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.0,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d0",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d1",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d2",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d3",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d4",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d5",
+      "pipeline": "beta",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.25,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d0",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d1",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d2",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d3",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d4",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    },
+    {
+      "document_id": "d5",
+      "pipeline": "gamma",
+      "view": "text",
+      "scores": [
+        {
+          "metric": "cer",
+          "value": 0.125,
+          "support": 8
+        }
+      ],
+      "stratum": null,
+      "image_ref": null
+    }
+  ],
+  "cross_engine": [
+    {
+      "metric": "text:cer:significance_p",
+      "value": 0.002478752176666357,
+      "support": 6
+    }
+  ],
+  "usage": [],
+  "analyses": [
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "diagnostics",
+        "metric": "cer",
+        "confusions": [
+          {
+            "pipeline": "beta",
+            "pairs": [
+              {
+                "expected": "a",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "b",
+                "observed": "Y",
+                "count": 1
+              },
+              {
+                "expected": "g",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "h",
+                "observed": "Y",
+                "count": 1
+              },
+              {
+                "expected": "i",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "j",
+                "observed": "Y",
+                "count": 1
+              },
+              {
+                "expected": "o",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "p",
+                "observed": "Y",
+                "count": 1
+              },
+              {
+                "expected": "q",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "r",
+                "observed": "Y",
+                "count": 1
+              }
+            ]
+          },
+          {
+            "pipeline": "gamma",
+            "pairs": [
+              {
+                "expected": "a",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "g",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "i",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "o",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "q",
+                "observed": "X",
+                "count": 1
+              },
+              {
+                "expected": "y",
+                "observed": "X",
+                "count": 1
+              }
+            ]
+          }
+        ],
+        "worst_lines": [
+          {
+            "pipeline": "beta",
+            "document_id": "d0",
+            "line_index": 0,
+            "cer": 0.25,
+            "reference": "abcdefgh",
+            "hypothesis": "XYcdefgh"
+          },
+          {
+            "pipeline": "beta",
+            "document_id": "d1",
+            "line_index": 0,
+            "cer": 0.25,
+            "reference": "ijklmnop",
+            "hypothesis": "XYklmnop"
+          },
+          {
+            "pipeline": "beta",
+            "document_id": "d2",
+            "line_index": 0,
+            "cer": 0.25,
+            "reference": "qrstuvwx",
+            "hypothesis": "XYstuvwx"
+          },
+          {
+            "pipeline": "beta",
+            "document_id": "d3",
+            "line_index": 0,
+            "cer": 0.25,
+            "reference": "yzabcdef",
+            "hypothesis": "XYabcdef"
+          },
+          {
+            "pipeline": "beta",
+            "document_id": "d4",
+            "line_index": 0,
+            "cer": 0.25,
+            "reference": "ghijklmn",
+            "hypothesis": "XYijklmn"
+          }
+        ],
+        "hardest_documents": [
+          {
+            "document_id": "d0",
+            "mean_cer": 0.125,
+            "n_pipelines": 3
+          },
+          {
+            "document_id": "d1",
+            "mean_cer": 0.125,
+            "n_pipelines": 3
+          },
+          {
+            "document_id": "d2",
+            "mean_cer": 0.125,
+            "n_pipelines": 3
+          },
+          {
+            "document_id": "d3",
+            "mean_cer": 0.125,
+            "n_pipelines": 3
+          },
+          {
+            "document_id": "d4",
+            "mean_cer": 0.125,
+            "n_pipelines": 3
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "document_lines",
+        "documents": [
+          {
+            "document_id": "d0",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          },
+          {
+            "document_id": "d1",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          },
+          {
+            "document_id": "d2",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          },
+          {
+            "document_id": "d3",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          },
+          {
+            "document_id": "d4",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          },
+          {
+            "document_id": "d5",
+            "pipelines": [
+              [
+                "alpha",
+                [
+                  0.0
+                ]
+              ],
+              [
+                "beta",
+                [
+                  0.25
+                ]
+              ],
+              [
+                "gamma",
+                [
+                  0.125
+                ]
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "document_texts",
+        "documents": [
+          {
+            "document_id": "d0",
+            "reference": "abcdefgh",
+            "hypotheses": [
+              [
+                "alpha",
+                "abcdefgh"
+              ],
+              [
+                "beta",
+                "XYcdefgh"
+              ],
+              [
+                "gamma",
+                "Xbcdefgh"
+              ]
+            ]
+          },
+          {
+            "document_id": "d1",
+            "reference": "ijklmnop",
+            "hypotheses": [
+              [
+                "alpha",
+                "ijklmnop"
+              ],
+              [
+                "beta",
+                "XYklmnop"
+              ],
+              [
+                "gamma",
+                "Xjklmnop"
+              ]
+            ]
+          },
+          {
+            "document_id": "d2",
+            "reference": "qrstuvwx",
+            "hypotheses": [
+              [
+                "alpha",
+                "qrstuvwx"
+              ],
+              [
+                "beta",
+                "XYstuvwx"
+              ],
+              [
+                "gamma",
+                "Xrstuvwx"
+              ]
+            ]
+          },
+          {
+            "document_id": "d3",
+            "reference": "yzabcdef",
+            "hypotheses": [
+              [
+                "alpha",
+                "yzabcdef"
+              ],
+              [
+                "beta",
+                "XYabcdef"
+              ],
+              [
+                "gamma",
+                "Xzabcdef"
+              ]
+            ]
+          },
+          {
+            "document_id": "d4",
+            "reference": "ghijklmn",
+            "hypotheses": [
+              [
+                "alpha",
+                "ghijklmn"
+              ],
+              [
+                "beta",
+                "XYijklmn"
+              ],
+              [
+                "gamma",
+                "Xhijklmn"
+              ]
+            ]
+          },
+          {
+            "document_id": "d5",
+            "reference": "opqrstuv",
+            "hypotheses": [
+              [
+                "alpha",
+                "opqrstuv"
+              ],
+              [
+                "beta",
+                "XYqrstuv"
+              ],
+              [
+                "gamma",
+                "Xpqrstuv"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "inference",
+        "metric": "cer",
+        "alpha": 0.05,
+        "n_documents": 6,
+        "critical_distance": 1.352731680711293,
+        "q_alpha": 2.343,
+        "q_alpha_extrapolated": false,
+        "mean_ranks": [
+          {
+            "pipeline": "alpha",
+            "mean_rank": 1.0
+          },
+          {
+            "pipeline": "gamma",
+            "mean_rank": 2.0
+          },
+          {
+            "pipeline": "beta",
+            "mean_rank": 3.0
+          }
+        ],
+        "tied_groups": [
+          [
+            "alpha",
+            "gamma"
+          ],
+          [
+            "beta"
+          ]
+        ],
+        "pairwise": [
+          {
+            "a": "alpha",
+            "b": "beta",
+            "rank_gap": 2.0,
+            "significant": true
+          },
+          {
+            "a": "alpha",
+            "b": "gamma",
+            "rank_gap": 1.0,
+            "significant": false
+          },
+          {
+            "a": "beta",
+            "b": "gamma",
+            "rank_gap": 1.0,
+            "significant": false
+          }
+        ],
+        "intervals": [
+          {
+            "pipeline": "alpha",
+            "mean": 0.0,
+            "lower": 0.0,
+            "upper": 0.0,
+            "n_documents": 6
+          },
+          {
+            "pipeline": "beta",
+            "mean": 0.25,
+            "lower": 0.25,
+            "upper": 0.25,
+            "n_documents": 6
+          },
+          {
+            "pipeline": "gamma",
+            "mean": 0.125,
+            "lower": 0.125,
+            "upper": 0.125,
+            "n_documents": 6
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "inter_engine",
+        "complementarity": {
+          "n_documents": 6,
+          "n_reference_tokens": 6,
+          "oracle_recall": 1.0,
+          "best_single_recall": 1.0,
+          "best_engine": "alpha",
+          "absolute_gap": 0.0,
+          "relative_gap": 0.0,
+          "per_engine_recall": [
+            {
+              "pipeline": "alpha",
+              "recall": 1.0
+            },
+            {
+              "pipeline": "beta",
+              "recall": 0.0
+            },
+            {
+              "pipeline": "gamma",
+              "recall": 0.0
+            }
+          ],
+          "per_document": [
+            {
+              "document_id": "d0",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            },
+            {
+              "document_id": "d1",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            },
+            {
+              "document_id": "d2",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            },
+            {
+              "document_id": "d3",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            },
+            {
+              "document_id": "d4",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            },
+            {
+              "document_id": "d5",
+              "oracle_recall": 1.0,
+              "best_single_recall": 1.0,
+              "absolute_gap": 0.0
+            }
+          ]
+        },
+        "taxonomy_divergence": {
+          "pairs": [
+            {
+              "a": "beta",
+              "b": "gamma",
+              "divergence": 0.0
+            }
+          ],
+          "max_pair": null
+        }
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "lines",
+        "heatmap_bins": 10,
+        "pipelines": [
+          {
+            "pipeline": "alpha",
+            "line_count": 6,
+            "mean_cer": 0.0,
+            "gini": 0.0,
+            "percentiles": {
+              "p50": 0.0,
+              "p75": 0.0,
+              "p90": 0.0,
+              "p95": 0.0,
+              "p99": 0.0
+            },
+            "catastrophic": [
+              {
+                "threshold": 0.3,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 0.5,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 1.0,
+                "count": 0,
+                "rate": 0.0
+              }
+            ],
+            "heatmap": [
+              0.0,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "pipeline": "beta",
+            "line_count": 6,
+            "mean_cer": 0.25,
+            "gini": 0.0,
+            "percentiles": {
+              "p50": 0.25,
+              "p75": 0.25,
+              "p90": 0.25,
+              "p95": 0.25,
+              "p99": 0.25
+            },
+            "catastrophic": [
+              {
+                "threshold": 0.3,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 0.5,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 1.0,
+                "count": 0,
+                "rate": 0.0
+              }
+            ],
+            "heatmap": [
+              0.25,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "pipeline": "gamma",
+            "line_count": 6,
+            "mean_cer": 0.125,
+            "gini": 0.0,
+            "percentiles": {
+              "p50": 0.125,
+              "p75": 0.125,
+              "p90": 0.125,
+              "p95": 0.125,
+              "p99": 0.125
+            },
+            "catastrophic": [
+              {
+                "threshold": 0.3,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 0.5,
+                "count": 0,
+                "rate": 0.0
+              },
+              {
+                "threshold": 1.0,
+                "count": 0,
+                "rate": 0.0
+              }
+            ],
+            "heatmap": [
+              0.125,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "taxonomy",
+        "classes": [
+          "segmentation",
+          "case",
+          "diacritic",
+          "ligature",
+          "visual",
+          "lacuna",
+          "insertion",
+          "other"
+        ],
+        "pipelines": [
+          {
+            "pipeline": "beta",
+            "total_errors": 6,
+            "counts": [
+              {
+                "label": "other",
+                "count": 6
+              }
+            ]
+          },
+          {
+            "pipeline": "gamma",
+            "total_errors": 6,
+            "counts": [
+              {
+                "label": "other",
+                "count": 6
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "textual_fidelity",
+        "max_freq": 2,
+        "pipelines": [
+          {
+            "pipeline": "alpha",
+            "n_rare_reference": 6,
+            "n_rare_recalled": 6,
+            "rare_recall": 1.0,
+            "missed": [],
+            "modernization": []
+          },
+          {
+            "pipeline": "beta",
+            "n_rare_reference": 6,
+            "n_rare_recalled": 0,
+            "rare_recall": 0.0,
+            "missed": [
+              "abcdefgh",
+              "ijklmnop",
+              "qrstuvwx",
+              "yzabcdef",
+              "ghijklmn",
+              "opqrstuv"
+            ],
+            "modernization": [
+              {
+                "token": "abcdefgh",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xycdefgh",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "ghijklmn",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xyijklmn",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "ijklmnop",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xyklmnop",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "opqrstuv",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xyqrstuv",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "qrstuvwx",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xystuvwx",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "yzabcdef",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xyabcdef",
+                    "count": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "pipeline": "gamma",
+            "n_rare_reference": 6,
+            "n_rare_recalled": 0,
+            "rare_recall": 0.0,
+            "missed": [
+              "abcdefgh",
+              "ijklmnop",
+              "qrstuvwx",
+              "yzabcdef",
+              "ghijklmn",
+              "opqrstuv"
+            ],
+            "modernization": [
+              {
+                "token": "abcdefgh",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xbcdefgh",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "ghijklmn",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xhijklmn",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "ijklmnop",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xjklmnop",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "opqrstuv",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xpqrstuv",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "qrstuvwx",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xrstuvwx",
+                    "count": 1
+                  }
+                ]
+              },
+              {
+                "token": "yzabcdef",
+                "n_total": 1,
+                "n_modernized": 1,
+                "rate": 1.0,
+                "variants": [
+                  {
+                    "form": "xzabcdef",
+                    "count": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scope": "corpus",
+      "view": "text",
+      "pipeline": null,
+      "document_id": null,
+      "payload": {
+        "kind": "word_errors",
+        "pipelines": [
+          "alpha",
+          "beta",
+          "gamma"
+        ],
+        "words": [
+          {
+            "word": "abcdefgh",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xycdefgh"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xbcdefgh"
+              }
+            ],
+            "group": "partial"
+          },
+          {
+            "word": "ghijklmn",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xyijklmn"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xhijklmn"
+              }
+            ],
+            "group": "partial"
+          },
+          {
+            "word": "ijklmnop",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xyklmnop"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xjklmnop"
+              }
+            ],
+            "group": "partial"
+          },
+          {
+            "word": "opqrstuv",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xyqrstuv"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xpqrstuv"
+              }
+            ],
+            "group": "partial"
+          },
+          {
+            "word": "qrstuvwx",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xystuvwx"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xrstuvwx"
+              }
+            ],
+            "group": "partial"
+          },
+          {
+            "word": "yzabcdef",
+            "total_errors": 2,
+            "per_engine": [
+              {
+                "pipeline": "beta",
+                "count": 1,
+                "variant": "xyabcdef"
+              },
+              {
+                "pipeline": "gamma",
+                "count": 1,
+                "variant": "xzabcdef"
+              }
+            ],
+            "group": "partial"
+          }
+        ]
+      }
+    }
+  ]
+}
