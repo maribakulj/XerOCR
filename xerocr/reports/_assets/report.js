@@ -150,12 +150,6 @@
             h.setAttribute("aria-sort", "none");
           });
           th.setAttribute("aria-sort", asc ? "ascending" : "descending");
-          /* renuméroter la colonne de rang (#) selon le nouvel ordre */
-          var n = 1;
-          Array.prototype.forEach.call(tbody.rows, function (r) {
-            var rk = r.querySelector("td.rank");
-            if (rk) rk.textContent = String(n++);
-          });
         });
       });
     },
@@ -184,11 +178,14 @@
        pour y ramener au retour. Les liens préc./suiv. (dans une fiche) n'écrasent
        pas le déclencheur. */
     var lastTrigger = {};
-    function swap(tabPanel, master, detail, link, fromInside) {
+    function modeKey(scope) {
+      var m = scope && scope.closest ? scope.closest(".mode") : null;
+      return m && m.id ? m.id : "_";
+    }
+    function swap(scope, master, detail, link, fromInside) {
       if (detail) detail.hidden = false;
       if (master) master.hidden = true;
-      if (link && !fromInside && tabPanel && tabPanel.id)
-        lastTrigger[tabPanel.id] = link;
+      if (link && !fromInside && scope) lastTrigger[modeKey(scope)] = link;
       var top = detail || master;
       if (top && top.scrollIntoView)
         top.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -197,9 +194,9 @@
     function openDetail(id, link) {
       var panel = document.getElementById(id);
       if (!panel) return;
-      var tabPanel = panel.closest(".tab-panel") || document;
-      var master = tabPanel.querySelector
-        ? tabPanel.querySelector(".tab-master")
+      var scope = panel.closest(".drill-scope") || document;
+      var master = scope.querySelector
+        ? scope.querySelector(".tab-master")
         : null;
       var detail = panel.closest(".tab-detail");
       if (detail) {
@@ -210,7 +207,7 @@
           },
         );
       }
-      swap(tabPanel, master, detail, link, !!link.closest(".drill-panel"));
+      swap(scope, master, detail, link, !!link.closest(".drill-panel"));
     }
     /* Détail DOCUMENT : fiche rendue par le serveur dans un <template> inerte,
        CLONÉE à la demande dans un unique conteneur vivant → DOM borné même à
@@ -224,23 +221,23 @@
       wireEngineTabs(live);
       wireFacZoom(live);
       var detail = live.closest(".tab-detail");
-      var tabPanel = detail ? detail.closest(".tab-panel") : null;
-      var master = tabPanel ? tabPanel.querySelector(".tab-master") : null;
+      var scope = detail ? detail.closest(".drill-scope") : null;
+      var master = scope ? scope.querySelector(".tab-master") : null;
       var fromInside = !!(
         link.closest(".doc-detail-live") || link.closest(".drill-panel")
       );
-      swap(tabPanel, master, detail, link, fromInside);
+      swap(scope, master, detail, link, fromInside);
     }
     function closeDetail(backLink) {
-      var tabPanel = backLink.closest(".tab-panel");
-      if (!tabPanel) return;
-      var master = tabPanel.querySelector(".tab-master");
-      var detail = tabPanel.querySelector(".tab-detail");
+      var scope = backLink.closest(".drill-scope");
+      if (!scope) return;
+      var master = scope.querySelector(".tab-master");
+      var detail = scope.querySelector(".tab-detail");
       if (detail) detail.hidden = true;
       var live = detail && detail.querySelector(".doc-detail-live");
       if (live) live.replaceChildren(); /* libère la fiche clonée */
       if (master) master.hidden = false;
-      var trig = lastTrigger[tabPanel.id];
+      var trig = lastTrigger[modeKey(scope)];
       if (trig) trig.scrollIntoView({ behavior: "smooth", block: "center" });
       else if (master) master.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -298,40 +295,59 @@
     },
   );
 
-  /* 7b) Filtre par strate (galerie documents) : un chip marque les cartes de la
-   *     strate choisie (ou toutes pour "*") via data-filtered, et le paginateur
-   *     sœur réaffiche la page 1 du sous-ensemble. Sans paginateur (cas dégradé),
-   *     on masque directement. Sans JS, chips inertes, toutes cartes visibles. */
+  /* 7b) Filtres galerie à FACETTES qui COMPOSENT (strate · anomalie). Chaque
+   *     groupe .doc-filter porte data-facet = l'attribut data-<facet> lu sur la
+   *     carte ; pour "anom" la carte porte une LISTE de tokens (appartenance). On
+   *     mémorise la sélection active de chaque facette (partagée par scope) et on
+   *     recompose data-filtered = ET des facettes ; le paginateur sœur réaffiche
+   *     la page 1 du sous-ensemble. Sans paginateur (dégradé), on masque direct.
+   *     Sans JS, chips inertes, toutes cartes visibles. */
   Array.prototype.forEach.call(
     document.querySelectorAll(".doc-filter"),
     function (group) {
       var scope = group.parentNode;
       var grid = scope.querySelector(".doc-grid");
+      var facet = group.getAttribute("data-facet") || "stratum";
+      scope._facets = scope._facets || {};
+      scope._facets[facet] = "*";
       var btns = group.querySelectorAll(".df-btn");
+      function matches(card, f, want) {
+        if (want === "*") return true;
+        var v = card.getAttribute("data-" + f) || "";
+        if (f === "anom") return (" " + v + " ").indexOf(" " + want + " ") >= 0;
+        return v === want;
+      }
+      function apply() {
+        Array.prototype.forEach.call(
+          scope.querySelectorAll(".doc-card"),
+          function (card) {
+            var keep = true;
+            for (var f in scope._facets)
+              if (!matches(card, f, scope._facets[f])) {
+                keep = false;
+                break;
+              }
+            card.setAttribute("data-filtered", keep ? "0" : "1");
+          },
+        );
+        if (grid && grid._paginator) grid._paginator.reset();
+        else
+          Array.prototype.forEach.call(
+            scope.querySelectorAll(".doc-card"),
+            function (card) {
+              card.hidden = card.getAttribute("data-filtered") === "1";
+            },
+          );
+      }
       Array.prototype.forEach.call(btns, function (btn) {
         btn.addEventListener("click", function () {
-          var want = btn.getAttribute("data-stratum");
+          scope._facets[facet] = btn.getAttribute("data-" + facet);
           Array.prototype.forEach.call(btns, function (b) {
             var on = b === btn;
             b.classList.toggle("on", on);
             b.setAttribute("aria-pressed", on ? "true" : "false");
           });
-          Array.prototype.forEach.call(
-            scope.querySelectorAll(".doc-card"),
-            function (card) {
-              var keep =
-                want === "*" || card.getAttribute("data-stratum") === want;
-              card.setAttribute("data-filtered", keep ? "0" : "1");
-            },
-          );
-          if (grid && grid._paginator) grid._paginator.reset();
-          else
-            Array.prototype.forEach.call(
-              scope.querySelectorAll(".doc-card"),
-              function (card) {
-                card.hidden = card.getAttribute("data-filtered") === "1";
-              },
-            );
+          apply();
         });
       });
     },
@@ -521,6 +537,54 @@
       apply();
     },
     );
+  }
+
+  /* 11) Scroll-spy du sommaire collant (spine) : surligne le lien du groupe en
+     cours de lecture. On observe les sous-titres (.tab-subhead[id]) ; l'actif est
+     le dernier dont le haut a franchi une bande sous le spine. Enrichissement
+     progressif (sans JS / sans IntersectionObserver : liens normaux, rien de
+     cassé). Seuls les sous-titres du mode VISIBLE comptent (offsetParent non nul
+     → un mode caché en display:none est ignoré). */
+  if (window.IntersectionObserver) {
+    var spineLinks = {};
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".spine-link"),
+      function (a) {
+        var href = a.getAttribute("href") || "";
+        if (href.charAt(0) === "#") spineLinks[href.slice(1)] = a;
+      },
+    );
+    var subheads = Array.prototype.slice.call(
+      document.querySelectorAll(".tab-subhead[id]"),
+    );
+    if (subheads.length && Object.keys(spineLinks).length) {
+      var markActive = function () {
+        var activeId = null;
+        subheads.forEach(function (h) {
+          if (h.offsetParent === null) return; /* mode caché → ignoré */
+          if (h.getBoundingClientRect().top <= 80) activeId = h.id;
+        });
+        if (activeId === null) {
+          /* aucun franchi (haut de page) : le premier visible fait l'actif */
+          for (var i = 0; i < subheads.length; i++) {
+            if (subheads[i].offsetParent !== null) {
+              activeId = subheads[i].id;
+              break;
+            }
+          }
+        }
+        Object.keys(spineLinks).forEach(function (id) {
+          spineLinks[id].classList.toggle("on", id === activeId);
+        });
+      };
+      var spy = new IntersectionObserver(markActive, {
+        threshold: [0, 1],
+      });
+      subheads.forEach(function (h) {
+        spy.observe(h);
+      });
+      markActive();
+    }
   }
 
   /* Câblage initial des comportements de fiche sur le document (les fiches

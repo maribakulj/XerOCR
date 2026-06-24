@@ -14,12 +14,10 @@ from xerocr.evaluation.analysis import (
     DiagnosticsPayload,
     DocumentHallucination,
     DocumentHallucinationPayload,
-    DocumentImageQuality,
     DocumentLines,
     DocumentLinesPayload,
     DocumentTexts,
     DocumentTextsPayload,
-    ImageQualityPayload,
     WorstLine,
 )
 from xerocr.evaluation.lines import gini, percentile
@@ -31,20 +29,6 @@ from xerocr.reports.sections._tables import ordered_unique
 from xerocr.reports.text_diff import char_diff
 
 _METRIC = "cer"
-#: Paliers de qualité d'image (clés payload anglaises — contrat).
-_TIER_FR = {"good": "bonne", "medium": "moyenne", "poor": "faible"}
-_TIER_EN = {"good": "good", "medium": "medium", "poor": "poor"}
-
-
-def _doc_image_quality(result: RunResult, doc_id: str) -> DocumentImageQuality | None:
-    """Qualité d'image **de ce document** (scope corpus), ``None`` si non mesurée."""
-    for analysis in result.analyses:
-        payload = analysis.payload
-        if isinstance(payload, ImageQualityPayload):
-            for row in payload.documents:
-                if row.document_id == doc_id:
-                    return row
-    return None
 
 
 def _doc_lines(result: RunResult, doc_id: str) -> DocumentLines | None:
@@ -159,8 +143,17 @@ def _hallucination_block(
     Le plus parlant quand un moteur **invente** du texte (mauvaise langue, VLM/LLM) :
     ancrage faible / insertion nette élevée + les **blocs hallucinés affichés**.
     Lecture seule du payload (aucun recalcul)."""
-    title = localized(lang, "Analyse des hallucinations", "Hallucination analysis")
-    flag = localized(lang, "⚠ hallucination détectée", "⚠ hallucination detected")
+    # Pas de verdict « hallucination » (qui prête une intention au modèle) : on
+    # nomme le **fait mesuré** — du texte inséré sans contrepartie dans le GT — et
+    # on **montre les blocs** en preuve (le critère est sous les yeux).
+    title = localized(
+        lang,
+        "Texte inséré sans appui dans le GT",
+        "Inserted text unsupported by GT",
+    )
+    flag = localized(
+        lang, "⚠ bloc inséré sans appui GT", "⚠ inserted block unsupported by GT"
+    )
     anchor_l = localized(lang, "Ancrage", "Anchoring")
     ratio_l = localized(lang, "Ratio longueur", "Length ratio")
     netins_l = localized(lang, "Insertion nette", "Net insertion")
@@ -201,43 +194,6 @@ def _hallucination_block(
         )
     return (
         f'<div class="dd-hl"><div class="drill-caption">{title}</div>{rows}</div>'
-    )
-
-
-def _iq_bar(label: str, value: float) -> str:
-    """Mini-barre [0,1] d'une feature de qualité d'image (largeur = valeur)."""
-    pct = max(0.0, min(1.0, value)) * 100
-    return (
-        f'<div class="dd-iq-row"><span class="dd-iq-lbl">{label}</span>'
-        f'<span class="track"><i style="width:{pct:.0f}%;background:var(--g-300)">'
-        "</i></span>"
-        f'<span class="dd-iq-val">{value:.2f}</span></div>'
-    )
-
-
-def _iq_block(iq: DocumentImageQuality, lang: str) -> str:
-    """Bloc qualité d'image **du document** : barres mesurées + palier + inclinaison.
-
-    Recentré sur CE doc (les features expliquent un CER élevé : image dégradée vs
-    moteur faible). Lecture seule du payload — aucun recalcul (anti-hallucination)."""
-    tier = (_TIER_FR if lang == "fr" else _TIER_EN).get(iq.tier, iq.tier)
-    title = localized(lang, "Qualité de l'image", "Image quality")
-    bars = (
-        _iq_bar(localized(lang, "Netteté", "Sharpness"), iq.sharpness)
-        + _iq_bar(localized(lang, "Contraste", "Contrast"), iq.contrast)
-        + _iq_bar(localized(lang, "Propreté (1−bruit)", "Cleanliness (1−noise)"),
-                  1.0 - iq.noise)
-        + _iq_bar(localized(lang, "Score global", "Overall score"), iq.quality_score)
-    )
-    skew = localized(
-        lang,
-        f"palier : {tier} · inclinaison {iq.rotation_degrees:+.1f}°",
-        f"tier: {tier} · skew {iq.rotation_degrees:+.1f}°",
-    )
-    return (
-        f'<div class="dd-iq"><div class="drill-caption">{title}</div>'
-        f'<div class="dd-iq-bars">{bars}</div>'
-        f'<div class="muted dd-iq-meta">{skew}</div></div>'
     )
 
 
@@ -379,14 +335,11 @@ class DocumentDetailSection:
                 f'<button type="button" data-zoom="in" aria-label="{zin}">+</button>'
                 "</div></div></div>"
             )
-        # Graphiques recentrés sur CE doc : heatmap CER par ligne, puis qualité
-        # d'image **en dernier** (demande utilisateur).
+        # Graphiques recentrés sur CE doc : heatmap CER par ligne, hallucinations.
         dl = _doc_lines(result, doc_id)
         lh_block = _line_distribution(dl, order, lang) if dl is not None else ""
         dh = _doc_hallucination(result, doc_id)
         hl_block = _hallucination_block(dh, order, lang) if dh is not None else ""
-        iq = _doc_image_quality(result, doc_id)
-        iq_block = _iq_block(iq, lang) if iq is not None else ""
         # Haut : fac-similé **en bandeau étroit centré au-dessus**, puis le diff
         # GT/sortie **côte à côte sur toute la largeur** en dessous — chaque
         # colonne de texte a ~2× plus de place (sauts de ligne propres sur petit
@@ -404,7 +357,7 @@ class DocumentDetailSection:
         # côte ; la distribution par ligne (heatmap + percentiles) est large →
         # elle prend toute la largeur (dd-wide) pour ne pas être tassée.
         sec_cards += [
-            f'<div class="dd-card">{blk}</div>' for blk in (hl_block, iq_block) if blk
+            f'<div class="dd-card">{blk}</div>' for blk in (hl_block,) if blk
         ]
         if lh_block:
             sec_cards.append(f'<div class="dd-card dd-wide">{lh_block}</div>')

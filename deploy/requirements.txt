@@ -5,6 +5,9 @@ pydantic>=2,<3
 lxml>=5
 pyyaml>=6
 scipy>=1.11
+# numpy : dépendance directe de evaluation/. Plafond <2.5 (stubs PEP 695
+# incompatibles avec mypy ciblant 3.11) — cohérent avec pyproject.
+numpy<2.5
 rapidfuzz>=3,<4
 fastapi>=0.115,<1
 uvicorn>=0.30,<1

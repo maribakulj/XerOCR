@@ -198,14 +198,16 @@ def _block(view: str, payload: CorrectionPayload, lang: str) -> str:
         '<p class="muted">Pipelines 2 étages (OCR → correcteur) : le triplet '
         "compte les documents améliorés/dégradés (jamais le pref seul) ; CCR "
         "mesure combien le correcteur a touché, indépendamment de la justesse "
-        "(à qualité égale, préférer l'intervention minimale) ; l'absorption "
+        "(à qualité égale, un CCR plus faible = intervention plus parcimonieuse) ; "
+        "l'absorption "
         "compte les mots corrigés vs introduits ; les longues séquences "
         "d'éditions signalent une réécriture de passage. Étage absent = "
         "matérialisé vide (erreur maximale), jamais exclu en silence.</p>\n",
         '<p class="muted">2-stage pipelines (OCR → corrector): the triplet '
         "counts improved/degraded documents (never pref alone); CCR "
         "measures how much the corrector touched, regardless of correctness "
-        "(at equal quality, prefer minimal intervention); absorption "
+        "(at equal quality, a lower CCR = more parsimonious intervention); "
+        "absorption "
         "counts corrected vs introduced words; long edit runs "
         "signal a passage rewrite. Missing stage = "
         "materialized empty (maximal error), never silently excluded.</p>\n",

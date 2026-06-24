@@ -76,6 +76,17 @@ _CSS = (
     ".tab-subhead{grid-column:1/-1;font-family:var(--display);font-weight:800;"
     "font-size:13px;letter-spacing:0.08em;text-transform:uppercase;"
     "color:var(--g-400);margin:10px 2px 0;}"
+    # Modes (Rapport/Explorer) : empilés sans JS, ``[hidden]`` masque l'inactif.
+    # Spine = sommaire collant horizontal (ancres de groupe) en tête de mode.
+    ".mode[hidden]{display:none;}"
+    ".spine{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;"
+    "gap:3px 5px;padding:8px 2px;margin-bottom:10px;background:var(--paper);"
+    "border-bottom:1px solid var(--g-100);}"
+    ".spine-link{font-family:var(--sans);font-size:13px;font-weight:500;"
+    "color:var(--g-700);text-decoration:none;white-space:nowrap;"
+    "padding:4px 10px;border-radius:var(--r-pill);line-height:1.25;}"
+    ".spine-link:hover{color:var(--ink);background:var(--g-50);}"
+    ".spine-link.on{color:var(--ink);font-weight:700;background:var(--g-50);}"
     ".sec{background:var(--raised);border-radius:var(--r-lg);padding:22px 26px 24px;}"
     ".sec h1{font-family:var(--display);font-size:24px;font-weight:800;"
     "font-optical-sizing:auto;letter-spacing:0;"
@@ -147,8 +158,6 @@ _CSS = (
     "border-radius:2px;background:var(--fern);opacity:0.55;z-index:0;}"
     "table.data td.databar .db-num{position:relative;z-index:1;display:block;"
     "text-align:right;padding:12px 14px;}"
-    "table.data td.rank{padding:11px 8px 11px 14px;color:var(--g-400);"
-    "font-family:var(--mono);font-size:11px;border-bottom:1px solid var(--g-50);}"
     "table.data td.disp{padding:11px 14px;text-align:right;font-family:var(--mono);"
     "font-size:11px;color:var(--g-500);border-bottom:1px solid var(--g-50);}"
     "table.data td.verdict{padding:11px 14px;font-family:var(--sans);font-size:11.5px;"
@@ -339,6 +348,8 @@ _CSS = (
     ".doc-preview-img img{width:100%;height:100%;object-fit:cover;display:block;}"
     ".doc-card .dc-id{font-family:var(--mono);font-size:12px;font-weight:600;"
     "color:var(--ink);word-break:break-all;}"
+    ".dc-anom{margin-left:5px;color:var(--clay,#a23b3b);font-weight:400;}"
+    ".anom-legend{font-size:11px;margin:6px 0 2px;}"
     ".dc-rows{display:flex;flex-direction:column;gap:4px;}"
     ".dc-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);"
     "font-size:11px;color:var(--g-500);}"
@@ -415,22 +426,6 @@ _CSS = (
     # Sommet : cible de survol (<title> = valeur brute + normalisée), cerné de fond.
     ".radar-vertex{fill-opacity:0.95;stroke:var(--surface);stroke-width:1;}"
     ".radar-legend{text-align:center;}"
-    # Nuage de bulles (SVG serveur) : 1 bulle par (doc, moteur), rayon ∝ volume,
-    # teinte = moteur, translucide pour lire les chevauchements. Échelle uniforme.
-    ".bubble-wrap{max-width:360px;margin:8px auto 4px;}"
-    ".bubble-svg{width:100%;height:auto;display:block;}"
-    ".bubble-frame{fill:none;stroke:var(--g-100);stroke-width:1;}"
-    ".bubble-grid{stroke:var(--g-50);stroke-width:1;stroke-dasharray:3 3;}"
-    ".bubble-dot{fill-opacity:0.34;stroke-width:1;stroke-opacity:0.65;}"
-    ".bubble-legend{text-align:center;}"
-    # Colonnes groupées (SVG serveur) : un groupe de colonnes par métrique, une
-    # colonne par moteur (teinte moteur). Échelle uniforme, libellés sous l'axe.
-    ".col-wrap{max-width:380px;margin:8px auto 4px;}"
-    ".col-svg{width:100%;height:auto;display:block;}"
-    ".col-axis{stroke:var(--g-100);stroke-width:1;}"
-    ".col-bar{fill-opacity:0.85;}"
-    ".col-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
-    ".col-legend{text-align:center;}"
     # Camembert (anneau SVG serveur) : parts teintées + trou central couleur fond
     # (découpe). Légende = pastille + libellé + compte. Centré dans sa carte.
     ".donut-svg{width:140px;height:140px;display:block;margin:6px auto 4px;}"
@@ -447,15 +442,13 @@ _CSS = (
     ".dumb-dot{stroke-width:1;fill-opacity:0.9;}"
     ".dumb-label{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
     ".dumb-legend{text-align:center;}"
-    # Bump chart (SVG serveur) : rang moteur par métrique, lignes + points ; les
-    # croisements = inversions de classement. Grille de rangs + libellés métrique.
-    ".bump-wrap{max-width:360px;margin:8px auto 4px;}"
-    ".bump-svg{width:100%;height:auto;display:block;}"
-    ".bump-grid{stroke:var(--g-50);stroke-width:1;}"
-    ".bump-rank,.bump-col{font-family:var(--mono);font-size:9px;fill:var(--g-400);}"
-    ".bump-line{fill:none;stroke-width:2.5;stroke-linejoin:round;}"
-    ".bump-dot{stroke-width:1;}"
-    ".bump-legend{text-align:center;}"
+    # Dot plot classé (SVG serveur) : par moteur, moustache d'IC 95 % + point à la
+    # moyenne, axe commun. Montre l'écart ET son incertitude, sans verdict.
+    ".dot-svg{width:100%;max-width:340px;height:auto;display:block;margin:6px 0;}"
+    ".dot-axis{stroke:var(--g-100);stroke-width:1;}"
+    ".dot-ci{stroke-width:2.5;stroke-linecap:round;opacity:0.55;}"
+    ".dot-pt{stroke:var(--paper);stroke-width:1;}"
+    ".dot-lbl{font-family:var(--mono);font-size:10px;fill:var(--g-500);}"
     # Carte des mots (heatmap SVG) : mots verbatim en lignes, moteurs en colonnes,
     # cases teintées par compte. Compagnon visuel de la table (aria-hidden).
     # Diagramme de Venn du recouvrement (2-3 moteurs) : cercles teintés par
@@ -545,7 +538,7 @@ _CSS = (
     ".report-tabs{display:inline-flex;flex-wrap:wrap;gap:2px;padding:3px;"
     "background:rgba(239,237,232,0.08);border-radius:var(--r-pill);}"
     ".report-tab{font-family:var(--sans);font-weight:500;font-size:12px;"
-    "text-decoration:none;color:rgba(239,237,232,0.62);padding:6px 14px;"
+    "text-decoration:none;color:rgba(239,237,232,0.78);padding:6px 14px;"
     "border-radius:var(--r-pill);white-space:nowrap;}"
     ".report-tab:hover{color:var(--paper);}"
     ".report-tab.on{background:var(--paper);color:var(--ink);}"

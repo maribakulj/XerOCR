@@ -4,6 +4,17 @@
 > exactes** (noms de champs, budgets chiffrés) sont **à confirmer au build** —
 > seul le *cadre* est figé ici. Journal : `MIGRATION_PLAN.md` D-094.
 
+> ⚠️ **MISE À JOUR — refonte « instrument neutre » (2026-06, `MIGRATION_PLAN.md`
+> D-190).** Le découpage **« 4 onglets par sujet »** ci-dessous est **renversé** au
+> profit d'une partition par **mode d'interaction** : bascule `[ Rapport |
+> Explorer ]` — **Rapport** défilant/imprimable/citable (spine collant, divulgation
+> progressive) + **Explorer** de triage à facettes. Principe directeur ajouté :
+> **le rapport ne donne aucun verdict** (pas de gagnant déclaré), il expose
+> données + analyse auditable, l'utilisateur interprète (cohérent avec « moteur
+> narratif supprimé » et l'invariant anti-hallucination). Restent valides ci-dessous :
+> autonomie, images = références, SVG inline, script mince CSP-hashé, drill-in
+> plafonné. Suivi des tranches T0→T7 : D-190.
+
 Ce document fige l'architecture du **rapport HTML** de XerOCR après le constat
 que le rapport plat actuel (sections empilées + sommaire à ancres) est **loin**
 de la cible (onglets, galerie à vraies vignettes, drill-in document, graphes).

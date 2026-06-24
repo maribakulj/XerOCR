@@ -18,14 +18,15 @@ from xerocr.reports.svg import radar_chart
 
 #: Axes du radar : (clé métrique, inverser ?, libellé fr, libellé en). Toutes les
 #: valeurs sont ramenées à « plus haut = meilleur » dans [0,1] (les métriques
-#: d'erreur — hallucination — sont inversées : 1 − valeur).
+#: d'erreur sont inversées : 1 − valeur). L'axe ``hallucination`` inversé EST
+#: l'ancrage des trigrammes (1 − part non ancrée) → libellé honnête « Ancrage ».
 _AXES: tuple[tuple[str, bool, str, str], ...] = (
     ("char_accuracy", False, "Caract.", "Char."),
     ("word_accuracy", False, "Mot", "Word"),
     ("fca", False, "Fidél.", "Fidel."),
     ("bow_f1", False, "F1", "F1"),
-    ("searchability", False, "Rech.", "Search"),
-    ("hallucination", True, "¬Halluc", "¬Halluc"),
+    ("searchability", False, "Rappel", "Recall"),
+    ("hallucination", True, "Ancrage", "Anchoring"),
 )
 
 

@@ -36,19 +36,27 @@ def col_max(rows: list[tuple[MetricScore, ...]], index: int) -> float:
     return max(values) if values else 0.0
 
 
+#: Métriques **calculées mais masquées de l'affichage** (toujours dans le JSON).
+#: ``mer`` (Match Error Rate) : redondant avec ``wer`` (aucun signal nouveau).
+_HIDDEN_METRICS: frozenset[str] = frozenset({"mer"})
+
+
 def nonempty_metric_indices(rows: list[tuple[MetricScore, ...]]) -> list[int]:
-    """Indices de colonnes ayant **au moins une** valeur non ``None``.
+    """Indices de colonnes ayant **au moins une** valeur non ``None``, hors
+    métriques masquées (``_HIDDEN_METRICS``).
 
     Une colonne tout-``None`` (métrique non applicable au corpus, ex. AIR/HCPR sur
     de la presse) n'apporte que des « — » : on la **masque** pour désencombrer.
     On distingue bien « tout None » (masqué) de « tout zéro » (gardé : c'est une
-    vraie valeur)."""
+    vraie valeur). Les métriques masquées d'affichage (``mer``) sont retirées des
+    colonnes — la donnée reste dans le ``RunResult``/JSON."""
     if not rows:
         return []
     return [
         i
         for i in range(len(rows[0]))
-        if any(r[i].value is not None for r in rows)
+        if rows[0][i].metric not in _HIDDEN_METRICS
+        and any(r[i].value is not None for r in rows)
     ]
 
 
@@ -164,8 +172,8 @@ _METRIC_SHORT: dict[str, str] = {
     "bow_precision": "P",
     "bow_recall": "R",
     "bow_f1": "F1",
-    "searchability": "search.",
-    "hallucination": "halluc.",
+    "searchability": "rappel·ft",
+    "hallucination": "non-ancré",
     "diacritic_err": "diacr.",
     "mufi_err": "MUFI",
     "region_cer": "CER rég.",
