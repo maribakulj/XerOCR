@@ -38,7 +38,7 @@ mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistrala
 google = ["httpx", "httpcore"]  # Vision via REST (≠ SDK gRPC lourd) — clé GOOGLE_VISION_API_KEY
 azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_INTEL_ENDPOINT + _KEY
 ollama = ["httpx", "httpcore"]
-huggingface = ["datasets"]
+huggingface = ["datasets", "huggingface_hub"]  # datasets = import ; huggingface_hub = publication (scripts/publish_dataset.py)
 segment = ["paddlex"]
 ner = ["spacy"]  # extraction d'entités nommées — modèle téléchargé à part (`spacy download`)
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
