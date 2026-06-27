@@ -198,7 +198,10 @@ _CSS = (
     # Détail document : fac-similé medium EN HAUT, zoomable/pan (molette + glisser).
     # Bandeau étroit **centré** au-dessus du diff (qui prend toute la largeur en
     # dessous) — image modeste, le texte respire.
-    ".dd-fac-top{max-width:560px;margin:0 auto 14px;}"
+    ".dd-fac-top{max-width:760px;margin:0 auto 14px;}"
+    ".dd-fac-full{font-family:var(--sans);font-size:12px;font-weight:500;"
+    "margin-left:10px;color:var(--g-500);text-decoration:none;white-space:nowrap;}"
+    ".dd-fac-full:hover{color:var(--ink);text-decoration:underline;}"
     # Cartes secondaires du drill-in (CER, heatmap ligne, qualité image…) en
     # grille : chacune à sa hauteur intrinsèque, pistes auto-ajustées de ~21rem,
     # ``align-items:start`` (pas d'étirement ni de chevauchement, ≠ l'ancien
@@ -208,7 +211,7 @@ _CSS = (
     ".dd-card{border:1px solid var(--g-50);"
     "border-radius:var(--r-md);padding:13px 15px;background:var(--surface);}"
     ".dd-card.dd-wide{grid-column:1/-1;}"
-    ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(300px,46vh,420px);"
+    ".dd-fac-zoom{position:relative;overflow:hidden;height:clamp(360px,62vh,640px);"
     "background:var(--surface);border-radius:var(--r-md);"
     "border:1px solid var(--g-50);cursor:zoom-in;}"
     ".dd-fac-img{width:100%;height:100%;object-fit:contain;display:block;"

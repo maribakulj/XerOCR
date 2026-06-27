@@ -485,7 +485,7 @@
         box.style.cursor = z > 1 ? "grab" : "zoom-in";
       }
       function zoom(factor) {
-        z = Math.max(1, Math.min(5, z * factor));
+        z = Math.max(1, Math.min(10, z * factor));
         if (z === 1) {
           ox = 0;
           oy = 0;

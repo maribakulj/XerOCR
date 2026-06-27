@@ -320,11 +320,14 @@ class DocumentDetailSection:
         fac_block = ""
         if facsimile:
             fac_title = localized(lang, "Fac-similé", "Facsimile")
+            open_lbl = localized(lang, "Ouvrir l’image", "Open image")
             zin = localized(lang, "Zoom avant", "Zoom in")
             zout = localized(lang, "Zoom arrière", "Zoom out")
             zreset = localized(lang, "Réinitialiser le zoom", "Reset zoom")
             fac_block = (
                 f'<div class="dd-fac-top"><div class="drill-caption">{fac_title}'
+                f'<a class="dd-fac-full" href="{escape(facsimile)}" target="_blank" '
+                f'rel="noopener noreferrer">{open_lbl} ↗</a>'
                 '</div><div class="dd-fac-zoom">'
                 f'<img class="dd-fac-img" src="{escape(facsimile)}" alt="" '
                 'loading="lazy" decoding="async">'
