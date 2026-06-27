@@ -207,10 +207,16 @@ def test_public_mode_blocks_cloud_llm_in_chain_403(tmp_path: Path) -> None:
 
 
 def _force_tesseract_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Stub direct du provider : tesseract « disponible » sans dépendre des sondes
+    # réelles (binaire ET module pytesseract) — la CI n'installe pas l'extra
+    # [tesseract], donc forcer le seul binaire ne suffisait pas (run 409 au gate
+    # moteur avant d'atteindre le gate NER). Isole bien le gate NER (4bis).
     monkeypatch.setattr(
         "cinoc.interfaces.web.app.engine_statuses",
-        lambda **kw: engine_statuses(
-            has_binary=lambda _name: "/usr/bin/tesseract", **kw
+        lambda **kw: (
+            EngineStatus(
+                kind="tesseract", label="Tesseract", available=True, detail="ok"
+            ),
         ),
     )
 
