@@ -48,6 +48,9 @@ _CSS = (
     "background:var(--paper);color:var(--ink);font-weight:700;font-size:12px;}"
     ".report-chrome .wm-name{font-family:var(--ocr);font-weight:400;"
     "font-size:18px;letter-spacing:0.01em;}"
+    # Le « o » de Cinoc rendu en **capitale OCR-A** (glyphe octogonal iconique,
+    # comme le « O » de l'ancien logo) ; le texte DOM reste « Cinoc ».
+    ".report-chrome .wm-o{text-transform:uppercase;}"
     ".report-chrome .wm-sep{width:1px;height:16px;background:rgba(239,237,232,0.2);}"
     ".report-chrome .wm-sub{font-family:var(--mono);font-size:11px;"
     "letter-spacing:0.04em;color:rgba(239,237,232,0.6);}"
@@ -683,7 +686,8 @@ def render_document(
         "</head>\n"
         '<body class="report-board">\n'
         '<header class="report-chrome">'
-        '<span class="wm-mark">X</span><span class="wm-name">Cinoc</span>'
+        '<span class="wm-mark">C</span>'
+        '<span class="wm-name">Cin<span class="wm-o">o</span>c</span>'
         f'<span class="wm-sep"></span><span class="wm-sub">{sub}</span>'
         f"{tabs}{meta}</header>\n"
         f'<main class="report-main">{body}</main>\n'

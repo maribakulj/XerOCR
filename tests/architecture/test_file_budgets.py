@@ -38,7 +38,7 @@ FILE_BUDGETS: dict[str, int] = {
     # d'autonomie — aucun fichier externe) + helpers d'assemblage. Cohésion du
     # design system > éclatement ; grandit avec les composants (axe 2). Budget
     # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
-    "reports/html.py": 705,
+    "reports/html.py": 730,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu

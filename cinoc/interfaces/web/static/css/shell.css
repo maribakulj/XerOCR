@@ -212,6 +212,10 @@ select:focus-visible {
   gap: 8px;
   letter-spacing: 0.01em;
 }
+.wordmark .wm-o {
+  /* « o » rendu en capitale OCR-A (glyphe iconique, comme l'ancien « O ») */
+  text-transform: uppercase;
+}
 .wordmark .mark {
   display: inline-flex;
   align-items: center;
