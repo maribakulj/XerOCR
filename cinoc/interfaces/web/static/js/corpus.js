@@ -7,7 +7,7 @@
 (function () {
   "use strict";
 
-  var CSRF = "X-XeroCR-CSRF";
+  var CSRF = "X-Cinoc-CSRF";
 
   function ready(fn) {
     if (document.readyState !== "loading") fn();

@@ -1,7 +1,7 @@
 """Défense CSRF des routes mutantes (couche 8).
 
 Stratégie **custom-header** : toute requête d'écriture (``POST``) doit porter
-l'en-tête ``X-XeroCR-CSRF: 1``. Un navigateur **ne peut pas** ajouter un en-tête
+l'en-tête ``X-Cinoc-CSRF: 1``. Un navigateur **ne peut pas** ajouter un en-tête
 personnalisé sur une requête *cross-site* « simple » (formulaire, image…) ; le
 faire exige ``fetch`` + un *preflight* CORS, que la vitrine **n'autorise pas**.
 Donc exiger cet en-tête bloque le forçage cross-site sans cookie ni token de
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from fastapi import HTTPException, Request
 
-CSRF_HEADER = "X-XeroCR-CSRF"
+CSRF_HEADER = "X-Cinoc-CSRF"
 _EXPECTED = "1"
 
 
@@ -25,7 +25,7 @@ def csrf_protect(request: Request) -> None:
     if request.headers.get(CSRF_HEADER) != _EXPECTED:
         raise HTTPException(
             status_code=403,
-            detail="en-tête CSRF requis (X-XeroCR-CSRF).",
+            detail="en-tête CSRF requis (X-Cinoc-CSRF).",
         )
 
 

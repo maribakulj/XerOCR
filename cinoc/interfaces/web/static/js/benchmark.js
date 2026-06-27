@@ -7,7 +7,7 @@
 (function () {
   "use strict";
 
-  var CSRF = "X-XeroCR-CSRF";
+  var CSRF = "X-Cinoc-CSRF";
   var STATES = ["pending", "running", "done", "failed", "cancelled"];
   var TERMINAL = { done: 1, failed: 1, cancelled: 1 };
 
