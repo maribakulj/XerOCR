@@ -5,9 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
-from cinoc.app.report_images import build_facsimiles, build_thumbnails
+from cinoc.app.report_images import (
+    build_facsimiles,
+    build_report_zip,
+    build_thumbnails,
+)
 from cinoc.app.results import RunResultError, load_run_result
 from cinoc.app.security import PathSecurityError
 from cinoc.interfaces.web.catalog import available_reports, resolve_report
@@ -41,6 +45,35 @@ def build_reports_router(reports_dir: Path) -> APIRouter:
             lang=report_lang,
             images=build_thumbnails(result),
             facsimiles=build_facsimiles(result),
+        )
+
+    @router.get("/reports/{name}/bundle.zip")
+    def get_report_bundle(name: str, lang: str = "fr") -> Response:
+        """Télécharge le rapport en **bundle dossier zippé** (saveur dossier) :
+        ``report.html`` + ``report-assets/`` (images réelles, hors-ligne). Rendu
+        à la demande depuis le ``RunResult`` sauvé — rien de pré-écrit."""
+        try:
+            path = resolve_report(reports_dir, name)
+        except PathSecurityError as exc:
+            raise HTTPException(status_code=404, detail="rapport introuvable") from exc
+        try:
+            result = load_run_result(path)
+        except RunResultError as exc:
+            raise HTTPException(status_code=500, detail="rapport illisible") from exc
+        report_lang = "en" if lang == "en" else "fr"
+        data = build_report_zip(
+            result,
+            render=default_report_renderer().render,
+            title=f"Cinoc — {result.manifest.run_id}",
+            lang=report_lang,
+        )
+        # ``name`` est déjà validé (resolve_report) → sûr en nom de fichier.
+        return Response(
+            content=data,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f'attachment; filename="{name}.zip"'
+            },
         )
 
     return router

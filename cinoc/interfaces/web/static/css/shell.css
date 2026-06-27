@@ -515,6 +515,23 @@ select:focus-visible {
   align-items: center;
   gap: 6px;
 }
+.report-row .r-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.report-row .r-zip {
+  font-family: var(--sans);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--g-500);
+  white-space: nowrap;
+  flex: none;
+}
+.report-row .r-zip:hover { color: var(--ink); }
 
 /* === Actions et formulaires === */
 .btn {

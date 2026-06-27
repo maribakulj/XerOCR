@@ -220,7 +220,11 @@ def build_home_router(
         names = available_reports(reports_dir)
         context = _base_context(lang, "reports", {"reports": str(len(names))})
         context["reports"] = [
-            {"name": name, "href": f"/reports/{quote(name, safe='')}"}
+            {
+                "name": name,
+                "href": f"/reports/{quote(name, safe='')}",
+                "zip_href": f"/reports/{quote(name, safe='')}/bundle.zip",
+            }
             for name in names
         ]
         context["n_reports"] = len(names)

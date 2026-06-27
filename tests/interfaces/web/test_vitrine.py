@@ -89,12 +89,36 @@ def test_path_traversal_is_blocked(tmp_path: Path) -> None:
     assert resp.status_code != 200
 
 
+def test_report_bundle_zip_downloads(tmp_path: Path) -> None:
+    import io
+    import zipfile
+
+    _write_report(tmp_path, "run1")
+    resp = _client(tmp_path).get("/reports/run1/bundle.zip")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/zip"
+    assert 'filename="run1.zip"' in resp.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(resp.content)) as archive:
+        assert "report.html" in archive.namelist()
+
+
+def test_report_bundle_unknown_is_404(tmp_path: Path) -> None:
+    assert _client(tmp_path).get("/reports/nope/bundle.zip").status_code == 404
+
+
+def test_report_bundle_traversal_is_blocked(tmp_path: Path) -> None:
+    resp = _client(tmp_path).get("/reports/..%2f..%2fsecret/bundle.zip")
+    assert resp.status_code != 200
+
+
 def test_home_lists_and_links_reports(tmp_path: Path) -> None:
     _write_report(tmp_path, "run1")
     resp = _client(tmp_path).get("/")
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
     assert 'href="/reports/run1"' in resp.text
+    # lien de téléchargement ZIP (saveur dossier) à côté de chaque rapport
+    assert 'href="/reports/run1/bundle.zip"' in resp.text
 
 
 def test_home_empty_when_no_reports(tmp_path: Path) -> None:

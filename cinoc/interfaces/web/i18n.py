@@ -33,6 +33,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         # NB : la sous-chaîne « aucun rapport » est attendue par les tests.
         "reports_empty": "aucun rapport disponible pour l'instant.",
         "open_report": "Ouvrir",
+        "download_zip": "Télécharger (ZIP)",
         # Banc d'essai (lanceur interactif)
         "bench_eyebrow": "Banc d'essai · comparer",
         "bench_title": "Banc d'essai",
@@ -263,6 +264,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_progress_label": "Run progress",
         "reports_empty": "no report available yet.",
         "open_report": "Open",
+        "download_zip": "Download (ZIP)",
         "bench_eyebrow": "Benchmark · compare",
         "bench_title": "Benchmark",
         "bench_desc": "Compose competitors (OCR, OCR→LLM, VLM) and compare them "

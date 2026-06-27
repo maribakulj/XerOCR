@@ -19,7 +19,10 @@ Pillow) ; aucune exception large.
 from __future__ import annotations
 
 import hashlib
+import io
 import re
+import tempfile
+import zipfile
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Protocol
@@ -211,9 +214,36 @@ def write_report_bundle(
     return report
 
 
+def build_report_zip(
+    result: RunResult,
+    *,
+    render: ReportHtmlRenderer,
+    title: str = "Cinoc — rapport",
+    lang: str = "fr",
+) -> bytes:
+    """Bundle dossier **en mémoire** : un ZIP de ``report.html`` + ``report-assets/``.
+
+    Même saveur dossier que :func:`write_report_bundle` (images réelles, hrefs
+    relatifs, hors-ligne) mais empaquetée en octets ZIP — la forme téléchargeable
+    depuis le web (le navigateur reçoit *un* fichier, l'utilisateur déballe un
+    dossier). Le ``render`` (couche 7) est **injecté** (``app`` n'importe pas
+    ``reports``). Déterministe : entrées triées. Dégradé gracieux sans Pillow
+    (HTML + aperçu synthétique, aucun asset)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        write_report_bundle(result, tmp, render=render, title=title, lang=lang)
+        buffer = io.BytesIO()
+        root = Path(tmp)
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    archive.write(path, path.relative_to(root).as_posix())
+        return buffer.getvalue()
+
+
 __all__ = [
     "ReportHtmlRenderer",
     "build_facsimiles",
+    "build_report_zip",
     "build_sidecar_facsimiles",
     "build_sidecar_thumbnails",
     "build_thumbnails",

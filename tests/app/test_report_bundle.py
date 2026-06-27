@@ -6,6 +6,8 @@ Le rendu navigateur n'est pas testable en CI : on vérifie la **surface serveur*
 
 from __future__ import annotations
 
+import io
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -13,6 +15,7 @@ import pytest
 
 from cinoc.app.report_images import (
     _stem_for,
+    build_report_zip,
     build_sidecar_facsimiles,
     build_sidecar_thumbnails,
     write_report_bundle,
@@ -126,3 +129,27 @@ def test_bundle_degrades_gracefully_without_images(tmp_path: Path) -> None:
     )
     assert report.read_text(encoding="utf-8").startswith("<!DOCTYPE html>")
     assert not (out / "report-assets").exists()  # aucun dérivé écrit
+
+
+def test_report_zip_packs_html_and_assets(tmp_path: Path) -> None:
+    pytest.importorskip("PIL")
+    img = _png(tmp_path / "scan.png")
+    data = build_report_zip(_result(_doc("scan", 0.2, img)), render=_render)
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        names = set(archive.namelist())
+        assert "report.html" in names
+        href = f"report-assets/{_stem_for('scan')}.jpg"
+        assert href in names  # l'image réelle voyage dans le ZIP
+        html = archive.read("report.html").decode("utf-8")
+        assert html.startswith("<!DOCTYPE html>")
+        assert f'src="{href}"' in html  # lien relatif, pas de data-URI
+        assert "data:image/jpeg" not in html
+
+
+def test_report_zip_is_valid_archive_without_images(tmp_path: Path) -> None:
+    # Réf morte → ZIP contient au moins report.html, archive valide (pas de crash).
+    data = build_report_zip(
+        _result(_doc("d", 0.1, str(tmp_path / "gone.png"))), render=_render
+    )
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        assert archive.namelist() == ["report.html"]
