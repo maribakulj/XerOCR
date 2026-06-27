@@ -13,6 +13,7 @@ se teste sans réseau ; le test ``live`` couvre le vrai fetch IIIF.
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable, Iterator
 from pathlib import Path
@@ -24,7 +25,7 @@ from xerocr.adapters.corpus.escriptorium import DEFAULT_LAYER, EScriptoriumImpor
 from xerocr.adapters.corpus.gallica import GALLICA_BASE, GallicaImporter, vue_number
 from xerocr.adapters.corpus.huggingface import HFPage, stream_pages
 from xerocr.adapters.corpus.iiif import IIIFImage, IIIFImporter
-from xerocr.app.security import validated_path
+from xerocr.app.security import PathSecurityError, validated_path
 from xerocr.domain.artifacts import ArtifactType
 from xerocr.domain.corpus import CorpusSpec
 from xerocr.domain.documents import DocumentRef, GroundTruthRef
@@ -319,8 +320,83 @@ def import_hf_corpus(
     )
 
 
+def _curated_entry(entry: object, root: Path, base_url: str | None) -> DocumentRef:
+    """Une entrée ``corpus.json`` → ``DocumentRef`` (image = référence, GT = vraie).
+
+    Image : URL IIIF (``base_url`` + chemin relatif) si fourni, sinon chemin local
+    du dérivé medium. GT : ``RAW_TEXT`` sur le ``.gt.txt`` local. Chemins relatifs
+    durcis (``validated_path`` rejette ``..``) — un dataset tiers hostile ne peut
+    pas pointer hors du layout."""
+    if not isinstance(entry, dict):
+        raise CorpusImportError(f"entrée corpus.json invalide : {entry!r}")
+    try:
+        doc_id, image_rel, gt_rel = entry["id"], entry["image"], entry["ground_truth"]
+    except (KeyError, TypeError) as exc:
+        raise CorpusImportError(f"entrée corpus.json incomplète : {entry!r}") from exc
+    try:
+        gt_path = validated_path(str(gt_rel), root)  # rejette le path-traversal
+        image_local = validated_path(str(image_rel), root)  # idem + valide la forme
+    except PathSecurityError as exc:
+        raise CorpusImportError(f"chemin non sûr dans corpus.json : {exc}") from exc
+    image_uri = (
+        f"{base_url.rstrip('/')}/{str(image_rel).lstrip('/')}"
+        if base_url
+        else str(image_local)
+    )
+    stratum = entry.get("stratum")
+    return DocumentRef(
+        id=str(doc_id),
+        image_uri=image_uri,
+        ground_truths=(GroundTruthRef(type=ArtifactType.RAW_TEXT, uri=str(gt_path)),),
+        metadata={"stratum": str(stratum)} if stratum else {},
+    )
+
+
+def import_curated_corpus(
+    layout_dir: str | Path,
+    *,
+    base_url: str | None = None,
+    revision: str | None = None,
+    name: str | None = None,
+) -> CorpusSpec:
+    """Importe un **layout dataset canonique XerOCR** → ``CorpusSpec`` scorable.
+
+    Variante **réf-IIIF** de ``import_hf_corpus`` (même sortie, pas un format
+    parallèle) : produit par ``app.dataset_standardize`` ou snapshot d'un dataset
+    HF publié. L'image est une **référence** (URL IIIF si ``base_url``, sinon
+    chemin local du dérivé medium) ; la GT est une **vraie GT** ``RAW_TEXT``.
+    ``base_url`` + ``revision`` (SHA HF) → reproductibilité pinnée (``RunManifest``).
+    """
+    root = Path(layout_dir)
+    manifest_path = root / "corpus.json"
+    if not manifest_path.is_file():
+        raise CorpusImportError(f"layout curé sans corpus.json : {root}")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise CorpusImportError(f"corpus.json illisible ({root}) : {exc}") from exc
+    entries = manifest.get("documents") if isinstance(manifest, dict) else None
+    if not isinstance(entries, list) or not entries:
+        raise CorpusImportError(f"corpus.json sans documents : {root}")
+
+    documents = tuple(_curated_entry(e, root, base_url) for e in entries)
+    corpus_meta: dict[str, str] = {"source": "curated"}
+    if revision:
+        corpus_meta["revision"] = revision
+    licenses = manifest.get("license")
+    if isinstance(licenses, dict):
+        for key, value in licenses.items():
+            corpus_meta[f"license_{key}"] = str(value)
+    return CorpusSpec(
+        name=name or str(manifest.get("name") or root.name),
+        documents=documents,
+        metadata=corpus_meta,
+    )
+
+
 __all__ = [
     "CorpusImportError",
+    "import_curated_corpus",
     "import_escriptorium_corpus",
     "import_gallica_corpus",
     "import_hf_corpus",

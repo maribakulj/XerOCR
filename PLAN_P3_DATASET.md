@@ -100,7 +100,7 @@ mince (mapping → `domain`).
 | Tranche | Livrable | Réseau ? |
 |---|---|---|
 | **P3-b.1 — Standardiseur** ✅ | `app/dataset_standardize.py` : `raw (jpg+page)` → **layout canonique** (IIIF Image API 3 level0 + GT `.gt.txt`/`.page.xml` + `corpus.json` + carte HF). Réutilise `formats.pagexml` + `adapters.images.iiif_derivative`. Déterministe, 7 tests ; **vérifié sur les 10 pages Dresden réelles** (info.json 2321×3812, dérivés 400/1600 exacts, ſ préservé). | non (local) |
-| **P3-b.2 — Importeur curé** | variante réf-IIIF de `import_hf_corpus` : lit le layout (local OU dataset HF @SHA) → `CorpusSpec` (image_uri=URL IIIF, `stratum`, `revision`). Tests. | non (local d'abord) |
+| **P3-b.2 — Importeur curé** ✅ | `app.corpus_import.import_curated_corpus` : lit `corpus.json` (local OU snapshot HF) → `CorpusSpec` (`image_uri` = URL IIIF si `base_url`, sinon dérivé local ; GT `RAW_TEXT` ; `metadata["stratum"]` ; `metadata["revision"]`=SHA). **Variante** de `import_hf_corpus`, pas un parallèle. Path-traversal durci (`validated_path`). 5 tests + round-trip ; **vérifié sur les 10 pages Dresden** (image_uri = URL IIIF HF, GT chargée). | non (local d'abord) |
 | **P3-b.3 — Publication** | upload du layout → dépôt Dataset HF (**toi** : compte + token write ; je fournis le script). | **oui (toi)** |
 | **P3-b.4 — Boucle prouvée** | run réel @SHA → rapport saveur « Réfs IIIF/HF » : images affichées via liens HF. | oui |
 
