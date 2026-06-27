@@ -475,47 +475,74 @@
     function (box) {
       var img = box.querySelector(".dd-fac-img");
       if (!img) return;
+      // Zoom par **taille réelle** (px) et non par ``transform: scale`` : le
+      // navigateur re-rasterise depuis le bitmap natif → net jusqu'à la
+      // résolution native (≠ scale sur calque GPU, qui agrandit un raster déjà
+      // réduit → flou). Panoramique par scroll du conteneur (overflow:auto).
       var z = 1,
-        ox = 0,
-        oy = 0,
         drag = null;
+      function fitWidth() {
+        // largeur affichée à z=1 (``object-fit: contain`` émulé) : bornée par la
+        // plus contraignante des deux dimensions du conteneur.
+        var bw = box.clientWidth,
+          bh = box.clientHeight,
+          nw = img.naturalWidth,
+          nh = img.naturalHeight;
+        if (!nw || !nh) return bw;
+        return Math.min(bw, bh * (nw / nh));
+      }
       function apply() {
-        img.style.transform =
-          "scale(" + z + ") translate(" + ox + "px," + oy + "px)";
-        box.style.cursor = z > 1 ? "grab" : "zoom-in";
+        if (z <= 1) {
+          z = 1;
+          img.style.maxWidth = "100%";
+          img.style.maxHeight = "100%";
+          img.style.width = "";
+          img.style.height = "";
+          box.style.cursor = "zoom-in";
+          return;
+        }
+        // jamais au-delà du natif (pas d'upscale flou) : on plafonne à la
+        // largeur native du bitmap.
+        var want = fitWidth() * z;
+        if (img.naturalWidth) want = Math.min(want, img.naturalWidth);
+        img.style.maxWidth = "none";
+        img.style.maxHeight = "none";
+        img.style.width = Math.round(want) + "px";
+        img.style.height = "auto";
+        box.style.cursor = "grab";
       }
       function zoom(factor) {
-        z = Math.max(1, Math.min(10, z * factor));
-        if (z === 1) {
-          ox = 0;
-          oy = 0;
-        }
+        z = Math.max(1, Math.min(16, z * factor));
         apply();
       }
       box.addEventListener(
         "wheel",
         function (e) {
           e.preventDefault();
-          zoom(e.deltaY < 0 ? 1.15 : 0.87);
+          zoom(e.deltaY < 0 ? 1.2 : 0.83);
         },
         { passive: false },
       );
       box.addEventListener("mousedown", function (e) {
         if (z <= 1 || (e.target.closest && e.target.closest("[data-zoom]"))) return;
         e.preventDefault();
-        drag = { x: e.clientX - ox * z, y: e.clientY - oy * z };
+        drag = {
+          x: e.clientX,
+          y: e.clientY,
+          sl: box.scrollLeft,
+          st: box.scrollTop,
+        };
         box.style.cursor = "grabbing";
       });
       document.addEventListener("mousemove", function (e) {
         if (!drag) return;
-        ox = (e.clientX - drag.x) / z;
-        oy = (e.clientY - drag.y) / z;
-        apply();
+        box.scrollLeft = drag.sl - (e.clientX - drag.x);
+        box.scrollTop = drag.st - (e.clientY - drag.y);
       });
       document.addEventListener("mouseup", function () {
         if (drag) {
           drag = null;
-          apply();
+          box.style.cursor = z > 1 ? "grab" : "zoom-in";
         }
       });
       Array.prototype.forEach.call(
@@ -523,13 +550,13 @@
         function (btn) {
           btn.addEventListener("click", function () {
             var k = btn.getAttribute("data-zoom");
-            if (k === "in") zoom(1.25);
-            else if (k === "out") zoom(0.8);
+            if (k === "in") zoom(1.3);
+            else if (k === "out") zoom(0.77);
             else {
               z = 1;
-              ox = 0;
-              oy = 0;
               apply();
+              box.scrollTop = 0;
+              box.scrollLeft = 0;
             }
           });
         },
