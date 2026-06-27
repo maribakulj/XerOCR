@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.app import run
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.run_planning import Competitor, plan_benchmark_run
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.app import run
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.run_planning import Competitor, plan_benchmark_run
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
 
 
 def _registry() -> ModuleRegistry:
@@ -31,7 +31,7 @@ def test_zero_shot_runs_and_reports_tokens(
 ) -> None:
     # Le VLM « transcrit » l'image et déclare ses jetons (7 in / 3 out).
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        "cinoc.adapters.llm.openai._invoke_openai_vision",
         lambda **_: LLMCompletion("abcd", tokens_in=7, tokens_out=3),
     )
     image = tmp_path / "doc1.png"

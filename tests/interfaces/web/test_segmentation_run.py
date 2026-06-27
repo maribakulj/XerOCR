@@ -12,21 +12,21 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.layout.pp_doclayout import (
+from cinoc.adapters.layout.pp_doclayout import (
     DetectedRegion,
     LayoutDetection,
     PPDocLayoutSegmenter,
 )
-from xerocr.adapters.storage import JobState, JobStore
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.engines import EngineStatus
-from xerocr.app.jobs import JobRunner
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.segmentation import SegmentationStore
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
-from xerocr.interfaces.web.routers.segmentation import build_segmentation_router
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.adapters.storage import JobState, JobStore
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.app.engines import EngineStatus
+from cinoc.app.jobs import JobRunner
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.segmentation import SegmentationStore
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
+from cinoc.interfaces.web.routers.segmentation import build_segmentation_router
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 _AVAILABLE = (

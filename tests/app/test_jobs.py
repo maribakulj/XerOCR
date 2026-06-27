@@ -8,22 +8,22 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.storage import JobState, JobStore
-from xerocr.adapters.storage.history_store import HistoryStore
-from xerocr.app.jobs import JobRunner
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.results import load_run_result
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
-from xerocr.domain.errors import XerOCRError
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run_spec import RunSpec
-from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
-from xerocr.pipeline.protocols import ParamValue
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext, StepOutput
+from cinoc.adapters.storage import JobState, JobStore
+from cinoc.adapters.storage.history_store import HistoryStore
+from cinoc.app.jobs import JobRunner
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.results import load_run_result
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
+from cinoc.domain.errors import CinocError
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run_spec import RunSpec
+from cinoc.interfaces.demo import demo_run_spec, write_demo_corpus
+from cinoc.pipeline.protocols import ParamValue
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext, StepOutput
 
 
 def _runner(tmp_path: Path) -> JobRunner:
@@ -57,7 +57,7 @@ def test_domain_error_marks_failed(tmp_path: Path) -> None:
     runner = _runner(tmp_path)
 
     def build(_ws: Path) -> RunSpec:
-        raise XerOCRError("spec invalide")
+        raise CinocError("spec invalide")
 
     job_id = runner.launch(build)
     assert runner.join(job_id, timeout=30)
@@ -127,7 +127,7 @@ def test_history_failure_does_not_fail_run(
     def _boom(*a: object, **k: object) -> int:
         raise RuntimeError("sqlite indisponible")
 
-    monkeypatch.setattr("xerocr.app.jobs.record_run", _boom)
+    monkeypatch.setattr("cinoc.app.jobs.record_run", _boom)
     job_id = runner.launch(
         lambda ws: demo_run_spec(write_demo_corpus(ws), run_id="hist-fail")
     )
@@ -286,7 +286,7 @@ def test_cancel_interrupts_a_running_job(tmp_path: Path) -> None:
 
 def _layout_build(layout_text_id: str = "r1"):
     """Builder d'un run de segmentation precomputed (IMAGE→LAYOUT) dans le ws."""
-    from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
+    from cinoc.domain.layout import CanonicalLayout, LayoutPage, Region
 
     layout = CanonicalLayout(
         pages=(LayoutPage(regions=(Region(id=layout_text_id, region_type="text"),)),)
@@ -319,7 +319,7 @@ def _layout_build(layout_text_id: str = "r1"):
 
 
 def test_run_persists_layout_to_segmentation_store(tmp_path: Path) -> None:
-    from xerocr.app.segmentation import SegmentationStore
+    from cinoc.app.segmentation import SegmentationStore
 
     seg = SegmentationStore(tmp_path / "seg")
     registry = ModuleRegistry()

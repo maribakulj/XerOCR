@@ -6,10 +6,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.app.results import dump_run_result
-from xerocr.domain.run import RunManifest, utcnow
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.interfaces.web.app import create_app
+from cinoc.app.results import dump_run_result
+from cinoc.domain.run import RunManifest, utcnow
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.interfaces.web.app import create_app
 
 
 def _write_report(reports_dir: Path, name: str = "run1", *, metric: str = "") -> None:

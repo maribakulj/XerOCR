@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2] / "xerocr"
+ROOT = Path(__file__).resolve().parents[2] / "cinoc"
 FORBIDDEN = [
     "picarones",
     "Picarones",

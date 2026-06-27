@@ -8,13 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.corpus_upload import (
+from cinoc.app.corpus_upload import (
     MAX_ENTRIES,
     CorpusStore,
     CorpusUploadError,
     extract_corpus_zip,
 )
-from xerocr.domain.artifacts import ArtifactType
+from cinoc.domain.artifacts import ArtifactType
 
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32  # en-tête PNG valide + remplissage
 
@@ -97,7 +97,7 @@ def test_too_many_entries_rejected(tmp_path: Path) -> None:
 
 def test_zip_bomb_total_capped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # plafond total abaissé → un cumul trop gros est refusé (octets RÉELS lus).
-    monkeypatch.setattr("xerocr.app.corpus_upload.MAX_TOTAL_UNCOMPRESSED", 64)
+    monkeypatch.setattr("cinoc.app.corpus_upload.MAX_TOTAL_UNCOMPRESSED", 64)
     data = _zip({"a.txt": b"x" * 50, "b.txt": b"y" * 50})
     with pytest.raises(CorpusUploadError, match="bombe|volumineuse décompressée"):
         extract_corpus_zip(data, tmp_path / "c", name="c")

@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 
 import pytest
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.compare import compare_runs, render_comparison
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.compare import compare_runs, render_comparison
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

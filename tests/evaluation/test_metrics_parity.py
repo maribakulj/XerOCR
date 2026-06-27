@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.text import cer, mer, wer
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.text import cer, mer, wer
 
 jiwer = pytest.importorskip("jiwer")
 

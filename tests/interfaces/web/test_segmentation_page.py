@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
+from cinoc.interfaces.web.app import create_app
 
 
 def _client(tmp_path: Path) -> TestClient:
@@ -68,11 +68,11 @@ def test_segmentation_page_shows_latest_persisted_run(tmp_path: Path) -> None:
     from fastapi import FastAPI
     from fastapi.templating import Jinja2Templates
 
-    from xerocr.adapters.storage.history_store import HistoryStore
-    from xerocr.app.segmentation import SegmentationStore, demo_layout
-    from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
-    from xerocr.interfaces.web.app import _TEMPLATES_DIR
-    from xerocr.interfaces.web.routers.home import build_home_router
+    from cinoc.adapters.storage.history_store import HistoryStore
+    from cinoc.app.segmentation import SegmentationStore, demo_layout
+    from cinoc.domain.layout import CanonicalLayout, LayoutPage, Region
+    from cinoc.interfaces.web.app import _TEMPLATES_DIR
+    from cinoc.interfaces.web.routers.home import build_home_router
 
     store = SegmentationStore(tmp_path / "seg")
     demo_id = store.save(demo_layout())

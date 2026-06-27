@@ -1,5 +1,5 @@
 {
-  "name": "xerocr-design-render",
+  "name": "cinoc-design-render",
   "private": true,
   "description": "Offline harness that renders the design report views to reference screenshots (single source of truth = ../tokens.css + ../picarones.css + ../*.jsx).",
   "dependencies": {

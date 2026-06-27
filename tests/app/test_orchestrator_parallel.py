@@ -14,15 +14,15 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app import run
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.orchestrator import _resolve_workers
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run_spec import RunSpec
+from cinoc.app import run
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.orchestrator import _resolve_workers
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run_spec import RunSpec
 
 _TEXT_VIEW = EvaluationView(
     name="text",
@@ -164,12 +164,12 @@ def test_failure_isolation_under_parallel(tmp_path: Path) -> None:
 
 
 def test_resolve_workers_clamps_and_reads_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("XEROCR_MAX_WORKERS", raising=False)
+    monkeypatch.delenv("CINOC_MAX_WORKERS", raising=False)
     assert _resolve_workers(4, 10) == 4
     assert _resolve_workers(4, 2) == 2  # borné au nombre d'unités en attente
     assert _resolve_workers(0, 10) >= 1  # invalide → défaut CPU, jamais < 1
     assert _resolve_workers(None, 1) == 1  # une seule unité → un seul worker
-    monkeypatch.setenv("XEROCR_MAX_WORKERS", "3")
+    monkeypatch.setenv("CINOC_MAX_WORKERS", "3")
     assert _resolve_workers(None, 10) == 3  # variable d'environnement respectée
-    monkeypatch.setenv("XEROCR_MAX_WORKERS", "bogus")
+    monkeypatch.setenv("CINOC_MAX_WORKERS", "bogus")
     assert _resolve_workers(None, 10) >= 1  # env invalide → défaut, pas de crash

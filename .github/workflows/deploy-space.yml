@@ -13,7 +13,7 @@ name: Deploy Space
       space:
         description: "Space cible (owner/nom)"
         required: true
-        default: "Ma-Ri-Ba-Ku/XerOCR"
+        default: "Ma-Ri-Ba-Ku/Cinoc"
 
 # Un seul déploiement à la fois ; un push plus récent annule le précédent.
 concurrency:
@@ -22,7 +22,7 @@ concurrency:
 
 env:
   # Space par défaut (push auto) ; l'input du déclenchement manuel le surcharge.
-  DEFAULT_SPACE: "Ma-Ri-Ba-Ku/XerOCR"
+  DEFAULT_SPACE: "Ma-Ri-Ba-Ku/Cinoc"
 
 jobs:
   deploy:
@@ -40,8 +40,8 @@ jobs:
       - name: Smoke-test de la vitrine servie
         run: |
           pip install -e ".[serve]"
-          export XEROCR_REPORTS_DIR="$PWD/deploy/reports"
-          python -m uvicorn xerocr.interfaces.web.app:create_app \
+          export CINOC_REPORTS_DIR="$PWD/deploy/reports"
+          python -m uvicorn cinoc.interfaces.web.app:create_app \
             --factory --host 127.0.0.1 --port 7861 &
           srv=$!
           ok=0
@@ -66,7 +66,7 @@ jobs:
           cp deploy/requirements.txt space/requirements.txt
           cp deploy/README_SPACE.md  space/README.md
           cp pyproject.toml          space/pyproject.toml
-          cp -r xerocr               space/xerocr
+          cp -r cinoc               space/cinoc
           cp deploy/reports/*.json space/reports/ 2>/dev/null || true
           touch space/reports/.gitkeep
           find space -name '__pycache__' -type d -prune -exec rm -rf {} +
@@ -76,7 +76,7 @@ jobs:
       #    Le contexte plat n'a pas de .git → setuptools_scm retombe sur
       #    ``fallback_version`` (pyproject), comme l'image vitrine.
       - name: Build de l'image moteur (smoke build inclus)
-        run: docker build -f space/Dockerfile -t xerocr-engine:ci space/
+        run: docker build -f space/Dockerfile -t cinoc-engine:ci space/
 
       # 4) Smoke OCR RÉEL : lancer le conteneur, vérifier /health, puis faire OCRiser
       #    une image de TEXTE réelle par le Tesseract baqué (≠ le damier du build).
@@ -94,7 +94,7 @@ jobs:
       - name: Smoke OCR réel (Tesseract baqué)
         run: |
           set -euo pipefail
-          docker run -d --name engine -p 7860:7860 xerocr-engine:ci
+          docker run -d --name engine -p 7860:7860 cinoc-engine:ci
           ok=0
           for _ in $(seq 1 60); do
             curl -sf http://127.0.0.1:7860/health >/dev/null 2>&1 && { ok=1; break; }
@@ -139,11 +139,11 @@ jobs:
           # fichiers LFS, donc les fontes restent servies normalement.
           git lfs install --local
           git lfs track "*.woff2" "*.woff" "*.otf" "*.ttf" "*.png" "*.jpg" "*.jpeg" "*.pdf"
-          git config user.name  "xerocr-deploy"
-          git config user.email "deploy@xerocr.local"
+          git config user.name  "cinoc-deploy"
+          git config user.email "deploy@cinoc.local"
           git checkout -q -b main
           git add -A
-          git commit -q -m "Déploiement de la vitrine XerOCR"
+          git commit -q -m "Déploiement de la vitrine Cinoc"
           set +x
           remote="https://${owner}:${HF_TOKEN}@huggingface.co/spaces/${space}"
           # HF renvoie parfois 429 (rate-limit) : retry avec backoff exponentiel

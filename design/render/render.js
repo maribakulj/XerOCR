@@ -1,4 +1,4 @@
-/* Offline reference-screenshot renderer for the XerOCR design report views.
+/* Offline reference-screenshot renderer for the Cinoc design report views.
  *
  * Single source of truth: the *real* design files one level up
  * (../tokens.css owns the typography, ../picarones.css the components,

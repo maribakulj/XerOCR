@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.formats.alto import (
+from cinoc.formats.alto import (
     AltoComposedBlock,
     AltoDocument,
     AltoIllustration,
@@ -16,7 +16,7 @@ from xerocr.formats.alto import (
     parse_alto,
     write_alto,
 )
-from xerocr.formats.pagexml import (
+from cinoc.formats.pagexml import (
     DEFAULT_PAGE_NS,
     PageDocument,
     PageTextRegion,

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.domain import ArtifactType, DocumentRef, GroundTruthRef
-from xerocr.domain.errors import CorpusSpecError
+from cinoc.domain import ArtifactType, DocumentRef, GroundTruthRef
+from cinoc.domain.errors import CorpusSpecError
 
 
 def test_path_traversal_rejected():

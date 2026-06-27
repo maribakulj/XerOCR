@@ -11,9 +11,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.corpus_import import CorpusImportError, import_curated_corpus
-from xerocr.app.dataset_standardize import StandardizeConfig, standardize_corpus
-from xerocr.domain.artifacts import ArtifactType
+from cinoc.app.corpus_import import CorpusImportError, import_curated_corpus
+from cinoc.app.dataset_standardize import StandardizeConfig, standardize_corpus
+from cinoc.domain.artifacts import ArtifactType
 
 _IMG_REL = "iiif/d1/full/1600,/0/default.jpg"
 

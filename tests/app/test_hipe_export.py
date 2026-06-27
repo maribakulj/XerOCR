@@ -6,10 +6,10 @@ import json
 import logging
 from pathlib import Path
 
-from xerocr.app.hipe_export import hipe_jsonl_sink, write_hipe_jsonl
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.app.hipe_export import hipe_jsonl_sink, write_hipe_jsonl
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
 
 
 def _artifact(doc: str, kind: ArtifactType, uri: Path) -> Artifact:

@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.precomputed import PrecomputedTextAdapter
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError, RunCancelledError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.precomputed import PrecomputedTextAdapter
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError, RunCancelledError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _ctx() -> RunContext:

@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
@@ -78,6 +78,6 @@ def test_oversized_upload_is_413(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # plafond abaissé (≠ envoyer 25 Mo) : au-delà → 413 net, avant tout dézippage.
-    monkeypatch.setattr("xerocr.interfaces.web.routers.corpus.MAX_ZIP_BYTES", 64)
+    monkeypatch.setattr("cinoc.interfaces.web.routers.corpus.MAX_ZIP_BYTES", 64)
     resp = _upload(_client(tmp_path), b"x" * 256)
     assert resp.status_code == 413

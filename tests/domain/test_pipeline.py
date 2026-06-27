@@ -4,14 +4,14 @@ import typing
 
 import pytest
 
-from xerocr.domain import (
+from cinoc.domain import (
     INITIAL_STEP_ID,
     ArtifactType,
     PipelineMode,
     PipelineSpec,
     PipelineStep,
 )
-from xerocr.domain.errors import XerOCRError
+from cinoc.domain.errors import CinocError
 
 
 def test_pipeline_mode_values():
@@ -23,12 +23,12 @@ def test_pipeline_mode_values():
 
 
 def test_reserved_step_id_rejected():
-    with pytest.raises(XerOCRError):
+    with pytest.raises(CinocError):
         PipelineStep(id=INITIAL_STEP_ID, kind="ocr", adapter_name="t")
 
 
 def test_bad_step_id_rejected():
-    with pytest.raises(XerOCRError):
+    with pytest.raises(CinocError):
         PipelineStep(id="bad id", kind="ocr", adapter_name="t")
 
 

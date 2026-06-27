@@ -14,16 +14,16 @@ from pathlib import Path
 import httpx
 import pytest
 
-from xerocr.adapters.ocr.google_vision import (
+from cinoc.adapters.ocr.google_vision import (
     GoogleVisionAdapter,
     _invoke_google_vision,
 )
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.deadline import Deadline
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.deadline import Deadline
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 #: Cassette : réponse Vision réelle (DOCUMENT_TEXT_DETECTION) d'une page à 2 lignes.
 _CASSETTE = {
@@ -76,7 +76,7 @@ def test_execute_writes_text(
 ) -> None:
     monkeypatch.setenv("GOOGLE_VISION_API_KEY", "k")
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.google_vision._invoke_google_vision",
+        "cinoc.adapters.ocr.google_vision._invoke_google_vision",
         lambda **_: "texte reconnu",
     )
     out = GoogleVisionAdapter(label="gv").execute(

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.flexible import flexible_character_accuracy as fca
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.metrics.flexible import flexible_character_accuracy as fca
 
 
 def _ctx(reference: object, hypothesis: object) -> DocContext:

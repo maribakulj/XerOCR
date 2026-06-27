@@ -1,11 +1,11 @@
-# PLAN_PARITE.md — porter XerOCR à parité fonctionnelle avec Picarones
+# PLAN_PARITE.md — porter Cinoc à parité fonctionnelle avec Picarones
 
 > **Nature** : plan d'enveloppe + séquencement de tranches, dans la continuité de
 > `MIGRATION_PLAN.md` (axes `T#`/`S#`). Il prolonge le parcours après T7/S6.
 > **Autorité de statut** : le roll-up de `MIGRATION_PLAN.md` — ce fichier ne
 > recopie aucun statut, il définit le *périmètre cible* et l'*ordre*.
 > Basé sur une analyse code-niveau des deux dépôts (juin 2026) :
-> contrats d'extension XerOCR (`@document_metric`, `@cross_engine_metric`,
+> contrats d'extension Cinoc (`@document_metric`, `@cross_engine_metric`,
 > `Module` Protocol, `Section` Protocol, `RunResult` v1) × dissection des
 > ~37 métriques / 7 modules statistiques / adapters de Picarones.
 
@@ -108,7 +108,7 @@ Chaque famille ajoute son **payload Pydantic frozen** à l'union discriminée
 | Économie : `pricing.yaml` + coût/débit/coût marginal | Question institutionnelle centrale ; les pipelines OCR→LLM ont un coût **réel dès aujourd'hui** | ~40 entrées YAML datées (`valid_until`) ; conso : durées (E1) + tokens (E1) |
 | Confusion de caractères | Diagnostic actionnable (choix de modèle/langue) | paires depuis le diff char, corpus-level |
 | Pires lignes | Le « voir où ça casse » le plus demandé | top-N lignes par CER + diff, ~150 LOC |
-| Hallucination | **Critique** pour les pipelines LLM (XerOCR en a 4) | insertion nette, ratio longueur, ancrage n-grammes, blocs ; texte pur |
+| Hallucination | **Critique** pour les pipelines LLM (Cinoc en a 4) | insertion nette, ratio longueur, ancrage n-grammes, blocs ; texte pur |
 | Cherchabilité (searchability) | LA question des bibliothèques numériques | recall tokens GT à distance ≤2 ; texte pur |
 | Difficulté document | Contextualise les écarts | texte pur |
 | Philologie étendue (abréviations, typo early-modern ; option : chiffres romains, séquences numériques) | Cœur patrimonial, fonctions doc-level simples, `None` si non applicable | autonomes |

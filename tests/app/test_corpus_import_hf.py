@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus.huggingface import HFPage
-from xerocr.app.corpus_import import CorpusImportError, import_hf_corpus
-from xerocr.domain.artifacts import ArtifactType
+from cinoc.adapters.corpus.huggingface import HFPage
+from cinoc.app.corpus_import import CorpusImportError, import_hf_corpus
+from cinoc.domain.artifacts import ArtifactType
 
 
 def _stream(pages: list[HFPage]):
@@ -27,12 +27,12 @@ def test_builds_scorable_corpus_with_real_gt(tmp_path: Path) -> None:
         HFPage(image_bytes=b"JPG2", image_ext=".jpg", gt_text="   "),  # GT blanche
     ]
     spec = import_hf_corpus(
-        "org/corpus-xerocr", tmp_path, stream=_stream(pages)
+        "org/corpus-cinoc", tmp_path, stream=_stream(pages)
     )
-    assert spec.name == "hf-org-corpus-xerocr"
+    assert spec.name == "hf-org-corpus-cinoc"
     assert spec.metadata == {
         "source": "huggingface",
-        "dataset_id": "org/corpus-xerocr",
+        "dataset_id": "org/corpus-cinoc",
         "split": "train",
     }
     assert [d.id for d in spec.documents] == ["page_0001", "page_0002"]

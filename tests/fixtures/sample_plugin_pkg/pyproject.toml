@@ -3,14 +3,14 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "xerocr-sample-plugin"
+name = "cinoc-sample-plugin"
 version = "0.0.1"
-description = "Plugin de référence XerOCR (segmenteur tiers) — fixture de test pip-installable."
+description = "Plugin de référence Cinoc (segmenteur tiers) — fixture de test pip-installable."
 
 # Le SEUL point d'extension tiers : un paquet déclare un Module de pipeline ici,
-# XerOCR le découvre via importlib.metadata sans forker.
-[project.entry-points."xerocr.modules"]
-sample_pkg_seg = "xerocr_sample_plugin:build_sample_pkg_segmenter"
+# Cinoc le découvre via importlib.metadata sans forker.
+[project.entry-points."cinoc.modules"]
+sample_pkg_seg = "cinoc_sample_plugin:build_sample_pkg_segmenter"
 
 [tool.setuptools]
-py-modules = ["xerocr_sample_plugin"]
+py-modules = ["cinoc_sample_plugin"]

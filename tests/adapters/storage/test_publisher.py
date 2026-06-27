@@ -7,7 +7,7 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
-from xerocr.adapters.storage.publisher import (
+from cinoc.adapters.storage.publisher import (
     GitHubPublisher,
     NoopPublisher,
     PublishTarget,
@@ -24,11 +24,11 @@ def _env(d: dict[str, str]) -> Callable[[str], str | None]:
 def test_target_none_when_unconfigured() -> None:
     assert resolve_publish_target(_env({})) is None
     # dépôt sans jeton, jeton sans dépôt, dépôt sans « / » → tous None
-    assert resolve_publish_target(_env({"XEROCR_PUBLISH_REPO": "o/r"})) is None
-    assert resolve_publish_target(_env({"XEROCR_PUBLISH_TOKEN": "t"})) is None
+    assert resolve_publish_target(_env({"CINOC_PUBLISH_REPO": "o/r"})) is None
+    assert resolve_publish_target(_env({"CINOC_PUBLISH_TOKEN": "t"})) is None
     assert (
         resolve_publish_target(
-            _env({"XEROCR_PUBLISH_REPO": "norepo", "XEROCR_PUBLISH_TOKEN": "t"})
+            _env({"CINOC_PUBLISH_REPO": "norepo", "CINOC_PUBLISH_TOKEN": "t"})
         )
         is None
     )
@@ -36,17 +36,17 @@ def test_target_none_when_unconfigured() -> None:
 
 def test_target_populated_with_defaults_and_overrides() -> None:
     t = resolve_publish_target(
-        _env({"XEROCR_PUBLISH_REPO": "o/r", "XEROCR_PUBLISH_TOKEN": "tok"})
+        _env({"CINOC_PUBLISH_REPO": "o/r", "CINOC_PUBLISH_TOKEN": "tok"})
     )
     assert t is not None
     assert (t.repo, t.token, t.branch, t.subdir) == ("o/r", "tok", "main", "reports")
     t2 = resolve_publish_target(
         _env(
             {
-                "XEROCR_PUBLISH_REPO": "o/r",
-                "XEROCR_PUBLISH_TOKEN": "tok",
-                "XEROCR_PUBLISH_BRANCH": "gh-pages",
-                "XEROCR_PUBLISH_DIR": "data",
+                "CINOC_PUBLISH_REPO": "o/r",
+                "CINOC_PUBLISH_TOKEN": "tok",
+                "CINOC_PUBLISH_BRANCH": "gh-pages",
+                "CINOC_PUBLISH_DIR": "data",
             }
         )
     )
@@ -55,7 +55,7 @@ def test_target_populated_with_defaults_and_overrides() -> None:
 
 def test_resolve_publisher_noop_vs_github() -> None:
     assert isinstance(resolve_publisher(_env({})), NoopPublisher)
-    configured = _env({"XEROCR_PUBLISH_REPO": "o/r", "XEROCR_PUBLISH_TOKEN": "t"})
+    configured = _env({"CINOC_PUBLISH_REPO": "o/r", "CINOC_PUBLISH_TOKEN": "t"})
     assert isinstance(resolve_publisher(configured), GitHubPublisher)
 
 

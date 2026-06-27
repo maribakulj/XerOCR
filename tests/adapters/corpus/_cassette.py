@@ -19,7 +19,7 @@ from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 
-from xerocr.adapters.corpus import _http
+from cinoc.adapters.corpus import _http
 
 _CASSETTES_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "cassettes"
 

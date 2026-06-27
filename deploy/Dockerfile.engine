@@ -1,4 +1,4 @@
-# Image **moteur** XerOCR pour un Hugging Face Space (SDK: docker).
+# Image **moteur** Cinoc pour un Hugging Face Space (SDK: docker).
 #
 # ≠ la vitrine lecture seule (deploy/Dockerfile{,.space}) : celle-ci **bake un vrai
 # moteur OCR gratuit** (Tesseract 5 + langues fra/lat/eng) pour qu'un visiteur du
@@ -6,7 +6,7 @@
 # cloud et les plugins tiers restent *gated* (mode public, fail-closed côté appli).
 #
 # Contexte de build « racine plate » (Dockerfile / requirements.txt / pyproject.toml
-# / xerocr / reports TOUS à la racine) — assemblé par .github/workflows/deploy-space.yml,
+# / cinoc / reports TOUS à la racine) — assemblé par .github/workflows/deploy-space.yml,
 # comme Dockerfile.space.
 FROM python:3.11-slim
 
@@ -40,8 +40,8 @@ ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 ENV OMP_THREAD_LIMIT=1
 # Mode public **verrouillé** : seul le socle gratuit (tesseract) s'exécute ; cloud
 # et plugins sont refusés (403, fail-closed). L'opérateur d'un Space privé peut
-# ouvrir via XEROCR_PUBLIC_MODE=false + ses propres clés.
-ENV XEROCR_PUBLIC_MODE=true
+# ouvrir via CINOC_PUBLIC_MODE=false + ses propres clés.
+ENV CINOC_PUBLIC_MODE=true
 ENV PYTHONUNBUFFERED=1
 
 # ── Smoke-test du binaire au BUILD (fail-fast) ─────────────────────────────────
@@ -67,8 +67,8 @@ RUN set -eu; \
     fi
 
 # ── Utilisateur non-root (sécurité d'un service exposé) ────────────────────────
-RUN useradd --create-home --uid 1000 xerocr
-WORKDIR /home/xerocr/app
+RUN useradd --create-home --uid 1000 cinoc
+WORKDIR /home/cinoc/app
 
 # ── Dépendances Python d'abord (cache de couche) ───────────────────────────────
 # requirements.txt fige le cœur + l'extra [serve] + pytesseract (wrapper du binaire).
@@ -77,14 +77,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Code + paquet (sans deps : tout est déjà figé ci-dessus) ───────────────────
 COPY pyproject.toml README.md ./
-COPY xerocr ./xerocr
+COPY cinoc ./cinoc
 RUN pip install --no-cache-dir --no-deps .
 
 # ── Rapports bakés (lecture seule) — dossier toujours présent ──────────────────
 COPY reports ./reports
-ENV XEROCR_REPORTS_DIR=/home/xerocr/app/reports
+ENV CINOC_REPORTS_DIR=/home/cinoc/app/reports
 
-USER xerocr
+USER cinoc
 EXPOSE 7860
 # 0.0.0.0 attendu en conteneur (le réseau est géré par la plateforme).
-CMD ["xerocr", "serve", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["cinoc", "serve", "--host", "0.0.0.0", "--port", "7860"]

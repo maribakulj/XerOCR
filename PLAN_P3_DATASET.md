@@ -1,7 +1,7 @@
 # PLAN P3 — Dataset de référence curé (axe « banc de corpus », P3-b)
 
 > **Statut** : design figé, **construction en cours**. Concrétise
-> [`VISION_DATASET_XEROCR.md`](VISION_DATASET_XEROCR.md) et la case `[ ] P3` de
+> [`VISION_DATASET_CINOC.md`](VISION_DATASET_CINOC.md) et la case `[ ] P3` de
 > [`PLAN_FIN_MIGRATION.md`](PLAN_FIN_MIGRATION.md). Décision cadre :
 > `MIGRATION_PLAN.md` D-094 (rapport interactif, images = références).
 
@@ -17,7 +17,7 @@ standardisation » est reformulé en **« profil d'adaptation »**.
 **On vise P3-b dès le départ** (et pas P3-a « GT seule sans images ») : le
 livrable produit veut un **rapport léger dont les images s'affichent via des
 liens HF** — c'est la **saveur « Réfs IIIF / HF »** du rapport
-([`xerocr/reports/DECISION_RAPPORT_INTERACTIF.md`](xerocr/reports/DECISION_RAPPORT_INTERACTIF.md)),
+([`cinoc/reports/DECISION_RAPPORT_INTERACTIF.md`](cinoc/reports/DECISION_RAPPORT_INTERACTIF.md)),
 qui exige des **URLs d'image résolvables** → donc du **IIIF statique publié**.
 
 ---
@@ -89,7 +89,7 @@ mince (mapping → `domain`).
   servis par le CDN HF). Tailles **vignette ~400 px + medium ~1600 px**
   uniquement (décision rapport : zoom medium, **pas** de pyramide de tuiles).
 - **Manifeste Presentation** : un `manifest.json` par corpus (optionnel au
-  squelette ; `corpus.json` suffit à l'importeur XerOCR).
+  squelette ; `corpus.json` suffit à l'importeur Cinoc).
 - **Repro** : la **révision git du dataset HF → SHA** est épinglée dans
   `CorpusSpec.metadata["revision"]` → `RunManifest`.
 

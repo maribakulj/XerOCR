@@ -1,12 +1,12 @@
-# design/ — spec visuelle **unique** de l'UI XerOCR
+# design/ — spec visuelle **unique** de l'UI Cinoc
 
 Référence de rendu que l'UI **rendue serveur** (Jinja2 + CSS + JS léger) et le
-**rapport autonome** (`xerocr/reports/`) reproduisent. **C'est une spec visuelle,
-PAS du code livré** : rien ici n'est importé par le paquet `xerocr/`.
+**rapport autonome** (`cinoc/reports/`) reproduisent. **C'est une spec visuelle,
+PAS du code livré** : rien ici n'est importé par le paquet `cinoc/`.
 
 > ⚠️ **Une seule source de vérité.** Ce dossier a connu 3 générations —
 > ① base *Claude Design* (polices CDN : Bricolage / IBM Plex / Apfel Grotezk),
-> ② ère *Picarones* (branding « Picarones »), ③ **spec XerOCR** (la bonne).
+> ② ère *Picarones* (branding « Picarones »), ③ **spec Cinoc** (la bonne).
 > Les couches ① et ② ont été **purgées** : plus de CDN, plus de « Picarones »,
 > plus de mockups divergents, plus de canvas d'édition. Ce qui reste **est** ③.
 
@@ -21,7 +21,7 @@ PAS du code livré** : rien ici n'est importé par le paquet `xerocr/`.
 | **Logo/tags courts** | **OCR-A** (John Sauter, domaine public) | `tokens.css` `--ocr` + `@font-face` |
 | **Polices** | **self-hosted** (woff2 dans `fonts/`), **zéro CDN** | `tokens.css` (source **unique** des `@font-face`) |
 | **Fond** | trame de points **Xerox halftone** (data-URI SVG) | `tokens.css` `.report-board` · `picarones.css` `html,body` |
-| **Branding** | **XerOCR** / pastille « X » | `chrome.jsx`, `js/app.jsx` |
+| **Branding** | **Cinoc** / pastille « X » | `chrome.jsx`, `js/app.jsx` |
 
 > **Changer la typo = trivial** : déposer le woff2 dans `fonts/`, éditer le `src`
 > du `@font-face` + la variable (`--display`/`--sans`/`--mono`/…) dans **`tokens.css`

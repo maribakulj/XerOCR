@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.app.modules.registry import (
+from cinoc.app.modules.registry import (
     ModuleRegistry,
     ModuleResolutionError,
     register_default_modules,
 )
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.pipeline.protocols import Module
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.pipeline.protocols import Module
 
 
 def _registry() -> ModuleRegistry:

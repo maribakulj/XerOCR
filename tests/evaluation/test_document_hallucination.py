@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.document_hallucination import DocumentHallucinationCollector
+from cinoc.evaluation.document_hallucination import DocumentHallucinationCollector
 
 
 def test_none_when_nothing_observed() -> None:

@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from xerocr.interfaces.cli import main
+from cinoc.interfaces.cli import main
 
 
 class _FakeUvicorn(ModuleType):
@@ -34,7 +34,7 @@ def test_serve_passes_factory_to_uvicorn(fake_uvicorn: _FakeUvicorn) -> None:
     assert code == 0
     (call,) = fake_uvicorn.calls
     # On passe la FACTORY (chemin importable + factory=True), jamais un app de module.
-    assert call["app"] == "xerocr.interfaces.web.app:create_app"
+    assert call["app"] == "cinoc.interfaces.web.app:create_app"
     assert call["factory"] is True
     assert call["host"] == "127.0.0.1"
     assert call["port"] == 9123
@@ -58,11 +58,11 @@ def test_serve_local_host_does_not_warn(
 def test_serve_sets_reports_dir_env(
     fake_uvicorn: _FakeUvicorn, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("XEROCR_REPORTS_DIR", raising=False)
+    monkeypatch.delenv("CINOC_REPORTS_DIR", raising=False)
     main(["serve", "--reports-dir", "/data/reports"])
     import os
 
-    assert os.environ["XEROCR_REPORTS_DIR"] == "/data/reports"
+    assert os.environ["CINOC_REPORTS_DIR"] == "/data/reports"
 
 
 def test_serve_without_extra_reports_cleanly(
@@ -72,4 +72,4 @@ def test_serve_without_extra_reports_cleanly(
     monkeypatch.setitem(sys.modules, "uvicorn", None)  # force ImportError
     code = main(["serve"])
     assert code == 1
-    assert "xerocr[serve]" in capsys.readouterr().err
+    assert "cinoc[serve]" in capsys.readouterr().err

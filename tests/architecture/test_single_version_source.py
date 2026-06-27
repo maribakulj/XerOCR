@@ -5,7 +5,7 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
-from xerocr.domain._version_fallback import FALLBACK_VERSION
+from cinoc.domain._version_fallback import FALLBACK_VERSION
 
 
 def test_fallback_matches_pyproject():

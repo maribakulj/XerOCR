@@ -7,8 +7,8 @@ import threading
 import pytest
 from pydantic import ValidationError
 
-from xerocr.adapters.storage import Job, JobState, JobStore
-from xerocr.adapters.storage.job_store import JobError
+from cinoc.adapters.storage import Job, JobState, JobStore
+from cinoc.adapters.storage.job_store import JobError
 
 
 def test_create_starts_pending() -> None:

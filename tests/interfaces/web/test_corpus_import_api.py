@@ -7,13 +7,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.corpus._http import SsrfError
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.adapters.corpus._http import SsrfError
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
-_IMPORT_TARGET = "xerocr.interfaces.web.routers.corpus.import_iiif_corpus"
+_IMPORT_TARGET = "cinoc.interfaces.web.routers.corpus.import_iiif_corpus"
 
 _CSRF = {CSRF_HEADER: "1"}
 _BODY = {"manifest_url": "https://example.org/manifest.json", "limit": 1}
@@ -99,7 +99,7 @@ def test_import_missing_url_is_422(tmp_path: Path) -> None:
 
 # --- eScriptorium --------------------------------------------------------------
 
-_ESC_TARGET = "xerocr.interfaces.web.routers.corpus.import_escriptorium_corpus"
+_ESC_TARGET = "cinoc.interfaces.web.routers.corpus.import_escriptorium_corpus"
 _ESC_BODY = {"base_url": "https://e.org", "token": "tok", "doc_pk": 5, "limit": 1}
 
 
@@ -148,7 +148,7 @@ def test_escriptorium_public_mode_403(
 def test_escriptorium_http_error_422(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from xerocr.adapters.corpus._http import HttpFetchError
+    from cinoc.adapters.corpus._http import HttpFetchError
 
     def _boom(*a: object, **k: object) -> CorpusSpec:
         raise HttpFetchError("401 du serveur eScriptorium")
@@ -171,7 +171,7 @@ def test_escriptorium_missing_token_is_422(tmp_path: Path) -> None:
 
 # --- Gallica -------------------------------------------------------------------
 
-_GAL_TARGET = "xerocr.interfaces.web.routers.corpus.import_gallica_corpus"
+_GAL_TARGET = "cinoc.interfaces.web.routers.corpus.import_gallica_corpus"
 _GAL_BODY = {"ark": "12148/btv1bTEST", "limit": 1}
 
 

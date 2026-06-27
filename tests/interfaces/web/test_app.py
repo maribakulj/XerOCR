@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import API_VERSION, create_app
+from cinoc.interfaces.web.app import API_VERSION, create_app
 
 
 def test_create_app_is_a_factory() -> None:
@@ -14,7 +14,7 @@ def test_create_app_is_a_factory() -> None:
 
 def test_app_metadata() -> None:
     app = create_app()
-    assert app.title == "XerOCR"
+    assert app.title == "Cinoc"
     assert app.version == API_VERSION
 
 

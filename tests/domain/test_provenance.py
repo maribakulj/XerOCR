@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from xerocr.domain import ProvenanceRecord
+from cinoc.domain import ProvenanceRecord
 
 
 def test_is_compatible_ignores_timestamp():

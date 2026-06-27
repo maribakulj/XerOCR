@@ -12,13 +12,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.adapters.llm.ollama import OllamaAdapter, _fail_or_cancel
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError, RunCancelledError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.adapters.llm.ollama import OllamaAdapter, _fail_or_cancel
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError, RunCancelledError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _raw_text(path: Path) -> Artifact:
@@ -41,7 +41,7 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.ollama._invoke_ollama", lambda **_: LLMCompletion(text)
+        "cinoc.adapters.llm.ollama._invoke_ollama", lambda **_: LLMCompletion(text)
     )
 
 

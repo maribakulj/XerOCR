@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 
-from xerocr.formats import safe_parse_xml
+from cinoc.formats import safe_parse_xml
 
 _VALID = b'<?xml version="1.0"?><root><child>salut</child></root>'
 

@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.calamari import CalamariAdapter
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.calamari import CalamariAdapter
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _ctx(workspace: Path) -> RunContext:
@@ -51,7 +51,7 @@ def test_execute_writes_text(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.calamari._invoke_calamari",
+        "cinoc.adapters.ocr.calamari._invoke_calamari",
         lambda **_: "texte de ligne",
     )
     out = CalamariAdapter(label="ln", model="ckpt").execute(

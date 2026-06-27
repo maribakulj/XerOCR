@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.representations import load_representation
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.representations import load_representation
 
 
 def test_loads_raw_text_and_normalises_newlines(tmp_path: Path) -> None:

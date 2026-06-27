@@ -12,7 +12,7 @@ import time
 
 import pytest
 
-from xerocr.adapters._resilience import (
+from cinoc.adapters._resilience import (
     call_resilient,
     http_is_retryable,
     http_retry_after,
@@ -131,7 +131,7 @@ def test_does_not_retry_non_retryable() -> None:
 
 
 def test_slot_caps_concurrency_per_provider(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("XEROCR_NETWORK_CONCURRENCY", "2")
+    monkeypatch.setenv("CINOC_NETWORK_CONCURRENCY", "2")
     provider = "test-cap-2"  # nom frais : plafond figé à 2 à la création
     active = 0
     peak = 0
@@ -156,7 +156,7 @@ def test_slot_caps_concurrency_per_provider(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_invalid_env_falls_back_to_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("XEROCR_NETWORK_CONCURRENCY", "pas-un-entier")
+    monkeypatch.setenv("CINOC_NETWORK_CONCURRENCY", "pas-un-entier")
     # Ne lève pas : nom frais → plafond défaut (3), au moins 1 détenteur possible.
     with network_slot("test-bad-env"):
         assert True

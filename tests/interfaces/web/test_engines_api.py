@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
+from cinoc.interfaces.web.app import create_app
 
 
 def _client(tmp_path: Path, *, public_mode: bool = False) -> TestClient:
@@ -56,7 +56,7 @@ def test_metric_profiles_endpoint_lists_standard_first(tmp_path: Path) -> None:
 
 
 def test_normalization_profiles_are_read_dynamically(tmp_path: Path) -> None:
-    from xerocr.formats.text.normalization import NORMALIZATION_PROFILES
+    from cinoc.formats.text.normalization import NORMALIZATION_PROFILES
 
     body = _client(tmp_path).get("/api/normalization/profiles").json()
     # Jamais une liste statique : l'endpoint reflète la couche 2 telle quelle.
@@ -77,7 +77,7 @@ def test_models_endpoint_unknown_provider_is_empty(tmp_path: Path) -> None:
 
 
 def test_normalization_preview_named_and_custom(tmp_path: Path) -> None:
-    from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+    from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
     client = _client(tmp_path)
     headers = {CSRF_HEADER: "1"}
@@ -98,7 +98,7 @@ def test_normalization_preview_named_and_custom(tmp_path: Path) -> None:
 
 
 def test_normalization_preview_invalid_config_is_422(tmp_path: Path) -> None:
-    from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+    from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
     r = _client(tmp_path).post(
         "/api/normalization/preview",

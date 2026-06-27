@@ -12,8 +12,8 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 

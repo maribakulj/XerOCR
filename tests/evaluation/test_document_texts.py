@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import _MAX_TEXT_CHARS, DocumentTextsPayload
-from xerocr.evaluation.document_texts import DocumentTextsCollector
+from cinoc.evaluation.analysis import _MAX_TEXT_CHARS, DocumentTextsPayload
+from cinoc.evaluation.document_texts import DocumentTextsCollector
 
 
 def test_none_when_nothing_observed() -> None:

@@ -16,16 +16,16 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.app.engines import engine_statuses
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.run_planning import (
+from cinoc.app.engines import engine_statuses
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.run_planning import (
     Competitor,
     RunPlanningError,
     benchmark_engine_catalog,
     plan_benchmark_run,
 )
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
 
 
 def _catalog() -> dict[str, list[dict[str, object]]]:

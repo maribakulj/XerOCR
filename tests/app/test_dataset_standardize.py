@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.dataset_standardize import (
+from cinoc.app.dataset_standardize import (
     DatasetStandardizeError,
     StandardizeConfig,
     standardize_corpus,

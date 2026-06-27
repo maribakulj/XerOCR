@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.adapters.corpus import huggingface
-from xerocr.adapters.corpus._http import HttpFetchError
-from xerocr.adapters.corpus.huggingface import (
+from cinoc.adapters.corpus import huggingface
+from cinoc.adapters.corpus._http import HttpFetchError
+from cinoc.adapters.corpus.huggingface import (
     HuggingFaceCatalogue,
     _parse_api,
     search_reference,

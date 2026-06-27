@@ -11,18 +11,18 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.embedded import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.embedded import (
     EMBEDDED_SCRIPTS,
     asset_text,
     inline_script,
     script_csp_hashes,
     script_hash,
 )
-from xerocr.reports.renderer import default_report_renderer
+from cinoc.reports.renderer import default_report_renderer
 
-_ASSETS = Path(__file__).resolve().parents[2] / "xerocr/reports/_assets"
+_ASSETS = Path(__file__).resolve().parents[2] / "cinoc/reports/_assets"
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
 
@@ -66,7 +66,7 @@ def test_report_embeds_both_scripts_and_palette_css() -> None:
         ),
     )
     html = default_report_renderer().render(result)
-    assert "xerocr-compare-btn" in html  # compare.js
+    assert "cinoc-compare-btn" in html  # compare.js
     assert "palette-cb" in html  # report.js + sa CSS
     assert ".palette-cb{--fern" in html  # bascule daltonien (variable CSS)
 

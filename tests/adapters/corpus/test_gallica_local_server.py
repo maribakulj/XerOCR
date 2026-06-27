@@ -24,8 +24,8 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.app.corpus_import import import_gallica_corpus
+from cinoc.adapters.corpus import _http
+from cinoc.app.corpus_import import import_gallica_corpus
 
 _PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HBOwAAAAC0lEQVR4nGNgYGAAAAAEAAH2FzhVAAAAAElFTkSuQmCC"

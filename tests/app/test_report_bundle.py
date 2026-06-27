@@ -11,15 +11,15 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.report_images import (
+from cinoc.app.report_images import (
     _stem_for,
     build_sidecar_facsimiles,
     build_sidecar_thumbnails,
     write_report_bundle,
 )
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, RunDocumentResult, RunResult
-from xerocr.reports import default_report_renderer
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, RunDocumentResult, RunResult
+from cinoc.reports import default_report_renderer
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

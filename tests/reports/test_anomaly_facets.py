@@ -6,23 +6,23 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     DocumentHallucination,
     DocumentHallucinationPayload,
     HallucinatedBlock,
     PipelineHallucination,
 )
-from xerocr.evaluation.result import (
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports._anomaly import compute_anomalies
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.gallery import DocumentGallerySection
+from cinoc.reports._anomaly import compute_anomalies
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.gallery import DocumentGallerySection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

@@ -1,5 +1,5 @@
 /* Mock data for the redesigned benchmark reports.
-   Représentative d'un benchmark XerOCR sur un corpus patrimonial. */
+   Représentative d'un benchmark Cinoc sur un corpus patrimonial. */
 
 const ENGINES = [
   {

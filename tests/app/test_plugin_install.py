@@ -1,5 +1,5 @@
 """Preuve réelle « brancher sans forker » : un paquet **pip-installé** dont
-l'entry-point ``xerocr.modules`` est **auto-découvert** par le vrai chemin
+l'entry-point ``cinoc.modules`` est **auto-découvert** par le vrai chemin
 ``importlib.metadata`` (pas un loader injecté).
 
 Isolé : installation dans un ``--target`` temporaire + découverte exécutée dans
@@ -39,7 +39,7 @@ def test_pip_installed_plugin_is_auto_discovered(tmp_path: Path) -> None:
         f"""
         import sys
         sys.path.insert(0, {str(target)!r})
-        from xerocr.app.modules import ModuleRegistry, discover_plugins
+        from cinoc.app.modules import ModuleRegistry, discover_plugins
         registry = ModuleRegistry()
         print(",".join(discover_plugins(registry, enabled=True)))
         """

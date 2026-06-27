@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xerocr.domain import PipelineSpec, RunManifest, utcnow
+from cinoc.domain import PipelineSpec, RunManifest, utcnow
 
 
 def _make() -> RunManifest:

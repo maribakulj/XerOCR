@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.diacritics import _is_diacritic, diacritic_error
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.diacritics import _is_diacritic, diacritic_error
 
 
 def _ctx(reference: str, hypothesis: str) -> DocContext:

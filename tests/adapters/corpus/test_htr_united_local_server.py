@@ -8,8 +8,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus.htr_united import fetch_catalogue
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus.htr_united import fetch_catalogue
 
 _YAML = b"""
 - title: Loopback Corpus

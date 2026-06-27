@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.formats.text.plain import read_plaintext
+from cinoc.formats.text.plain import read_plaintext
 
 
 def test_decodes_utf8() -> None:

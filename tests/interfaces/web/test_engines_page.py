@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
+from cinoc.interfaces.web.app import create_app
 
 
 def _client(tmp_path: Path, *, public_mode: bool = False) -> TestClient:

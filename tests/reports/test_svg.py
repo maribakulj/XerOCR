@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports.svg import (
+from cinoc.reports.svg import (
     bar_series,
     box_plot,
     calibration_curve,

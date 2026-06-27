@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.app.segmentation import SegmentationStore, demo_layout, demo_page_image
+from cinoc.app.segmentation import SegmentationStore, demo_layout, demo_page_image
 
 
 def test_save_and_get_layout_roundtrip(tmp_path: Path) -> None:

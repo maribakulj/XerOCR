@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from cinoc.adapters.corpus.huggingface import HuggingFaceCatalogue
+from cinoc.app.corpus_import import import_iiif_corpus
 from tests.adapters.corpus._cassette import replaying
-from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue
-from xerocr.app.corpus_import import import_iiif_corpus
 
 #: URL exacte du manifeste enregistré dans la cassette IIIF.
 _IIIF_MANIFEST = "https://iiif.io/api/cookbook/recipe/0009-book-1/manifest.json"

@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import DocumentLinesPayload
-from xerocr.evaluation.document_lines import DocumentLinesCollector
+from cinoc.evaluation.analysis import DocumentLinesPayload
+from cinoc.evaluation.document_lines import DocumentLinesCollector
 
 
 def test_none_when_nothing_observed() -> None:

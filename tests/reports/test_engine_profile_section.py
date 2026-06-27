@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CalibrationBin,
     CalibrationPayload,
@@ -14,14 +14,14 @@ from xerocr.evaluation.analysis import (
     TaxonomyCount,
     TaxonomyPayload,
 )
-from xerocr.evaluation.result import (
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.engine_profile import EngineProfileSection
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.engine_profile import EngineProfileSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -132,7 +132,7 @@ def _doc_s(doc_id: str, pipeline: str, cer: float, stratum: str) -> RunDocumentR
 
 
 def test_profile_shows_per_stratum_cer_when_multiple_strata() -> None:
-    from xerocr.evaluation.result import RunResult as _RR
+    from cinoc.evaluation.result import RunResult as _RR
 
     base = _result()
     docs = (
@@ -158,8 +158,8 @@ def test_profile_shows_per_stratum_cer_when_multiple_strata() -> None:
 
 
 def test_profile_config_details_from_manifest() -> None:
-    from xerocr.domain.artifacts import ArtifactType
-    from xerocr.domain.pipeline import PipelineSpec, PipelineStep
+    from cinoc.domain.artifacts import ArtifactType
+    from cinoc.domain.pipeline import PipelineSpec, PipelineStep
 
     base = _result()
     spec = PipelineSpec(

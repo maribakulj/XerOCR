@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.csv_export import run_result_csv
+from cinoc.reports.csv_export import run_result_csv
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 

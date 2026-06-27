@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xerocr.domain import ArtifactKey
+from cinoc.domain import ArtifactKey
 
 
 def test_canonical_json_is_order_independent():

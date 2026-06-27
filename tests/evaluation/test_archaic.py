@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.archaic import (
+from cinoc.evaluation.archaic import (
     ARCHAIC_LISTS,
     DEFAULT_ARCHAIC_LIST,
     air_observation,
@@ -16,9 +16,9 @@ from xerocr.evaluation.archaic import (
     hcpr_observation,
     resolve_archaic_list,
 )
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.archaic import make_air_metric, make_hcpr_metric
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.metrics.archaic import make_air_metric, make_hcpr_metric
 
 _CHARS = resolve_archaic_list(DEFAULT_ARCHAIC_LIST).chars
 _LONG_S = "ſ"

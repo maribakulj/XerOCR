@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.adapters.corpus.escriptorium import _image_uri, extract_gt_text
+from cinoc.adapters.corpus.escriptorium import _image_uri, extract_gt_text
 
 
 def test_gt_from_lines() -> None:

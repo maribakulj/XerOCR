@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     ComplementarityDocument,
     EngineTokenRecall,
@@ -21,9 +21,9 @@ from xerocr.evaluation.analysis import (
     PipelineRank,
     TaxonomyDivergencePair,
 )
-from xerocr.evaluation.result import MetricScore, RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.cross_engine import CrossEngineSection
+from cinoc.evaluation.result import MetricScore, RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.cross_engine import CrossEngineSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

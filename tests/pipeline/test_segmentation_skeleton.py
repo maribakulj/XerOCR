@@ -13,26 +13,26 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.layout.precomputed import (
+from cinoc.adapters.layout.precomputed import (
     PrecomputedLayoutSource,
     PrecomputedRegionRecognizer,
 )
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.errors import AdapterStepError
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.runner import evaluate_run
-from xerocr.pipeline.fanout import run_region_fanout
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
-from xerocr.reports.renderer import default_report_renderer
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.runner import evaluate_run
+from cinoc.pipeline.fanout import run_region_fanout
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
+from cinoc.reports.renderer import default_report_renderer
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 LAYOUT_VIEW = EvaluationView(

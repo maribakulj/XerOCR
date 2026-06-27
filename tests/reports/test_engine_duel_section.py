@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.engine_duel import EngineDuelSection
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.engine_duel import EngineDuelSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

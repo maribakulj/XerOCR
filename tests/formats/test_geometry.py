@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.formats._geometry import format_points, parse_points
+from cinoc.formats._geometry import format_points, parse_points
 
 
 def test_parse_points_valid() -> None:

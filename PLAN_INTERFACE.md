@@ -1,9 +1,9 @@
-# PLAN_INTERFACE.md — Refonte de l'interface web XerOCR
+# PLAN_INTERFACE.md — Refonte de l'interface web Cinoc
 
 > **Objet.** Plan d'exécution de la refonte UI « produit fini » : composeur
 > OCR/LLM/VLM complet (3 modes, tous les fournisseurs), **runs multi-concurrents
 > exposés au web**, parité fonctionnelle avec l'interface Picarones + ajouts propres
-> à XerOCR (segmentation), et **système typographique à 3 familles**.
+> à Cinoc (segmentation), et **système typographique à 3 familles**.
 >
 > **Garanties.** Zéro shim, zéro chemin parallèle, zéro création de fichier inutile.
 > L'inventaire create-vs-modify ci-dessous a été **vérifié au contact du code**
@@ -40,7 +40,7 @@ docs + code dans le commit de merge, conformément au rituel du projet).
 
 ### 1.1 Le cœur est **nativement multi-concurrent** — NE PAS y toucher
 Le défaut majeur de Picarones (plusieurs **runs séparés** pour comparer des moteurs)
-**n'est pas reproduit** dans XerOCR :
+**n'est pas reproduit** dans Cinoc :
 
 - `RunSpec.pipelines` = **tuple de N pipelines** (`domain/run_spec.py:28`, `min_length=1`).
 - `orchestrator.run()` exécute les N pipelines sur **le même corpus**, dans **un seul
@@ -56,7 +56,7 @@ moteur et bâtit une spec mono-pipeline, parce que le formulaire S6 ne poste qu'
 `engine`. C'est un trou de **surface**, pas d'architecture.
 
 ### 1.2 OCR→LLM : existe au moteur, partiel, non exposé web
-| Brique | État XerOCR | Référence |
+| Brique | État Cinoc | Référence |
 |---|---|---|
 | Pipeline 2 étapes OCR→LLM + executor DAG | ✅ **testé** | `tests/app/test_orchestrator.py:92`, `tests/adapters/test_llm_pipeline.py:16` |
 | Mode `text_only` (LLM corrige le texte) | ✅ | adapters llm `RAW_TEXT → CORRECTED_TEXT` |
@@ -70,7 +70,7 @@ moteur et bâtit une spec mono-pipeline, parce que le formulaire S6 ne poste qu'
 - `inputs_from` **pleinement générique** (`pipeline/executor.py:122`) : un step LLM peut
   recevoir **IMAGE** (`__initial__`) **et** **RAW_TEXT** (étape OCR) → `text_and_image`
   natif, sans bricolage.
-- Registre + **découverte entry-points** `xerocr.modules` déjà en place (`app/modules/`).
+- Registre + **découverte entry-points** `cinoc.modules` déjà en place (`app/modules/`).
 - `PipelineMode` **déclaré** (`domain/pipeline.py:32`) mais **non consommé** → à brancher.
 
 ### 1.4 Cause de l'illisibilité (motivation Phase 0)
@@ -129,8 +129,8 @@ Contrainte CSP `font-src 'self'` : **aucun CDN**, woff2 auto-hébergés sous
 ## 5. Inventaire définitif
 
 ### 5.1 CRÉER (minimum strict)
-- `xerocr/adapters/llm/anthropic.py` — **seul** nouvel adapter (rôle-aware, 3 modes).
-- `xerocr/interfaces/web/static/fonts/IBMPlexSans-{400,500,600}.woff2`,
+- `cinoc/adapters/llm/anthropic.py` — **seul** nouvel adapter (rôle-aware, 3 modes).
+- `cinoc/interfaces/web/static/fonts/IBMPlexSans-{400,500,600}.woff2`,
   `IBMPlexMono-{400,500}.woff2`, `IBMPlex-LICENSE.txt` — assets.
 - `tests/architecture/test_no_dead_ui.py` — garde-fou anti-vide.
 - Tests par feature sous `tests/` (modes, multimodal, multi-concurrent, delete corpus).
@@ -173,7 +173,7 @@ Contrainte CSP `font-src 'self'` : **aucun CDN**, woff2 auto-hébergés sous
   `PipelineMode`) ; `pyproject.toml` (+`anthropic`).
 - **Tests** : chaque mode bout-en-bout via orchestrateur (SDK mockés) ; chaque adapter
   en isolation ; `PipelineMode` consommé.
-- **DoD** : `xerocr run` couvre OCR seul / OCR→LLM texte / OCR→LLM image+texte / VLM
+- **DoD** : `cinoc run` couvre OCR seul / OCR→LLM texte / OCR→LLM image+texte / VLM
   zero-shot, avec openai·anthropic·mistral (+ollama texte).
 
 ### Phase 2 — Run multi-concurrent + exposition web (couche 6 + API)
@@ -202,7 +202,7 @@ Contrainte CSP `font-src 'self'` : **aucun CDN**, woff2 auto-hébergés sous
   `history.html` rend des **sparklines CER** (SVG inline déterministe).
 - **Segmentation / Moteurs / Panneau système** : restyle `segmentation.html`,
   `engines.html` (statuts réels), panneau (moteurs X/Y, LLM X/Y, tâche active, mode).
-- **DoD** : parité Picarones + ajouts XerOCR, chaque contrôle sur un backend réel.
+- **DoD** : parité Picarones + ajouts Cinoc, chaque contrôle sur un backend réel.
 
 ### Phase 4 — Garde-fou anti-vide + docs + CI
 - **CRÉER** `tests/architecture/test_no_dead_ui.py` : chaque mode×fournisseur ↔ builder
@@ -214,7 +214,7 @@ Contrainte CSP `font-src 'self'` : **aucun CDN**, woff2 auto-hébergés sous
 ---
 
 ## 7. Ce que je NE fais pas (anti-bloat, explicite)
-7 fichiers d'adapters vision · moteur narratif (supprimé en XerOCR) · shim / double
+7 fichiers d'adapters vision · moteur narratif (supprimé en Cinoc) · shim / double
 format · option UI sans backend (chaque option vient de `/api/engines`).
 
 ---

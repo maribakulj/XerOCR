@@ -1,5 +1,5 @@
 ---
-title: XerOCR — OCR gratuit
+title: Cinoc — OCR gratuit
 emoji: 📜
 colorFrom: indigo
 colorTo: gray
@@ -9,7 +9,7 @@ pinned: false
 license: apache-2.0
 ---
 
-# XerOCR — banc d'essai OCR gratuit
+# Cinoc — banc d'essai OCR gratuit
 
 Banc d'essai **déterministe** de pipelines de transcription (OCR / HTR / VLM).
 Ce Space **exécute un vrai OCR Tesseract gratuitement** — **sans clé ni
@@ -26,7 +26,7 @@ En **mode public** (le défaut sur ce Space), seul le **socle gratuit** s'exécu
 (Tesseract — aucun secret, aucun appel facturé). Les moteurs **cloud** (clé) et les
 **plugins tiers** sont **refusés** (`403`, fail-closed) : aucun secret n'est requis
 ni stocké. Pour les pipelines lourds (OCR→LLM, VLM), lancez-les **hors ligne** via la
-CLI `xerocr run`, avec vos clés et vos moteurs.
+CLI `cinoc run`, avec vos clés et vos moteurs.
 
 ## Activer les moteurs cloud (Mistral…) — ⚠️ Space PRIVÉ uniquement
 
@@ -38,7 +38,7 @@ dépenser votre clé. Pour les ouvrir, sur **votre** Space :
 > Rendez le Space **Private** (Settings → Visibility → Private) **avant** d'ouvrir.
 
 1. **Rendre le Space privé** (Settings → Visibility → **Private**).
-2. **Désactiver le mode public** : variable `XEROCR_PUBLIC_MODE` = `false`
+2. **Désactiver le mode public** : variable `CINOC_PUBLIC_MODE` = `false`
    (Settings → Variables and secrets). C'est ce qui lève le verrou fail-closed sur
    les moteurs cloud **et** sur les imports distants (IIIF/Gallica/…) / plugins tiers.
 3. **Secret** : `MISTRAL_API_KEY` = votre clé. Le SDK `mistralai` est déjà dans

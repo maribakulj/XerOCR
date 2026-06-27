@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.formats.alto import (
+from cinoc.formats.alto import (
     AltoDocument,
     AltoGraphicalElement,
     AltoPage,

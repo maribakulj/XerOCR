@@ -12,18 +12,18 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.projection import ProjectionSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.projectors import get_projector, layout_to_text
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.runner import evaluate_run
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.projection import ProjectionSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.projectors import get_projector, layout_to_text
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.runner import evaluate_run
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 _LAYOUT_TO_TEXT = ProjectionSpec(

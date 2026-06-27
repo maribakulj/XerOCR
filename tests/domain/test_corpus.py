@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.domain import CorpusSpec, DocumentRef
-from xerocr.domain.errors import CorpusSpecError
+from cinoc.domain import CorpusSpec, DocumentRef
+from cinoc.domain.errors import CorpusSpecError
 
 
 def test_unique_doc_ids():

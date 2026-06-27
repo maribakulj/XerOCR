@@ -10,10 +10,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.app.engines import engine_statuses
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.routers.runs import LaunchRequest
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.app.engines import engine_statuses
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.routers.runs import LaunchRequest
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 
@@ -213,7 +213,7 @@ def test_public_mode_allows_free_tesseract(
     # (pas de 403). Binaire forcé absent → il tombe sur la dispo (409), prouvant
     # qu'il a franchi le verrou public et atteint la vérification runtime.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
     )
     resp = _post(
@@ -242,7 +242,7 @@ def test_unavailable_engine_is_409(
 ) -> None:
     # binaire forcé absent → tesseract indisponible (déterministe), sans corpus.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
     )
     resp = _post(_client(tmp_path), {"competitors": [{"engine": "tesseract"}]})
@@ -254,7 +254,7 @@ def test_unknown_normalization_is_422(
 ) -> None:
     # moteurs forcés disponibles → on atteint le plan ; profil inconnu → 422.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(
             has_binary=lambda _n: "/usr/bin/tesseract",
             has_module=lambda _n: True,
@@ -291,7 +291,7 @@ def test_ocr_llm_chain_reaches_availability_not_preblocked(
     # dispo, openai indispo (pas de clé/SDK en CI) → 409 sur openai : la chaîne
     # atteint bien la garde de disponibilité.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(
             has_binary=lambda _name: "/usr/bin/tesseract", **kw
         ),

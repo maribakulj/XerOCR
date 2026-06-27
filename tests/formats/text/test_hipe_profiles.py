@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.formats.text import get_builtin_profile
+from cinoc.formats.text import get_builtin_profile
 
 HIPE = get_builtin_profile("hipe")
 HERITAGE = get_builtin_profile("heritage")

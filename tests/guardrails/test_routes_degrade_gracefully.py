@@ -24,10 +24,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus._http import SsrfError
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
-from xerocr.interfaces.web.app import create_app
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus._http import SsrfError
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.interfaces.web.app import create_app
 
 
 def _client(tmp_path: Path) -> TestClient:

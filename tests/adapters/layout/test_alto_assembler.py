@@ -11,15 +11,15 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.layout.assembler import AltoAssembler
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.evaluation.representations import load_representation
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.layout.assembler import AltoAssembler
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.evaluation.representations import load_representation
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _filled(*regions: tuple[str, str]) -> CanonicalLayout:

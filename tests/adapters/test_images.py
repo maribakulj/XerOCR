@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.images import thumbnail_data_uri, thumbnail_to_file
+from cinoc.adapters.images import thumbnail_data_uri, thumbnail_to_file
 
 PIL = pytest.importorskip("PIL")  # extra [images] ; sans Pillow → adapter rend None
 

@@ -2,9 +2,9 @@
 
 Picarones déduisait le mode public de ``SPACE_ID`` (masquage des moteurs cloud,
 refus des imports distants fetchant une URL côté serveur, verrouillage du code
-tiers in-process). XerOCR ne lit ``SPACE_ID`` que pour la CSP (``headers.py``) :
+tiers in-process). Cinoc ne lit ``SPACE_ID`` que pour la CSP (``headers.py``) :
 sur un Space, ``_resolve_public_mode(None)`` renvoie ``False`` faute de
-``XEROCR_PUBLIC_MODE`` explicite → surface cloud/SSRF/plugins ouverte.
+``CINOC_PUBLIC_MODE`` explicite → surface cloud/SSRF/plugins ouverte.
 
 L'override explicite (l'opérateur force ``public_mode=False``) doit, lui, rester
 respecté — avant comme après la correction (test non-``xfail``).
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.interfaces.web.app import _resolve_public_mode
+from cinoc.interfaces.web.app import _resolve_public_mode
 
 
 def test_explicit_choice_overrides_space(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -25,14 +25,14 @@ def test_explicit_choice_overrides_space(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_space_defaults_to_public_mode(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("SPACE_ID", "user/space")
-    monkeypatch.delenv("XEROCR_PUBLIC_MODE", raising=False)
+    monkeypatch.delenv("CINOC_PUBLIC_MODE", raising=False)
     assert _resolve_public_mode(None) is True
 
 
 def test_space_explicit_false_env_opens(monkeypatch: pytest.MonkeyPatch) -> None:
     # Un Space PRIVÉ peut ouvrir explicitement (moteurs cloud avec sa clé) via
-    # XEROCR_PUBLIC_MODE=false. Sans ça, impossible de débloquer Mistral/OpenAI
+    # CINOC_PUBLIC_MODE=false. Sans ça, impossible de débloquer Mistral/OpenAI
     # sur un Space (le défaut reste verrouillé). L'opérateur assume l'exposition.
     monkeypatch.setenv("SPACE_ID", "user/space")
-    monkeypatch.setenv("XEROCR_PUBLIC_MODE", "false")
+    monkeypatch.setenv("CINOC_PUBLIC_MODE", "false")
     assert _resolve_public_mode(None) is False

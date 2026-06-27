@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from xerocr.domain import (
+from cinoc.domain import (
     ArtifactType,
     EvaluationSpec,
     EvaluationView,

@@ -12,17 +12,17 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.layout import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.layout import (
     BBox,
     CanonicalLayout,
     Geometry,
     LayoutPage,
     Region,
 )
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_detection
-from xerocr.evaluation.representations import load_representation
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_detection
+from cinoc.evaluation.representations import load_representation
 
 _EXCERPT = (
     Path(__file__).resolve().parents[1]

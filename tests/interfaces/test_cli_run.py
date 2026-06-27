@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.results import load_run_result
-from xerocr.interfaces.cli import main
+from cinoc.app.results import load_run_result
+from cinoc.interfaces.cli import main
 
 _YAML = """
 corpus:

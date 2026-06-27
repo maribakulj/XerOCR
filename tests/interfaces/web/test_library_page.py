@@ -11,15 +11,15 @@ from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
-from xerocr.adapters.corpus.huggingface import HuggingFaceDataset
-from xerocr.adapters.storage.history_store import HistoryStore
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.segmentation import SegmentationStore, demo_layout
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
-from xerocr.interfaces.web.app import _TEMPLATES_DIR, create_app
-from xerocr.interfaces.web.routers.home import build_home_router
+from cinoc.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
+from cinoc.adapters.corpus.huggingface import HuggingFaceDataset
+from cinoc.adapters.storage.history_store import HistoryStore
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.app.segmentation import SegmentationStore, demo_layout
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
+from cinoc.interfaces.web.app import _TEMPLATES_DIR, create_app
+from cinoc.interfaces.web.routers.home import build_home_router
 
 
 def _seg(tmp_path: Path) -> tuple[SegmentationStore, str]:
@@ -68,10 +68,10 @@ def _client(
     public_mode: bool = False,
 ) -> TestClient:
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
+        "cinoc.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
     )
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
+        "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
     seg_store, seg_id = _seg(tmp_path)
@@ -104,10 +104,10 @@ def test_library_caches_catalogue_across_loads(
         return _HTR_REMOTE
 
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.fetch_catalogue", counting_fetch
+        "cinoc.interfaces.web.routers.home.fetch_catalogue", counting_fetch
     )
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
+        "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
     seg_store, seg_id = _seg(tmp_path)
@@ -236,7 +236,7 @@ def test_corpus_js_syntax_is_valid() -> None:
     if node is None:
         pytest.skip("node absent : vérification de syntaxe JS ignorée")
     js = Path(__file__).resolve().parents[3] / (
-        "xerocr/interfaces/web/static/js/corpus.js"
+        "cinoc/interfaces/web/static/js/corpus.js"
     )
     result = subprocess.run([node, "--check", str(js)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr

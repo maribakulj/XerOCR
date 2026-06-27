@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.prompts import PromptError, available_prompts, load_prompt
+from cinoc.prompts import PromptError, available_prompts, load_prompt
 
 
 def test_sixteen_prompts_available_and_sorted() -> None:
@@ -17,7 +17,7 @@ def test_sixteen_prompts_available_and_sorted() -> None:
 
 def test_correction_prompts_use_ocr_text_placeholder() -> None:
     # Les prompts de correction injectent le texte OCR via {ocr_text} (convention
-    # XerOCR, ≠ {ocr_output} de Picarones) ; sinon l'OCR ne serait jamais inséré.
+    # Cinoc, ≠ {ocr_output} de Picarones) ; sinon l'OCR ne serait jamais inséré.
     for name in available_prompts():
         text = load_prompt(name)
         assert text  # jamais vide

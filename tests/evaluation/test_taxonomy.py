@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.taxonomy import (
+from cinoc.evaluation.taxonomy import (
     TaxonomyCollector,
     classify_texts,
     classify_word_pair,

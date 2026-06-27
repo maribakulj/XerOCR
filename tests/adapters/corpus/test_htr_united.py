@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.adapters.corpus import htr_united
-from xerocr.adapters.corpus._http import HttpFetchError
-from xerocr.adapters.corpus.htr_united import (
+from cinoc.adapters.corpus import htr_united
+from cinoc.adapters.corpus._http import HttpFetchError
+from cinoc.adapters.corpus.htr_united import (
     HTRUnitedCatalogue,
     fetch_catalogue,
     parse_catalogue,

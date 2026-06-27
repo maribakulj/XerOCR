@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.kraken import KrakenAdapter, tokens_from_lines
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.kraken import KrakenAdapter, tokens_from_lines
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _ctx(workspace: Path) -> RunContext:
@@ -59,7 +59,7 @@ def test_execute_writes_text_and_sidecar(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.kraken._invoke_kraken",
+        "cinoc.adapters.ocr.kraken._invoke_kraken",
         lambda **_: [("ligne une", [0.9] * 9), ("ligne deux", [0.5] * 10)],
     )
     out = KrakenAdapter(label="med", model="med.mlmodel").execute(

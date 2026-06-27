@@ -1,4 +1,4 @@
-"""Import HuggingFace en **streaming** (convention XerOCR), loader injecté.
+"""Import HuggingFace en **streaming** (convention Cinoc), loader injecté.
 
 Couvre le chemin réel ``stream_pages`` sans la lib ``datasets`` : un loader
 factice renvoie des lignes (image en octets + ``ground_truth``) comme le ferait
@@ -12,8 +12,8 @@ from collections.abc import Iterable
 
 import pytest
 
-from xerocr.adapters.corpus import huggingface as hf
-from xerocr.adapters.corpus.huggingface import (
+from cinoc.adapters.corpus import huggingface as hf
+from cinoc.adapters.corpus.huggingface import (
     HuggingFaceConventionError,
     stream_pages,
 )

@@ -8,14 +8,14 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.headers import (
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.headers import (
     CONTENT_SECURITY_POLICY,
     SecurityHeadersMiddleware,
     get_csp_policy,
     is_huggingface_space,
 )
-from xerocr.interfaces.web.security.rate_limit import RateLimitMiddleware
+from cinoc.interfaces.web.security.rate_limit import RateLimitMiddleware
 
 
 def _client(tmp_path: Path, rate_limit: int = 60) -> TestClient:
@@ -45,7 +45,7 @@ def test_is_huggingface_space_reads_space_id(monkeypatch: pytest.MonkeyPatch) ->
     # SPACE_ID injecté par HF = marqueur de Space ; absent/blanc = local.
     monkeypatch.delenv("SPACE_ID", raising=False)
     assert is_huggingface_space() is False
-    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/Cinoc")
     assert is_huggingface_space() is True
     monkeypatch.setenv("SPACE_ID", "   ")  # valeur blanche ⇒ pas un Space
     assert is_huggingface_space() is False
@@ -66,7 +66,7 @@ def test_csp_relaxes_frame_ancestors_on_hf_space(
 ) -> None:
     # Sur HF Space, la vitrine doit être embarquable dans l'iframe du Hub :
     # frame-ancestors ouvre huggingface.co / *.hf.space, sans 'none'.
-    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/Cinoc")
     resp = _client(tmp_path).get("/health")
     csp = resp.headers["content-security-policy"]
     assert csp == get_csp_policy()
@@ -82,15 +82,15 @@ def test_x_frame_options_omitted_on_hf_space(
 ) -> None:
     # X-Frame-Options: DENY a priorité absolue sur frame-ancestors dans les
     # vieux navigateurs → il est omis en Space pour ne pas annuler l'embed.
-    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/XerOCR")
+    monkeypatch.setenv("SPACE_ID", "Ma-Ri-Ba-Ku/Cinoc")
     resp = _client(tmp_path).get("/health")
     assert "x-frame-options" not in resp.headers
 
 
 def test_headers_on_html_report(tmp_path: Path) -> None:
-    from xerocr.app.results import dump_run_result
-    from xerocr.domain.run import RunManifest, utcnow
-    from xerocr.evaluation.result import RunResult
+    from cinoc.app.results import dump_run_result
+    from cinoc.domain.run import RunManifest, utcnow
+    from cinoc.evaluation.result import RunResult
 
     manifest = RunManifest(
         run_id="r",
@@ -107,7 +107,7 @@ def test_headers_on_html_report(tmp_path: Path) -> None:
     csp = resp.headers["content-security-policy"]
     # Réponse /reports/ : script-src autorise le hash de CHAQUE script statique
     # inliné du rapport (compare + report) — l'inline non hashé reste interdit.
-    from xerocr.reports.embedded import EMBEDDED_SCRIPTS, script_hash
+    from cinoc.reports.embedded import EMBEDDED_SCRIPTS, script_hash
 
     for name in EMBEDDED_SCRIPTS:
         assert script_hash(name) in csp

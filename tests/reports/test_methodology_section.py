@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.evaluation import EvaluationView
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.evaluation import EvaluationView
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.methodology import MethodologySection
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.methodology import MethodologySection
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 

@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.bow import bow_f1, bow_precision, bow_recall
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.metrics.bow import bow_f1, bow_precision, bow_recall
 
 
 def _ctx(reference: object, hypothesis: object) -> DocContext:

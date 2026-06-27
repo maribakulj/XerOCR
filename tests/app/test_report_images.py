@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.report_images import build_thumbnails
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.app.report_images import build_thumbnails
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     RunDocumentResult,
     RunResult,

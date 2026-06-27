@@ -20,7 +20,7 @@
   `MAX_TOTAL_UNCOMPRESSED=200 Mo` : vit dans `extract_corpus_zip`
   (`app/corpus_upload.py`), appelé **uniquement** par l'endpoint d'**upload ZIP
   web** `POST /api/corpus`. Cet endpoint tourne à l'identique sur le **Space HF**
-  et en **local** (`xerocr serve`). → le cap pénalise **les deux** déploiements
+  et en **local** (`cinoc serve`). → le cap pénalise **les deux** déploiements
   web ; il **ne s'applique pas** à la **CLI** (corpus depuis fichiers locaux via
   spec YAML) ni aux **importeurs distants**.
 - **Importeurs distants** (IIIF/Gallica/eScriptorium/HF) : **gated `403` en mode
@@ -33,7 +33,7 @@
   vignettes **data-URI base64 inline**, plafonnées (300 vignettes / 60 fac-similés).
   Le **renderer est agnostique** de la provenance du href (`<img src="{href}">`).
 - **Résilience réseau (D-150)** : les appels d'un moteur cloud sont **capés par
-  fournisseur** (`network_slot`, `XEROCR_NETWORK_CONCURRENCY` défaut 3) + **retry
+  fournisseur** (`network_slot`, `CINOC_NETWORK_CONCURRENCY` défaut 3) + **retry
   borné 429/5xx** (`Retry-After` respecté), **par défaut** sur web et CLI — le pool
   du runner peut rester à `cpu_count` (Pero local plein débit), seuls les appels
   réseau sont plafonnés. Câblé Mistral ; le helper est générique (openai/anthropic
@@ -76,7 +76,7 @@ process) : OCR Tesseract = sous-processus, cloud = I/O HTTP → travail hors-GIL
 speedup quasi-linéaire sans sérialiser les artefacts. **Déterminisme** : exécution
 parallèle, **assemblage dans l'ordre du spec** → `RunResult` byte-identique au
 séquentiel (prouvé par test N=1 vs N=4). `max_workers` paramétrable
-(`XEROCR_MAX_WORKERS` / `--workers`), défaut `os.cpu_count()`. Annulation/timeout
+(`CINOC_MAX_WORKERS` / `--workers`), défaut `os.cpu_count()`. Annulation/timeout
 coopératifs conservés (`RunControl`/`Deadline`) ; isolation d'erreur par unité ;
 `ResumeStore` accédé **main-thread** (pas de souci de concurrence).
 

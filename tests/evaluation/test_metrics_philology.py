@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.philology import _is_mufi, mufi_error
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.philology import _is_mufi, mufi_error
 
 _LONG_S = "ſ"  # ſ s long médiéval (set explicite)
 _THORN = "þ"  # þ thorn (set explicite)

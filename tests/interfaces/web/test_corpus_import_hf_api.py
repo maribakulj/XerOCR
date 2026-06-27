@@ -8,19 +8,19 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.corpus.huggingface import (
+from cinoc.adapters.corpus.huggingface import (
     HuggingFaceConventionError,
     HuggingFaceUnavailableError,
 )
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
-_TARGET = "xerocr.interfaces.web.routers.corpus.import_hf_corpus"
+_TARGET = "cinoc.interfaces.web.routers.corpus.import_hf_corpus"
 _CSRF = {CSRF_HEADER: "1"}
-_BODY = {"dataset_id": "org/corpus-xerocr", "limit": 2}
+_BODY = {"dataset_id": "org/corpus-cinoc", "limit": 2}
 
 
 def _client(tmp_path: Path, *, public_mode: bool = False) -> TestClient:
@@ -104,7 +104,7 @@ def test_missing_extra_is_409(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     def _unavailable(*a: object, **k: object) -> CorpusSpec:
-        raise HuggingFaceUnavailableError("installer 'xerocr[huggingface]'.")
+        raise HuggingFaceUnavailableError("installer 'cinoc[huggingface]'.")
 
     monkeypatch.setattr(_TARGET, _unavailable)
     resp = _client(tmp_path).post(

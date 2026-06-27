@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CharConfusion,
     DiagnosticsPayload,
@@ -13,9 +13,9 @@ from xerocr.evaluation.analysis import (
     PipelineConfusions,
     WorstLine,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.diagnostics import DiagnosticsSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.diagnostics import DiagnosticsSection
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 

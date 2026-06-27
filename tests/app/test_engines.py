@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.app.engines import PUBLIC_ENGINE_KINDS, engine_statuses
+from cinoc.app.engines import PUBLIC_ENGINE_KINDS, engine_statuses
 
 
 def _statuses(**kw: object) -> dict[str, tuple[bool, str]]:
@@ -176,7 +176,7 @@ def test_default_probes_run_without_error() -> None:
 # --- Segmenteurs (catégorie distincte des moteurs OCR, T2) ---------------------
 
 def test_segmenter_available_when_sdk_present() -> None:
-    from xerocr.app.engines import segmenter_statuses
+    from cinoc.app.engines import segmenter_statuses
 
     (status,) = segmenter_statuses(has_module=lambda n: n == "paddlex")
     assert status.kind == "pp_doclayout"
@@ -184,7 +184,7 @@ def test_segmenter_available_when_sdk_present() -> None:
 
 
 def test_segmenter_unavailable_signals_extra() -> None:
-    from xerocr.app.engines import segmenter_statuses
+    from cinoc.app.engines import segmenter_statuses
 
     (status,) = segmenter_statuses(has_module=lambda _n: False)
     assert status.available is False

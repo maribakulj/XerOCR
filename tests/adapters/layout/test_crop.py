@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.layout.crop import crop_region
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
-from xerocr.pipeline.fanout import run_region_fanout
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext, StepOutput
+from cinoc.adapters.layout.crop import crop_region
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
+from cinoc.pipeline.fanout import run_region_fanout
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext, StepOutput
 
 Image = pytest.importorskip("PIL.Image")
 

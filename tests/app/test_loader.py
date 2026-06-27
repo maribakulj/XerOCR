@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.loader import RunSpecError, load_run_spec
-from xerocr.app.security import PathSecurityError
+from cinoc.app.loader import RunSpecError, load_run_spec
+from cinoc.app.security import PathSecurityError
 
 _VALID = """
 run_id: demo

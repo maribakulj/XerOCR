@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.app import run
-from xerocr.app.engines import EngineStatus
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.run_planning import (
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.app import run
+from cinoc.app.engines import EngineStatus
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.run_planning import (
     DEFAULT_METRIC_PROFILE,
     METRIC_PROFILES,
     Competitor,
@@ -21,11 +21,11 @@ from xerocr.app.run_planning import (
     metric_profile_catalog,
     plan_benchmark_run,
 )
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.pipeline import INITIAL_STEP_ID
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.pipeline import INITIAL_STEP_ID
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 
 
 def _corpus(tmp_path: Path) -> CorpusSpec:
@@ -230,14 +230,14 @@ def test_benchmark_runs_n_competitors_in_one_run(
     # tesseract (mocké → "alpha" == GT → CER 0) vs tesseract→openai (LLM mocké →
     # "beta" ≠ GT → CER > 0) : UN run, DEUX pipelines, scorés distinctement.
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
     )
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences",
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_confidences",
         lambda **_: [],
     )
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
+        "cinoc.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
     )
     comps = (
         Competitor(engine="tesseract"),
