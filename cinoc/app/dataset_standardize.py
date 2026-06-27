@@ -27,6 +27,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from cinoc.adapters.corpus.huggingface import CURATED_DATASET_TAG
 from cinoc.adapters.images import iiif_derivative
 from cinoc.domain.errors import CinocError
 from cinoc.formats.pagexml import parse_pagexml
@@ -177,6 +178,9 @@ def _dataset_card(config: StandardizeConfig, n_docs: int) -> str:
         f"pretty_name: {config.name}\n"
         "tags:\n"
         "- htr\n- ocr\n- handwritten-text-recognition\n- ground-truth\n- iiif\n"
+        # Tag de convention : rend le dataset **découvrable** par Cinoc sur le
+        # compte (``discover_curated``) sans coller son ``repo_id``.
+        f"- {CURATED_DATASET_TAG}\n"
         "---\n\n"
         f"# {config.name}\n\n"
         f"{n_docs} pages de vérité-terrain, standardisées pour Cinoc "

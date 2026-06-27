@@ -20,7 +20,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from cinoc.adapters.corpus.htr_united import HTRUnitedCatalogue, fetch_catalogue
-from cinoc.adapters.corpus.huggingface import HuggingFaceCatalogue, HuggingFaceDataset
+from cinoc.adapters.corpus.huggingface import (
+    CuratedDatasetRef,
+    HuggingFaceCatalogue,
+    HuggingFaceDataset,
+    discover_curated,
+)
 from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
 from cinoc.app import resolve_code_version
 from cinoc.app.corpus_upload import CorpusStore
@@ -166,6 +171,7 @@ def build_home_router(
     segmentation_store: SegmentationStore,
     demo_segmentation_id: str,
     corpus_store: CorpusStore | None = None,
+    curated_author: str | None = None,
     public_mode: bool = False,
 ) -> APIRouter:
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
@@ -176,6 +182,11 @@ def build_home_router(
     # et HuggingFace (par requête ``q``).
     htr_cache: TTLCache[str, HTRUnitedCatalogue] = TTLCache(_CATALOGUE_TTL_SECONDS)
     hf_cache: TTLCache[str, tuple[HuggingFaceDataset, ...]] = TTLCache(
+        _CATALOGUE_TTL_SECONDS
+    )
+    # Datasets curés du compte HF configuré (``CINOC_HF_AUTHOR``) : découverts par
+    # tag de convention, mis en cache TTL comme les autres catalogues distants.
+    curated_cache: TTLCache[str, tuple[CuratedDatasetRef, ...]] = TTLCache(
         _CATALOGUE_TTL_SECONDS
     )
 
@@ -281,6 +292,14 @@ def build_home_router(
         catalogue = htr_cache.get_or_compute("htr_united", fetch_catalogue)
         htr = catalogue.search(q) if q else catalogue.entries
         hf = hf_cache.get_or_compute(q, lambda: HuggingFaceCatalogue().search(q))
+        # Datasets curés du compte configuré (apparaissent sans coller le repo_id).
+        # Best-effort + TTL : compte absent → tuple vide (l'import manuel reste).
+        curated: tuple[CuratedDatasetRef, ...] = ()
+        if curated_author:
+            author = curated_author
+            curated = curated_cache.get_or_compute(
+                author, lambda: discover_curated(author)
+            )
         corpora = _corpora_summaries(corpus_store)
         context = _base_context(lang, "library", {"library": str(len(htr) + len(hf))})
         context["query"] = q
@@ -288,6 +307,7 @@ def build_home_router(
         context["htr_entries"] = htr
         context["htr_is_demo"] = catalogue.is_demo
         context["hf_datasets"] = hf
+        context["curated_datasets"] = curated
         context["n_corpora"] = len(corpora)
         context["n_htr"] = len(htr)
         context["n_hf"] = len(hf)

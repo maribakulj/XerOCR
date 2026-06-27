@@ -81,6 +81,11 @@ PUBLIC_MODE_ENV = "CINOC_PUBLIC_MODE"
 #: exposé ne publie pas ses stats par défaut). Surchargé par ``create_app(metrics=)``.
 METRICS_ENV = "CINOC_METRICS"
 
+#: Compte HF dont les **datasets curés** (tag ``cinoc-corpus``) sont listés
+#: automatiquement dans la Bibliothèque (sans coller le ``repo_id``). Vide → la
+#: section reste masquée (l'import manuel par identifiant reste disponible).
+HF_AUTHOR_ENV = "CINOC_HF_AUTHOR"
+
 
 def _resolve_reports_dir(reports_dir: Path | str | None) -> Path:
     """Argument explicite > variable d'env > défaut ``./reports``."""
@@ -245,6 +250,7 @@ def create_app(
             segmentation_store=seg_store,
             demo_segmentation_id=demo_seg_id,
             corpus_store=corpus_store,
+            curated_author=os.environ.get(HF_AUTHOR_ENV, "").strip() or None,
             public_mode=is_public,
         )
     )
@@ -274,6 +280,7 @@ def create_app(
 
 __all__ = [
     "API_VERSION",
+    "HF_AUTHOR_ENV",
     "METRICS_ENV",
     "PUBLIC_MODE_ENV",
     "REPORTS_DIR_ENV",

@@ -130,6 +130,15 @@ def test_card_has_license_frontmatter(tmp_path: Path) -> None:
     assert "Public Domain Mark" in card
 
 
+def test_card_carries_curated_discovery_tag(tmp_path: Path) -> None:
+    # Le tag de convention rend le dataset découvrable par Cinoc sur le compte HF.
+    from cinoc.adapters.corpus.huggingface import CURATED_DATASET_TAG
+
+    out = standardize_corpus(_raw_corpus(tmp_path), tmp_path / "out", _config())
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert f"- {CURATED_DATASET_TAG}\n" in card
+
+
 def test_missing_subdirs_raise(tmp_path: Path) -> None:
     (tmp_path / "raw").mkdir()
     with pytest.raises(DatasetStandardizeError, match="layout brut"):

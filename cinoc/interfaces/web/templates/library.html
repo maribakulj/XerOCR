@@ -240,6 +240,37 @@
 
       {% if not public_mode %}
       <div class="source-panel" data-source-panel="curated" hidden>
+        {% if curated_datasets %}
+        <div class="source-headline">
+          <div>
+            <div class="stack-title">{{ t.library_curated_yours }}</div>
+            <div class="stack-sub">{{ t.library_curated_yours_hint }}</div>
+          </div>
+        </div>
+        <div class="catalog-card-grid">
+          {% for d in curated_datasets %}
+          <article class="panel result-card">
+            <div class="result-card-head">
+              <div>
+                <div class="result-card-title">{{ d.title }}</div>
+                <div class="result-card-meta mono">{{ d.repo_id }}{% if d.revision %} · {{ d.revision[:7] }}{% endif %}</div>
+              </div>
+              <span class="badge">{{ t.library_source_curated }}</span>
+            </div>
+            <div class="result-card-actions">
+              <a class="btn btn-sm" href="https://huggingface.co/datasets/{{ d.repo_id }}"
+                 rel="noopener noreferrer" target="_blank">{{ t.library_open_source }}</a>
+              {% if not public_mode %}
+              <button class="btn btn-sm btn-primary" type="button"
+                      data-import-source="curated"
+                      data-repo-id="{{ d.repo_id }}"
+                      data-revision="{{ d.revision or '' }}">{{ t.library_import_source }}</button>
+              {% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+        {% endif %}
         <div class="panel import-card">
           <div class="source-headline">
             <div>

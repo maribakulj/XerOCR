@@ -65,6 +65,7 @@ def _client(
     *,
     catalogue: HTRUnitedCatalogue = _HTR_REMOTE,
     corpus_store: CorpusStore | None = None,
+    curated_author: str | None = None,
     public_mode: bool = False,
 ) -> TestClient:
     monkeypatch.setattr(
@@ -86,6 +87,7 @@ def _client(
             segmentation_store=seg_store,
             demo_segmentation_id=seg_id,
             corpus_store=corpus_store,
+            curated_author=curated_author,
             public_mode=public_mode,
         )
     )
@@ -240,3 +242,42 @@ def test_corpus_js_syntax_is_valid() -> None:
     )
     result = subprocess.run([node, "--check", str(js)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+# --- Découverte des datasets curés du compte (CINOC_HF_AUTHOR) -----------------
+
+
+def test_curated_datasets_listed_with_one_click_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from cinoc.adapters.corpus.huggingface import CuratedDatasetRef
+
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.routers.home.discover_curated",
+        lambda author, **_: (
+            CuratedDatasetRef(
+                repo_id=f"{author}/Cinoc-Dresden",
+                title=f"{author}/Cinoc-Dresden",
+                revision="abc123def",
+                last_modified="2026-06-01",
+            ),
+        ),
+    )
+    body = _client(tmp_path, monkeypatch, curated_author="me").get("/library").text
+    # carte rendue + bouton d'import en un clic (repo_id + révision pinnée).
+    assert "me/Cinoc-Dresden" in body
+    assert 'data-repo-id="me/Cinoc-Dresden"' in body
+    assert 'data-revision="abc123def"' in body
+
+
+def test_no_curated_section_without_author(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(author: str, **_: object) -> object:
+        raise AssertionError("aucune découverte sans compte configuré")
+
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.routers.home.discover_curated", boom
+    )
+    body = _client(tmp_path, monkeypatch).get("/library").text
+    assert "data-repo-id=" not in body  # pas de carte curée découverte

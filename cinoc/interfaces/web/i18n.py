@@ -224,6 +224,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_source_gallica": "Gallica",
         "library_source_escriptorium": "eScriptorium",
         "library_source_curated": "Cinoc curé",
+        "library_curated_yours": "Vos datasets curés",
+        "library_curated_yours_hint": "Datasets curés Cinoc détectés sur votre "
+        "compte HuggingFace (tag cinoc-corpus) — importez-en un en un clic.",
         "library_zip_meta": "ZIP · max 500 MB · paires auto-détectées",
         "library_ready": "prêt pour benchmark",
         "library_add_desc": "Téléversez un ZIP (glisser-déposer) ou importez "
@@ -448,6 +451,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_source_gallica": "Gallica",
         "library_source_escriptorium": "eScriptorium",
         "library_source_curated": "Cinoc curated",
+        "library_curated_yours": "Your curated datasets",
+        "library_curated_yours_hint": "Cinoc curated datasets found on your "
+        "HuggingFace account (cinoc-corpus tag) — import one in a click.",
         "library_zip_meta": "ZIP · max 500 MB · pairs auto-detected",
         "library_ready": "ready for benchmark",
         "library_add_desc": "Upload a ZIP (drag-and-drop) or import from a "

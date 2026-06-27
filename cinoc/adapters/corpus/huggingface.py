@@ -30,6 +30,11 @@ logger = logging.getLogger(__name__)
 
 HF_API_BASE = "https://huggingface.co/api"
 
+#: Tag de convention apposé aux datasets **curés Cinoc** (carte HF) : il rend un
+#: dataset de référence **découvrable** sur un compte sans coller son ``repo_id``.
+#: Émis par ``app.dataset_standardize`` (front-matter), filtré par ``discover_curated``.
+CURATED_DATASET_TAG = "cinoc-corpus"
+
 #: Convention Cinoc (cf. ``docs/corpus_huggingface.md``) : un dataset importable
 #: porte **au minimum** une colonne image et une colonne vérité-terrain. La
 #: segmentation est une extension *future* (non requise ici).
@@ -54,6 +59,20 @@ class HuggingFaceDataset:
     @property
     def hf_url(self) -> str:
         return f"https://huggingface.co/datasets/{self.dataset_id}"
+
+
+@dataclass(frozen=True)
+class CuratedDatasetRef:
+    """Un dataset **curé Cinoc** découvert sur un compte HF (tag de convention).
+
+    Métadonnées d'affichage **et** d'import en un clic : ``repo_id`` (+ ``revision``
+    si l'API la fournit, pour épingler la repro) alimentent directement
+    ``import_curated_hf_corpus``."""
+
+    repo_id: str
+    title: str
+    revision: str | None
+    last_modified: str
 
 
 def _ref(
@@ -312,6 +331,71 @@ def stream_pages(
             return
 
 
+#: Récupère un JSON depuis une URL. Injectable → ``discover_curated`` se teste
+#: sans réseau (le défaut tape l'API HF via ``fetch_json``).
+CuratedFetcher = Callable[[str], object]
+
+
+def _parse_curated(payload: object, *, tag: str) -> tuple[CuratedDatasetRef, ...]:
+    """Réponse ``/api/datasets`` (liste de dicts) → datasets curés. Pure.
+
+    Re-filtre **défensivement** sur le tag (si la liste porte ``tags``) : on ne
+    présente que de vrais layouts Cinoc, jamais un dataset quelconque du compte."""
+    if not isinstance(payload, list):
+        return ()
+    out: list[CuratedDatasetRef] = []
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        repo_id = str(item.get("id", "") or "")
+        if not repo_id:
+            continue
+        tags = item.get("tags")
+        if isinstance(tags, list) and tag not in tags:
+            continue
+        sha = item.get("sha")
+        out.append(
+            CuratedDatasetRef(
+                repo_id=repo_id,
+                title=str(item.get("id", repo_id)),
+                revision=str(sha) if isinstance(sha, str) and sha else None,
+                last_modified=str(item.get("lastModified", "") or ""),
+            )
+        )
+    return tuple(out)
+
+
+def discover_curated(
+    author: str,
+    *,
+    tag: str = CURATED_DATASET_TAG,
+    api_base: str = HF_API_BASE,
+    timeout: float = DEFAULT_TIMEOUT,
+    fetcher: CuratedFetcher | None = None,
+) -> tuple[CuratedDatasetRef, ...]:
+    """Liste les datasets **curés Cinoc** d'un compte HF (``author`` + ``tag``).
+
+    Best-effort : API injoignable → ``()`` en journalisant (l'UI retombe sur
+    l'import manuel par ``repo_id``, jamais un blocage). C'est ce qui fait
+    « apparaître » un dataset publié sans coller son identifiant : on filtre le
+    compte par le tag de convention."""
+    if not author:
+        return ()
+    get = fetcher or (lambda url: fetch_json(url, timeout=timeout))
+    params = {"author": author, "filter": tag, "full": "true", "limit": "100"}
+    url = f"{api_base.rstrip('/')}/datasets?{urlencode(params)}"
+    try:
+        payload = get(url)
+    except CorpusHttpError as exc:
+        logger.warning(
+            "[huggingface] découverte curée indisponible (compte %s) : %s",
+            author,
+            exc,
+        )
+        return ()
+    return _parse_curated(payload, tag=tag)
+
+
 def snapshot_curated_layout(
     repo_id: str, dest: Path, revision: str | None
 ) -> Path:  # pragma: no cover -- réseau réel (test 'live')
@@ -352,11 +436,14 @@ __all__ = [
     "HF_API_BASE",
     "CINOC_GT_COLUMN",
     "CINOC_IMAGE_COLUMN",
+    "CURATED_DATASET_TAG",
+    "CuratedDatasetRef",
     "HFPage",
     "HuggingFaceCatalogue",
     "HuggingFaceConventionError",
     "HuggingFaceDataset",
     "HuggingFaceUnavailableError",
+    "discover_curated",
     "search_reference",
     "snapshot_curated_layout",
     "stream_pages",

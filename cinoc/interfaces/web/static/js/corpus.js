@@ -203,6 +203,15 @@
     var datasetId = button.getAttribute("data-dataset-id");
     if (datasetId) payload.dataset_id = datasetId;
 
+    // Carte « Cinoc curé » découverte : l'identifiant (et la révision pinnée, si
+    // l'API la fournit) viennent du bouton — ils priment sur le formulaire manuel.
+    var repoId = button.getAttribute("data-repo-id");
+    if (repoId) {
+      payload.repo_id = repoId;
+      var revision = button.getAttribute("data-revision");
+      if (revision) payload.revision = revision;
+    }
+
     var headers = { "Content-Type": "application/json" };
     headers[CSRF] = "1";
     button.disabled = true;
