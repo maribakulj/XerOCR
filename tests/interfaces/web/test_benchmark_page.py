@@ -52,6 +52,17 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_ner_toggle_present_and_sent(tmp_path: Path) -> None:
+    # Case « NER » du composeur rendue serveur + le JS la met dans le payload du
+    # concurrent (et porte le modèle spaCy optionnel).
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="draft-ner"' in body
+    assert 'id="draft-ner-model"' in body
+    js = _JS.read_text(encoding="utf-8")
+    assert "entry.ner = true" in js
+    assert "ner_model" in js
+
+
 def test_char_exclude_field_present_and_sent(tmp_path: Path) -> None:
     # 3c : champ « caractères à exclure » + le JS le met dans le payload du run.
     body = _client(tmp_path).get("/benchmark").text

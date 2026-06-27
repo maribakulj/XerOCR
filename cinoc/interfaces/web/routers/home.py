@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 from urllib.parse import quote
 
@@ -24,6 +25,7 @@ from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
 from cinoc.app import resolve_code_version
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.engines import (
+    EngineStatus,
     StatusProvider,
     curated_prompts,
     installed_mistral_models,
@@ -159,6 +161,7 @@ def build_home_router(
     *,
     statuses: StatusProvider,
     segmenters: StatusProvider,
+    ner: Callable[[], EngineStatus] | None = None,
     history_store: HistoryStore,
     segmentation_store: SegmentationStore,
     demo_segmentation_id: str,
@@ -238,6 +241,9 @@ def build_home_router(
         # Prompts curés par période (lus dynamiquement) → menu déroulant ; le
         # texte libre du formulaire reste prioritaire (résolu au plan).
         context["curated_prompts"] = list(curated_prompts())
+        # Étape NER (extra [ner]) : son statut active/désactive la case « NER » du
+        # composeur (désactivée + motif si spaCy absent).
+        context["ner"] = ner() if ner is not None else None
         return templates.TemplateResponse(request, "benchmark.html", context)
 
     @router.get("/segmentation", response_class=HTMLResponse)

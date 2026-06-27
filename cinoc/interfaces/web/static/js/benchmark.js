@@ -86,6 +86,8 @@
     var draftModel = document.getElementById("draft-model");
     var draftPrompt = document.getElementById("draft-prompt");
     var draftPromptCurated = document.getElementById("draft-prompt-curated");
+    var draftNer = document.getElementById("draft-ner");
+    var draftNerModel = document.getElementById("draft-ner-model");
     var queueLabels = {
       ocr: queueList.getAttribute("data-label-ocr") || "OCR",
       ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
@@ -240,10 +242,21 @@
       // serveur refuse d'ailleurs les deux à la fois).
       var promptName =
         !prompt && draftPromptCurated ? draftPromptCurated.value : "";
+      var ner = !!(draftNer && draftNer.checked);
+      var nerModel =
+        ner && draftNerModel && draftNerModel.value
+          ? draftNerModel.value.trim()
+          : "";
       if (activeMode === "ocr_only") {
         // En OCR seul, `model` = le modèle du moteur (kraken/pero/calamari : path ;
         // mistral_ocr : nom). Tesseract/Google/Azure l'ignorent.
-        return { engine: draftOcr.value, mode: "ocr_only", model: model };
+        return {
+          engine: draftOcr.value,
+          mode: "ocr_only",
+          model: model,
+          ner: ner,
+          nerModel: nerModel,
+        };
       }
       if (activeMode === "text_only") {
         return {
@@ -253,6 +266,8 @@
           model: model,
           prompt: prompt,
           promptName: promptName,
+          ner: ner,
+          nerModel: nerModel,
         };
       }
       if (activeMode === "text_and_image") {
@@ -263,6 +278,8 @@
           model: model,
           prompt: prompt,
           promptName: promptName,
+          ner: ner,
+          nerModel: nerModel,
         };
       }
       return {
@@ -271,6 +288,8 @@
         model: model,
         prompt: prompt,
         promptName: promptName,
+        ner: ner,
+        nerModel: nerModel,
       };
     }
 
@@ -284,6 +303,10 @@
         if (queue[i].model) entry.model = queue[i].model;
         if (queue[i].prompt) entry.prompt = queue[i].prompt;
         else if (queue[i].promptName) entry.prompt_name = queue[i].promptName;
+        if (queue[i].ner) {
+          entry.ner = true;
+          if (queue[i].nerModel) entry.ner_model = queue[i].nerModel;
+        }
         out.push(entry);
       }
       return out;
@@ -326,6 +349,8 @@
           model: c.model || "",
           prompt: c.prompt || "",
           promptName: c.prompt_name || "",
+          ner: !!c.ner,
+          nerModel: c.ner_model || "",
         });
       }
       renderQueue();

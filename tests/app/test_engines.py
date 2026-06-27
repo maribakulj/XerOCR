@@ -215,3 +215,24 @@ def test_segmenter_not_in_ocr_engine_list() -> None:
     kinds = {s.kind for s in engine_statuses()}
     assert "pp_doclayout" not in kinds
     assert "remote_segmenter" not in kinds
+
+
+def test_ner_status_available_with_spacy() -> None:
+    from cinoc.app.engines import ner_status
+
+    status = ner_status(has_module=lambda n: n == "spacy")
+    assert status.kind == "ner"
+    assert status.available is True
+
+
+def test_ner_status_unavailable_signals_extra() -> None:
+    from cinoc.app.engines import ner_status
+
+    status = ner_status(has_module=lambda _n: False)
+    assert status.available is False
+    assert "[ner]" in status.detail
+
+
+def test_ner_not_in_ocr_engine_list() -> None:
+    # la NER est un post-traitement, pas un moteur de transcription.
+    assert "ner" not in {s.kind for s in engine_statuses()}

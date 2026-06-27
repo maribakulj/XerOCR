@@ -212,6 +212,22 @@ def _ollama_status(has_module: ModuleProbe) -> EngineStatus:
     return EngineStatus(kind="ollama", label="Ollama", available=ok, detail=detail)
 
 
+def ner_status(*, has_module: ModuleProbe = _module_present) -> EngineStatus:
+    """Disponibilité de l'**étape NER** (extra ``[ner]``, spaCy).
+
+    Catégorie **distincte** des moteurs de transcription : la NER est une brique
+    de post-traitement (``texte → ENTITIES``), pas un moteur — elle n'apparaît
+    pas dans le ``<select>`` moteur. **Jamais masquée en mode public** : spaCy est
+    une lib **locale** first-party (pas de clé, pas d'appel cloud), comme
+    ``tesseract``. Le modèle spaCy lui-même est résolu à l'exécution (un modèle
+    absent → erreur d'étape claire, fail-closed)."""
+    if has_module("spacy"):
+        detail, ok = "prêt (spaCy installé)", True
+    else:
+        detail, ok = "spaCy non installé (extra [ner])", False
+    return EngineStatus(kind="ner", label="NER (spaCy)", available=ok, detail=detail)
+
+
 def segmenter_statuses(
     *, has_module: ModuleProbe = _module_present
 ) -> tuple[EngineStatus, ...]:
@@ -304,5 +320,6 @@ __all__ = [
     "PUBLIC_ENGINE_KINDS",
     "StatusProvider",
     "engine_statuses",
+    "ner_status",
     "segmenter_statuses",
 ]

@@ -93,6 +93,13 @@ class Competitor(BaseModel):
     #: Nom d'un **prompt curé** (``cinoc.prompts``) à utiliser à la place du défaut.
     #: Mutuellement exclusif avec ``prompt`` (libre). Résolu au plan en son texte.
     prompt_name: str | None = Field(default=None, max_length=128)
+    #: Active une **étape NER terminale** (``texte → ENTITIES``) après l'OCR/LLM —
+    #: scorée par la vue *entités nommées* si le corpus porte une GT ``ENTITIES``.
+    #: Brique optionnelle (extra ``[ner]``, spaCy) ; ``False`` par défaut.
+    ner: bool = False
+    #: Modèle spaCy de l'étape NER (défaut ``fr_core_news_sm``). Ignoré si
+    #: ``ner`` est ``False``.
+    ner_model: str | None = Field(default=None, max_length=128)
 
 
 #: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
@@ -166,6 +173,19 @@ def _layout_view() -> EvaluationView:
     )
 
 
+def _ner_view() -> EvaluationView:
+    """Vue **entités nommées (NER)** : note les sorties ``ENTITIES`` (étape NER)
+    par ``ner_f1`` contre la GT ``ENTITIES``, sans projection (jonction
+    ``(ENTITIES, ENTITIES)``). Normalisation/`char_exclude` N/A (comparaison
+    d'entités, pas de texte). N'est ajoutée que si le corpus porte une GT
+    ``ENTITIES`` (sinon la section NER resterait orpheline)."""
+    return EvaluationView(
+        name="entités nommées (NER)",
+        candidate_types=frozenset({ArtifactType.ENTITIES}),
+        metric_names=("ner_f1",),
+    )
+
+
 def _reference_view(
     normalization: str | None, char_exclude: str | None
 ) -> EvaluationView:
@@ -221,6 +241,8 @@ def _views_for_corpus(
         views.append(_reference_view(normalization, char_exclude))
     if ArtifactType.LAYOUT in gt_types:
         views.append(_layout_view())
+    if ArtifactType.ENTITIES in gt_types:
+        views.append(_ner_view())
     if not views:
         views.append(
             _ocr_view(
@@ -280,6 +302,31 @@ def _llm_kwargs(
     return kwargs
 
 
+#: Modèle spaCy par défaut de l'étape NER (français — cohérent avec le défaut
+#: historique du builder ``ner``). Surchargé par ``Competitor.ner_model``.
+_NER_DEFAULT_MODEL = "fr_core_news_sm"
+
+
+def _ner_step(suffix: str, text_type: ArtifactType, from_id: str) -> PipelineStep:
+    """Étape NER **terminale** : ``text → ENTITIES`` (branchée sur la sortie texte
+    la plus aboutie du pipeline — ``RAW_TEXT`` en OCR/zero-shot, ``CORRECTED_TEXT``
+    en chaîne LLM/VLM)."""
+    return PipelineStep(
+        id="ner",
+        kind="ner",
+        adapter_name=f"ner:{suffix}",
+        input_types=(text_type,),
+        output_types=(ArtifactType.ENTITIES,),
+        inputs_from={text_type: from_id},
+    )
+
+
+def _ner_kwargs(
+    suffix: str, comp: Competitor
+) -> dict[str, str | int | float | bool]:
+    return {"label": suffix, "model": comp.ner_model or _NER_DEFAULT_MODEL}
+
+
 def _pipeline_for_competitor(
     comp: Competitor, index: int,
 ) -> tuple[PipelineSpec, dict[str, dict[str, str | int | float | bool]]]:
@@ -302,9 +349,7 @@ def _pipeline_for_competitor(
             input_types=(ArtifactType.IMAGE,),
             output_types=(ArtifactType.RAW_TEXT,),
         )
-        pipeline = PipelineSpec(
-            name=comp.engine, initial_inputs=(ArtifactType.IMAGE,), steps=(step,)
-        )
+        steps: list[PipelineStep] = [step]
         ocr_kwargs: dict[str, dict[str, str | int | float | bool]] = {
             name: {"label": suffix, "lang": comp.lang}
         }
@@ -314,6 +359,14 @@ def _pipeline_for_competitor(
         # ``model`` désigne le LLM aval, cf. ``_llm_kwargs``.)
         if comp.model:
             ocr_kwargs[name]["model"] = comp.model
+        if comp.ner:
+            steps.append(_ner_step(suffix, ArtifactType.RAW_TEXT, "ocr"))
+            ocr_kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)
+        pipeline = PipelineSpec(
+            name=comp.engine,
+            initial_inputs=(ArtifactType.IMAGE,),
+            steps=tuple(steps),
+        )
         return pipeline, ocr_kwargs
 
     if comp.mode == "zero_shot":
@@ -333,12 +386,19 @@ def _pipeline_for_competitor(
             input_types=(ArtifactType.IMAGE,),
             output_types=(ArtifactType.RAW_TEXT,),
         )
+        vlm_steps: list[PipelineStep] = [step]
+        vlm_kwargs: dict[str, dict[str, str | int | float | bool]] = {
+            name: _llm_kwargs(suffix, comp, "zero_shot")
+        }
+        if comp.ner:
+            vlm_steps.append(_ner_step(suffix, ArtifactType.RAW_TEXT, "vlm"))
+            vlm_kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)
         pipeline = PipelineSpec(
             name=f"{comp.engine} (zero-shot)",
             initial_inputs=(ArtifactType.IMAGE,),
-            steps=(step,),
+            steps=tuple(vlm_steps),
         )
-        return pipeline, {name: _llm_kwargs(suffix, comp, "zero_shot")}
+        return pipeline, vlm_kwargs
 
     # text_only / text_and_image : OCR amont → LLM/VLM.
     if comp.engine not in _OCR_ENGINES:
@@ -380,15 +440,19 @@ def _pipeline_for_competitor(
         output_types=(ArtifactType.CORRECTED_TEXT,),
         inputs_from=inputs_from,
     )
-    pipeline = PipelineSpec(
-        name=f"{comp.engine}→{comp.llm}",
-        initial_inputs=(ArtifactType.IMAGE,),
-        steps=(ocr_step, llm_step),
-    )
+    chain_steps: list[PipelineStep] = [ocr_step, llm_step]
     kwargs: dict[str, dict[str, str | int | float | bool]] = {
         ocr_name: {"label": suffix, "lang": comp.lang},
         llm_name: _llm_kwargs(suffix, comp, comp.mode),
     }
+    if comp.ner:
+        chain_steps.append(_ner_step(suffix, ArtifactType.CORRECTED_TEXT, "llm"))
+        kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)
+    pipeline = PipelineSpec(
+        name=f"{comp.engine}→{comp.llm}",
+        initial_inputs=(ArtifactType.IMAGE,),
+        steps=tuple(chain_steps),
+    )
     return pipeline, kwargs
 
 

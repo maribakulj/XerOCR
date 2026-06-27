@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from cinoc.app.engines import engine_statuses
+from cinoc.app.engines import EngineStatus, engine_statuses
 from cinoc.interfaces.web.app import create_app
 from cinoc.interfaces.web.routers.runs import LaunchRequest
 from cinoc.interfaces.web.security.csrf import CSRF_HEADER
@@ -204,6 +204,59 @@ def test_public_mode_blocks_cloud_llm_in_chain_403(tmp_path: Path) -> None:
     }
     resp = _post(_client(tmp_path, public_mode=True), body)
     assert resp.status_code == 403
+
+
+def _force_tesseract_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.app.engine_statuses",
+        lambda **kw: engine_statuses(
+            has_binary=lambda _name: "/usr/bin/tesseract", **kw
+        ),
+    )
+
+
+def _patch_ner(monkeypatch: pytest.MonkeyPatch, *, available: bool) -> None:
+    detail = (
+        "prêt (spaCy installé)" if available else "spaCy non installé (extra [ner])"
+    )
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.app.ner_status",
+        lambda **kw: EngineStatus(
+            kind="ner", label="NER (spaCy)", available=available, detail=detail
+        ),
+    )
+
+
+def test_ner_requested_without_spacy_is_409(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Étape NER demandée mais spaCy absent → 409 AVANT le lancement (pas d'échec
+    # d'étape en cours de run). tesseract forcé dispo → on atteint bien le gate NER.
+    _force_tesseract_available(monkeypatch)
+    _patch_ner(monkeypatch, available=False)
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {"competitors": [{"engine": "tesseract", "ner": True}], "corpus_id": corpus_id},
+    )
+    assert resp.status_code == 409
+    assert "[ner]" in resp.json()["detail"]
+
+
+def test_ner_requested_with_spacy_passes_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spaCy dispo → le gate NER passe (le run est lancé : 201).
+    _force_tesseract_available(monkeypatch)
+    _patch_ner(monkeypatch, available=True)
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {"competitors": [{"engine": "tesseract", "ner": True}], "corpus_id": corpus_id},
+    )
+    assert resp.status_code == 201
 
 
 def test_public_mode_allows_free_tesseract(

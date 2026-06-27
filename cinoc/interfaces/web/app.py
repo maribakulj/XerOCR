@@ -30,7 +30,12 @@ from cinoc.adapters.storage.publisher import resolve_publisher
 from cinoc.app import resolve_code_version
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.data_dir import resolve_data_dir
-from cinoc.app.engines import EngineStatus, engine_statuses, segmenter_statuses
+from cinoc.app.engines import (
+    EngineStatus,
+    engine_statuses,
+    ner_status,
+    segmenter_statuses,
+)
 from cinoc.app.jobs import JobRunner
 from cinoc.app.modules import (
     ModuleRegistry,
@@ -224,12 +229,18 @@ def create_app(
     def segmenter_status_provider() -> tuple[EngineStatus, ...]:
         return segmenter_statuses()
 
+    # Étape NER (extra [ner], spaCy) : catégorie distincte (post-traitement, pas
+    # un moteur). Alimente le gate du lanceur et la case « NER » du composeur.
+    def ner_status_provider() -> EngineStatus:
+        return ner_status()
+
     app.include_router(
         build_home_router(
             runtime_dir,
             templates,
             statuses=engine_status_provider,
             segmenters=segmenter_status_provider,
+            ner=ner_status_provider,
             history_store=history_store,
             segmentation_store=seg_store,
             demo_segmentation_id=demo_seg_id,
@@ -251,6 +262,7 @@ def create_app(
             runner,
             corpus_store,
             statuses=engine_status_provider,
+            ner_available=lambda: ner_status_provider().available,
             public_mode=is_public,
         )
     )

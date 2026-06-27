@@ -186,6 +186,89 @@ def test_ocr_only_without_model_omits_it(tmp_path: Path) -> None:
     assert "model" not in spec.adapter_kwargs["tesseract:c0"]
 
 
+def _corpus_with_entities(tmp_path: Path) -> CorpusSpec:
+    (tmp_path / "d.gt.txt").write_text("alpha", encoding="utf-8")
+    (tmp_path / "d.ent.json").write_text(
+        '{"text": "alpha", "entities": []}', encoding="utf-8"
+    )
+    return CorpusSpec(
+        name="c",
+        documents=(
+            DocumentRef(
+                id="d",
+                image_uri=str(tmp_path / "d.png"),
+                ground_truths=(
+                    GroundTruthRef(
+                        type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "d.gt.txt")
+                    ),
+                    GroundTruthRef(
+                        type=ArtifactType.ENTITIES, uri=str(tmp_path / "d.ent.json")
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
+def test_ner_step_appended_to_ocr_only(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", ner=True)
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    ocr, ner = pipe.steps
+    assert ocr.id == "ocr"
+    assert ner.id == "ner"
+    assert ner.adapter_name == "ner:c0"
+    assert ner.input_types == (ArtifactType.RAW_TEXT,)
+    assert ner.inputs_from[ArtifactType.RAW_TEXT] == "ocr"
+    assert ner.output_types == (ArtifactType.ENTITIES,)
+    # kwargs du module NER (label + modèle par défaut) → constructible.
+    kwargs = spec.adapter_kwargs["ner:c0"]
+    assert kwargs == {"label": "c0", "model": "fr_core_news_sm"}
+    assert _registry().build("ner:c0", kwargs).name == "ner:c0"
+
+
+def test_ner_step_in_chain_consumes_corrected_text(tmp_path: Path) -> None:
+    comp = Competitor(
+        engine="tesseract", mode="text_only", llm="openai", ner=True,
+        ner_model="en_core_web_sm",
+    )
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    _ocr, _llm, ner = pipe.steps
+    assert ner.input_types == (ArtifactType.CORRECTED_TEXT,)
+    assert ner.inputs_from[ArtifactType.CORRECTED_TEXT] == "llm"
+    assert spec.adapter_kwargs["ner:c0"]["model"] == "en_core_web_sm"
+
+
+def test_no_ner_step_when_disabled(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    (pipe,) = spec.pipelines
+    assert all(step.id != "ner" for step in pipe.steps)
+    assert "ner:c0" not in spec.adapter_kwargs
+
+
+def test_ner_view_added_when_corpus_has_entity_gt(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract", ner=True),),
+        _corpus_with_entities(tmp_path),
+        "r",
+    )(tmp_path)
+    names = {v.name for v in spec.evaluation.views}
+    assert "entités nommées (NER)" in names
+    ner_view = next(v for v in spec.evaluation.views if v.name.startswith("entités"))
+    assert ner_view.metric_names == ("ner_f1",)
+    assert ner_view.candidate_types == frozenset({ArtifactType.ENTITIES})
+
+
+def test_no_ner_view_without_entity_gt(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract", ner=True),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert all(not v.name.startswith("entités") for v in spec.evaluation.views)
+
+
 def test_curated_prompt_name_resolves_to_text(tmp_path: Path) -> None:
     comp = Competitor(
         engine="openai", mode="zero_shot", prompt_name="zero_shot_medieval_french"

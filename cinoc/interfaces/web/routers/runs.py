@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -107,6 +107,7 @@ def build_runs_router(
     corpus_store: CorpusStore,
     *,
     statuses: StatusProvider,
+    ner_available: Callable[[], bool] = lambda: True,
     public_mode: bool = False,
 ) -> APIRouter:
     """Construit le routeur du lanceur (monté par ``create_app``).
@@ -114,6 +115,11 @@ def build_runs_router(
     ``public_mode`` (Space exposé) **verrouille** l'exécution au seul socle
     first-party gratuit (``PUBLIC_ENGINE_KINDS``) : tout moteur cloud ou autre kind
     est refusé en ``403`` (fail-closed), sans jamais lancer un appel facturé.
+
+    ``ner_available`` sonde la dispo de l'étape NER (extra ``[ner]``, spaCy) : un
+    concurrent NER demandé sans la lib tombe en ``409`` **avant** le lancement
+    (plutôt qu'un échec d'étape en cours de run). spaCy étant local first-party,
+    la NER reste autorisée en mode public.
     """
     router = APIRouter()
 
@@ -169,6 +175,12 @@ def build_runs_router(
                     raise HTTPException(
                         status_code=409, detail=f"moteur indisponible : {kind!r}"
                     )
+        # 4bis : étape NER demandée → exiger spaCy (extra [ner]) AVANT le lancement.
+        if any(comp.ner for comp in req.competitors) and not ner_available():
+            raise HTTPException(
+                status_code=409,
+                detail="étape NER indisponible : installer 'cinoc[ner]' (spaCy).",
+            )
         # 5 : cohérence mode⇄moteur (dispatch exhaustif).
         try:
             build = plan_benchmark_run(
