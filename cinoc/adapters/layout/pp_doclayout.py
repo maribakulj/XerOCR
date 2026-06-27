@@ -93,15 +93,22 @@ def to_canonical_layout(
     return CanonicalLayout(pages=(page,))
 
 
+#: Modèle PP-DocLayout par défaut. La variante **légère** ``PP-DocLayout-S``
+#: (poids ~10× plus petits) est bakable dans l'image Space pour **tester
+#: l'option** sans peser sur le free-tier ; ``-L`` reste le défaut qualité.
+#: Surchargé par ``CINOC_PPDOCLAYOUT_MODEL`` (lu par le builder) ou ``model=``.
+_DEFAULT_MODEL = "PP-DocLayout-L"
+
+
 def _detect_with_paddle(  # pragma: no cover -- SDK + poids requis (test 'live')
-    image_path: str,
+    image_path: str, model: str = _DEFAULT_MODEL
 ) -> LayoutDetection:
     """Détecte la mise en page via **PaddleX PP-DocLayout**. Isolé → mockable.
 
     SDK absent → ``AdapterStepError`` explicite (l'extra ``[segment]`` manque) ;
     le module reste listable, il ne plante pas à l'import. Le corps qui exécute le
-    modèle n'est exercé que par un test ``live`` (SDK + poids installés).
-    """
+    modèle n'est exercé que par un test ``live`` (SDK + poids installés). ``model``
+    choisit la variante (``-L`` qualité / ``-S`` légère)."""
     try:
         from paddlex import create_model  # type: ignore[import-not-found]
     except ImportError as exc:
@@ -109,7 +116,7 @@ def _detect_with_paddle(  # pragma: no cover -- SDK + poids requis (test 'live')
             "pp_doclayout : PaddleX non installé "
             "(pip install 'cinoc[segment]' + poids PP-DocLayout)."
         ) from exc
-    results = list(create_model("PP-DocLayout-L").predict(image_path, batch_size=1))
+    results = list(create_model(model).predict(image_path, batch_size=1))
     if not results:
         return LayoutDetection(page_width=0, page_height=0, regions=())
     boxes = results[0].get("boxes", [])
@@ -136,6 +143,7 @@ class PPDocLayoutSegmenter:
     def __init__(
         self,
         *,
+        model: str = _DEFAULT_MODEL,
         min_score: float = _DEFAULT_MIN_SCORE,
         detector: DetectorFn | None = None,
     ) -> None:
@@ -143,6 +151,7 @@ class PPDocLayoutSegmenter:
             raise AdapterStepError(
                 f"PPDocLayoutSegmenter : min_score ∈ [0, 1], reçu {min_score}."
             )
+        self._model = model
         self._min_score = min_score
         self._detector = detector
 
@@ -165,7 +174,7 @@ class PPDocLayoutSegmenter:
     def _detect(self, image_path: str) -> LayoutDetection:
         if self._detector is not None:
             return self._detector(image_path)
-        return _detect_with_paddle(image_path)
+        return _detect_with_paddle(image_path, self._model)
 
     def execute(
         self,

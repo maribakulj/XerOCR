@@ -146,6 +146,13 @@ def test_invalid_min_score_rejected() -> None:
         PPDocLayoutSegmenter(min_score=1.5)
 
 
+def test_model_defaults_to_large_and_is_configurable() -> None:
+    # Le défaut reste la variante qualité ; la variante légère se choisit (image
+    # Space) pour tester l'option sans peser sur le free-tier.
+    assert PPDocLayoutSegmenter()._model == "PP-DocLayout-L"
+    assert PPDocLayoutSegmenter(model="PP-DocLayout-S")._model == "PP-DocLayout-S"
+
+
 @pytest.mark.skipif(
     importlib.util.find_spec("paddlex") is not None,
     reason="PaddleX installé → chemin réel (test live)",

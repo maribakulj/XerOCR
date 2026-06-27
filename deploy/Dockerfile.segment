@@ -1,0 +1,88 @@
+# Image **moteur + segmenteur léger** Cinoc (Hugging Face Space, SDK: docker).
+#
+# Variante OPTIONNELLE de `Dockerfile.engine` : en plus du socle OCR gratuit
+# (Tesseract), elle **bake le segmenteur local léger PP-DocLayout-S** (PaddleX)
+# pour qu'on puisse **tester l'option « segmenteur local »** sur le Space sans
+# rien installer. Ce n'est **pas** l'image principale : le chemin recommandé pour
+# la segmentation reste le **segmenteur distant** (endpoint HF, image légère). On
+# choisit la variante **-S** (poids ~10× plus petits que -L) pour rester
+# compatible free-tier ; la qualité -L se choisit via `CINOC_PPDOCLAYOUT_MODEL`.
+#
+# Contexte de build « racine plate » (assemblé par le workflow de déploiement).
+FROM python:3.11-slim
+
+# ── Système : Tesseract 5 + langues + libs image (Pillow / OpenCV runtime) ──────
+RUN apt-get update -o Acquire::Retries=3 \
+    && apt-get install -y --no-install-recommends -o Acquire::Retries=3 \
+        tesseract-ocr \
+        tesseract-ocr-fra \
+        tesseract-ocr-lat \
+        tesseract-ocr-eng \
+        libtiff6 \
+        libjpeg62-turbo \
+        libpng16-16 \
+        libwebp7 \
+        libgomp1 \
+        libglib2.0-0 \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Variables d'exécution ──────────────────────────────────────────────────────
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+ENV OMP_THREAD_LIMIT=1
+ENV CINOC_PUBLIC_MODE=true
+ENV PYTHONUNBUFFERED=1
+# Variante LÉGÈRE du segmenteur local (bakée ci-dessous) : le builder du socle la
+# lit pour construire `pp_doclayout` avec ce modèle. Mettre `PP-DocLayout-L` pour
+# la qualité (poids plus lourds → re-baker l'image en conséquence).
+ENV CINOC_PPDOCLAYOUT_MODEL=PP-DocLayout-S
+
+# ── Smoke-test Tesseract au BUILD (fail-fast) ──────────────────────────────────
+RUN set -eu; \
+    timeout 30 tesseract --version; \
+    timeout 30 tesseract --list-langs 2>&1 | grep -qx fra
+
+# ── Utilisateur non-root ───────────────────────────────────────────────────────
+RUN useradd --create-home --uid 1000 cinoc
+WORKDIR /home/cinoc/app
+
+# ── Dépendances Python : socle vitrine + tesseract + segment + images ──────────
+# paddlepaddle (CPU) + paddlex sont lourds : c'est le prix de l'option locale.
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir "paddlepaddle==3.0.0" "paddlex>=3,<4" Pillow
+
+# ── Code + paquet (sans deps : tout est déjà figé ci-dessus) ───────────────────
+COPY pyproject.toml README.md ./
+COPY cinoc ./cinoc
+RUN pip install --no-cache-dir --no-deps .
+
+# ── Rapports bakés (lecture seule) ─────────────────────────────────────────────
+COPY reports ./reports
+ENV CINOC_REPORTS_DIR=/home/cinoc/app/reports
+
+USER cinoc
+
+# ── Bake des poids PP-DocLayout-S + smoke-test segmenteur au BUILD ──────────────
+# `create_model` télécharge les poids (réseau de build) dans ~/.paddlex → ils
+# persistent dans l'image (le Space free-tier n'a pas de réseau garanti au
+# runtime). Un segmenteur cassé casse le BUILD (l'image précédente reste servie),
+# pas un déploiement qui échoue en silence. On valide une vraie prédiction sur une
+# image blanche générée — succès = poids présents + inférence CPU fonctionnelle.
+RUN set -eu; \
+    python - <<'PY'
+from pathlib import Path
+import tempfile
+from PIL import Image
+from cinoc.adapters.layout.pp_doclayout import _detect_with_paddle
+
+with tempfile.TemporaryDirectory() as d:
+    img = Path(d) / "smoke.png"
+    Image.new("RGB", (320, 240), (255, 255, 255)).save(img)
+    # Déclenche le téléchargement des poids -S + une inférence CPU réelle.
+    _detect_with_paddle(str(img), "PP-DocLayout-S")
+print("PP-DocLayout-S OK (poids bakés, inférence CPU vérifiée)")
+PY
+
+EXPOSE 7860
+CMD ["cinoc", "serve", "--host", "0.0.0.0", "--port", "7860"]

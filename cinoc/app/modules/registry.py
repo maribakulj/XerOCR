@@ -241,9 +241,16 @@ def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
 
 
 def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:
+    import os
+
     from cinoc.adapters.layout.pp_doclayout import PPDocLayoutSegmenter
 
-    return PPDocLayoutSegmenter()
+    # Variante du modèle : kwarg explicite > env (l'image Space bake la variante
+    # légère via ``CINOC_PPDOCLAYOUT_MODEL=PP-DocLayout-S``) > défaut (-L qualité).
+    model = kwargs.get("model")
+    if not isinstance(model, str) or not model:
+        model = os.environ.get("CINOC_PPDOCLAYOUT_MODEL", "PP-DocLayout-L")
+    return PPDocLayoutSegmenter(model=model)
 
 
 def _build_remote_segmenter(kwargs: Mapping[str, ParamValue]) -> Module:

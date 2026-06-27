@@ -79,6 +79,21 @@ def test_ner_requires_label() -> None:
         _registry().build("ner:c0", {})
 
 
+def test_pp_doclayout_model_from_env_and_kwarg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # L'image Space bake la variante légère via CINOC_PPDOCLAYOUT_MODEL ; un kwarg
+    # explicite l'emporte ; défaut = -L.
+    monkeypatch.delenv("CINOC_PPDOCLAYOUT_MODEL", raising=False)
+    assert _registry().build("pp_doclayout", {})._model == "PP-DocLayout-L"
+    monkeypatch.setenv("CINOC_PPDOCLAYOUT_MODEL", "PP-DocLayout-S")
+    assert _registry().build("pp_doclayout", {})._model == "PP-DocLayout-S"
+    assert (
+        _registry().build("pp_doclayout", {"model": "PP-DocLayout-M"})._model
+        == "PP-DocLayout-M"
+    )
+
+
 def test_builds_remote_segmenter_module() -> None:
     module = _registry().build(
         "remote_segmenter", {"endpoint": "https://example.org/seg"}
