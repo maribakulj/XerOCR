@@ -58,7 +58,7 @@ def test_renders_one_strip_per_engine() -> None:
     assert html.count('class="box-plot"') == 2  # une boîte SVG par moteur
     # labels min·Q1·méd·µ·Q3·max en pourcentage (échelle commune : max 30 %)
     assert (
-        "min 10.0 % · Q1 5.0 % · méd 20.0 % · µ 20.0 % · Q3 35.0 % · max 30.0 %"
+        "min 10,0 % · Q1 5,0 % · méd 20,0 % · µ 20,0 % · Q3 35,0 % · max 30,0 %"
         in html
     )  # tesseract
 

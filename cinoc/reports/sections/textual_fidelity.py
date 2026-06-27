@@ -15,17 +15,24 @@ from cinoc.evaluation.analysis import (
     TextualFidelityPayload,
 )
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
 
-def _rare_row(row: PipelineTextualFidelity, order: dict[str, int]) -> str:
+def _rare_row(
+    row: PipelineTextualFidelity, order: dict[str, int], lang: str
+) -> str:
     if row.n_rare_reference == 0:
         recall = "—"
         missed = "—"
     else:
-        recall = f"{row.rare_recall:.1%}" if row.rare_recall is not None else "—"
+        recall = (
+            localize_decimal(f"{row.rare_recall:.1%}", lang)
+            if row.rare_recall is not None
+            else "—"
+        )
         missed = (
             f'<span class="muted">{escape(", ".join(row.missed))}</span>'
             if row.missed
@@ -40,7 +47,7 @@ def _rare_row(row: PipelineTextualFidelity, order: dict[str, int]) -> str:
     )
 
 
-def _token_flow(token: ModernizedToken) -> str:
+def _token_flow(token: ModernizedToken, lang: str) -> str:
     """Une forme GT → ses variantes produites (chips, barre ∝ compte = taille)."""
     max_count = token.variants[0].count if token.variants else 1
     chips = "".join(
@@ -52,7 +59,7 @@ def _token_flow(token: ModernizedToken) -> str:
     return (
         '<div class="wf-row">'
         f'<span class="wf-word wf-src">{escape(token.token)}</span>'
-        f'<span class="wf-meta">{token.rate:.1%}</span>'
+        f'<span class="wf-meta">{localize_decimal(f"{token.rate:.1%}", lang)}</span>'
         f'<span class="wf-arrow">→</span>{chips}</div>'
     )
 
@@ -65,7 +72,7 @@ def _modernization_block(
     for row in payload.pipelines:
         if not row.modernization:
             continue
-        flows = "".join(_token_flow(token) for token in row.modernization)
+        flows = "".join(_token_flow(token, lang) for token in row.modernization)
         badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
         groups.append(
             f'<div class="cf-engine"><span class="cf-eng-name">{badge}</span>'
@@ -95,7 +102,7 @@ def _modernization_block(
 def _block(
     view: str, payload: TextualFidelityPayload, lang: str, order: dict[str, int]
 ) -> str:
-    rare_rows = "".join(_rare_row(row, order) for row in payload.pipelines)
+    rare_rows = "".join(_rare_row(row, order, lang) for row in payload.pipelines)
     head = localized(
         lang,
         f"{view}rappel des tokens rares "

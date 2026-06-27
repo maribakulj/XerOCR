@@ -41,7 +41,7 @@ def test_renders_region_f1_and_cer() -> None:
     html = StructureSection().render(_result((pipe,)), SectionContext())
     assert html is not None
     assert "Region-F1" in html
-    assert "0.8200" in html and "0.0345" in html
+    assert "0,8200" in html and "0,0345" in html
 
 
 def test_absent_without_region_metrics() -> None:

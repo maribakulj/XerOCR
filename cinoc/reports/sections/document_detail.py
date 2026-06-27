@@ -22,6 +22,7 @@ from cinoc.evaluation.analysis import (
 )
 from cinoc.evaluation.lines import gini, percentile
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import fmt_pct, localize_decimal
 from cinoc.reports.engine_badges import engine_accent, engine_letter, engine_order
 from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
@@ -77,8 +78,9 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
         ordered = sorted(cers)
         mean_cer = sum(cers) / n
         chips = (
-            f'<span class="chip">CER {mean_cer * 100:.1f} %</span>'
-            f'<span class="chip">Gini {gini(cers):.2f}</span>'
+            f'<span class="chip">CER {fmt_pct(mean_cer, lang)}</span>'
+            f'<span class="chip">Gini '
+            f'{localize_decimal(f"{gini(cers):.2f}", lang)}</span>'
             f'<span class="chip">{n} {lines_l}</span>'
         )
         for thr in (0.30, 0.50, 1.0):
@@ -97,7 +99,7 @@ def _line_distribution(dl: DocumentLines, order: dict[str, int], lang: str) -> s
             f'<div class="dd-pct-row"><span class="dd-pct-lbl">{label}</span>'
             f'<span class="track"><i class="lh-{_cer_bucket(v)}" '
             f'style="width:{min(100.0, v * 100):.0f}%"></i></span>'
-            f'<span class="dd-pct-val">{v * 100:.1f} %</span></div>'
+            f'<span class="dd-pct-val">{fmt_pct(v, lang)}</span></div>'
             for label, v in (
                 (lbl, percentile(ordered, q)) for lbl, q in _PCTS
             )
@@ -170,7 +172,8 @@ def _hallucination_block(
         )
         chips = (
             f'<span class="chip">{anchor_l} {ph.anchor_score * 100:.0f} %</span>'
-            f'<span class="chip">{ratio_l} {ph.length_ratio:.2f}</span>'
+            f'<span class="chip">{ratio_l} '
+            f'{localize_decimal(f"{ph.length_ratio:.2f}", lang)}</span>'
             f'<span class="chip">{netins_l} {ph.net_insertion_rate * 100:.0f} %'
             "</span>"
             f'<span class="chip">{ph.gt_words} / {ph.hyp_words} {words_l}</span>'
@@ -292,7 +295,7 @@ class DocumentDetailSection:
             f'<span class="eng-badge" style="--badge:{engine_accent(order.get(p, 0))}">'
             f"{engine_letter(order.get(p, 0))}</span>"
             f'<span class="dd-name">{escape(p)}</span>'
-            f'<span class="dd-cer">{c * 100:.1f} %</span></div>'
+            f'<span class="dd-cer">{fmt_pct(c, lang)}</span></div>'
             for p, c in cers
         )
         # Diff **pleine page** (texte complet + sélecteur de moteur) si le payload

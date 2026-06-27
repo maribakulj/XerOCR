@@ -66,7 +66,8 @@ def _table_for_view(
     body_rows: list[str] = []
     for pipeline in pipelines:
         cells = "".join(
-            bar_cell(pipeline.aggregate[i], maxes[j]) for j, i in enumerate(keep)
+            bar_cell(pipeline.aggregate[i], maxes[j], lang=lang)
+            for j, i in enumerate(keep)
         )
         badge = engine_cell(pipeline.pipeline, order.get(pipeline.pipeline, 0))
         body_rows.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')

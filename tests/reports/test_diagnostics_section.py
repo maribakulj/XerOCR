@@ -78,7 +78,7 @@ def test_renders_confusions_lines_and_hardest_with_escaping() -> None:
     # Anti-XSS : les glyphes méta-caractères sont **échappés** dans leur slot.
     assert 'class="cf-glyph">&amp;</span>' in html
     assert 'class="cf-glyph">&lt;</span>' in html
-    assert "0.6200" in html and "d7" in html
+    assert "0,6200" in html and "d7" in html
     # Drill-in : diff GT↔hypothèse surligné caractère à caractère.
     assert 'class="d-del"' in html  # suppressions (présentes en GT)
     assert 'class="d-ins"' in html  # insertions (produites par le moteur)
@@ -86,7 +86,7 @@ def test_renders_confusions_lines_and_hardest_with_escaping() -> None:
     # (anti-XSS) : `<s>` n'apparaît jamais brut, seulement `&lt;s&gt;`.
     assert "<s>preux</s>" not in html and "&lt;s&gt;" in html
     assert "preux" in html  # segment identique rendu tel quel
-    assert "0.4100" in html
+    assert "0,4100" in html
     assert html == DiagnosticsSection().render(_result(), SectionContext())
 
 

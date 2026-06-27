@@ -13,6 +13,7 @@ from __future__ import annotations
 from cinoc.evaluation.analysis import CalibrationPayload, TaxonomyPayload
 from cinoc.evaluation.result import PipelineResult, RunResult
 from cinoc.reports._binning import histogram
+from cinoc.reports._numbers import fmt_pct
 from cinoc.reports.engine_badges import engine_accent, engine_letter, engine_order
 from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
@@ -71,8 +72,8 @@ def _kpi(label: str, value: str) -> str:
     )
 
 
-def _pct(v: float) -> str:
-    return f"{v * 100:.1f} %"
+def _pct(v: float, lang: str) -> str:
+    return fmt_pct(v, lang)
 
 
 def _config_block(result: RunResult, name: str, lang: str) -> str:
@@ -132,7 +133,7 @@ def _stratum_block(result: RunResult, name: str, view: str, lang: str) -> str:
     )
     rows = "".join(
         f'<tr><td class="lbl">{escape(s)}</td><td class="disp">{n}</td>'
-        f'<td class="disp">{_pct(m)}</td></tr>'
+        f'<td class="disp">{_pct(m, lang)}</td></tr>'
         for s, m, n in rows_data
     )
     cap = localized(lang, "Performance par strate", "Performance by stratum")
@@ -190,13 +191,13 @@ class EngineProfileSection:
         next_idx = order[engines[(pos + 1) % total]]
         # KPIs : métriques d'agrégat (réelles) + ECE si calibration présente.
         kpis = [
-            _kpi(s.metric, _pct(s.value))
+            _kpi(s.metric, _pct(s.value, lang))
             for s in pipe.aggregate
             if s.value is not None
         ]
         cal = _calibration(result, view, name)
         if cal is not None:
-            kpis.append(_kpi("ece", _pct(cal[0])))
+            kpis.append(_kpi("ece", _pct(cal[0], lang)))
         cer_vals = _per_doc_cer(result, name, view)
         chart_caption = localized(
             lang,

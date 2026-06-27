@@ -9,15 +9,28 @@ explicite est rendu — jamais un chiffre silencieusement périmé.
 
 from __future__ import annotations
 
-from cinoc.evaluation.analysis import EconomicsPayload
+from cinoc.evaluation.analysis import EconomicsPayload, MarginalCost
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
 
-def _fmt(value: float | None, pattern: str = "{:.4f}") -> str:
-    return "—" if value is None else pattern.format(value)
+def _fmt(value: float | None, lang: str, pattern: str = "{:.4f}") -> str:
+    return "—" if value is None else localize_decimal(pattern.format(value), lang)
+
+
+def _marginal_row(m: MarginalCost, lang: str) -> str:
+    delta = localize_decimal(f"{m.cost_delta_eur:+.4f}", lang)
+    avoided = localize_decimal(f"{m.errors_avoided:+.1f}", lang)
+    return (
+        f'<tr><td class="eng-cell">{escape(m.pipeline)}</td>'
+        f'<td class="eng-cell">{escape(m.baseline)}</td>'
+        f'<td class="disp">{delta}</td>'
+        f'<td class="disp">{avoided}</td>'
+        f'<td class="disp">{_fmt(m.eur_per_avoided_error, lang)}</td></tr>'
+    )
 
 
 def _fmt_int(value: int | None) -> str:
@@ -30,16 +43,19 @@ def _block(
     rows: list[str] = []
     for row in payload.pipelines:
         badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
+        dur = _fmt(row.duration_seconds, lang, "{:.1f}")
+        pph = _fmt(row.pages_per_hour, lang, "{:.1f}")
+        pph_eff = _fmt(row.pages_per_hour_effective, lang, "{:.1f}")
         rows.append(
             f'<tr><td class="eng-cell">{badge}</td>'
-            f'<td class="disp">{_fmt(row.cer)}</td>'
-            f'<td class="disp">{_fmt(row.duration_seconds, "{:.1f}")}</td>'
+            f'<td class="disp">{_fmt(row.cer, lang)}</td>'
+            f'<td class="disp">{dur}</td>'
             f'<td class="disp">{_fmt_int(row.tokens_in)}</td>'
             f'<td class="disp">{_fmt_int(row.tokens_out)}</td>'
-            f'<td class="disp">{_fmt(row.cost_eur)}</td>'
+            f'<td class="disp">{_fmt(row.cost_eur, lang)}</td>'
             f'<td class="eng-cell">{escape(row.basis)}</td>'
-            f'<td class="disp">{_fmt(row.pages_per_hour, "{:.1f}")}</td>'
-            f'<td class="disp">{_fmt(row.pages_per_hour_effective, "{:.1f}")}</td>'
+            f'<td class="disp">{pph}</td>'
+            f'<td class="disp">{pph_eff}</td>'
             "</tr>"
         )
     stale = (
@@ -57,14 +73,7 @@ def _block(
     )
     marginal = ""
     if payload.marginal:
-        items = "".join(
-            f'<tr><td class="eng-cell">{escape(m.pipeline)}</td>'
-            f'<td class="eng-cell">{escape(m.baseline)}</td>'
-            f'<td class="disp">{m.cost_delta_eur:+.4f}</td>'
-            f'<td class="disp">{m.errors_avoided:+.1f}</td>'
-            f'<td class="disp">{_fmt(m.eur_per_avoided_error)}</td></tr>'
-            for m in payload.marginal
-        )
+        items = "".join(_marginal_row(m, lang) for m in payload.marginal)
         marginal_head = localized(
             lang,
             "Coût marginal (vs pipeline le moins cher)",
@@ -108,20 +117,22 @@ def _block(
         f"{view}coûts &amp; débit",
         f"{view}costs &amp; throughput",
     )
+    rate = localize_decimal(f"{payload.hourly_rate_eur:g}", lang)
+    tpe = localize_decimal(f"{payload.time_per_error_seconds:g}", lang)
     prose = localized(
         lang,
         '<p class="muted">Coûts <strong>indicatifs</strong> : temps machine '
-        f"(durée mesurée × {payload.hourly_rate_eur:g} "
+        f"(durée mesurée × {rate} "
         f"{escape(payload.currency)}/h) + jetons cloud au tarif de la table "
         f"(valable jusqu'au {escape(payload.pricing_valid_until)}) ; débit "
         "effectif corrigé du temps de relecture "
-        f"({payload.time_per_error_seconds:g} s/erreur).</p>\n",
+        f"({tpe} s/erreur).</p>\n",
         '<p class="muted">Costs are <strong>indicative</strong>: machine time '
-        f"(measured duration × {payload.hourly_rate_eur:g} "
+        f"(measured duration × {rate} "
         f"{escape(payload.currency)}/h) + cloud tokens at the table's rate "
         f"(valid until {escape(payload.pricing_valid_until)}); effective "
         "throughput corrected for proofreading time "
-        f"({payload.time_per_error_seconds:g} s/error).</p>\n",
+        f"({tpe} s/error).</p>\n",
     )
     th_pipeline = localized(lang, "Pipeline", "Pipeline")
     th_duration = localized(lang, "durée (s)", "duration (s)")

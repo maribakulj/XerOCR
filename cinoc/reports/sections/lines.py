@@ -12,35 +12,40 @@ from collections.abc import Mapping
 
 from cinoc.evaluation.analysis import LinesPayload, PipelineLines
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
 
-def _distribution_row(row: PipelineLines, order: Mapping[str, int]) -> str:
+def _distribution_row(
+    row: PipelineLines, order: Mapping[str, int], lang: str
+) -> str:
     badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
     p = row.percentiles
     catastrophic = " · ".join(
-        f"≥{item.threshold:.2f} : {item.rate:.1%}" for item in row.catastrophic
+        f"≥{localize_decimal(f'{item.threshold:.2f}', lang)} : "
+        f"{localize_decimal(f'{item.rate:.1%}', lang)}"
+        for item in row.catastrophic
     )
     return (
         f'<tr><td class="eng-cell">{badge}</td>'
         f'<td class="disp">{row.line_count}</td>'
-        f'<td class="disp">{row.mean_cer:.1%}</td>'
-        f'<td class="disp">{p.p50:.1%}</td>'
-        f'<td class="disp">{p.p75:.1%}</td>'
-        f'<td class="disp">{p.p90:.1%}</td>'
-        f'<td class="disp">{p.p95:.1%}</td>'
-        f'<td class="disp">{p.p99:.1%}</td>'
-        f'<td class="disp">{row.gini:.3f}</td>'
+        f'<td class="disp">{localize_decimal(f"{row.mean_cer:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{p.p50:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{p.p75:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{p.p90:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{p.p95:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{p.p99:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{row.gini:.3f}", lang)}</td>'
         f'<td class="disp">{catastrophic}</td></tr>'
     )
 
 
-def _heatmap_row(row: PipelineLines, order: Mapping[str, int]) -> str:
+def _heatmap_row(row: PipelineLines, order: Mapping[str, int], lang: str) -> str:
     badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
     cells = "".join(
-        f'<td class="disp">{value:.1%}</td>'
+        f'<td class="disp">{localize_decimal(f"{value:.1%}", lang)}</td>'
         if value is not None
         else '<td class="disp">—</td>'
         for value in row.heatmap
@@ -51,8 +56,12 @@ def _heatmap_row(row: PipelineLines, order: Mapping[str, int]) -> str:
 def _block(
     view: str, payload: LinesPayload, order: Mapping[str, int], lang: str
 ) -> str:
-    rows = "".join(_distribution_row(row, order) for row in payload.pipelines)
-    heatmap_rows = "".join(_heatmap_row(row, order) for row in payload.pipelines)
+    rows = "".join(
+        _distribution_row(row, order, lang) for row in payload.pipelines
+    )
+    heatmap_rows = "".join(
+        _heatmap_row(row, order, lang) for row in payload.pipelines
+    )
     bin_headers = "".join(
         f'<th class="num-cell">{i + 1}/{payload.heatmap_bins}</th>'
         for i in range(payload.heatmap_bins)

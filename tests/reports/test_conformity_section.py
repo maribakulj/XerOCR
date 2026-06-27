@@ -59,7 +59,7 @@ def test_renders_scores_and_deltas() -> None:
     assert html is not None
     assert "Conformité HIPE" in html
     assert "cmer_micro" in html and "wmer_macro" in html  # noms du scorer
-    assert "0.1234" in html and "+0.0500" in html
+    assert "0,1234" in html and "+0,0500" in html
     assert html.count("—") >= 2  # wmer_macro et delta_heritage absents → tiret
     assert "eng" in html
 

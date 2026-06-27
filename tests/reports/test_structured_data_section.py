@@ -69,7 +69,7 @@ def test_renders_categories_and_lost_forms() -> None:
     assert html is not None
     assert "Données structurées" in html
     assert "années" in html and "foliotation" in html
-    assert "50.0%" in html and "100.0%" in html
+    assert "50,0%" in html and "100,0%" in html
     assert "1789" in html  # forme perdue affichée
 
 

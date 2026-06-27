@@ -11,6 +11,7 @@ from __future__ import annotations
 from statistics import fmean, median, quantiles
 
 from cinoc.evaluation.result import RunDocumentResult, RunResult
+from cinoc.reports._numbers import fmt_pct
 from cinoc.reports.engine_badges import engine_accent, engine_letter, engine_order
 from cinoc.reports.html import escape, localized, view_label
 from cinoc.reports.section import Html, SectionContext
@@ -32,8 +33,8 @@ def _per_doc_cer(
     ]
 
 
-def _pct(v: float) -> str:
-    return f"{v * 100:.1f} %"
+def _pct(v: float, lang: str) -> str:
+    return fmt_pct(v, lang)
 
 
 class DispersionSection:
@@ -103,8 +104,9 @@ class DispersionSection:
             f'<span class="disp-name">{escape(pipeline)}</span></div>'
             f"{plot}"
             '<div class="disp-labels mono">'
-            f"min {_pct(lo)} · Q1 {_pct(q1)} · {med_label} {_pct(med)} · "
-            f"µ {_pct(mean)} · Q3 {_pct(q3)} · max {_pct(hi)}"
+            f"min {_pct(lo, lang)} · Q1 {_pct(q1, lang)} · "
+            f"{med_label} {_pct(med, lang)} · "
+            f"µ {_pct(mean, lang)} · Q3 {_pct(q3, lang)} · max {_pct(hi, lang)}"
             "</div></div>"
         )
 

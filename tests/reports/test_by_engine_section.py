@@ -69,7 +69,7 @@ def test_engines_ordered_by_cer_without_ordinal_rank() -> None:
     assert 'class="rank"' not in html
     assert "n'est déclaré" in html  # neutralité affirmée dans la prose
     # dispersion de fast : min 0.05 · médiane 0.10 · max 0.15
-    assert "0.050" in html and "0.150" in html
+    assert "0,050" in html and "0,150" in html
     # badge moteur présent, et la lettre suit l'ordre canonique (pas le tri) :
     # `slow` apparaît d'abord dans le run → A puis B, même si `fast` a un CER plus bas.
     assert 'class="eng-badge"' in html
@@ -128,7 +128,7 @@ def test_air_and_hcpr_render_as_columns() -> None:
     html = EngineSection().render(result, SectionContext())
     assert html is not None
     assert ">air " in html and ">hcpr " in html  # en-têtes de colonne (+ tri ↕)
-    assert "0.2500" in html and "0.8000" in html  # valeurs rendues
+    assert "0,2500" in html and "0,8000" in html  # valeurs rendues
     assert "Apport net" in html  # définition glossaire FR de air au survol
 
 

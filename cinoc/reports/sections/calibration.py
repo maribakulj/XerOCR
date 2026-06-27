@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import CalibrationPayload
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_accent, engine_order
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
@@ -44,9 +45,11 @@ def _block(
     th_tokens = localized(lang, "jetons", "tokens")
     for row in payload.pipelines:
         bins = "".join(
-            f'<tr><td class="disp">[{b.lower:.1f} ; {b.upper:.1f}[</td>'
-            f'<td class="disp">{b.mean_confidence:.3f}</td>'
-            f'<td class="disp">{b.accuracy:.3f}</td>'
+            f'<tr><td class="disp">'
+            f'{localize_decimal(f"[{b.lower:.1f} ; {b.upper:.1f}[", lang)}</td>'
+            f'<td class="disp">'
+            f'{localize_decimal(f"{b.mean_confidence:.3f}", lang)}</td>'
+            f'<td class="disp">{localize_decimal(f"{b.accuracy:.3f}", lang)}</td>'
             f'<td class="disp">{b.count}</td></tr>'
             for b in row.bins
         )
@@ -55,8 +58,10 @@ def _block(
             accent=engine_accent(order.get(row.pipeline, 0)),
         )
         parts.append(
-            f"<h4>{escape(row.pipeline)} — ECE {row.ece:.4f} · "
-            f"MCE {row.mce:.4f} · {row.n_tokens} {tokens_word}</h4>\n"
+            f"<h4>{escape(row.pipeline)} — "
+            f'ECE {localize_decimal(f"{row.ece:.4f}", lang)} · '
+            f'MCE {localize_decimal(f"{row.mce:.4f}", lang)} · '
+            f"{row.n_tokens} {tokens_word}</h4>\n"
             '<div class="calib-block">'
             f'<div class="calib-plot">{curve}'
             f'<div class="calib-axis mono">{conf_axis}</div></div>'

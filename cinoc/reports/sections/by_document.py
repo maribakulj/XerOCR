@@ -70,7 +70,8 @@ def _table_for_view(
         for offset, doc in enumerate(doc_rows):
             label = escape(doc_id) if offset == 0 else ""  # groupé : nom 1×
             cells = "".join(
-                bar_cell(doc.scores[i], maxes[j]) for j, i in enumerate(keep)
+                bar_cell(doc.scores[i], maxes[j], lang=lang)
+                for j, i in enumerate(keep)
             )
             badge = engine_cell(doc.pipeline, order.get(doc.pipeline, 0))
             body.append(

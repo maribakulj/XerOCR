@@ -93,10 +93,10 @@ def test_satisfies_section_protocol() -> None:
 def test_renders_costs_pareto_and_marginal_read_only() -> None:
     html = EconomicsSection().render(_result(), SectionContext())
     assert html is not None
-    assert "0.0050" in html and "0.1750" in html  # coûts du payload, pas recalculés
+    assert "0,0050" in html and "0,1750" in html  # coûts du payload, pas recalculés
     assert "machine+jetons" in html
     assert "Front de Pareto" in html and "ocr_llm" in html
-    assert "EUR/erreur évitée" in html and "0.0017" in html
+    assert "EUR/erreur évitée" in html and "0,0017" in html
     # Déterminisme : même RunResult → même HTML, bit à bit.
     assert html == EconomicsSection().render(_result(), SectionContext())
 

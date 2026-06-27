@@ -96,9 +96,9 @@ def test_renders_balance_and_samples() -> None:
     )
     assert html is not None
     assert "Bilan de correction" in html
-    assert "chain" in html and "50.0%" in html
-    assert "+0.0000" in html  # pref signé
-    assert "2.0000" in html  # change_ratio
+    assert "chain" in html and "50,0%" in html
+    assert "+0,0000" in html  # pref signé
+    assert "2,0000" in html  # change_ratio
     assert "Pires régressions" in html and "doc2" in html
     # #16 sur-normalisation : flux mot OCR-juste (référence) → forme du correcteur.
     assert "Mots sur-normalisés" in html and 'class="wf-row"' in html

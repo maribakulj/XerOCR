@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from cinoc.evaluation.result import MetricScore, RunResult
 from cinoc.reports._anomaly import ANOMALY_LABELS, ANOMALY_ORDER, compute_anomalies
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_accent, engine_letter, engine_order
 from cinoc.reports.html import escape, localized, view_label
 from cinoc.reports.section import Html, SectionContext
@@ -25,8 +26,10 @@ def _cer(scores: tuple[MetricScore, ...]) -> float | None:
     return None
 
 
-def _row(pipeline: str, cer: float | None, index: int, *, best: bool) -> str:
-    value = "—" if cer is None else f"{cer:.4f}"
+def _row(
+    pipeline: str, cer: float | None, index: int, lang: str, *, best: bool
+) -> str:
+    value = "—" if cer is None else localize_decimal(f"{cer:.4f}", lang)
     cls = "dc-row best" if best else "dc-row"
     return (
         f'<div class="{cls}">'
@@ -45,6 +48,8 @@ def _card(
     thumb: str | None,
     stratum: str | None = None,
     anomalies: frozenset[str] = frozenset(),
+    *,
+    lang: str,
 ) -> str:
     scored = [c for _, c in entries if c is not None]
     best = min(scored) if scored else None
@@ -53,6 +58,7 @@ def _card(
             pipeline,
             cer,
             order.get(pipeline, 0),
+            lang,
             best=cer is not None and cer == best,
         )
         for pipeline, cer in sorted(
@@ -113,6 +119,7 @@ class DocumentGallerySection:
                 ctx.images.get(doc_id),
                 strata.get(doc_id),
                 frozenset(anomalies.get(doc_id, set())),
+                lang=ctx.lang,
             )
             for idx, doc_id in enumerate(ordered_unique(d.document_id for d in rows))
         )
@@ -204,9 +211,9 @@ class DocumentGallerySection:
         present: list[str], cutoffs: dict[str, float], lang: str
     ) -> str:
         """Critère **exact** de chaque facette présente (cutoff = P90 observé)."""
-        cc = f"P90 ({cutoffs.get('cer', 0):.3f})"
-        uc = f"P90 ({cutoffs.get('unanchored', 0):.3f})"
-        dc = f"P90 ({cutoffs.get('disagree', 0):.3f})"
+        cc = localize_decimal(f"P90 ({cutoffs.get('cer', 0):.3f})", lang)
+        uc = localize_decimal(f"P90 ({cutoffs.get('unanchored', 0):.3f})", lang)
+        dc = localize_decimal(f"P90 ({cutoffs.get('disagree', 0):.3f})", lang)
         rule = {
             "cer": localized(
                 lang, f"CER d'un moteur ≥ {cc}", f"an engine's CER ≥ {cc}"

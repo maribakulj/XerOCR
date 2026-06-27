@@ -10,16 +10,17 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import ConformityPayload, PipelineConformity
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_label
 from cinoc.reports.section import Html, SectionContext
 
 
-def _cell(value: float | None, *, signed: bool = False) -> str:
+def _cell(value: float | None, lang: str, *, signed: bool = False) -> str:
     if value is None:
         return '<td class="disp muted">—</td>'
-    text = f"{value:+.4f}" if signed else f"{value:.4f}"
-    return f'<td class="disp">{text}</td>'
+    raw = f"{value:+.4f}" if signed else f"{value:.4f}"
+    return f'<td class="disp">{localize_decimal(raw, lang)}</td>'
 
 
 def _block(payload: ConformityPayload, lang: str, order: dict[str, int]) -> str:
@@ -30,15 +31,16 @@ def _block(payload: ConformityPayload, lang: str, order: dict[str, int]) -> str:
 
     def _row(row: PipelineConformity) -> str:
         deltas = (
-            _cell(row.delta_norm, signed=True) + _cell(row.delta_heritage, signed=True)
+            _cell(row.delta_norm, lang, signed=True)
+            + _cell(row.delta_heritage, lang, signed=True)
             if has_deltas
             else ""
         )
         return (
             f'<tr><td class="eng-cell">'
             f"{engine_cell(row.pipeline, order.get(row.pipeline, 0))}</td>"
-            + _cell(row.cmer_micro) + _cell(row.cmer_macro)
-            + _cell(row.wmer_micro) + _cell(row.wmer_macro)
+            + _cell(row.cmer_micro, lang) + _cell(row.cmer_macro, lang)
+            + _cell(row.wmer_micro, lang) + _cell(row.wmer_macro, lang)
             + deltas
             + f'<td class="disp">{row.n_missing}</td></tr>'
         )

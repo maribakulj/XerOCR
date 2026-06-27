@@ -10,6 +10,7 @@ déterministe (≠ Chart.js), zéro JS.
 from __future__ import annotations
 
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import fmt_pct, localize_decimal
 from cinoc.reports.engine_badges import engine_accent, engine_letter, engine_order
 from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
@@ -78,7 +79,9 @@ class EngineRadarSection:
                 values.append(norm)
                 lbl = fr if ctx.lang != "en" else en
                 # Infobulle : valeur **brute** (% lisible) ET normalisée (auditables).
-                tips.append(f"{lbl} : {raw * 100:.1f} % (norm. {norm:.2f})")
+                raw_pct = fmt_pct(raw, ctx.lang)
+                norm_v = localize_decimal(f"{norm:.2f}", ctx.lang)
+                tips.append(f"{lbl} : {raw_pct} (norm. {norm_v})")
             series.append((p.pipeline, values))
             accents.append(engine_accent(order[p.pipeline]))
             point_titles.append(tips)

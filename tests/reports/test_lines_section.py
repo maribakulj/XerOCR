@@ -62,10 +62,10 @@ def test_distribution_and_heatmap_render() -> None:
     assert html is not None
     assert "Distribution des erreurs par ligne" in html
     assert "alpha" in html
-    assert "44.0%" in html  # CER moyen
-    assert "98.4%" in html  # p99
-    assert "0.436" in html  # Gini
-    assert "≥0.30 : 60.0%" in html  # taux catastrophique, seuil inclusif
+    assert "44,0%" in html  # CER moyen
+    assert "98,4%" in html  # p99
+    assert "0,436" in html  # Gini
+    assert "≥0,30 : 60,0%" in html  # taux catastrophique, seuil inclusif
     assert "heatmap" in html
     assert "—" in html  # tranche sans ligne : tiret, jamais un faux zéro
     # Déterminisme bit-à-bit du rendu.

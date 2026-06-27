@@ -61,8 +61,8 @@ def test_renders_family_and_signs() -> None:
     assert "Philologie" in html
     assert "abréviations médiévales" in html
     assert "ꝑ" in html and "ꝓ" in html
-    assert "33.3%" in html  # strict global 1/3
-    assert "100.0%" in html  # expansion global 3/3
+    assert "33,3%" in html  # strict global 1/3
+    assert "100,0%" in html  # expansion global 3/3
 
 
 def test_renders_positional_early_modern() -> None:
@@ -94,8 +94,8 @@ def test_renders_positional_early_modern() -> None:
     assert "préservé" in html  # lentille positionnelle
     assert "avec dév." not in html  # pas la colonne strict/expansion containment
     assert "s long (ſ)" in html  # libellé de catégorie
-    assert "75.0%" in html  # préservation globale 3/4
-    assert "50.0%" in html  # long_s 1/2
+    assert "75,0%" in html  # préservation globale 3/4
+    assert "50,0%" in html  # long_s 1/2
 
 
 def test_renders_modern_archives_with_category_labels() -> None:
@@ -127,8 +127,8 @@ def test_renders_modern_archives_with_category_labels() -> None:
     assert "titres de civilité (Mme, Dr)" in html  # libellé de catégorie
     assert "avec dév." in html  # lentille strict/expansion (containment)
     assert "<th>catégorie</th>" in html  # en-tête catégorie, pas « signe »
-    assert "75.0%" in html  # strict global 3/4
-    assert "50.0%" in html  # currency strict 1/2
+    assert "75,0%" in html  # strict global 3/4
+    assert "50,0%" in html  # currency strict 1/2
 
 
 def test_renders_roman_numerals() -> None:
@@ -153,8 +153,8 @@ def test_renders_roman_numerals() -> None:
     assert html is not None
     assert "numéraux romains" in html
     assert "converti en arabe" in html  # libellé de statut
-    assert "25.0%" in html  # strict 1/4
-    assert "75.0%" in html  # valeur préservée (4-1)/4
+    assert "25,0%" in html  # strict 1/4
+    assert "75,0%" in html  # valeur préservée (4-1)/4
 
 
 def test_without_payload_renders_nothing() -> None:

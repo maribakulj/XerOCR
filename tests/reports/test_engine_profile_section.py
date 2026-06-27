@@ -70,7 +70,7 @@ def test_panel_has_kpi_band_and_cer_chart() -> None:
     html = EngineProfileSection().render(_result(), SectionContext())
     assert html is not None
     assert 'class="kpi-band"' in html and 'class="kpi-v"' in html
-    assert "20.0 %" in html  # CER agrégat de tesseract en KPI
+    assert "20,0 %" in html  # CER agrégat de tesseract en KPI
     assert 'class="bars-svg"' in html  # graphe CER par document
 
 
@@ -121,7 +121,7 @@ def test_profile_includes_calibration_and_composition_when_present() -> None:
     assert html is not None
     assert 'class="calib-svg"' in html  # courbe de calibration du moteur
     assert 'class="comp-bar"' in html  # composition d'erreurs du moteur
-    assert "8.0 %" in html  # ECE en KPI (réutilise les builders U2b/U2c)
+    assert "8,0 %" in html  # ECE en KPI (réutilise les builders U2b/U2c)
 
 
 def _doc_s(doc_id: str, pipeline: str, cer: float, stratum: str) -> RunDocumentResult:
@@ -146,7 +146,7 @@ def test_profile_shows_per_stratum_cer_when_multiple_strata() -> None:
     assert "Performance par strate" in html
     assert "presse" in html and "manuscrit" in html
     # macro-moyenne presse = (0.10+0.20)/2 = 15.0 % ; manuscrit = 40.0 %
-    assert "15.0 %" in html and "40.0 %" in html
+    assert "15,0 %" in html and "40,0 %" in html
     # une seule strate → pas de bloc (jamais inventé)
     one = _RR(
         manifest=base.manifest, pipelines=base.pipelines,

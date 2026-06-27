@@ -17,6 +17,7 @@ from cinoc.evaluation.analysis import (
     RomanNumeralsPayload,
 )
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
@@ -78,8 +79,12 @@ _CATEGORY_LABELS: dict[str, tuple[str, str]] = {
 }
 
 
-def _share(numerator: int, denominator: int) -> str:
-    return f"{numerator / denominator:.1%}" if denominator else "—"
+def _share(numerator: int, denominator: int, lang: str) -> str:
+    return (
+        localize_decimal(f"{numerator / denominator:.1%}", lang)
+        if denominator
+        else "—"
+    )
 
 
 def _item_label(sign: str, by_category: bool, lang: str) -> str:
@@ -97,19 +102,19 @@ def _containment_block(
         f'<tr><td class="lbl">'
         f"{escape(_item_label(marker.sign, by_category, lang))}</td>"
         f'<td class="disp">{marker.n_total}</td>'
-        f'<td class="disp">{_share(marker.n_strict, marker.n_total)}</td>'
-        f'<td class="disp">{_share(marker.n_expansion, marker.n_total)}</td></tr>'
+        f'<td class="disp">{_share(marker.n_strict, marker.n_total, lang)}</td>'
+        f'<td class="disp">{_share(marker.n_expansion, marker.n_total, lang)}</td></tr>'
         for marker in row.markers
     )
     head = localized(
         lang,
         f"{escape(row.pipeline)} — {escape(family)} : "
-        f"{_share(row.n_strict, row.n_total)} strict · "
-        f"{_share(row.n_expansion, row.n_total)} avec développement "
+        f"{_share(row.n_strict, row.n_total, lang)} strict · "
+        f"{_share(row.n_expansion, row.n_total, lang)} avec développement "
         f"({row.n_total} marqueurs)",
         f"{escape(row.pipeline)} — {escape(family)}: "
-        f"{_share(row.n_strict, row.n_total)} strict · "
-        f"{_share(row.n_expansion, row.n_total)} with expansion "
+        f"{_share(row.n_strict, row.n_total, lang)} strict · "
+        f"{_share(row.n_expansion, row.n_total, lang)} with expansion "
         f"({row.n_total} markers)",
     )
     th_n = localized(lang, "n", "n")
@@ -129,16 +134,16 @@ def _positional_block(row: PipelinePhilology, family: str, lang: str) -> str:
         f'<tr><td class="lbl">'
         f"{escape(_item_label(marker.sign, True, lang))}</td>"
         f'<td class="disp">{marker.n_total}</td>'
-        f'<td class="disp">{_share(marker.n_strict, marker.n_total)}</td></tr>'
+        f'<td class="disp">{_share(marker.n_strict, marker.n_total, lang)}</td></tr>'
         for marker in row.markers
     )
     head = localized(
         lang,
         f"{escape(row.pipeline)} — {escape(family)} : "
-        f"{_share(row.n_strict, row.n_total)} préservé "
+        f"{_share(row.n_strict, row.n_total, lang)} préservé "
         f"({row.n_total} marqueurs)",
         f"{escape(row.pipeline)} — {escape(family)}: "
-        f"{_share(row.n_strict, row.n_total)} preserved "
+        f"{_share(row.n_strict, row.n_total, lang)} preserved "
         f"({row.n_total} markers)",
     )
     th_category = localized(lang, "catégorie", "category")
@@ -206,19 +211,19 @@ def _roman_pipeline_block(row: PipelineRomanNumerals, lang: str) -> str:
     rows = "".join(
         f'<tr><td class="lbl">{escape(localized(lang, label_fr, label_en))}</td>'
         f'<td class="disp">{counts[key]}</td>'
-        f'<td class="disp">{_share(counts[key], row.n_total)}</td></tr>'
+        f'<td class="disp">{_share(counts[key], row.n_total, lang)}</td></tr>'
         for key, label_fr, label_en in _ROMAN_STATUS_LABELS
     )
     value_preserved = row.n_total - row.lost
     head = localized(
         lang,
         f"{escape(row.pipeline)} — numéraux romains : "
-        f"{_share(row.strict_preserved, row.n_total)} strict · "
-        f"{_share(value_preserved, row.n_total)} valeur préservée "
+        f"{_share(row.strict_preserved, row.n_total, lang)} strict · "
+        f"{_share(value_preserved, row.n_total, lang)} valeur préservée "
         f"({row.n_total} numéraux)",
         f"{escape(row.pipeline)} — Roman numerals: "
-        f"{_share(row.strict_preserved, row.n_total)} strict · "
-        f"{_share(value_preserved, row.n_total)} value preserved "
+        f"{_share(row.strict_preserved, row.n_total, lang)} strict · "
+        f"{_share(value_preserved, row.n_total, lang)} value preserved "
         f"({row.n_total} numerals)",
     )
     th_status = localized(lang, "statut", "status")

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import CharConfusion, DiagnosticsPayload, WorstLine
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, view_prefix
 from cinoc.reports.section import Html, SectionContext
@@ -79,23 +80,23 @@ def _confusion_flow(
     )
 
 
-def _worst_lines_row(line: WorstLine) -> str:
+def _worst_lines_row(line: WorstLine, lang: str) -> str:
     # Drill-in : GT vs hypothèse surlignées caractère à caractère (écarts visibles).
     ref_html, hyp_html = char_diff(line.reference, line.hypothesis)
     return (
         f'<tr><td class="eng-cell">{escape(line.pipeline)}</td>'
         f'<td class="eng-cell">{escape(line.document_id)}</td>'
         f'<td class="disp">{line.line_index}</td>'
-        f'<td class="disp">{line.cer:.4f}</td>'
+        f'<td class="disp">{localize_decimal(f"{line.cer:.4f}", lang)}</td>'
         f'<td class="diff">{ref_html}</td>'
         f'<td class="diff">{hyp_html}</td></tr>'
     )
 
 
-def _worst_lines_table(payload: DiagnosticsPayload) -> str:
+def _worst_lines_table(payload: DiagnosticsPayload, lang: str) -> str:
     if not payload.worst_lines:
         return ""
-    rows = "".join(_worst_lines_row(line) for line in payload.worst_lines)
+    rows = "".join(_worst_lines_row(line, lang) for line in payload.worst_lines)
     return (
         "<h4>Pires lignes du corpus — diff GT ↔ hypothèse</h4>\n"
         '<p class="muted">Surlignage : '
@@ -108,12 +109,12 @@ def _worst_lines_table(payload: DiagnosticsPayload) -> str:
     )
 
 
-def _hardest_table(payload: DiagnosticsPayload) -> str:
+def _hardest_table(payload: DiagnosticsPayload, lang: str) -> str:
     if not payload.hardest_documents:
         return ""
     rows = "".join(
         f'<tr><td class="eng-cell">{escape(doc.document_id)}</td>'
-        f'<td class="disp">{doc.mean_cer:.4f}</td>'
+        f'<td class="disp">{localize_decimal(f"{doc.mean_cer:.4f}", lang)}</td>'
         f'<td class="disp">{doc.n_pipelines}</td></tr>'
         for doc in payload.hardest_documents
     )
@@ -142,8 +143,8 @@ class DiagnosticsSection:
                 continue
             inner = (
                 _confusion_flow(payload, ctx.lang, order)
-                + _worst_lines_table(payload)
-                + _hardest_table(payload)
+                + _worst_lines_table(payload, ctx.lang)
+                + _hardest_table(payload, ctx.lang)
             )
             if inner:
                 blocks.append(

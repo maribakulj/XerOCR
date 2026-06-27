@@ -37,7 +37,7 @@ def test_renders_table_with_values() -> None:
     html = OverviewSection().render(_result(0.25), SectionContext())
     assert html is not None
     assert "tesseract" in html
-    assert "0.2500" in html
+    assert "0,2500" in html
     assert "demo" in html
     assert "cer" in html
 

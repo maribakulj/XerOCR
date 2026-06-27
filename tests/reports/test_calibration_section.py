@@ -55,8 +55,8 @@ def test_satisfies_section_protocol() -> None:
 def test_renders_ece_mce_and_bins() -> None:
     html = CalibrationSection().render(_result(), SectionContext())
     assert html is not None
-    assert "ECE 0.4000" in html and "MCE 0.7000" in html
-    assert "[0.9 ; 1.0[" in html
+    assert "ECE 0,4000" in html and "MCE 0,7000" in html
+    assert "[0,9 ; 1,0[" in html
     assert html == CalibrationSection().render(_result(), SectionContext())
 
 

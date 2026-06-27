@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from cinoc.evaluation.result import MetricScore
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.glossary import load_glossary
 from cinoc.reports.html import escape
 
@@ -25,9 +26,10 @@ def ordered_unique(values: Iterable[str]) -> tuple[str, ...]:
     return tuple(seen)
 
 
-def format_value(score: MetricScore) -> str:
-    """Valeur formatée (``None`` non applicable → tiret)."""
-    return "—" if score.value is None else f"{score.value:.4f}"
+def format_value(score: MetricScore, lang: str) -> str:
+    """Valeur formatée (``None`` non applicable → tiret), séparateur décimal
+    localisé (virgule en français)."""
+    return "—" if score.value is None else localize_decimal(f"{score.value:.4f}", lang)
 
 
 def col_max(rows: list[tuple[MetricScore, ...]], index: int) -> float:
@@ -60,7 +62,9 @@ def nonempty_metric_indices(rows: list[tuple[MetricScore, ...]]) -> list[int]:
     ]
 
 
-def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -> str:
+def bar_cell(
+    score: MetricScore, column_max: float, *, lang: str, sortable: bool = False
+) -> str:
     """Cellule ``td.databar`` : **teinte de fond** ∝ position sur l'axe de la
     colonne (échelle commune par colonne, façon canon) + valeur. Plus de barre
     pleine : deux valeurs proches donnent une teinte proche — lecture honnête
@@ -69,7 +73,7 @@ def bar_cell(score: MetricScore, column_max: float, *, sortable: bool = False) -
 
     ``sortable`` ajoute ``data-sort`` (valeur brute) → le tri client de
     ``report.js`` réordonne le DOM par cette clé (aucune donnée reconstruite)."""
-    text = format_value(score)
+    text = format_value(score, lang)
     sort = (
         f' data-sort="{score.value:.6f}"'
         if sortable and score.value is not None

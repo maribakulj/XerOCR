@@ -92,7 +92,7 @@ def test_significance_as_neutral_fact_wilcoxon() -> None:
     # k=2 → Wilcoxon : le RÉSULTAT DU TEST est un fait, pas un gagnant.
     html = KeyMeasuresSection().render(_result(p=0.002), SectionContext())
     assert html is not None
-    assert "Wilcoxon" in html and "p = 0.0020" in html
+    assert "Wilcoxon" in html and "p = 0,0020" in html
     assert "significative" in html  # qualifie la DIFFÉRENCE, pas un moteur
 
 

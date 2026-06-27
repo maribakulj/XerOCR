@@ -8,6 +8,7 @@ le corpus porte une vérité-terrain ``LAYOUT`` (segmentation). Absente sinon
 from __future__ import annotations
 
 from cinoc.evaluation.result import PipelineResult, RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import localized
 from cinoc.reports.section import Html, SectionContext
@@ -20,10 +21,10 @@ def _value(pipeline: PipelineResult, metric: str) -> float | None:
     return next((s.value for s in pipeline.aggregate if s.metric == metric), None)
 
 
-def _cell(value: float | None) -> str:
+def _cell(value: float | None, lang: str) -> str:
     if value is None:
         return '<td class="disp muted">—</td>'
-    return f'<td class="disp">{value:.4f}</td>'
+    return f'<td class="disp">{localize_decimal(f"{value:.4f}", lang)}</td>'
 
 
 class StructureSection:
@@ -61,8 +62,8 @@ class StructureSection:
         body = "".join(
             f'<tr><td class="eng-cell">'
             f"{engine_cell(p.pipeline, order.get(p.pipeline, 0))}</td>"
-            + _cell(_value(p, "region_detection"))
-            + _cell(_value(p, "region_cer"))
+            + _cell(_value(p, "region_detection"), ctx.lang)
+            + _cell(_value(p, "region_cer"), ctx.lang)
             + "</tr>"
             for p in rows
         )

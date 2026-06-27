@@ -65,7 +65,7 @@ def test_renders_global_categories_and_samples() -> None:
     assert "Entités nommées" in html
     assert "conjointe" in html  # caveat OCR + NER documenté
     assert "alpha" in html
-    assert "70.0%" in html  # rappel global
+    assert "70,0%" in html  # rappel global
     assert "7/2/3" in html  # TP/FP/FN
     assert "PER" in html and "support" in html  # bloc par catégorie
     assert "Bourgogne (LOC)" in html  # entité manquée

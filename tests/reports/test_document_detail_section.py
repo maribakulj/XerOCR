@@ -106,7 +106,7 @@ def test_panel_shows_cer_per_engine() -> None:
     html = DocumentDetailSection().render(_result(), SectionContext())
     assert html is not None
     assert "CER par moteur" in html
-    assert "20.0 %" in html and "10.0 %" in html  # folio_1 : tesseract / pero
+    assert "20,0 %" in html and "10,0 %" in html  # folio_1 : tesseract / pero
 
 
 def test_worst_lines_diff_when_present() -> None:

@@ -14,6 +14,7 @@ from __future__ import annotations
 from statistics import median
 
 from cinoc.evaluation.result import PipelineResult, RunDocumentResult, RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_label
 from cinoc.reports.section import Html, SectionContext
@@ -74,14 +75,19 @@ class EngineSection:
         # ordinal attribué : aucune colonne « # », aucun gagnant désigné).
         for pipeline in ordered:
             cells = "".join(
-                bar_cell(pipeline.aggregate[i], maxes[j], sortable=True)
+                bar_cell(
+                    pipeline.aggregate[i], maxes[j], lang=ctx.lang, sortable=True
+                )
                 for j, i in enumerate(keep)
             )
             vals = _per_doc_values(
                 result.documents, pipeline.pipeline, view, sort_metric
             )
             disp = (
-                f"{min(vals):.3f} · {median(vals):.3f} · {max(vals):.3f}"
+                localize_decimal(
+                    f"{min(vals):.3f} · {median(vals):.3f} · {max(vals):.3f}",
+                    ctx.lang,
+                )
                 if vals
                 else "—"
             )

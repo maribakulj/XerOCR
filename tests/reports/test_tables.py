@@ -40,9 +40,11 @@ def test_nonempty_metric_indices_hides_all_none_keeps_zero() -> None:
 
 
 def test_bar_cell_sortable_adds_data_sort() -> None:
-    assert 'data-sort="0.250000"' in bar_cell(_s(0.25), 0.5, sortable=True)
-    assert "data-sort" not in bar_cell(_s(0.25), 0.5)  # défaut : pas de clé de tri
-    assert "data-sort" not in bar_cell(_s(None), 0.5, sortable=True)  # None non triable
+    assert 'data-sort="0.250000"' in bar_cell(_s(0.25), 0.5, lang="fr", sortable=True)
+    assert "data-sort" not in bar_cell(_s(0.25), 0.5, lang="fr")  # pas de clé de tri
+    assert "data-sort" not in bar_cell(
+        _s(None), 0.5, lang="fr", sortable=True
+    )  # None non triable
 
 
 def test_metric_th_has_definition_and_sort_affordance() -> None:

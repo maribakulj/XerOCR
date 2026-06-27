@@ -11,6 +11,7 @@ from collections.abc import Mapping
 
 from cinoc.evaluation.analysis import EntityMention, NerPayload, PipelineNer
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
@@ -26,20 +27,20 @@ def _mentions(mentions: tuple[EntityMention, ...]) -> str:
     return f'<span class="muted">{labels}</span>'
 
 
-def _global_row(row: PipelineNer, order: Mapping[str, int]) -> str:
+def _global_row(row: PipelineNer, order: Mapping[str, int], lang: str) -> str:
     badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
     return (
         f'<tr><td class="eng-cell">{badge}</td>'
         f'<td class="disp">{row.n_reference}</td>'
-        f'<td class="disp">{row.precision:.1%}</td>'
-        f'<td class="disp">{row.recall:.1%}</td>'
-        f'<td class="disp">{row.f1:.1%}</td>'
+        f'<td class="disp">{localize_decimal(f"{row.precision:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{row.recall:.1%}", lang)}</td>'
+        f'<td class="disp">{localize_decimal(f"{row.f1:.1%}", lang)}</td>'
         f'<td class="disp">{row.true_positives}/{row.false_positives}'
         f"/{row.false_negatives}</td></tr>"
     )
 
 
-def _category_rows(row: PipelineNer, order: Mapping[str, int]) -> str:
+def _category_rows(row: PipelineNer, order: Mapping[str, int], lang: str) -> str:
     rows: list[str] = []
     for cat in row.per_category:
         badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
@@ -47,9 +48,9 @@ def _category_rows(row: PipelineNer, order: Mapping[str, int]) -> str:
             f'<tr><td class="eng-cell">{badge}</td>'
             f'<td class="eng-cell">{escape(cat.label)}</td>'
             f'<td class="disp">{cat.support}</td>'
-            f'<td class="disp">{cat.precision:.1%}</td>'
-            f'<td class="disp">{cat.recall:.1%}</td>'
-            f'<td class="disp">{cat.f1:.1%}</td></tr>'
+            f'<td class="disp">{localize_decimal(f"{cat.precision:.1%}", lang)}</td>'
+            f'<td class="disp">{localize_decimal(f"{cat.recall:.1%}", lang)}</td>'
+            f'<td class="disp">{localize_decimal(f"{cat.f1:.1%}", lang)}</td></tr>'
         )
     return "".join(rows)
 
@@ -66,16 +67,21 @@ def _samples_rows(row: PipelineNer, order: Mapping[str, int]) -> str:
 def _block(
     view: str, payload: NerPayload, order: Mapping[str, int], lang: str
 ) -> str:
-    global_rows = "".join(_global_row(row, order) for row in payload.pipelines)
-    category_rows = "".join(_category_rows(row, order) for row in payload.pipelines)
+    global_rows = "".join(
+        _global_row(row, order, lang) for row in payload.pipelines
+    )
+    category_rows = "".join(
+        _category_rows(row, order, lang) for row in payload.pipelines
+    )
     samples_rows = "".join(_samples_rows(row, order) for row in payload.pipelines)
+    iou = localize_decimal(f"{payload.iou_threshold:.2f}", lang)
     th_pipeline = localized(lang, "Pipeline", "Pipeline")
     th_precision = localized(lang, "précision", "precision")
     th_recall = localized(lang, "rappel", "recall")
     global_head = localized(
         lang,
-        f"{view}entités nommées (IoU ≥ {payload.iou_threshold:.2f})",
-        f"{view}named entities (IoU ≥ {payload.iou_threshold:.2f})",
+        f"{view}entités nommées (IoU ≥ {iou})",
+        f"{view}named entities (IoU ≥ {iou})",
     )
     global_prose = localized(
         lang,

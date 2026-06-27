@@ -26,13 +26,14 @@ from cinoc.evaluation.analysis import (
     InterEnginePayload,
 )
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_label, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
 
-def _format_p(value: float | None) -> str:
-    return "—" if value is None else f"{value:.4f}"
+def _format_p(value: float | None, lang: str) -> str:
+    return "—" if value is None else localize_decimal(f"{value:.4f}", lang)
 
 
 def _split_key(key: str) -> tuple[str, str]:
@@ -61,15 +62,21 @@ def _inference_block(
     for rank in payload.mean_ranks:
         interval = intervals.get(rank.pipeline)
         ic = (
-            f"[{interval.lower:.4f} ; {interval.upper:.4f}]"
+            localize_decimal(
+                f"[{interval.lower:.4f} ; {interval.upper:.4f}]", lang
+            )
             if interval is not None
             else "—"
         )
-        mean = f"{interval.mean:.4f}" if interval is not None else "—"
+        mean = (
+            localize_decimal(f"{interval.mean:.4f}", lang)
+            if interval is not None
+            else "—"
+        )
         badge = engine_cell(rank.pipeline, order.get(rank.pipeline, 0))
         rows.append(
             f'<tr><td class="eng-cell">{badge}</td>'
-            f'<td class="disp">{rank.mean_rank:.3f}</td>'
+            f'<td class="disp">{localize_decimal(f"{rank.mean_rank:.3f}", lang)}</td>'
             f'<td class="disp">{mean}</td>'
             f'<td class="disp">{ic}</td></tr>'
         )
@@ -82,13 +89,15 @@ def _inference_block(
             lang, " (q extrapolé)" if payload.q_alpha_extrapolated else "",
             " (q extrapolated)" if payload.q_alpha_extrapolated else "",
         )
+        alpha = localize_decimal(f"{payload.alpha:g}", lang)
+        cd = localize_decimal(f"{payload.critical_distance:.4f}", lang)
         nemenyi = localized(
             lang,
-            f'<p class="muted">Nemenyi (α={payload.alpha:g}) : distance '
-            f"critique CD = {payload.critical_distance:.4f}{extrapolated} ; "
+            f'<p class="muted">Nemenyi (α={alpha}) : distance '
+            f"critique CD = {cd}{extrapolated} ; "
             f"groupes indiscernables : {groups}.</p>\n",
-            f'<p class="muted">Nemenyi (α={payload.alpha:g}): critical '
-            f"distance CD = {payload.critical_distance:.4f}{extrapolated} ; "
+            f'<p class="muted">Nemenyi (α={alpha}): critical '
+            f"distance CD = {cd}{extrapolated} ; "
             f"indistinguishable groups: {groups}.</p>\n",
         )
     else:
@@ -136,17 +145,18 @@ def _complementarity_block(
         )
         rows.append(
             f'<tr><td class="eng-cell">{badge}{best}</td>'
-            f'<td class="disp">{item.recall:.1%}</td></tr>'
+            f'<td class="disp">{localize_decimal(f"{item.recall:.1%}", lang)}</td></tr>'
         )
+    oracle_recall = localize_decimal(f"{comp.oracle_recall:.1%}", lang)
     rows.append(
         localized(
             lang,
             f'<tr><td class="eng-cell">oracle (union des '
             f"{len(comp.per_engine_recall)} moteurs)</td>"
-            f'<td class="disp">{comp.oracle_recall:.1%}</td></tr>',
+            f'<td class="disp">{oracle_recall}</td></tr>',
             f'<tr><td class="eng-cell">oracle (union of '
             f"{len(comp.per_engine_recall)} engines)</td>"
-            f'<td class="disp">{comp.oracle_recall:.1%}</td></tr>',
+            f'<td class="disp">{oracle_recall}</td></tr>',
         )
     )
     gap_documents = [d for d in comp.per_document if d.absolute_gap > 0]
@@ -154,9 +164,11 @@ def _complementarity_block(
     if gap_documents:
         document_rows = "".join(
             f'<tr><td class="eng-cell">{escape(d.document_id)}</td>'
-            f'<td class="disp">{d.oracle_recall:.1%}</td>'
-            f'<td class="disp">{d.best_single_recall:.1%}</td>'
-            f'<td class="disp">{d.absolute_gap:.1%}</td></tr>'
+            f'<td class="disp">{localize_decimal(f"{d.oracle_recall:.1%}", lang)}</td>'
+            f'<td class="disp">'
+            f'{localize_decimal(f"{d.best_single_recall:.1%}", lang)}</td>'
+            f'<td class="disp">{localize_decimal(f"{d.absolute_gap:.1%}", lang)}</td>'
+            "</tr>"
             for d in gap_documents
         )
         doc_prose = localized(
@@ -205,15 +217,17 @@ def _complementarity_block(
     )
     th_pipeline = localized(lang, "Pipeline", "Pipeline")
     th_token_recall = localized(lang, "rappel tokens", "token recall")
+    abs_gap = localize_decimal(f"{comp.absolute_gap:.1%}", lang)
+    rel_gap = localize_decimal(f"{comp.relative_gap:.1%}", lang)
     gap_prose = localized(
         lang,
         f'<p class="muted">Écart absolu oracle − meilleur '
-        f"({escape(comp.best_engine)}) : {comp.absolute_gap:.1%} ; écart "
-        f"relatif : {comp.relative_gap:.1%} des erreurs du meilleur moteur "
+        f"({escape(comp.best_engine)}) : {abs_gap} ; écart "
+        f"relatif : {rel_gap} des erreurs du meilleur moteur "
         "théoriquement rattrapables par un ensemble.</p>\n",
         f'<p class="muted">Absolute oracle − best gap '
-        f"({escape(comp.best_engine)}): {comp.absolute_gap:.1%} ; relative "
-        f"gap: {comp.relative_gap:.1%} of the best engine's errors "
+        f"({escape(comp.best_engine)}): {abs_gap} ; relative "
+        f"gap: {rel_gap} of the best engine's errors "
         "theoretically recoverable by an ensemble.</p>\n",
     )
     return (
@@ -236,18 +250,19 @@ def _divergence_block(
         f'<tr><td class="eng-cell">'
         f"{engine_cell(pair.a, order.get(pair.a, 0))} · "
         f"{engine_cell(pair.b, order.get(pair.b, 0))}</td>"
-        f'<td class="disp">{pair.divergence:.4f}</td></tr>'
+        f'<td class="disp">{localize_decimal(f"{pair.divergence:.4f}", lang)}</td></tr>'
         for pair in divergence.pairs
     )
     if divergence.max_pair is not None:
+        max_div = localize_decimal(f"{divergence.max_pair.divergence:.4f}", lang)
         max_pair = localized(
             lang,
             f'<p class="muted">Paire la plus divergente : '
             f"{escape(divergence.max_pair.a)} · {escape(divergence.max_pair.b)} "
-            f"({divergence.max_pair.divergence:.4f} bit).</p>\n",
+            f"({max_div} bit).</p>\n",
             f'<p class="muted">Most divergent pair: '
             f"{escape(divergence.max_pair.a)} · {escape(divergence.max_pair.b)} "
-            f"({divergence.max_pair.divergence:.4f} bit).</p>\n",
+            f"({max_div} bit).</p>\n",
         )
     else:
         max_pair = localized(
@@ -334,7 +349,7 @@ class CrossEngineSection:
                 body.append(
                     f'<tr><td class="eng-cell">{escape(view_label(view, lang))}</td>'
                     f'<td class="eng-cell">{escape(metric)}</td>'
-                    f'<td class="disp">{_format_p(score.value)}</td>'
+                    f'<td class="disp">{_format_p(score.value, lang)}</td>'
                     f'<td class="disp">{score.support}</td>'
                     f'<td class="verdict{css}">{label}</td></tr>'
                 )

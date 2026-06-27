@@ -9,18 +9,20 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import CorrectionPayload, PipelineCorrection
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
 
 
-def _pct(value: float | None) -> str:
-    return "—" if value is None else f"{value:.1%}"
+def _pct(value: float | None, lang: str) -> str:
+    return "—" if value is None else localize_decimal(f"{value:.1%}", lang)
 
 
-def _num(value: float | None, *, signed: bool = False) -> str:
+def _num(value: float | None, lang: str, *, signed: bool = False) -> str:
     if value is None:
         return "—"
-    return f"{value:+.4f}" if signed else f"{value:.4f}"
+    raw = f"{value:+.4f}" if signed else f"{value:.4f}"
+    return localize_decimal(raw, lang)
 
 
 def _row(label: str, *cells: str) -> str:
@@ -42,6 +44,9 @@ def _pipeline_block(
         if row.n_missing_raw or row.n_missing_corrected
         else ""
     )
+    cata = localize_decimal(f"{payload.catastrophic_threshold:g}", lang)
+    over = localize_decimal(f"{payload.overedit_threshold:g}", lang)
+    ins = localize_decimal(f"{payload.insertion_threshold:g}", lang)
     rows = [
         _row(
             localized(
@@ -49,18 +54,18 @@ def _pipeline_block(
                 "Triplet (amélioration / régression / égalité)",
                 "Triplet (improvement / regression / no change)",
             ),
-            _pct(row.improvement_rate),
-            _pct(row.regression_rate),
-            _pct(row.no_change_rate),
+            _pct(row.improvement_rate, lang),
+            _pct(row.regression_rate, lang),
+            _pct(row.no_change_rate, lang),
         ),
         _row(
             localized(
                 lang,
-                f"pref · catastrophiques (Δ > {payload.catastrophic_threshold:g})",
-                f"pref · catastrophic (Δ > {payload.catastrophic_threshold:g})",
+                f"pref · catastrophiques (Δ > {cata})",
+                f"pref · catastrophic (Δ > {cata})",
             ),
-            _num(row.pref_score, signed=True),
-            f"{row.n_catastrophic} ({_pct(row.catastrophic_rate)})",
+            _num(row.pref_score, lang, signed=True),
+            f"{row.n_catastrophic} ({_pct(row.catastrophic_rate, lang)})",
             "",
         ),
         _row(
@@ -69,33 +74,33 @@ def _pipeline_block(
                 "pcis (macro · médiane · |pcis| > 1)",
                 "pcis (macro · median · |pcis| > 1)",
             ),
-            _num(row.pcis_macro, signed=True),
-            _num(row.pcis_median, signed=True),
+            _num(row.pcis_macro, lang, signed=True),
+            _num(row.pcis_median, lang, signed=True),
             str(row.n_pcis_extreme),
         ),
         _row(
             localized(
                 lang,
                 f"Intervention (CCR · ratio · sur-édités > "
-                f"{payload.overedit_threshold:g})",
+                f"{over})",
                 f"Intervention (CCR · ratio · over-edited > "
-                f"{payload.overedit_threshold:g})",
+                f"{over})",
             ),
-            _num(row.ccr),
-            _num(row.change_ratio),
+            _num(row.ccr, lang),
+            _num(row.change_ratio, lang),
             str(row.n_overedited),
         ),
         _row(
             localized(
                 lang,
-                f"Insertions (part · lourds > {payload.insertion_threshold:g} "
+                f"Insertions (part · lourds > {ins} "
                 f"· longueur)",
-                f"Insertions (share · heavy > {payload.insertion_threshold:g} "
+                f"Insertions (share · heavy > {ins} "
                 f"· length)",
             ),
-            _num(row.char_ins_ratio),
+            _num(row.char_ins_ratio, lang),
             str(row.n_hallucination_heavy),
-            _num(row.length_ratio),
+            _num(row.length_ratio, lang),
         ),
         _row(
             localized(
@@ -114,7 +119,7 @@ def _pipeline_block(
                 "Over-normalization (OCR-correct words degraded)",
             ),
             f"{row.n_over_normalized}/{row.n_correct_ocr_words}",
-            _num(row.over_normalization),
+            _num(row.over_normalization, lang),
             "",
         ),
         _row(
@@ -125,9 +130,9 @@ def _pipeline_block(
                 f"Consecutive edits (median · max · share > "
                 f"{payload.edit_run_threshold})",
             ),
-            _num(row.edit_run_median),
+            _num(row.edit_run_median, lang),
             str(row.edit_run_max),
-            _num(row.edit_run_share),
+            _num(row.edit_run_share, lang),
         ),
     ]
     documents_label = localized(
@@ -142,9 +147,12 @@ def _pipeline_block(
     if row.worst_regressions:
         regression_rows = "".join(
             f'<tr><td class="eng-cell">{escape(sample.document_id)}</td>'
-            f'<td class="disp">{sample.cmer_raw:.4f}</td>'
-            f'<td class="disp">{sample.cmer_corrected:.4f}</td>'
-            f'<td class="disp">{sample.delta:+.4f}</td></tr>'
+            f'<td class="disp">'
+            f'{localize_decimal(f"{sample.cmer_raw:.4f}", lang)}</td>'
+            f'<td class="disp">'
+            f'{localize_decimal(f"{sample.cmer_corrected:.4f}", lang)}</td>'
+            f'<td class="disp">'
+            f'{localize_decimal(f"{sample.delta:+.4f}", lang)}</td></tr>'
             for sample in row.worst_regressions
         )
         worst_summary = localized(

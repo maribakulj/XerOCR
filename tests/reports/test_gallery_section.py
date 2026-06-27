@@ -66,7 +66,7 @@ def test_renders_card_per_document_with_cer_and_badges() -> None:
     assert "doc1" in html and "doc2" in html
     assert "doc-preview" in html  # aperçu synthétique (zéro image)
     assert 'class="eng-badge"' in html  # CER par moteur via badges A→E
-    assert "0.1000" in html and "0.2000" in html
+    assert "0,1000" in html and "0,2000" in html
     # le meilleur moteur du document (openai 0.10 sur doc1) est surligné
     assert "dc-row best" in html
 

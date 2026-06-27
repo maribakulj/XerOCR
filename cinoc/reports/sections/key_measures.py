@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import InferencePayload
 from cinoc.evaluation.result import PipelineResult, RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import (
     engine_accent,
     engine_cell,
@@ -143,7 +144,8 @@ class KeyMeasuresSection:
                 if v is None:
                     cells += '<td class="disp muted">—</td>'
                 else:
-                    cells += f'<td class="disp" data-sort="{v:.6f}">{v:.4f}</td>'
+                    disp = localize_decimal(f"{v:.4f}", lang)
+                    cells += f'<td class="disp" data-sort="{v:.6f}">{disp}</td>'
             badge = engine_cell(p.pipeline, order.get(p.pipeline, 0))
             body.append(f'<tr><td class="eng-cell">{badge}</td>{cells}</tr>')
         return (
@@ -192,15 +194,17 @@ class KeyMeasuresSection:
                 "{" + ", ".join(escape(p) for p in g) + "}"
                 for g in payload.tied_groups
             )
+            alpha = localize_decimal(f"{payload.alpha:g}", lang)
+            cd = localize_decimal(f"{payload.critical_distance:.3f}", lang)
             txt = localized(
                 lang,
                 f"<strong>Test inter-moteurs (CER)</strong> — post-hoc Nemenyi "
-                f"(α={payload.alpha:g}, CD={payload.critical_distance:.3f}, "
+                f"(α={alpha}, CD={cd}, "
                 f"{payload.n_documents} cas complets) : groupes d'indiscernables "
                 f"{groups}. Deux moteurs hors d'un même groupe = différence "
                 f"significative.",
                 f"<strong>Inter-engine test (CER)</strong> — Nemenyi post-hoc "
-                f"(α={payload.alpha:g}, CD={payload.critical_distance:.3f}, "
+                f"(α={alpha}, CD={cd}, "
                 f"{payload.n_documents} complete cases): indistinguishable groups "
                 f"{groups}. Two engines outside one group = significant difference.",
             )
@@ -212,12 +216,13 @@ class KeyMeasuresSection:
                 "significative" if p < 0.05 else "non significative",
                 "significant" if p < 0.05 else "not significant",
             )
+            pv = localize_decimal(f"{p:.4f}", lang)
             txt = localized(
                 lang,
                 f"<strong>Test inter-moteurs (CER)</strong> — Wilcoxon : p = "
-                f"{p:.4f} → différence {verdict} au seuil α = 0,05.",
+                f"{pv} → différence {verdict} au seuil α = 0,05.",
                 f"<strong>Inter-engine test (CER)</strong> — Wilcoxon: p = "
-                f"{p:.4f} → difference {verdict} at α = 0.05.",
+                f"{pv} → difference {verdict} at α = 0.05.",
             )
             return f'<p class="muted">{txt}</p>\n'
         return ""

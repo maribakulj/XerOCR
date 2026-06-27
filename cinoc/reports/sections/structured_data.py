@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from cinoc.evaluation.analysis import StructuredDataPayload
 from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
 from cinoc.reports.html import escape, localized, view_prefix
 from cinoc.reports.section import Html, SectionContext
@@ -45,8 +46,10 @@ def _block(
                 f'<td class="eng-cell">'
                 f"{escape(_category_label(item.category, lang))}</td>"
                 f'<td class="disp">{item.n_total}</td>'
-                f'<td class="disp">{item.strict_score:.1%}</td>'
-                f'<td class="disp">{item.value_score:.1%}</td>'
+                f'<td class="disp">'
+                f'{localize_decimal(f"{item.strict_score:.1%}", lang)}</td>'
+                f'<td class="disp">'
+                f'{localize_decimal(f"{item.value_score:.1%}", lang)}</td>'
                 f'<td class="disp">{lost}</td></tr>'
             )
     head = localized(
