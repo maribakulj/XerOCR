@@ -23,7 +23,11 @@ from urllib.parse import urlsplit
 from cinoc.adapters.corpus import _http
 from cinoc.adapters.corpus.escriptorium import DEFAULT_LAYER, EScriptoriumImporter
 from cinoc.adapters.corpus.gallica import GALLICA_BASE, GallicaImporter, vue_number
-from cinoc.adapters.corpus.huggingface import HFPage, stream_pages
+from cinoc.adapters.corpus.huggingface import (
+    HFPage,
+    snapshot_curated_layout,
+    stream_pages,
+)
 from cinoc.adapters.corpus.iiif import IIIFImage, IIIFImporter
 from cinoc.app.security import PathSecurityError, validated_path
 from cinoc.domain.artifacts import ArtifactType
@@ -394,9 +398,45 @@ def import_curated_corpus(
     )
 
 
+#: Télécharge un layout curé HF → dossier local (au moins ``corpus.json`` + GT).
+#: Injectable → l'import distant se teste sans réseau ni ``huggingface_hub``.
+CuratedFetcher = Callable[[str, Path, "str | None"], Path]
+
+
+def _hf_resolve_base(repo_id: str, revision: str | None) -> str:
+    """Racine ``resolve`` d'un dataset HF, épinglée à ``revision`` (sinon ``main``)."""
+    return f"https://huggingface.co/datasets/{repo_id}/resolve/{revision or 'main'}"
+
+
+def import_curated_hf_corpus(
+    repo_id: str,
+    dest: str | Path,
+    *,
+    revision: str | None = None,
+    name: str | None = None,
+    fetch: CuratedFetcher | None = None,
+) -> CorpusSpec:
+    """Importe un **dataset curé Cinoc publié sur HF** → ``CorpusSpec`` scorable.
+
+    Variante **distante** de ``import_curated_corpus`` : télécharge **uniquement**
+    le manifeste + la GT (les images restent des références IIIF HF, épinglées à
+    ``revision``), puis délègue à l'importeur local. Un corpus de référence publié
+    devient ainsi sélectionnable au Banc d'essai en quelques secondes, sans
+    rapatrier les images. ``fetch`` est injectable (test sans réseau).
+    """
+    layout_dir = (fetch or snapshot_curated_layout)(repo_id, Path(dest), revision)
+    return import_curated_corpus(
+        layout_dir,
+        base_url=_hf_resolve_base(repo_id, revision),
+        revision=revision,
+        name=name,
+    )
+
+
 __all__ = [
     "CorpusImportError",
     "import_curated_corpus",
+    "import_curated_hf_corpus",
     "import_escriptorium_corpus",
     "import_gallica_corpus",
     "import_hf_corpus",

@@ -214,12 +214,12 @@ def test_library_has_upload_and_import_controls(
     body = _client(tmp_path, monkeypatch).get("/library").text
     assert 'id="corpus-file"' in body  # upload ZIP
     assert 'id="dropzone"' in body  # zone de glisser-déposer
-    for source in ("iiif", "gallica", "escriptorium", "huggingface"):
+    for source in ("iiif", "gallica", "escriptorium", "huggingface", "curated"):
         assert f'data-source-tab="{source}"' in body
-    for source in ("iiif", "gallica", "escriptorium"):
+    for source in ("iiif", "gallica", "escriptorium", "curated"):
         assert f'data-import-source="{source}"' in body
     assert 'data-import-source="huggingface"' in body
-    for name in ("manifest_url", "ark", "base_url", "token"):
+    for name in ("manifest_url", "ark", "base_url", "token", "repo_id", "revision"):
         assert f'name="{name}"' in body
 
 

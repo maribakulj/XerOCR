@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from urllib.parse import urlencode
 
 from cinoc.adapters.corpus._http import (
@@ -312,6 +312,42 @@ def stream_pages(
             return
 
 
+def snapshot_curated_layout(
+    repo_id: str, dest: Path, revision: str | None
+) -> Path:  # pragma: no cover -- réseau réel (test 'live')
+    """Snapshot **partiel** d'un dataset curé Cinoc publié sur HF.
+
+    Ne rapatrie que ``corpus.json`` + ``ground_truth/`` (scorables en local) ; les
+    images restent des **références** IIIF distantes (saveur rapport « liens HF »,
+    D-094). ``huggingface_hub`` (extra ``[huggingface]``) est importé
+    paresseusement → sans l'extra, ``HuggingFaceUnavailableError`` actionnable ;
+    dépôt/révision injoignable → ``CorpusHttpError`` (→ 422 côté web).
+    """
+    try:
+        from huggingface_hub import snapshot_download  # type: ignore[import-not-found]
+        from huggingface_hub.utils import (  # type: ignore[import-not-found]
+            HfHubHTTPError,
+        )
+    except ImportError as exc:
+        raise HuggingFaceUnavailableError(
+            "import curé HF indisponible : installer 'cinoc[huggingface]' "
+            "(lib 'huggingface_hub')."
+        ) from exc
+    try:
+        local = snapshot_download(
+            repo_id,
+            repo_type="dataset",
+            revision=revision,
+            allow_patterns=["corpus.json", "ground_truth/*"],
+            local_dir=str(dest),
+        )
+    except HfHubHTTPError as exc:
+        raise CorpusHttpError(
+            f"dataset curé HF {repo_id!r} injoignable : {exc}"
+        ) from exc
+    return Path(local)
+
+
 __all__ = [
     "HF_API_BASE",
     "CINOC_GT_COLUMN",
@@ -322,5 +358,6 @@ __all__ = [
     "HuggingFaceDataset",
     "HuggingFaceUnavailableError",
     "search_reference",
+    "snapshot_curated_layout",
     "stream_pages",
 ]

@@ -112,6 +112,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Couche de transcription",
         "imp_limit": "Limite (pages)",
         "imp_name": "Nom (optionnel)",
+        "imp_repo": "Dépôt HF (org/nom-du-dataset)",
+        "imp_revision": "Révision (SHA — recommandé pour l'épinglage)",
+        "imp_curated_hint": "Dataset de référence Cinoc publié sur HuggingFace : "
+        "le manifeste et la vérité-terrain sont rapatriés, les images restent "
+        "des liens IIIF épinglés à la révision.",
         # Run de segmentation — panneau de lancement (page /segmentation)
         "seg_run_title": "Segmenter un corpus",
         "seg_run_desc": "Choisissez un corpus préparé et un segmenteur, puis "
@@ -214,6 +219,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_source_iiif": "IIIF",
         "library_source_gallica": "Gallica",
         "library_source_escriptorium": "eScriptorium",
+        "library_source_curated": "Cinoc curé",
         "library_zip_meta": "ZIP · max 500 MB · paires auto-détectées",
         "library_ready": "prêt pour benchmark",
         "library_add_desc": "Téléversez un ZIP (glisser-déposer) ou importez "
@@ -328,6 +334,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Transcription layer",
         "imp_limit": "Limit (pages)",
         "imp_name": "Name (optional)",
+        "imp_repo": "HF repo (org/dataset-name)",
+        "imp_revision": "Revision (SHA — recommended for pinning)",
+        "imp_curated_hint": "Cinoc reference dataset published on HuggingFace: "
+        "the manifest and ground truth are fetched, images stay as IIIF links "
+        "pinned to the revision.",
         # Segmentation run — launch panel (/segmentation page)
         "seg_run_title": "Segment a corpus",
         "seg_run_desc": "Pick a prepared corpus and a segmenter, then run region "
@@ -428,6 +439,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_source_iiif": "IIIF",
         "library_source_gallica": "Gallica",
         "library_source_escriptorium": "eScriptorium",
+        "library_source_curated": "Cinoc curated",
         "library_zip_meta": "ZIP · max 500 MB · pairs auto-detected",
         "library_ready": "ready for benchmark",
         "library_add_desc": "Upload a ZIP (drag-and-drop) or import from a "

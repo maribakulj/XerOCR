@@ -144,6 +144,8 @@
         <a class="source-chip" href="#discover:huggingface" role="tab" aria-selected="false"
            data-source-tab="huggingface"><span class="src-glyph">HF</span><span>{{ t.library_source_hf }}</span><span class="src-count">{{ n_hf }}</span></a>
         {% if not public_mode %}
+        <a class="source-chip" href="#discover:curated" role="tab" aria-selected="false"
+           data-source-tab="curated"><span class="src-glyph">Ci</span><span>{{ t.library_source_curated }}</span><span class="src-count">HF</span></a>
         <a class="source-chip" href="#discover:iiif" role="tab" aria-selected="false"
            data-source-tab="iiif"><span class="src-glyph">IIIF</span><span>{{ t.library_source_iiif }}</span><span class="src-count">{{ t.library_manifest }}</span></a>
         <a class="source-chip" href="#discover:gallica" role="tab" aria-selected="false"
@@ -237,6 +239,29 @@
       </div>
 
       {% if not public_mode %}
+      <div class="source-panel" data-source-panel="curated" hidden>
+        <div class="panel import-card">
+          <div class="source-headline">
+            <div>
+              <div class="stack-title">{{ t.library_source_curated }}</div>
+              <div class="stack-sub">{{ t.imp_curated_hint }}</div>
+            </div>
+          </div>
+          <div class="import-fields" data-source="curated">
+            <input class="input input-wide" type="text" name="repo_id"
+                   placeholder="{{ t.imp_repo }}" aria-label="{{ t.imp_repo }}">
+            <input class="input" type="text" name="revision"
+                   placeholder="{{ t.imp_revision }}" aria-label="{{ t.imp_revision }}">
+          </div>
+          <div class="import-actions">
+            <input class="input" type="text" data-import-shared="name" name="name"
+                   placeholder="{{ t.imp_name }}" aria-label="{{ t.imp_name }}">
+            <button class="btn btn-primary" type="button" data-import-source="curated">{{ t.imp_btn }}</button>
+            <span class="run-status" data-import-status="curated"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="source-panel" data-source-panel="iiif" hidden>
         <div class="panel import-card">
           <div class="source-headline">

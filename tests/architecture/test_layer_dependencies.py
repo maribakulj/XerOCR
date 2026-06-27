@@ -103,12 +103,13 @@ ADAPTERS_ALLOWED_PKG = (
 #: ``httpcore`` : moteur de transport de ``httpx`` (toujours co-installé), requis
 #: pour l'épinglage d'IP anti-DNS-rebinding (``corpus/_http._PinnedBackend``).
 #: ``datasets`` : import de corpus HuggingFace en streaming (extra ``[huggingface]``,
-#: import paresseux dans ``corpus/huggingface``).
+#: import paresseux dans ``corpus/huggingface``). ``huggingface_hub`` : snapshot
+#: partiel d'un dataset curé publié (même extra, même import paresseux).
 #: ``paddlex`` : segmenteur de mise en page PP-DocLayout (extra ``[segment]``,
 #: import paresseux dans ``layout/pp_doclayout``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
-    "datasets", "PIL", "yaml", "paddlex", "kraken",
+    "datasets", "huggingface_hub", "PIL", "yaml", "paddlex", "kraken",
     # Moteurs OCR/HTR locaux in-tree (extras `[pero]`/`[calamari]`, D-078).
     "pero_ocr", "calamari_ocr", "cv2", "numpy",
     # Extracteur d'entités nommées (extra `[ner]`, import paresseux dans

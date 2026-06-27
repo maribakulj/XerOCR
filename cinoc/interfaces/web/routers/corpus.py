@@ -1,10 +1,11 @@
 """Routeur **corpus** : upload ZIP **et** imports distants (couche 8).
 
 ``POST /api/corpus`` (multipart, **CSRF**) → ``CorpusStore`` valide et matérialise
-une archive. ``POST /api/corpus/import/{iiif,escriptorium,gallica}`` (JSON, **CSRF**)
-importent un corpus distant → ``CorpusSpec`` via la couche 6 (même seam
-``CorpusStore.materialize``). ``GET /api/corpus/{id}`` restitue le résumé. Tout
-corpus stocké est une cible de run.
+une archive. ``POST /api/corpus/import/{iiif,escriptorium,gallica,huggingface,
+curated}`` (JSON, **CSRF**) importent un corpus distant → ``CorpusSpec`` via la
+couche 6 (même seam ``CorpusStore.materialize``). ``curated`` rapatrie un **dataset
+curé Cinoc publié sur HF** (manifeste + GT seulement, images en réfs IIIF pinnées).
+``GET /api/corpus/{id}`` restitue le résumé. Tout corpus stocké est une cible de run.
 
 La taille de l'archive est plafonnée **deux fois** : lecture bornée ici (``413``),
 puis quotas fins dans ``extract_corpus_zip`` (``422``).
@@ -32,6 +33,7 @@ from cinoc.adapters.corpus.huggingface import (
 )
 from cinoc.app.corpus_import import (
     CorpusImportError,
+    import_curated_hf_corpus,
     import_escriptorium_corpus,
     import_gallica_corpus,
     import_hf_corpus,
@@ -95,6 +97,20 @@ class HuggingFaceImportRequest(BaseModel):
     name: str | None = Field(default=None, max_length=128)
     #: Borne le nombre de pages **streamées** (les premières) — protège le Space.
     limit: int | None = Field(default=None, ge=1, le=2000)
+
+
+class CuratedImportRequest(BaseModel):
+    """Corps d'``POST /api/corpus/import/curated`` (dataset curé Cinoc publié sur HF).
+
+    ``revision`` (SHA du commit HF) épingle la reproductibilité ET les URLs IIIF
+    des images : la fournir est **recommandé** (sinon ``main``, mouvant).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    repo_id: str = Field(min_length=1, max_length=256)
+    revision: str | None = Field(default=None, max_length=64)
+    name: str | None = Field(default=None, max_length=128)
 
 
 def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> APIRouter:
@@ -183,6 +199,18 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
         )
 
     @router.post(
+        "/api/corpus/import/curated",
+        status_code=201,
+        dependencies=[Depends(csrf_protect)],
+    )
+    def import_curated(req: CuratedImportRequest) -> dict[str, object]:
+        return _materialize(
+            lambda dest: import_curated_hf_corpus(
+                req.repo_id, dest, revision=req.revision, name=req.name
+            )
+        )
+
+    @router.post(
         "/api/corpus", status_code=201, dependencies=[Depends(csrf_protect)]
     )
     async def upload_corpus(
@@ -225,6 +253,7 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
 
 
 __all__ = [
+    "CuratedImportRequest",
     "EScriptoriumImportRequest",
     "GallicaImportRequest",
     "HuggingFaceImportRequest",

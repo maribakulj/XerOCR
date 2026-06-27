@@ -11,7 +11,11 @@ from pathlib import Path
 
 import pytest
 
-from cinoc.app.corpus_import import CorpusImportError, import_curated_corpus
+from cinoc.app.corpus_import import (
+    CorpusImportError,
+    import_curated_corpus,
+    import_curated_hf_corpus,
+)
 from cinoc.app.dataset_standardize import StandardizeConfig, standardize_corpus
 from cinoc.domain.artifacts import ArtifactType
 
@@ -77,6 +81,48 @@ def test_path_traversal_in_manifest_rejected(tmp_path: Path) -> None:
     root = _layout(tmp_path / "ds", gt_rel="../../etc/secret")
     with pytest.raises(CorpusImportError, match="non sûr"):
         import_curated_corpus(root)
+
+
+def test_hf_import_pins_iiif_to_revision(tmp_path: Path) -> None:
+    # fetch injecté (pas de réseau) → renvoie un layout local ; l'URL IIIF des
+    # images est épinglée à la révision sur huggingface.co.
+    layout = _layout(tmp_path / "ds")
+    seen: dict[str, object] = {}
+
+    def _fetch(repo_id: str, dest: Path, revision: str | None) -> Path:
+        seen["repo_id"] = repo_id
+        seen["revision"] = revision
+        return layout
+
+    spec = import_curated_hf_corpus(
+        "Ma-Ri-Ba-Ku/Cinoc-Dresden",
+        tmp_path / "dl",
+        revision="abc123",
+        name="Dresden",
+        fetch=_fetch,
+    )
+    assert seen == {"repo_id": "Ma-Ri-Ba-Ku/Cinoc-Dresden", "revision": "abc123"}
+    doc = spec.documents[0]
+    assert doc.image_uri == (
+        "https://huggingface.co/datasets/Ma-Ri-Ba-Ku/Cinoc-Dresden/resolve/abc123/"
+        f"{_IMG_REL}"
+    )
+    assert spec.name == "Dresden"
+    assert spec.metadata["revision"] == "abc123"
+    assert spec.metadata["source"] == "curated"
+    # GT rapatriée localement et lisible.
+    gt = doc.gt_for(ArtifactType.RAW_TEXT)
+    assert gt is not None and Path(gt.uri).read_text(encoding="utf-8") == "hello ſ"
+
+
+def test_hf_import_defaults_to_main_without_revision(tmp_path: Path) -> None:
+    layout = _layout(tmp_path / "ds")
+    spec = import_curated_hf_corpus(
+        "org/ds", tmp_path / "dl", fetch=lambda _r, _d, _rev: layout
+    )
+    doc = spec.documents[0]
+    assert "/resolve/main/" in doc.image_uri
+    assert "revision" not in spec.metadata  # non épinglé → pas de fausse provenance
 
 
 def test_round_trip_standardize_then_import(tmp_path: Path) -> None:
