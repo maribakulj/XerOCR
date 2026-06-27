@@ -26,7 +26,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.engines import StatusProvider
 from cinoc.app.jobs import JobRunner
-from cinoc.app.run_planning import SEGMENTER_KIND, plan_segmentation_run
+from cinoc.app.run_planning import (
+    SEGMENTER_KIND,
+    SEGMENTER_KINDS,
+    RunPlanningError,
+    plan_segmentation_run,
+)
 from cinoc.app.segmentation import SegmentationStore
 from cinoc.interfaces.web.security.csrf import csrf_protect
 
@@ -41,11 +46,20 @@ _MEDIA_TYPES = {
 
 
 class SegmentationRunRequest(BaseModel):
-    """Corps d'``POST /api/segmentation/run`` : le corpus à segmenter."""
+    """Corps d'``POST /api/segmentation/run`` : corpus + segmenteur choisi.
+
+    ``segmenter`` sélectionne le module (``pp_doclayout`` local par défaut, ou
+    ``remote_segmenter`` distant). Pour le distant, ``endpoint`` est requis (cible
+    object-detection HF) et ``token`` optionnel (auth) — c'est ce qui rend un
+    segmenteur tiers **sélectionnable avant le run** sans rien réinstaller.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     corpus_id: str = Field(min_length=1, max_length=128)
+    segmenter: str = Field(default=SEGMENTER_KIND, max_length=64)
+    endpoint: str | None = Field(default=None, max_length=2048)
+    token: str | None = Field(default=None, max_length=512)
 
 
 def build_segmentation_router(
@@ -64,19 +78,33 @@ def build_segmentation_router(
         dependencies=[Depends(csrf_protect)],
     )
     def launch_segmentation(req: SegmentationRunRequest) -> dict[str, str]:
-        available = any(
-            s.available for s in segmenters() if s.kind == SEGMENTER_KIND
-        )
-        if not available:
+        if req.segmenter not in SEGMENTER_KINDS:
             raise HTTPException(
-                status_code=409,
-                detail="segmenteur indisponible (extra [segment] requis).",
+                status_code=422, detail=f"segmenteur inconnu : {req.segmenter}"
+            )
+        status = next(
+            (s for s in segmenters() if s.kind == req.segmenter), None
+        )
+        if status is None or not status.available:
+            detail = status.detail if status else "segmenteur inconnu"
+            raise HTTPException(
+                status_code=409, detail=f"segmenteur indisponible : {detail}"
             )
         corpus = corpus_store.get(req.corpus_id)
         if corpus is None:
             raise HTTPException(status_code=404, detail="corpus introuvable")
         run_id = f"seg-{uuid.uuid4().hex[:12]}"
-        return {"job_id": runner.launch(plan_segmentation_run(corpus, run_id))}
+        try:
+            plan = plan_segmentation_run(
+                corpus,
+                run_id,
+                segmenter=req.segmenter,
+                endpoint=req.endpoint,
+                token=req.token,
+            )
+        except RunPlanningError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {"job_id": runner.launch(plan)}
 
     @router.get("/api/segmentation/{seg_id}/image")
     def segmentation_image(seg_id: str) -> FileResponse:

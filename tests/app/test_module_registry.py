@@ -43,6 +43,7 @@ def test_kinds_listed() -> None:
         "precomputed",
         "precomputed_layout",
         "precomputed_region",
+        "remote_segmenter",
         "tesseract",
     )
 
@@ -76,6 +77,20 @@ def test_builds_ner_module() -> None:
 def test_ner_requires_label() -> None:
     with pytest.raises(ModuleResolutionError):
         _registry().build("ner:c0", {})
+
+
+def test_builds_remote_segmenter_module() -> None:
+    module = _registry().build(
+        "remote_segmenter", {"endpoint": "https://example.org/seg"}
+    )
+    assert module.name == "remote_segmenter"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.LAYOUT})
+
+
+def test_remote_segmenter_requires_endpoint() -> None:
+    with pytest.raises(ModuleResolutionError):
+        _registry().build("remote_segmenter", {})
 
 
 def test_builds_azure_di_module() -> None:

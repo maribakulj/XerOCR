@@ -245,6 +245,24 @@ def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:
 
     return PPDocLayoutSegmenter()
 
+
+def _build_remote_segmenter(kwargs: Mapping[str, ParamValue]) -> Module:
+    endpoint = kwargs.get("endpoint")
+    if not isinstance(endpoint, str) or not endpoint:
+        raise ModuleResolutionError(
+            "remote_segmenter : 'endpoint' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.layout.remote import RemoteSegmenter
+
+    token = kwargs.get("token")
+    min_score = kwargs.get("min_score")
+    return RemoteSegmenter(
+        endpoint=endpoint,
+        token=token if isinstance(token, str) else None,
+        min_score=float(min_score) if isinstance(min_score, (int, float)) else 0.5,
+    )
+
+
 def _build_precomputed_region(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("source_label")
     if not isinstance(label, str):
@@ -289,6 +307,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("anthropic", _build_anthropic)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("pp_doclayout", _build_pp_doclayout)
+    registry.register_builder("remote_segmenter", _build_remote_segmenter)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
     registry.register_builder("ner", _build_ner)

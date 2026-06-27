@@ -112,11 +112,23 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Couche de transcription",
         "imp_limit": "Limite (pages)",
         "imp_name": "Nom (optionnel)",
-        # Run de segmentation — bouton sur le lanceur
-        "seg_run_title": "Segmentation de la mise en page",
-        "seg_run_btn": "Segmenter (PP-DocLayout)",
+        # Run de segmentation — panneau de lancement (page /segmentation)
+        "seg_run_title": "Segmenter un corpus",
+        "seg_run_desc": "Choisissez un corpus préparé et un segmenteur, puis "
+        "lancez la détection des régions. Le segmenteur distant délègue à un "
+        "endpoint Hugging Face — on change de modèle en changeant l'URL.",
+        "seg_run_corpus": "Corpus",
+        "seg_run_engine": "Segmenteur",
+        "seg_run_endpoint": "Endpoint (object-detection HF)",
+        "seg_run_endpoint_ph": "https://…",
+        "seg_run_token": "Jeton (optionnel)",
+        "seg_run_btn": "Segmenter",
         "seg_run_hint": "détecte les régions du corpus sélectionné.",
         "seg_run_unavailable": "segmenteur indisponible",
+        "seg_run_no_corpus": "Aucun corpus préparé — importez-en un dans la "
+        "Bibliothèque.",
+        "seg_run_running": "Segmentation en cours…",
+        "seg_run_done": "Segmentation terminée.",
         "seg_run_open": "Voir la segmentation",
         # Segmentation (squelette de visualisation)
         "seg_eyebrow": "Vitrine · mise en page",
@@ -316,11 +328,22 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_layer": "Transcription layer",
         "imp_limit": "Limit (pages)",
         "imp_name": "Name (optional)",
-        # Segmentation run — button on the launcher
-        "seg_run_title": "Page layout segmentation",
-        "seg_run_btn": "Segment (PP-DocLayout)",
+        # Segmentation run — launch panel (/segmentation page)
+        "seg_run_title": "Segment a corpus",
+        "seg_run_desc": "Pick a prepared corpus and a segmenter, then run region "
+        "detection. The remote segmenter delegates to a Hugging Face endpoint — "
+        "switch models by switching the URL.",
+        "seg_run_corpus": "Corpus",
+        "seg_run_engine": "Segmenter",
+        "seg_run_endpoint": "Endpoint (HF object-detection)",
+        "seg_run_endpoint_ph": "https://…",
+        "seg_run_token": "Token (optional)",
+        "seg_run_btn": "Segment",
         "seg_run_hint": "detects regions of the selected corpus.",
         "seg_run_unavailable": "segmenter unavailable",
+        "seg_run_no_corpus": "No prepared corpus — import one in the Library.",
+        "seg_run_running": "Segmenting…",
+        "seg_run_done": "Segmentation complete.",
         "seg_run_open": "View the segmentation",
         # Segmentation (visualization skeleton)
         "seg_eyebrow": "Showcase · layout",

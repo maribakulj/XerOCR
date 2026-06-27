@@ -238,11 +238,6 @@ def build_home_router(
         # Prompts curés par période (lus dynamiquement) → menu déroulant ; le
         # texte libre du formulaire reste prioritaire (résolu au plan).
         context["curated_prompts"] = list(curated_prompts())
-        # Segmenteur (catégorie séparée) : son statut alimente le bouton
-        # « Segmenter » — désactivé + motif si l'extra [segment] manque.
-        context["segmenter"] = next(
-            (s for s in segmenters() if s.kind == "pp_doclayout"), None
-        )
         return templates.TemplateResponse(request, "benchmark.html", context)
 
     @router.get("/segmentation", response_class=HTMLResponse)
@@ -261,6 +256,13 @@ def build_home_router(
         context["svg"] = layout_to_svg(layout, image_href=image_href) if layout else ""
         context["regions"] = regions
         context["n_regions"] = len(regions)
+        # Panneau de lancement : corpus préparés + segmenteurs du socle (local
+        # PP-DocLayout + distant HF). Le distant **délègue** à un endpoint
+        # object-detection → on change de segmenteur (un YOLO d'HF…) en
+        # changeant l'URL, sans rien réinstaller. Catégorie séparée des moteurs
+        # OCR → le lanceur vit ici, pas dans la coquille benchmark.
+        context["corpora"] = _corpora_summaries(corpus_store)
+        context["segmenters"] = list(segmenters())
         return templates.TemplateResponse(request, "segmentation.html", context)
 
     @router.get("/library", response_class=HTMLResponse)

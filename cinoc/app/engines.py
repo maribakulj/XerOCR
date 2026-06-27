@@ -215,21 +215,42 @@ def _ollama_status(has_module: ModuleProbe) -> EngineStatus:
 def segmenter_statuses(
     *, has_module: ModuleProbe = _module_present
 ) -> tuple[EngineStatus, ...]:
-    """Disponibilité des **segmenteurs** de mise en page du socle (PP-DocLayout).
+    """Disponibilité des **segmenteurs** de mise en page du socle.
 
     Catégorie **distincte** des moteurs de transcription : un segmenteur produit
     un ``LAYOUT`` (géométrie), pas du texte — il n'apparaît donc pas dans le
     ``<select>`` moteur du lanceur OCR. **Jamais masqué en mode public** : un
-    segmenteur du socle tourne en **local** (poids, pas de clé d'API) → comme
-    ``tesseract``, pas comme un moteur cloud.
+    segmenteur du socle tourne en **local** (PaddleX) ou **délègue** à un endpoint
+    distant (``remote_segmenter``) → pas de surface filesystem cloud à masquer.
+
+    Deux segmenteurs maison :
+
+    - ``pp_doclayout`` — modèle **local** PP-DocLayout (extra ``[segment]`` +
+      poids) ;
+    - ``remote_segmenter`` — **délégué** à un endpoint object-detection HF
+      (``httpx``), le modèle tourne à distance : on change de modèle en
+      changeant l'``endpoint``, rien à installer ni à baker.
     """
     if has_module("paddlex"):
-        detail, ok = "prêt (PaddleX installé)", True
+        paddle_detail, paddle_ok = "prêt (PaddleX installé)", True
     else:
-        detail, ok = "PaddleX non installé (extra [segment])", False
+        paddle_detail, paddle_ok = "PaddleX non installé (extra [segment])", False
+    if has_module("httpx"):
+        remote_detail, remote_ok = "prêt (endpoint distant à fournir)", True
+    else:
+        remote_detail, remote_ok = "httpx non installé", False
     return (
         EngineStatus(
-            kind="pp_doclayout", label="PP-DocLayout", available=ok, detail=detail
+            kind="pp_doclayout",
+            label="PP-DocLayout",
+            available=paddle_ok,
+            detail=paddle_detail,
+        ),
+        EngineStatus(
+            kind="remote_segmenter",
+            label="Segmenteur distant (HF)",
+            available=remote_ok,
+            detail=remote_detail,
         ),
     )
 

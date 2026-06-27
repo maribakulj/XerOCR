@@ -44,9 +44,15 @@ from cinoc.evaluation.archaic import resolve_archaic_list
 from cinoc.formats.text import NORMALIZATION_PROFILES
 from cinoc.prompts import PromptError, load_prompt
 
-#: Segmenteur de mise en page du socle — **source unique** du *kind* (consommé
-#: par la planification du run de segmentation ET par le gate du routeur).
+#: Segmenteur de mise en page du socle **par défaut** — **source unique** du
+#: *kind* (consommé par la planification du run de segmentation ET par le gate
+#: du routeur).
 SEGMENTER_KIND = "pp_doclayout"
+
+#: Segmenteurs du socle proposables au lanceur. ``pp_doclayout`` tourne en local
+#: (poids) ; ``remote_segmenter`` **délègue** à un endpoint object-detection HF
+#: (le modèle tourne à distance — on change de modèle en changeant l'endpoint).
+SEGMENTER_KINDS = ("pp_doclayout", "remote_segmenter")
 
 #: Moteurs OCR câblés pour un run réel (amont d'une chaîne ou OCR seul).
 _OCR_ENGINES = frozenset(
@@ -509,17 +515,26 @@ def metric_profile_catalog() -> tuple[dict[str, object], ...]:
     )
 
 
-def _segmentation_spec(corpus: CorpusSpec, run_id: str) -> RunSpec:
-    """Pipeline de segmentation à 1 étape : ``pp_doclayout`` (IMAGE→LAYOUT).
+def _segmentation_spec(
+    corpus: CorpusSpec,
+    run_id: str,
+    *,
+    segmenter: str,
+    adapter_kwargs: dict[str, dict[str, str | int | float | bool]],
+) -> RunSpec:
+    """Pipeline de segmentation à 1 étape : ``segmenter`` (IMAGE→LAYOUT).
 
     Aucune vue d'évaluation : un run de segmentation produit de la **géométrie**
     (captée par le sink), pas une métrique scalaire. Le ``RunResult`` reste
     l'output formel du run ; la visualisation vit sur ``/segmentation``.
+
+    ``adapter_kwargs`` porte les paramètres de construction du module choisi
+    (ex. ``endpoint``/``token`` du segmenteur distant) → factory + ``RunManifest``.
     """
     step = PipelineStep(
         id="seg",
         kind="layout",
-        adapter_name=SEGMENTER_KIND,
+        adapter_name=segmenter,
         input_types=(ArtifactType.IMAGE,),
         output_types=(ArtifactType.LAYOUT,),
     )
@@ -527,27 +542,53 @@ def _segmentation_spec(corpus: CorpusSpec, run_id: str) -> RunSpec:
         corpus=corpus,
         pipelines=(
             PipelineSpec(
-                name=SEGMENTER_KIND,
+                name=segmenter,
                 initial_inputs=(ArtifactType.IMAGE,),
                 steps=(step,),
             ),
         ),
         evaluation=EvaluationSpec(views=()),
+        adapter_kwargs=adapter_kwargs,
         run_id=run_id,
     )
 
 
 def plan_segmentation_run(
-    corpus: CorpusSpec, run_id: str
+    corpus: CorpusSpec,
+    run_id: str,
+    *,
+    segmenter: str = SEGMENTER_KIND,
+    endpoint: str | None = None,
+    token: str | None = None,
 ) -> Callable[[Path], RunSpec]:
-    """Builder de spec d'un run de **segmentation** (``pp_doclayout``)."""
-    return lambda _ws: _segmentation_spec(corpus, run_id)
+    """Builder de spec d'un run de **segmentation**.
+
+    ``segmenter`` choisit le module (``pp_doclayout`` local ou ``remote_segmenter``
+    distant). Pour ``remote_segmenter``, ``endpoint`` est **requis** (la cible
+    object-detection) ; ``token`` est optionnel (auth de l'endpoint).
+    """
+    if segmenter not in SEGMENTER_KINDS:
+        raise RunPlanningError(f"segmenteur inconnu : {segmenter!r}.")
+    adapter_kwargs: dict[str, dict[str, str | int | float | bool]] = {}
+    if segmenter == "remote_segmenter":
+        if not endpoint:
+            raise RunPlanningError(
+                "remote_segmenter : 'endpoint' requis (cible object-detection)."
+            )
+        kwargs: dict[str, str | int | float | bool] = {"endpoint": endpoint}
+        if token:
+            kwargs["token"] = token
+        adapter_kwargs[segmenter] = kwargs
+    return lambda _ws: _segmentation_spec(
+        corpus, run_id, segmenter=segmenter, adapter_kwargs=adapter_kwargs
+    )
 
 
 __all__ = [
     "DEFAULT_METRIC_PROFILE",
     "METRIC_PROFILES",
     "SEGMENTER_KIND",
+    "SEGMENTER_KINDS",
     "Competitor",
     "RunPlanningError",
     "benchmark_engine_catalog",

@@ -17,6 +17,7 @@ from cinoc.adapters.layout.pp_doclayout import (
     LayoutDetection,
     PPDocLayoutSegmenter,
 )
+from cinoc.adapters.layout.remote import RemoteSegmenter
 from cinoc.adapters.storage import JobState, JobStore
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.engines import EngineStatus
@@ -40,10 +41,21 @@ _UNAVAILABLE = (
         detail="PaddleX non installé (extra [segment])",
     ),
 )
+#: Les deux segmenteurs du socle disponibles (local + distant).
+_BOTH_AVAILABLE = (
+    EngineStatus(
+        kind="pp_doclayout", label="PP-DocLayout", available=True, detail="ok"
+    ),
+    EngineStatus(
+        kind="remote_segmenter", label="Segmenteur distant (HF)",
+        available=True, detail="ok",
+    ),
+)
 
 
 def _fake_segmenter_registry() -> ModuleRegistry:
-    """Registre du socle où ``pp_doclayout`` a un détecteur injecté (pas de SDK)."""
+    """Registre du socle où les segmenteurs ont un détecteur injecté (pas de SDK
+    ni de réseau) : ``pp_doclayout`` (local) **et** ``remote_segmenter`` (distant)."""
     detection = LayoutDetection(
         page_width=100, page_height=120,
         regions=(DetectedRegion("title", 1, 2, 30, 10, 0.95),),
@@ -53,6 +65,12 @@ def _fake_segmenter_registry() -> ModuleRegistry:
     registry.register_builder(
         "pp_doclayout",
         lambda _kw: PPDocLayoutSegmenter(detector=lambda _path: detection),
+    )
+    registry.register_builder(
+        "remote_segmenter",
+        lambda kw: RemoteSegmenter(
+            endpoint=str(kw["endpoint"]), detector=lambda _path: detection
+        ),
     )
     return registry
 
@@ -113,6 +131,56 @@ def test_run_segments_corpus_and_persists_layout(tmp_path: Path) -> None:
     layout = seg_store.get_layout(seg_id)
     assert layout is not None
     assert layout.pages[0].regions[0].region_type == "title"
+
+
+def test_run_with_remote_segmenter_persists_layout(tmp_path: Path) -> None:
+    client, runner, seg_store, corpus_store = _client(
+        tmp_path, segmenters=_BOTH_AVAILABLE
+    )
+    corpus_id = _add_corpus(corpus_store)
+    resp = client.post(
+        "/api/segmentation/run",
+        json={
+            "corpus_id": corpus_id,
+            "segmenter": "remote_segmenter",
+            "endpoint": "https://example.org/seg",
+            "token": "secret",
+        },
+        headers=_CSRF,
+    )
+    assert resp.status_code == 201
+    job_id = resp.json()["job_id"]
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    seg_id = seg_store.latest()
+    assert seg_id is not None
+    layout = seg_store.get_layout(seg_id)
+    assert layout is not None
+    assert layout.pages[0].regions[0].region_type == "title"
+
+
+def test_run_remote_segmenter_without_endpoint_is_422(tmp_path: Path) -> None:
+    client, _, _, corpus_store = _client(tmp_path, segmenters=_BOTH_AVAILABLE)
+    corpus_id = _add_corpus(corpus_store)
+    resp = client.post(
+        "/api/segmentation/run",
+        json={"corpus_id": corpus_id, "segmenter": "remote_segmenter"},
+        headers=_CSRF,
+    )
+    assert resp.status_code == 422
+    assert "endpoint" in resp.json()["detail"]
+
+
+def test_run_unknown_segmenter_is_422(tmp_path: Path) -> None:
+    client, _, _, corpus_store = _client(tmp_path, segmenters=_BOTH_AVAILABLE)
+    corpus_id = _add_corpus(corpus_store)
+    resp = client.post(
+        "/api/segmentation/run",
+        json={"corpus_id": corpus_id, "segmenter": "nope"},
+        headers=_CSRF,
+    )
+    assert resp.status_code == 422
 
 
 def test_run_unavailable_segmenter_is_409(tmp_path: Path) -> None:

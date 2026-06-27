@@ -62,7 +62,7 @@ class LayoutDetection:
 DetectorFn = Callable[[str], LayoutDetection]
 
 
-def _to_canonical_layout(
+def to_canonical_layout(
     detection: LayoutDetection, *, min_score: float
 ) -> CanonicalLayout:
     """Détections → ``CanonicalLayout`` (1 page, régions **sans lignes**).
@@ -184,25 +184,42 @@ class PPDocLayoutSegmenter:
             raise AdapterStepError(
                 f"{self.name} : workspace requis (RunContext.workspace_uri)."
             )
-        layout = _to_canonical_layout(
+        layout = to_canonical_layout(
             self._detect(image.uri), min_score=self._min_score
         )
-        payload = layout.model_dump_json().encode("utf-8")
-        output_path = workspace_artifact_path(
-            context.workspace_uri, context.document_id, self.name, "layout.json"
-        )
-        output_path.write_bytes(payload)
-        return StepOutput(
-            artifacts={
-                ArtifactType.LAYOUT: Artifact(
-                    id=f"{context.document_id}:{self.name}:layout",
-                    document_id=context.document_id,
-                    type=ArtifactType.LAYOUT,
-                    uri=str(output_path),
-                    content_hash=compute_content_hash(payload),
-                )
-            }
-        )
+        return layout_step_output(layout, context, self.name)
 
 
-__all__ = ["DetectedRegion", "LayoutDetection", "PPDocLayoutSegmenter"]
+def layout_step_output(
+    layout: CanonicalLayout, context: RunContext, name: str
+) -> StepOutput:
+    """Sérialise un ``CanonicalLayout`` → artefact ``LAYOUT`` (tail d'``execute``
+    partagé par tous les segmenteurs : PP-DocLayout, segmenteur distant…)."""
+    if context.workspace_uri is None:
+        raise AdapterStepError(f"{name} : workspace requis (RunContext.workspace_uri).")
+    payload = layout.model_dump_json().encode("utf-8")
+    output_path = workspace_artifact_path(
+        context.workspace_uri, context.document_id, name, "layout.json"
+    )
+    output_path.write_bytes(payload)
+    return StepOutput(
+        artifacts={
+            ArtifactType.LAYOUT: Artifact(
+                id=f"{context.document_id}:{name}:layout",
+                document_id=context.document_id,
+                type=ArtifactType.LAYOUT,
+                uri=str(output_path),
+                content_hash=compute_content_hash(payload),
+            )
+        }
+    )
+
+
+__all__ = [
+    "DetectedRegion",
+    "LayoutDetection",
+    "DetectorFn",
+    "PPDocLayoutSegmenter",
+    "to_canonical_layout",
+    "layout_step_output",
+]

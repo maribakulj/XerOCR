@@ -178,17 +178,35 @@ def test_default_probes_run_without_error() -> None:
 def test_segmenter_available_when_sdk_present() -> None:
     from cinoc.app.engines import segmenter_statuses
 
-    (status,) = segmenter_statuses(has_module=lambda n: n == "paddlex")
-    assert status.kind == "pp_doclayout"
-    assert status.available is True
+    statuses = {
+        s.kind: s
+        for s in segmenter_statuses(has_module=lambda n: n in {"paddlex", "httpx"})
+    }
+    assert statuses["pp_doclayout"].available is True
+    assert statuses["remote_segmenter"].available is True
 
 
 def test_segmenter_unavailable_signals_extra() -> None:
     from cinoc.app.engines import segmenter_statuses
 
-    (status,) = segmenter_statuses(has_module=lambda _n: False)
-    assert status.available is False
-    assert "[segment]" in status.detail
+    statuses = {s.kind: s for s in segmenter_statuses(has_module=lambda _n: False)}
+    paddle = statuses["pp_doclayout"]
+    assert paddle.available is False
+    assert "[segment]" in paddle.detail
+
+
+def test_remote_segmenter_needs_httpx() -> None:
+    from cinoc.app.engines import segmenter_statuses
+
+    statuses = {
+        s.kind: s for s in segmenter_statuses(has_module=lambda n: n == "httpx")
+    }
+    remote = statuses["remote_segmenter"]
+    assert remote.available is True
+    statuses_off = {
+        s.kind: s for s in segmenter_statuses(has_module=lambda _n: False)
+    }
+    assert statuses_off["remote_segmenter"].available is False
 
 
 def test_segmenter_not_in_ocr_engine_list() -> None:
@@ -196,3 +214,4 @@ def test_segmenter_not_in_ocr_engine_list() -> None:
     # (sinon il polluerait le <select> du lanceur OCR).
     kinds = {s.kind for s in engine_statuses()}
     assert "pp_doclayout" not in kinds
+    assert "remote_segmenter" not in kinds
