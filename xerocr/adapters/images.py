@@ -86,4 +86,45 @@ def thumbnail_to_file(
     return f"{folder.name}/{stem}.jpg"
 
 
-__all__ = ["thumbnail_data_uri", "thumbnail_to_file"]
+def iiif_derivative(
+    source: str | Path, dest_path: str | Path, *, width: int
+) -> tuple[int, int] | None:
+    """Écrit un dérivé JPEG de **largeur exacte** ``width`` (jamais agrandi) à
+    ``dest_path`` ; renvoie ``(largeur, hauteur)`` réels, ou ``None`` (dégradé).
+
+    Variante **largeur-fixe** de ``_render_jpeg`` (qui borne le plus grand côté) :
+    une taille IIIF Image API ``full/{w},/`` exige une largeur exacte, pas un
+    cadrage. Convertit en RGB, ré-échantillonne (Lanczos), crée les dossiers
+    parents. ``None`` (avec ``logger.warning``) si Pillow absent, fichier
+    introuvable ou image illisible — l'outil appelant décide d'échouer ou non."""
+    path = Path(source)
+    if not path.is_file():
+        logger.warning("[images] image introuvable %s — dérivé IIIF omis.", path)
+        return None
+    try:
+        from PIL import Image, UnidentifiedImageError
+    except ImportError as exc:
+        logger.warning(
+            "[images] Pillow indisponible (%s) — dérivé IIIF omis. Extra ``[images]``.",
+            exc,
+        )
+        return None
+    try:
+        with Image.open(path) as opened:
+            rgb = opened.convert("RGB")
+            orig_w, orig_h = rgb.size
+            target_w = min(width, orig_w)  # jamais agrandi
+            target_h = max(1, round(orig_h * target_w / orig_w))
+            resized = rgb.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            dest = Path(dest_path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            resized.save(dest, format="JPEG", quality=82, optimize=True)
+    except (UnidentifiedImageError, OSError) as exc:
+        logger.warning(
+            "[images] image illisible %s : %s — dérivé IIIF omis.", path, exc
+        )
+        return None
+    return (target_w, target_h)
+
+
+__all__ = ["thumbnail_data_uri", "thumbnail_to_file", "iiif_derivative"]
