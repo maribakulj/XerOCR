@@ -48,7 +48,6 @@ from cinoc.interfaces.web.catalog import seed_reports
 from cinoc.interfaces.web.metrics import MetricsMiddleware, RequestMetrics
 from cinoc.interfaces.web.routers.corpus import build_corpus_router
 from cinoc.interfaces.web.routers.engines import build_engines_router
-from cinoc.interfaces.web.routers.history import build_history_router
 from cinoc.interfaces.web.routers.home import build_home_router
 from cinoc.interfaces.web.routers.reports import build_reports_router
 from cinoc.interfaces.web.routers.runs import build_runs_router
@@ -201,7 +200,7 @@ def create_app(
     # pas de chargement de code arbitraire in-process sur un serveur exposé).
     discover_plugins(registry, enabled=not is_public)
     # Historique longitudinal : un store SQLite par application ; le runner
-    # y enregistre chaque run terminé, le routeur Historique le lit.
+    # y enregistre chaque run terminé, la page `/history` (rendu serveur) le lit.
     history_store = HistoryStore(runtime_dir / "history.db")
     # Segmentation : un store disque par application + une graine de **démo**
     # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
@@ -279,9 +278,8 @@ def create_app(
             public_mode=is_public,
         )
     )
-    app.include_router(build_engines_router(engine_status_provider))
+    app.include_router(build_engines_router())
     app.include_router(build_corpus_router(corpus_store, public_mode=is_public))
-    app.include_router(build_history_router(history_store))
     return app
 
 
