@@ -15,6 +15,24 @@ scorer v0.9.9 ; seules les entrées sont curées). Un seul ``primary_dataset_nam
 documentés de ``norm()`` (§4.3) : diacritiques préservées, ligatures œ/æ/ß, ꝛ,
 umlaut décomposé aͤ, césure DTA ``—\\n``, ponctuation → espace, casse, compactage,
 + cas dégénérés (réf vide, sortie vide).
+
+⚠️ **Divergences connues, EXCLUES du corpus** (le golden ne les couvre donc pas —
+à trancher dans le registre de décision, hors Phase 1 qui ne change aucun
+comportement). Mesurées en comparant ``get_builtin_profile("hipe").normalize`` au
+``norm()`` officiel :
+
+1. **``casefold()`` vs ``.lower()``** — le profil ``hipe`` plie la casse avec
+   ``str.casefold()`` (``caseless=True``), le scorer avec ``str.lower()``.
+   ``casefold`` sur-plie : ``ſ→s``, ``ﬀ→ff``, ``ﬁ→fi`` (le scorer les **garde** ;
+   ``ß→ss`` coïncide). ``ſ`` (s long) est **fréquent en OCR patrimonial** → écart
+   matériel sur ces entrées.
+2. **Hygiène des invisibles** — ``_strip_invisible`` **supprime** les Cf
+   (soft-hyphen U+00AD, zero-width U+200B…), le scorer les mappe en **espace**
+   (non-``\\w`` → espace) : nous **recollons** un mot là où le scorer le **scinde**.
+
+Tant que ces deux points ne sont pas tranchés (aligner le profil sur le scorer,
+ou documenter l'écart comme assumé), ne PAS ajouter ces classes au corpus : le
+golden deviendrait rouge — ce qui est précisément le signal à traiter sciemment.
 """
 
 from __future__ import annotations
