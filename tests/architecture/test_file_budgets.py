@@ -57,6 +57,24 @@ FILE_BUDGETS: dict[str, int] = {
 }
 
 
+#: Seuil de surveillance des assets front (JS/CSS) — plus bas que le Python : un
+#: rapport/coquille autonome embarque ces fichiers, ils enflent en silence
+#: (``test_file_budgets`` ne scannait QUE ``*.py``). Au-dessus, entrée justifiée.
+ASSET_THRESHOLD = 500
+
+#: Chemin relatif (depuis ``cinoc/``) → budget en lignes pour les assets front.
+#: Budgets re-basés au courant + ~15 %. Cibles de réduction (Phase 3/6) : la
+#: coquille tend vers « pas de SPA » — ``benchmark.js``/``shell.css`` à surveiller.
+ASSET_BUDGETS: dict[str, int] = {
+    # CSS de la coquille web (design system inline auto-hébergé).
+    "interfaces/web/static/css/shell.css": 1477,
+    # Script du composeur Banc d'essai (formulaire interactif).
+    "interfaces/web/static/js/benchmark.js": 631,
+    # Script du rapport autonome (enrichissement progressif, CSP-hashé).
+    "reports/_assets/report.js": 714,
+}
+
+
 def _line_count(path: Path) -> int:
     return len(path.read_text(encoding="utf-8").splitlines())
 
@@ -78,6 +96,42 @@ def test_file_size_within_budget(rel_path: str, budget: int) -> None:
 def test_no_orphaned_budget_entries() -> None:
     missing = [p for p in FILE_BUDGETS if not (CINOC / p).exists()]
     assert not missing, f"Entrées orphelines dans FILE_BUDGETS : {missing}."
+
+
+@pytest.mark.parametrize(("rel_path", "budget"), sorted(ASSET_BUDGETS.items()))
+def test_asset_size_within_budget(rel_path: str, budget: int) -> None:
+    path = CINOC / rel_path
+    assert path.exists(), (
+        f"Asset disparu : {rel_path}. Retire l'entrée de ASSET_BUDGETS."
+    )
+    actual = _line_count(path)
+    assert actual <= budget, (
+        f"\n{rel_path} a {actual} lignes (budget {budget}).\n"
+        "Refactor/élague, ou relève le budget consciemment dans ASSET_BUDGETS."
+    )
+
+
+def test_no_orphaned_asset_budget_entries() -> None:
+    missing = [p for p in ASSET_BUDGETS if not (CINOC / p).exists()]
+    assert not missing, f"Entrées orphelines dans ASSET_BUDGETS : {missing}."
+
+
+def test_asset_budget_covers_all_large_assets() -> None:
+    """Tout ``*.js``/``*.css`` ≥ ASSET_THRESHOLD doit avoir une entrée justifiée."""
+    untracked: list[tuple[str, int]] = []
+    for pattern in ("*.js", "*.css"):
+        for path in CINOC.rglob(pattern):
+            rel = path.relative_to(CINOC).as_posix()
+            if rel in ASSET_BUDGETS:
+                continue
+            count = _line_count(path)
+            if count >= ASSET_THRESHOLD:
+                untracked.append((rel, count))
+    assert not untracked, (
+        f"\nAssets ≥ {ASSET_THRESHOLD} lignes non surveillés :\n"
+        + "\n".join(f"  {p} ({n} lignes)" for p, n in sorted(untracked))
+        + "\n\nAjoute-les à ASSET_BUDGETS (budget = current + ~15 %), ou splitte."
+    )
 
 
 def test_budget_table_covers_all_large_files() -> None:

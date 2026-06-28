@@ -17,13 +17,15 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-ROUTERS = (
-    Path(__file__).resolve().parents[2]
-    / "cinoc"
-    / "interfaces"
-    / "web"
-    / "routers"
+INTERFACES = (
+    Path(__file__).resolve().parents[2] / "cinoc" / "interfaces"
 )
+
+#: Exemption temporaire (Phase 1) : ``demo.py`` construit aujourd'hui des specs
+#: d'orchestration (RunSpec/PipelineSpec/EvaluationView) en couche 8. La Phase 5.2
+#: déplacera ces constructeurs en couche ``app`` ; l'exemption sera alors levée.
+#: Tout AUTRE fichier d'``interfaces/`` qui fabriquerait une spec casse le test.
+_EXEMPT = frozenset({"demo.py"})
 
 #: Constructeurs de specs d'orchestration : leur instanciation appartient à la
 #: couche ``app`` (planification du run), pas à un routeur de transport.
@@ -58,13 +60,17 @@ def _spec_constructions(path: Path) -> list[str]:
     return found
 
 
-def test_routers_do_not_build_orchestration_specs() -> None:
+def test_interfaces_do_not_build_orchestration_specs() -> None:
+    """Aucune feuille de transport (``interfaces/**``) ne fabrique de spec
+    d'orchestration — sauf l'exemption nommée ``demo.py`` (cf. ``_EXEMPT``)."""
     offenders: dict[str, list[str]] = {}
-    for path in sorted(ROUTERS.glob("*.py")):
+    for path in sorted(INTERFACES.rglob("*.py")):
+        if path.name in _EXEMPT:
+            continue
         hits = _spec_constructions(path)
         if hits:
-            offenders[path.name] = hits
+            offenders[str(path.relative_to(INTERFACES))] = hits
     assert not offenders, (
-        "Construction de specs d'orchestration dans des routeurs de transport "
+        "Construction de specs d'orchestration dans une feuille de transport "
         f"(doit vivre en couche app) : {offenders}"
     )
