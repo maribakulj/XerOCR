@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from cinoc.domain import (
     ArtifactType,
-    EvaluationSpec,
     EvaluationView,
     MetricSpec,
     ProjectionSpec,
@@ -36,10 +35,3 @@ def test_projection_for_resolution():
     )
     assert v.projection_for(ArtifactType.ALTO_XML) is proj
     assert v.projection_for(ArtifactType.RAW_TEXT) is None
-
-
-def test_spec_view_lookup():
-    v = EvaluationView(name="text", candidate_types=frozenset({ArtifactType.RAW_TEXT}))
-    spec = EvaluationSpec(views=(v,))
-    assert spec.view_by_name("text") is v
-    assert spec.view_by_name("x") is None

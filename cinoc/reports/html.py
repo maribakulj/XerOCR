@@ -377,18 +377,14 @@ _CSS = (
     ".strata-pct{font-family:var(--display);font-weight:800;"
     "font-optical-sizing:auto;font-size:22px;font-variant-numeric:tabular-nums;"
     "color:var(--ink);}"
-    # Graphe de dispersion CER (SVG serveur, échelle commune) : badge+nom, bande,
-    # labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
+    # Grille de dispersion CER (SVG serveur, échelle commune) : badge+nom, box
+    # plot, labels min·méd·µ·max. Couleurs d'accent inline (palette engine_badges).
     ".disp-grid{display:flex;flex-direction:column;gap:14px;margin:14px 0 4px;}"
     ".disp-row{display:grid;grid-template-columns:170px 1fr;gap:6px 14px;"
     "align-items:center;}"
     ".disp-head{display:flex;align-items:center;gap:8px;}"
     ".disp-name{font-family:var(--mono);font-size:12px;color:var(--ink);"
     "overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}"
-    ".disp-strip{width:100%;height:22px;display:block;}"
-    ".disp-axis{stroke:var(--g-100);stroke-width:1;}"
-    ".disp-range{stroke-width:4;stroke-linecap:round;opacity:0.45;}"
-    ".disp-mean{stroke:var(--ink);stroke-width:1.5;}"
     ".disp-labels{grid-column:2;font-size:11px;color:var(--g-500);"
     "font-variant-numeric:tabular-nums;}"
     # Boîte à moustaches (SVG serveur) : moustaches min→max + capuchons, boîte
