@@ -8,6 +8,8 @@ n'est pas un détail web.
 
 from __future__ import annotations
 
+import hashlib
+import re
 from pathlib import Path
 
 from cinoc.domain.errors import CinocError
@@ -15,6 +17,22 @@ from cinoc.domain.errors import CinocError
 
 class PathSecurityError(CinocError):
     """Un chemin utilisateur sort de la zone autorisée (path traversal)."""
+
+
+def safe_stem(value: str, *, suffix: str = "", fallback: str = "x") -> str:
+    """Composant de chemin **sûr** dérivé d'une chaîne (anti path-traversal).
+
+    Slug lisible (caractères sûrs sur tous les OS : ``A-Za-z0-9._-``) + empreinte
+    SHA-256 courte de la valeur **brute** → jamais de collision même si deux
+    valeurs se réduisent au même slug. ``suffix`` distingue des variantes (vignette
+    vs fac-similé) ; ``fallback`` remplace un slug vide (valeur tout-symboles).
+
+    Source unique du « nom de fichier sûr » (invariant produit §12) — réutilisée
+    par ``alto_store`` et ``report_images``.
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or fallback
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:8]
+    return f"{cleaned}-{digest}{suffix}"
 
 
 def validated_path(user_path: str, base: Path, *, must_exist: bool = False) -> Path:
@@ -48,4 +66,4 @@ def validated_path(user_path: str, base: Path, *, must_exist: bool = False) -> P
     return resolved
 
 
-__all__ = ["PathSecurityError", "validated_path"]
+__all__ = ["PathSecurityError", "safe_stem", "validated_path"]

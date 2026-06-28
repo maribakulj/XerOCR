@@ -12,24 +12,12 @@ des rapports les rezippe à la demande. Pas de second format, pas de cache pré-
 
 from __future__ import annotations
 
-import hashlib
 import io
-import re
 import threading
 import zipfile
 from pathlib import Path
 
-from cinoc.app.security import PathSecurityError, validated_path
-
-
-def _slug(value: str) -> str:
-    """Composant de chemin **sûr** dérivé d'une chaîne (anti path-traversal).
-
-    Caractères sûrs sur tous les OS + empreinte SHA-256 courte → jamais de
-    collision même si deux valeurs se réduisent au même slug lisible."""
-    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", value).strip("-") or "x"
-    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:8]
-    return f"{cleaned}-{digest}"
+from cinoc.app.security import PathSecurityError, safe_stem, validated_path
 
 
 class AltoStore:
@@ -44,9 +32,9 @@ class AltoStore:
     ) -> None:
         """Persiste un ALTO XML pour ``(run_id, pipeline_name, document_id)``."""
         with self._lock:
-            folder = self._base / _slug(run_id)
+            folder = self._base / safe_stem(run_id)
             folder.mkdir(parents=True, exist_ok=True)
-            stem = _slug(f"{pipeline_name}::{document_id}")
+            stem = safe_stem(f"{pipeline_name}::{document_id}")
             (folder / f"{stem}.alto.xml").write_bytes(xml)
 
     def has(self, run_id: str) -> bool:
@@ -76,7 +64,7 @@ class AltoStore:
     def _folder(self, run_id: str) -> Path | None:
         """Dossier du run, **chemin validé** (anti path-traversal sur le run_id URL)."""
         try:
-            return validated_path(_slug(run_id), self._base)
+            return validated_path(safe_stem(run_id), self._base)
         except PathSecurityError:
             return None
 

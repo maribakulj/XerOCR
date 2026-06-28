@@ -18,9 +18,7 @@ Pillow) ; aucune exception large.
 
 from __future__ import annotations
 
-import hashlib
 import io
-import re
 import tempfile
 import zipfile
 from collections.abc import Callable, Mapping
@@ -28,6 +26,7 @@ from pathlib import Path
 from typing import Protocol
 
 from cinoc.adapters.images import thumbnail_data_uri, thumbnail_to_file
+from cinoc.app.security import safe_stem
 from cinoc.evaluation.result import RunResult
 
 #: Plafond par défaut de documents vignettés (borne le poids du rapport autonome).
@@ -91,17 +90,6 @@ def _ordered_refs(
     return [(doc_id, refs[doc_id]) for doc_id in selected]
 
 
-def _stem_for(doc_id: str, *, suffix: str = "") -> str:
-    """Stem de fichier **déterministe et sûr** dérivé du ``document_id``.
-
-    Slug lisible (caractères sûrs sur tous les OS) + empreinte SHA-256 courte du
-    ``document_id`` brut → jamais de collision même si deux ids se réduisent au
-    même slug. ``suffix`` distingue les variantes (vignette vs fac-similé)."""
-    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", doc_id).strip("-") or "doc"
-    digest = hashlib.sha256(doc_id.encode("utf-8")).hexdigest()[:8]
-    return f"{slug}-{digest}{suffix}"
-
-
 def build_thumbnails(
     result: RunResult, *, max_px: int = 280, max_docs: int = _DEFAULT_MAX_DOCS
 ) -> dict[str, str]:
@@ -138,7 +126,8 @@ def _build_sidecar(
 ) -> dict[str, str]:
     out: dict[str, str] = {}
     for doc_id, ref in _ordered_refs(result, max_docs=max_docs):
-        href = resolve(ref, assets_dir, _stem_for(doc_id, suffix=suffix))
+        stem = safe_stem(doc_id, suffix=suffix, fallback="doc")
+        href = resolve(ref, assets_dir, stem)
         if href is not None:
             out[doc_id] = href
     return out

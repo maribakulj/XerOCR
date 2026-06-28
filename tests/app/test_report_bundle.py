@@ -14,17 +14,22 @@ from pathlib import Path
 import pytest
 
 from cinoc.app.report_images import (
-    _stem_for,
     build_report_zip,
     build_sidecar_facsimiles,
     build_sidecar_thumbnails,
     write_report_bundle,
 )
+from cinoc.app.security import safe_stem
 from cinoc.domain.run import RunManifest
 from cinoc.evaluation.result import MetricScore, RunDocumentResult, RunResult
 from cinoc.reports import default_report_renderer
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
+
+
+def _stem_for(doc_id: str, *, suffix: str = "") -> str:
+    """Miroir de l'appel de ``report_images`` à ``safe_stem`` (fallback ``doc``)."""
+    return safe_stem(doc_id, suffix=suffix, fallback="doc")
 
 
 def _png(path: Path) -> str:
