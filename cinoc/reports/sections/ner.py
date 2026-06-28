@@ -13,8 +13,9 @@ from cinoc.evaluation.analysis import EntityMention, NerPayload, PipelineNer
 from cinoc.evaluation.result import RunResult
 from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
-from cinoc.reports.html import escape, localized, view_prefix
+from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 
 
 def _mentions(mentions: tuple[EntityMention, ...]) -> str:
@@ -149,20 +150,14 @@ class NerSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
-        blocks = [
-            _block(
-                view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, order, ctx.lang
-            )
-            for analysis in result.analyses
-            if isinstance(analysis.payload, NerPayload)
-        ]
-        if not blocks:
-            return None
-        title = localized(ctx.lang, "Entités nommées", "Named entities")
-        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=NerPayload,
+            title=localized(ctx.lang, "Entités nommées", "Named entities"),
+            block=lambda view, payload: _block(view, payload, order, ctx.lang),
+        )
 
 
 __all__ = ["NerSection"]

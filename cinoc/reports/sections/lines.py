@@ -14,8 +14,9 @@ from cinoc.evaluation.analysis import LinesPayload, PipelineLines
 from cinoc.evaluation.result import RunResult
 from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
-from cinoc.reports.html import localized, view_prefix
+from cinoc.reports.html import localized
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 
 
 def _distribution_row(
@@ -132,24 +133,18 @@ class LinesSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
-        blocks = [
-            _block(
-                view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, order, ctx.lang
-            )
-            for analysis in result.analyses
-            if isinstance(analysis.payload, LinesPayload)
-        ]
-        if not blocks:
-            return None
-        title = localized(
-            ctx.lang,
-            "Distribution des erreurs par ligne",
-            "Per-line error distribution",
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=LinesPayload,
+            title=localized(
+                ctx.lang,
+                "Distribution des erreurs par ligne",
+                "Per-line error distribution",
+            ),
+            block=lambda view, payload: _block(view, payload, order, ctx.lang),
         )
-        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
 
 
 __all__ = ["LinesSection"]
