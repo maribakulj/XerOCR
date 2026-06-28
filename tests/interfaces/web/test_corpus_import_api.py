@@ -58,9 +58,8 @@ def test_import_iiif_ok_and_selectable(
     assert resp.status_code == 201
     body = resp.json()
     assert body["n_documents"] == 1
-    # le corpus importé est immédiatement consultable (donc cible d'un run)
-    got = client.get(f"/api/corpus/{body['corpus_id']}").json()
-    assert got["documents"] == ["page_0001"]
+    # la réponse d'import EST le résumé (documents) → corpus cible d'un run.
+    assert body["documents"] == ["page_0001"]
 
 
 def test_import_without_csrf_is_403(tmp_path: Path) -> None:
@@ -131,8 +130,7 @@ def test_escriptorium_ok_and_selectable(
     client = _client(tmp_path)
     resp = client.post("/api/corpus/import/escriptorium", json=_ESC_BODY, headers=_CSRF)
     assert resp.status_code == 201
-    got = client.get(f"/api/corpus/{resp.json()['corpus_id']}").json()
-    assert got["documents"] == ["part_00042"]
+    assert resp.json()["documents"] == ["part_00042"]
 
 
 def test_escriptorium_public_mode_403(
@@ -194,8 +192,7 @@ def test_gallica_ok_and_selectable(
     client = _client(tmp_path)
     resp = client.post("/api/corpus/import/gallica", json=_GAL_BODY, headers=_CSRF)
     assert resp.status_code == 201
-    got = client.get(f"/api/corpus/{resp.json()['corpus_id']}").json()
-    assert got["documents"] == ["f0001"]
+    assert resp.json()["documents"] == ["f0001"]
 
 
 def test_gallica_public_mode_403(

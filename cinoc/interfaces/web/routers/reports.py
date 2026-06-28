@@ -15,7 +15,7 @@ from cinoc.app.report_images import (
 )
 from cinoc.app.results import RunResultError, load_run_result
 from cinoc.app.security import PathSecurityError
-from cinoc.interfaces.web.catalog import available_reports, resolve_report
+from cinoc.interfaces.web.catalog import resolve_report
 from cinoc.reports import default_report_renderer
 
 
@@ -28,10 +28,6 @@ def build_reports_router(
     ``/reports/{name}/alto.zip`` ; absent → l'endpoint répond ``404``.
     """
     router = APIRouter()
-
-    @router.get("/api/reports")
-    def list_reports() -> dict[str, list[str]]:
-        return {"reports": available_reports(reports_dir)}
 
     @router.get("/reports/{name}", response_class=HTMLResponse)
     def get_report(name: str, lang: str = "fr") -> str:

@@ -117,6 +117,17 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
     """Construit le routeur corpus (upload + imports distants)."""
     router = APIRouter()
 
+    def _summary(corpus_id: str, spec: CorpusSpec) -> dict[str, object]:
+        """Résumé d'un corpus créé : la réponse de création **est** le résumé
+        (corpus_id + nom + nombre de documents + liste des ids) — pas de GET
+        séparé à re-interroger."""
+        return {
+            "corpus_id": corpus_id,
+            "name": spec.name,
+            "n_documents": len(spec.documents),
+            "documents": [doc.id for doc in spec.documents],
+        }
+
     def _materialize(builder: Callable[..., CorpusSpec]) -> dict[str, object]:
         """Gate mode public → matérialise via le store → résumé (erreurs → 422)."""
         if public_mode:
@@ -130,11 +141,7 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except _IMPORT_ERRORS as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return {
-            "corpus_id": corpus_id,
-            "name": spec.name,
-            "n_documents": len(spec.documents),
-        }
+        return _summary(corpus_id, spec)
 
     @router.post(
         "/api/corpus/import/iiif",
@@ -223,23 +230,7 @@ def build_corpus_router(store: CorpusStore, *, public_mode: bool = False) -> API
             corpus_id, spec = store.save(file.filename or "corpus", data)
         except CorpusUploadError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        return {
-            "corpus_id": corpus_id,
-            "name": spec.name,
-            "n_documents": len(spec.documents),
-        }
-
-    @router.get("/api/corpus/{corpus_id}")
-    def corpus_summary(corpus_id: str) -> dict[str, object]:
-        spec = store.get(corpus_id)
-        if spec is None:
-            raise HTTPException(status_code=404, detail="corpus introuvable.")
-        return {
-            "corpus_id": corpus_id,
-            "name": spec.name,
-            "n_documents": len(spec.documents),
-            "documents": [doc.id for doc in spec.documents],
-        }
+        return _summary(corpus_id, spec)
 
     @router.delete(
         "/api/corpus/{corpus_id}", dependencies=[Depends(csrf_protect)]
