@@ -32,11 +32,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from cinoc.adapters.storage import JobStore
 from cinoc.app.corpus_upload import CorpusStore
+from cinoc.app.demo import demo_spec_builder
 from cinoc.app.engines import PUBLIC_ENGINE_KINDS, StatusProvider
 from cinoc.app.jobs import JobRunner
 from cinoc.app.run_planning import Competitor, RunPlanningError, plan_benchmark_run
 from cinoc.domain.corpus import CorpusSpec
-from cinoc.interfaces.demo import demo_spec_builder
 from cinoc.interfaces.web.security.csrf import csrf_protect
 
 

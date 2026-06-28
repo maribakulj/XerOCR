@@ -12,11 +12,8 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from cinoc.adapters.layout.pp_doclayout import (
-    DetectedRegion,
-    LayoutDetection,
-    PPDocLayoutSegmenter,
-)
+from cinoc.adapters.layout._base import DetectedRegion, LayoutDetection
+from cinoc.adapters.layout.pp_doclayout import PPDocLayoutSegmenter
 from cinoc.adapters.layout.remote import RemoteSegmenter
 from cinoc.adapters.storage import JobState, JobStore
 from cinoc.app.corpus_upload import CorpusStore

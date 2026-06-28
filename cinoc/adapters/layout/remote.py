@@ -25,7 +25,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from cinoc.adapters.corpus._http import SsrfError, assert_public_url
-from cinoc.adapters.layout.pp_doclayout import (
+from cinoc.adapters.layout._base import (
     DetectedRegion,
     DetectorFn,
     LayoutDetection,

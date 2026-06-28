@@ -21,6 +21,7 @@ from cinoc.app import (
     resolve_code_version,
 )
 from cinoc.app import run as run_orchestrator
+from cinoc.app.demo import demo_run_spec, write_demo_corpus
 from cinoc.app.modules import (
     ModuleRegistry,
     discover_plugins,
@@ -34,7 +35,6 @@ from cinoc.app.report_images import (
 from cinoc.app.resume import ResumeStore
 from cinoc.domain.errors import CinocError
 from cinoc.evaluation.analysis import EconomicsPayload
-from cinoc.interfaces.demo import demo_run_spec, write_demo_corpus
 from cinoc.reports import default_report_renderer, render_comparison
 from cinoc.reports.csv_export import run_result_csv
 

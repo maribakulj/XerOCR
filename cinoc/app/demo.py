@@ -1,9 +1,10 @@
-"""Mini-corpus de démonstration **déterministe** (couche 8, partagé).
+"""Mini-corpus de démonstration **déterministe** (couche 6, ``app``).
 
 Le même corpus pré-calculé sert la commande CLI ``demo`` **et** le lanceur web
 (walking skeleton) : un run réel, sans moteur externe (``precomputed``),
-qui produit un ``RunResult`` reproductible. Extrait de ``cli.py`` pour éviter la
-duplication (DRY) quand le web a eu besoin du même corpus.
+qui produit un ``RunResult`` reproductible. Construire le ``RunSpec`` est un acte
+de **planification de run** → couche ``app`` (les feuilles de transport ``cli`` /
+``web`` délèguent ici, jamais l'inverse — cf. ``test_interfaces_thin``).
 """
 
 from __future__ import annotations
