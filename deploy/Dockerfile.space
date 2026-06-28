@@ -1,11 +1,11 @@
 # Variante « racine plate » du Dockerfile, pour le dépôt d'un Hugging Face Space
-# où Dockerfile / requirements.txt / xerocr / reports sont TOUS à la racine.
-# (Le deploy/Dockerfile, lui, suppose le contexte de la racine du dépôt XerOCR.)
+# où Dockerfile / requirements.txt / cinoc / reports sont TOUS à la racine.
+# (Le deploy/Dockerfile, lui, suppose le contexte de la racine du dépôt Cinoc.)
 # Assemblé automatiquement par .github/workflows/deploy-space.yml.
 FROM python:3.11-slim
 
-RUN useradd --create-home --uid 1000 xerocr
-WORKDIR /home/xerocr/app
+RUN useradd --create-home --uid 1000 cinoc
+WORKDIR /home/cinoc/app
 
 # Dépendances d'abord (cache) : cœur + extra [serve] uniquement, aucun moteur.
 COPY requirements.txt ./requirements.txt
@@ -13,13 +13,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Code + paquet (sans deps : tout est déjà figé ci-dessus).
 COPY pyproject.toml README.md ./
-COPY xerocr ./xerocr
+COPY cinoc ./cinoc
 RUN pip install --no-cache-dir --no-deps .
 
 # Rapports à exposer (lecture seule) — dossier toujours présent.
 COPY reports ./reports
-ENV XEROCR_REPORTS_DIR=/home/xerocr/app/reports
+ENV CINOC_REPORTS_DIR=/home/cinoc/app/reports
 
-USER xerocr
+USER cinoc
 EXPOSE 7860
-CMD ["xerocr", "serve", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["cinoc", "serve", "--host", "0.0.0.0", "--port", "7860"]

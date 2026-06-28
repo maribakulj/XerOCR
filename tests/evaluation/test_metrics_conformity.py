@@ -8,9 +8,9 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.conformity import cmer
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.conformity import cmer
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 
 
 def _obs(reference: str, hypothesis: str):

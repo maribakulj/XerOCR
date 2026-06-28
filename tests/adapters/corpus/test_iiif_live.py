@@ -6,7 +6,7 @@ parsing du schéma servi, le téléchargement d'une vraie image et la fabricatio
 
 ⚠️ **Skip par défaut** (comme les tests `live` BNL) : un test qui frappe un hôte
 externe est non déterministe et n'a pas sa place dans la CI. Il ne s'exécute que si
-``XEROCR_LIVE_IIIF`` est défini. La couverture transport déterministe vit dans
+``CINOC_LIVE_IIIF`` est défini. La couverture transport déterministe vit dans
 ``test_iiif_local_server.py`` (loopback réel, en CI).
 """
 
@@ -17,8 +17,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus.iiif import IIIFImporter
-from xerocr.app.corpus_import import import_iiif_corpus
+from cinoc.adapters.corpus.iiif import IIIFImporter
+from cinoc.app.corpus_import import import_iiif_corpus
 
 pytestmark = [pytest.mark.network, pytest.mark.live]
 
@@ -26,8 +26,8 @@ MANIFEST = "https://iiif.io/api/cookbook/recipe/0001-mvm-image/manifest.json"
 
 
 def _skip_unless_opted_in() -> None:
-    if not os.environ.get("XEROCR_LIVE_IIIF"):
-        pytest.skip("XEROCR_LIVE_IIIF non défini (test réseau externe opt-in).")
+    if not os.environ.get("CINOC_LIVE_IIIF"):
+        pytest.skip("CINOC_LIVE_IIIF non défini (test réseau externe opt-in).")
 
 
 def test_fetch_real_manifest_images() -> None:

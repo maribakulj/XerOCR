@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.adapters._workspace import safe_document_stem, workspace_artifact_path
+from cinoc.adapters._workspace import safe_document_stem, workspace_artifact_path
 
 
 def test_stem_is_filesystem_safe() -> None:

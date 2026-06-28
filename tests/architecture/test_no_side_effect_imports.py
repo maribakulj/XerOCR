@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-XEROCR = Path(__file__).resolve().parents[2] / "xerocr"
+CINOC = Path(__file__).resolve().parents[2] / "cinoc"
 
 #: Fabriques à effet de bord : instancier un serveur/routeur, ouvrir un store,
 #: installer un handler global, enregistrer dans un registre. Interdites au
@@ -89,12 +89,12 @@ def _module_level_side_effects(tree: ast.Module) -> list[str]:
 
 def test_no_module_level_side_effects() -> None:
     hits: dict[str, list[str]] = {}
-    for path in XEROCR.rglob("*.py"):
+    for path in CINOC.rglob("*.py"):
         if "__pycache__" in path.parts:
             continue
         calls = _module_level_side_effects(ast.parse(path.read_text(encoding="utf-8")))
         if calls:
-            hits[str(path.relative_to(XEROCR))] = calls
+            hits[str(path.relative_to(CINOC))] = calls
     assert not hits, (
         f"\nEffet de bord exécuté à l'import (interdit) :\n  {hits}\n"
         "Tout enregistrement/instanciation doit être explicite (dans une "
@@ -107,18 +107,18 @@ def test_layer_import_loads_no_heavy_lib(layer: str) -> None:
     """Importer une couche construite ne charge aucune lib externe lourde."""
     code = (
         "import sys;"
-        f"import xerocr.{layer};"
+        f"import cinoc.{layer};"
         "print(','.join(sorted(m for m in sys.modules if '.' not in m)))"
     )
     proc = subprocess.run(
         [sys.executable, "-c", code],
         capture_output=True,
         text=True,
-        cwd=XEROCR.parent,
+        cwd=CINOC.parent,
     )
-    assert proc.returncode == 0, f"import xerocr.{layer} a échoué :\n{proc.stderr}"
+    assert proc.returncode == 0, f"import cinoc.{layer} a échoué :\n{proc.stderr}"
     loaded = set(proc.stdout.strip().split(","))
     heavy = sorted(loaded.intersection(_HEAVY))
     assert not heavy, (
-        f"import xerocr.{layer} charge des libs lourdes par effet de bord : {heavy}"
+        f"import cinoc.{layer} charge des libs lourdes par effet de bord : {heavy}"
     )

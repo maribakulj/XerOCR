@@ -2,7 +2,7 @@
 
 Démontre qu'un module de pipeline tiers — un YOLO de segmentation en vrai, ici un
 stub déterministe — se branche via le **même** ``Module`` Protocol, découvert par
-entry-point ``xerocr.modules``. Vit en fixture de test (= ce qu'un tiers
+entry-point ``cinoc.modules``. Vit en fixture de test (= ce qu'un tiers
 écrirait, hors de l'arbre livré).
 """
 
@@ -11,12 +11,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
-from xerocr.domain.errors import AdapterStepError
-from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
-from xerocr.pipeline.protocols import ParamValue
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext, StepOutput
+from cinoc.domain.artifacts import Artifact, ArtifactType, compute_content_hash
+from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
+from cinoc.pipeline.protocols import ParamValue
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext, StepOutput
 
 
 def _band(region_id: str, y: int) -> Region:
@@ -75,5 +75,5 @@ class SampleSegmenter:
 
 
 def build_sample_segmenter(kwargs: Mapping[str, ParamValue]) -> SampleSegmenter:
-    """``ModuleBuilder`` exposé par l'entry-point ``xerocr.modules``."""
+    """``ModuleBuilder`` exposé par l'entry-point ``cinoc.modules``."""
     return SampleSegmenter()

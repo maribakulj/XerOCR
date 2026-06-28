@@ -1,9 +1,9 @@
-"""Pipeline **hybride réel** de bout en bout (le cas d'usage central de XerOCR).
+"""Pipeline **hybride réel** de bout en bout (le cas d'usage central de Cinoc).
 
 Segmentation externe (ici les régions ABBYY réelles) → **crop** de chaque bloc du
 vrai TIFF → **OCR réel par bloc** (Tesseract) → réassemblage → ``region_cer`` par
 bloc contre la référence ABBYY. Opt-in (``live``) : binaire Tesseract + Pillow +
-``XEROCR_BNL_IMAGE`` (TIFF) + ``XEROCR_BNL_ALTO`` (ALTO ABBYY de la même page).
+``CINOC_BNL_IMAGE`` (TIFF) + ``CINOC_BNL_ALTO`` (ALTO ABBYY de la même page).
 
 Démontre que « module de segmentation → OCR des blocs issus de la segmentation »
 tourne sur de la vraie donnée — un YOLO se branche dans le même emplacement
@@ -18,11 +18,11 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 pytestmark = pytest.mark.live
 
@@ -32,22 +32,22 @@ def _skip_unless_ready() -> tuple[str, str]:
         pytest.skip("binaire tesseract absent")
     pytest.importorskip("PIL.Image")
     pytest.importorskip("pytesseract")
-    image = os.environ.get("XEROCR_BNL_IMAGE")
-    alto = os.environ.get("XEROCR_BNL_ALTO")
+    image = os.environ.get("CINOC_BNL_IMAGE")
+    alto = os.environ.get("CINOC_BNL_ALTO")
     if not image or not Path(image).is_file() or not alto or not Path(alto).is_file():
-        pytest.skip("XEROCR_BNL_IMAGE / XEROCR_BNL_ALTO non fournis")
+        pytest.skip("CINOC_BNL_IMAGE / CINOC_BNL_ALTO non fournis")
     return image, alto
 
 
 def test_external_segmentation_then_per_block_ocr(tmp_path: Path) -> None:
     image_path, alto_path = _skip_unless_ready()
-    from xerocr.adapters.layout.crop import crop_region
-    from xerocr.adapters.ocr.tesseract import TesseractAdapter
-    from xerocr.evaluation.representations import load_representation
-    from xerocr.pipeline.fanout import run_region_fanout
+    from cinoc.adapters.layout.crop import crop_region
+    from cinoc.adapters.ocr.tesseract import TesseractAdapter
+    from cinoc.evaluation.representations import load_representation
+    from cinoc.pipeline.fanout import run_region_fanout
 
     reference = load_representation(alto_path, ArtifactType.LAYOUT)
-    from xerocr.domain.layout import CanonicalLayout
+    from cinoc.domain.layout import CanonicalLayout
 
     assert isinstance(reference, CanonicalLayout)
     page_image = Artifact(

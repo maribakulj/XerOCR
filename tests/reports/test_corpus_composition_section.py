@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.corpus_composition import CorpusCompositionSection
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.corpus_composition import CorpusCompositionSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

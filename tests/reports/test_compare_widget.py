@@ -11,13 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.compare_widget import compare_script_hash, compare_widget
-from xerocr.reports.embedded import asset_text
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.compare_widget import compare_script_hash, compare_widget
+from cinoc.reports.embedded import asset_text
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
-_JS = Path(__file__).resolve().parents[2] / "xerocr/reports/_assets/compare.js"
+_JS = Path(__file__).resolve().parents[2] / "cinoc/reports/_assets/compare.js"
 
 
 def _result(cer: float = 0.1) -> RunResult:
@@ -38,9 +38,9 @@ def _result(cer: float = 0.1) -> RunResult:
 
 def test_widget_has_button_data_and_inline_script() -> None:
     html = compare_widget(_result())
-    assert 'id="xerocr-compare-btn"' in html
-    assert 'id="xerocr-compare-file"' in html
-    assert 'id="xerocr-compare-data" type="application/json"' in html
+    assert 'id="cinoc-compare-btn"' in html
+    assert 'id="cinoc-compare-file"' in html
+    assert 'id="cinoc-compare-data" type="application/json"' in html
     assert "<script>" in html  # script inliné (autonomie du rapport)
     # Données du run courant : CER par "pipeline · view".
     assert "tesseract" in html and "0.1" in html

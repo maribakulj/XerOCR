@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.app.run_planning import (
+from cinoc.app.run_planning import (
     Competitor,
     RunPlanningError,
     plan_benchmark_run,
 )
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
 
 
 def _corpus() -> CorpusSpec:

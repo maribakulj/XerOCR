@@ -1,7 +1,7 @@
-# Convention XerOCR — datasets HuggingFace
+# Convention Cinoc — datasets HuggingFace
 
 Pour importer un dataset HuggingFace comme corpus **scorable**, le dataset doit
-suivre la **convention XerOCR** : des colonnes nommées de façon fixe (XerOCR ne
+suivre la **convention Cinoc** : des colonnes nommées de façon fixe (Cinoc ne
 devine pas un mapping arbitraire — convention unique, pas de configuration).
 
 ## Colonnes
@@ -24,7 +24,7 @@ devine pas un mapping arbitraire — convention unique, pas de configuration).
   de snapshot local complet. `limit` borne le nombre de pages.
 - Un dataset sans les colonnes requises → erreur **422** claire (la conformité
   est validée sur la première ligne).
-- La lib `datasets` est un **extra** : `pip install xerocr[huggingface]`. Sans
+- La lib `datasets` est un **extra** : `pip install cinoc[huggingface]`. Sans
   elle, l'import signale qu'il faut l'installer (**409**), il ne plante pas.
 - En **mode public** (Space exposé), l'import distant est **refusé (403)** comme
   les autres importeurs — il fetch côté serveur.
@@ -37,5 +37,5 @@ from datasets import Dataset, Features, Image, Value
 Dataset.from_dict(
     {"image": ["p1.png", "p2.png"], "ground_truth": ["Au nom de Dieu…", "…"]},
     features=Features({"image": Image(), "ground_truth": Value("string")}),
-).push_to_hub("mon-org/mon-corpus-xerocr")
+).push_to_hub("mon-org/mon-corpus-cinoc")
 ```

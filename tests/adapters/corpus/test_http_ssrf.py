@@ -10,8 +10,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpcore
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus._http import SsrfError, assert_public_url, fetch_json
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus._http import SsrfError, assert_public_url, fetch_json
 
 
 @pytest.mark.parametrize(

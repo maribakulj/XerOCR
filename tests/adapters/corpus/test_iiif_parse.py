@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.adapters.corpus.iiif import parse_manifest
+from cinoc.adapters.corpus.iiif import parse_manifest
 
 V2 = {
     "@context": "http://iiif.io/api/presentation/2/context.json",

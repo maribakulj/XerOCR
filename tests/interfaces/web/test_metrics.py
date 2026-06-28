@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.metrics import RequestMetrics
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.metrics import RequestMetrics
 
 
 def _client(tmp_path: Path, *, metrics: bool | None = None) -> TestClient:
@@ -23,9 +23,9 @@ def test_request_metrics_render_is_deterministic_and_prometheus() -> None:
     m.record("GET", 200)
     m.record("POST", 403)
     text = m.render()
-    assert "# TYPE xerocr_requests_total counter" in text
-    assert 'xerocr_requests_total{method="GET",status="200"} 2' in text
-    assert 'xerocr_requests_total{method="POST",status="403"} 1' in text
+    assert "# TYPE cinoc_requests_total counter" in text
+    assert 'cinoc_requests_total{method="GET",status="200"} 2' in text
+    assert 'cinoc_requests_total{method="POST",status="403"} 1' in text
     assert m.render() == text  # déterministe (clés triées)
 
 
@@ -48,6 +48,6 @@ def test_metrics_endpoint_opt_in_counts_requests(tmp_path: Path) -> None:
 def test_metrics_opt_in_via_env(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("XEROCR_METRICS", "true")
+    monkeypatch.setenv("CINOC_METRICS", "true")
     client = TestClient(create_app(reports_dir=tmp_path, rate_limit=1000))
     assert client.get("/metrics").status_code == 200

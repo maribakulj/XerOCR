@@ -1,4 +1,4 @@
-"""Découverte de modules tiers par entry-points (``xerocr.modules``).
+"""Découverte de modules tiers par entry-points (``cinoc.modules``).
 
 Vérifie le **seul** point d'extension tiers : un builder tiers découvert et
 enregistré comme le socle (même `Module` Protocol), le **fail-closed en mode
@@ -13,13 +13,13 @@ from collections.abc import Callable
 from importlib.metadata import EntryPoint
 from pathlib import Path
 
+from cinoc.app.modules import ModuleRegistry, discover_plugins
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.layout import CanonicalLayout
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 from tests.fixtures.sample_segmenter_plugin import build_sample_segmenter
-from xerocr.app.modules import ModuleRegistry, discover_plugins
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.layout import CanonicalLayout
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
 
 
 class _FakeEntryPoint:
@@ -98,7 +98,7 @@ def test_real_entry_point_load_resolves_dotted_path() -> None:
     entry_point = EntryPoint(
         name="sample_seg",
         value="tests.fixtures.sample_segmenter_plugin:build_sample_segmenter",
-        group="xerocr.modules",
+        group="cinoc.modules",
     )
     registry = ModuleRegistry()
     kinds = discover_plugins(
@@ -111,7 +111,7 @@ def test_real_entry_point_load_resolves_dotted_path() -> None:
 
 
 def test_default_loader_runs_clean() -> None:
-    # Aucun entry-point `xerocr.modules` en CI → découverte vide, sans erreur
+    # Aucun entry-point `cinoc.modules` en CI → découverte vide, sans erreur
     # (prouve que le vrai chemin importlib.metadata est branché correctement).
     assert discover_plugins(ModuleRegistry(), enabled=True) == ()
 

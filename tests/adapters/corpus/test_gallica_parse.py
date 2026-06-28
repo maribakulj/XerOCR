@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.adapters.corpus.gallica import (
+from cinoc.adapters.corpus.gallica import (
     GallicaArkError,
     GallicaImporter,
     normalize_ark,

@@ -19,7 +19,7 @@ function ReportChrome({ active }) {
     <div className="report-chrome">
       <div className="wm">
         <span className="wm-mark">X</span>
-        <span className="wm-name">XerOCR</span>
+        <span className="wm-name">Cinoc</span>
         <span className="wm-sep"></span>
         <span className="wm-sub">Rapport · benchmark</span>
       </div>

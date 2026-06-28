@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.adapters.llm.openai import OpenAIAdapter
-from xerocr.adapters.ocr.precomputed import PrecomputedTextAdapter
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.pipeline.executor import PipelineExecutor
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.adapters.llm.openai import OpenAIAdapter
+from cinoc.adapters.ocr.precomputed import PrecomputedTextAdapter
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.pipeline.executor import PipelineExecutor
 
 
 def _image(tmp_path: Path) -> Artifact:
@@ -30,7 +30,7 @@ def test_ocr_then_llm_produces_corrected_text(
 ) -> None:
     (tmp_path / "doc1.eng.txt").write_text("Hello wrld", encoding="utf-8")
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai",
+        "cinoc.adapters.llm.openai._invoke_openai",
         lambda **_: LLMCompletion("Hello world"),
     )
     ocr = PipelineStep(
@@ -76,7 +76,7 @@ def test_ocr_then_vlm_correction_receives_image_and_text(
     """``text_and_image`` : le step LLM reçoit IMAGE (initial) ET RAW_TEXT (OCR)."""
     (tmp_path / "doc1.eng.txt").write_text("Helo", encoding="utf-8")
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        "cinoc.adapters.llm.openai._invoke_openai_vision",
         lambda **_: LLMCompletion("Hello"),
     )
     ocr = PipelineStep(
@@ -123,7 +123,7 @@ def test_zero_shot_vlm_transcribes_image(
 ) -> None:
     """``zero_shot`` : un seul step VLM (IMAGE → RAW_TEXT), sans OCR amont."""
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        "cinoc.adapters.llm.openai._invoke_openai_vision",
         lambda **_: LLMCompletion("Transcribed"),
     )
     vlm = PipelineStep(

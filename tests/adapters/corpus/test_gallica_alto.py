@@ -12,10 +12,10 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus import gallica as gallica_mod
-from xerocr.adapters.corpus._http import HttpFetchError
-from xerocr.adapters.corpus.gallica import GallicaImporter, alto_to_text
-from xerocr.formats.alto import parse_alto
+from cinoc.adapters.corpus import gallica as gallica_mod
+from cinoc.adapters.corpus._http import HttpFetchError
+from cinoc.adapters.corpus.gallica import GallicaImporter, alto_to_text
+from cinoc.formats.alto import parse_alto
 
 _FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "gallica_alto"
 

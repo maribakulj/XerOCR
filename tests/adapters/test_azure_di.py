@@ -14,13 +14,13 @@ from pathlib import Path
 import httpx
 import pytest
 
-from xerocr.adapters.ocr.azure_di import AzureDocIntelAdapter, _invoke_azure_di
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.deadline import Deadline
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.azure_di import AzureDocIntelAdapter, _invoke_azure_di
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.deadline import Deadline
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 _ENDPOINT = "https://res.cognitiveservices.azure.com"
 _OP_URL = f"{_ENDPOINT}/documentintelligence/operations/abc123?api-version=2024-11-30"
@@ -80,7 +80,7 @@ def test_execute_writes_text(
 ) -> None:
     _set_creds(monkeypatch)
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.azure_di._invoke_azure_di", lambda **_: "texte reconnu"
+        "cinoc.adapters.ocr.azure_di._invoke_azure_di", lambda **_: "texte reconnu"
     )
     out = AzureDocIntelAdapter(label="az").execute(
         {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()

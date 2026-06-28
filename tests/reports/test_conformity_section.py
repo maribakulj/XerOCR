@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     ConformityPayload,
     PipelineConformity,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.conformity import ConformitySection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.conformity import ConformitySection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -59,7 +59,7 @@ def test_renders_scores_and_deltas() -> None:
     assert html is not None
     assert "Conformité HIPE" in html
     assert "cmer_micro" in html and "wmer_macro" in html  # noms du scorer
-    assert "0.1234" in html and "+0.0500" in html
+    assert "0,1234" in html and "+0,0500" in html
     assert html.count("—") >= 2  # wmer_macro et delta_heritage absents → tiret
     assert "eng" in html
 

@@ -8,14 +8,14 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.diagnostics import (
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.diagnostics import (
     DiagnosticsCollector,
     char_confusions,
     line_cers,
 )
-from xerocr.evaluation.metrics.diagnostics import hallucination, searchability
-from xerocr.evaluation.result import MetricScore
+from cinoc.evaluation.metrics.diagnostics import hallucination, searchability
+from cinoc.evaluation.result import MetricScore
 
 
 def _ctx(reference: str, hypothesis: str) -> DocContext:

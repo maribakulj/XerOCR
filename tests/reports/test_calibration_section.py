@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CalibrationBin,
     CalibrationPayload,
     PipelineCalibration,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.calibration import CalibrationSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.calibration import CalibrationSection
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 
@@ -55,8 +55,8 @@ def test_satisfies_section_protocol() -> None:
 def test_renders_ece_mce_and_bins() -> None:
     html = CalibrationSection().render(_result(), SectionContext())
     assert html is not None
-    assert "ECE 0.4000" in html and "MCE 0.7000" in html
-    assert "[0.9 ; 1.0[" in html
+    assert "ECE 0,4000" in html and "MCE 0,7000" in html
+    assert "[0,9 ; 1,0[" in html
     assert html == CalibrationSection().render(_result(), SectionContext())
 
 

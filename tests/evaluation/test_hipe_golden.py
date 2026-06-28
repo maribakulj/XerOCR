@@ -3,7 +3,7 @@
 Protocole (SPEC_HIPE §11) — **fixture vendorée**, pas d'exécution du scorer en
 CI ordinaire :
 
-1. Sur un poste **Python ≥ 3.12** : ``pip install xerocr[hipe-oracle]``
+1. Sur un poste **Python ≥ 3.12** : ``pip install cinoc[hipe-oracle]``
    (``hipe-ocrepair-scorer==0.9.9`` épinglé) ;
 2. scorer le corpus d'exemple du dépôt officiel et vendorer la paire
    ``tests/fixtures/hipe_golden/input.jsonl`` (les enregistrements §4.8) +
@@ -25,9 +25,9 @@ from statistics import fmean
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.conformity import cmer
-from xerocr.formats.text import get_builtin_profile
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.conformity import cmer
+from cinoc.formats.text import get_builtin_profile
 
 _FIXTURES = Path(__file__).parent.parent / "fixtures" / "hipe_golden"
 _TOLERANCE = 1e-9

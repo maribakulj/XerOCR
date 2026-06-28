@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.metrics.text import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.metrics.text import (
     cer,
     cer_diplomatic,
     char_accuracy,

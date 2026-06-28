@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
 
 
 def test_materialize_allocates_dir_and_registers(tmp_path: Path) -> None:

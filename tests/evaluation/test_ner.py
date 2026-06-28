@@ -12,9 +12,9 @@ import json
 
 import pytest
 
-from xerocr.evaluation.analysis import NerPayload
-from xerocr.evaluation.errors import EvaluationError
-from xerocr.evaluation.ner import (
+from cinoc.evaluation.analysis import NerPayload
+from cinoc.evaluation.errors import EvaluationError
+from cinoc.evaluation.ner import (
     EntitiesCollector,
     Entity,
     EntitySet,
@@ -107,7 +107,7 @@ class TestAlignAndCompute:
         ocr = "XXXXXMarie de Bourgogne"
         hyp = EntitySet(text=ocr, entities=(Entity("LOC", 14, 23, "Bourgogne"),))
         # Raw (no remap) would fail:
-        from xerocr.evaluation.ner import _iou
+        from cinoc.evaluation.ner import _iou
 
         assert _iou(gt.entities[0], hyp.entities[0]) == pytest.approx(4 / 14)
         # With remap (compute_ner) → TP.

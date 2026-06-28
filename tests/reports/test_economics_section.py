@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     EconomicsPayload,
     MarginalCost,
     PipelineEconomics,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.economics import EconomicsSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.economics import EconomicsSection
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 
@@ -93,10 +93,10 @@ def test_satisfies_section_protocol() -> None:
 def test_renders_costs_pareto_and_marginal_read_only() -> None:
     html = EconomicsSection().render(_result(), SectionContext())
     assert html is not None
-    assert "0.0050" in html and "0.1750" in html  # coûts du payload, pas recalculés
+    assert "0,0050" in html and "0,1750" in html  # coûts du payload, pas recalculés
     assert "machine+jetons" in html
     assert "Front de Pareto" in html and "ocr_llm" in html
-    assert "EUR/erreur évitée" in html and "0.0017" in html
+    assert "EUR/erreur évitée" in html and "0,0017" in html
     # Déterminisme : même RunResult → même HTML, bit à bit.
     assert html == EconomicsSection().render(_result(), SectionContext())
 

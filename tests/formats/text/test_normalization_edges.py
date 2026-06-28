@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.formats.text.normalization import NormalizationProfile
+from cinoc.formats.text.normalization import NormalizationProfile
 
 
 def test_caseless_excludes_letter_case_insensitively() -> None:

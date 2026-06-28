@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CatastrophicRate,
     LinePercentiles,
     LinesPayload,
     PipelineLines,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.lines import LinesSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.lines import LinesSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -62,10 +62,10 @@ def test_distribution_and_heatmap_render() -> None:
     assert html is not None
     assert "Distribution des erreurs par ligne" in html
     assert "alpha" in html
-    assert "44.0%" in html  # CER moyen
-    assert "98.4%" in html  # p99
-    assert "0.436" in html  # Gini
-    assert "≥0.30 : 60.0%" in html  # taux catastrophique, seuil inclusif
+    assert "44,0%" in html  # CER moyen
+    assert "98,4%" in html  # p99
+    assert "0,436" in html  # Gini
+    assert "≥0,30 : 60,0%" in html  # taux catastrophique, seuil inclusif
     assert "heatmap" in html
     assert "—" in html  # tranche sans ligne : tiret, jamais un faux zéro
     # Déterminisme bit-à-bit du rendu.

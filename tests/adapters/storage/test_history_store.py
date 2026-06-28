@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
 
 
 def _rec(run_id: str, when: str, value: float, *, metric: str = "cer") -> HistoryRecord:

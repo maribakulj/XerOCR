@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.security import PathSecurityError, validated_path
+from cinoc.app.security import PathSecurityError, validated_path
 
 
 def test_relative_resolves_under_base(tmp_path: Path) -> None:

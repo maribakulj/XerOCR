@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
-from xerocr.interfaces.cli import main
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.interfaces.cli import main
 
 
 def _record(run_id: str, completed: str, value: float) -> HistoryRecord:

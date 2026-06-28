@@ -1,4 +1,4 @@
-/* Main app — XerOCR launcher, 3 main views + System modal.
+/* Main app — Cinoc launcher, 3 main views + System modal.
    (Design-tweak overlay removed: it was Claude-Design editing tooling, not the
    product. Density/accent are fixed to the shipped defaults.) */
 const { useState, useEffect } = React;
@@ -62,7 +62,7 @@ function App() {
         <div className="wordmark-card">
           <div className="wordmark">
             <span className="mark">X</span>
-            <span>XerOCR</span>
+            <span>Cinoc</span>
           </div>
           <div className="wordmark-sub">OCR · HTR · VLM benchmark</div>
         </div>

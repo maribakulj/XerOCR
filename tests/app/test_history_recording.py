@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.adapters.storage import JobState, JobStore
-from xerocr.adapters.storage.history_store import HistoryStore
-from xerocr.app.jobs import JobRunner
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.results import load_run_result
-from xerocr.interfaces.demo import demo_run_spec, write_demo_corpus
+from cinoc.adapters.storage import JobState, JobStore
+from cinoc.adapters.storage.history_store import HistoryStore
+from cinoc.app.jobs import JobRunner
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.results import load_run_result
+from cinoc.interfaces.demo import demo_run_spec, write_demo_corpus
 
 
 def _runner(tmp_path: Path, history: HistoryStore | None) -> JobRunner:

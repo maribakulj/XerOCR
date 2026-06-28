@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.adapters.corpus.iiif import IIIFImage
-from xerocr.app.corpus_import import import_gallica_corpus
-from xerocr.domain.artifacts import ArtifactType
+from cinoc.adapters.corpus.iiif import IIIFImage
+from cinoc.app.corpus_import import import_gallica_corpus
+from cinoc.domain.artifacts import ArtifactType
 
 
 class _FakeIIIF:

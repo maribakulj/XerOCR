@@ -21,7 +21,7 @@
    verdict métrique-par-métrique, garde-fous). **C'est le plan que ces sessions
    exécutent**, une étape (ou sous-étape) à la fois.
 5. La `DoD vivante` de chaque couche touchée
-   (`xerocr/<couche>/{ANALYSE,MIGRATION}_COUCHE_*.md`).
+   (`cinoc/<couche>/{ANALYSE,MIGRATION}_COUCHE_*.md`).
 
 ## 2. Règles de session (rappel court)
 

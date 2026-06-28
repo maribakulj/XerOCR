@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports._binning import histogram
+from cinoc.reports._binning import histogram
 
 
 def test_histogram_counts_and_edges() -> None:

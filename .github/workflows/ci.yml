@@ -25,9 +25,9 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Lint
-        run: ruff check xerocr/ tests/
+        run: ruff check cinoc/ tests/
       - name: Type
-        run: python -m mypy -p xerocr
+        run: python -m mypy -p cinoc
       - name: Test
         env:
           # `coverage` via sys.monitoring (PEP 669) annule l'overhead de tracing
@@ -36,7 +36,7 @@ jobs:
           COVERAGE_CORE: ${{ matrix.python == '3.11' && 'ctrace' || 'sysmon' }}
         # Le gate (coverage + seuil 85 %) est injecté ICI, pas dans addopts —
         # ainsi les runs locaux restent rapides par défaut (cf. Makefile/pyproject).
-        run: python -m pytest -q --cov=xerocr --cov-report=term-missing --cov-fail-under=85
+        run: python -m pytest -q --cov=cinoc --cov-report=term-missing --cov-fail-under=85
 
   # Construit l'image de la vitrine (ce que le sandbox ne pouvait pas vérifier)
   # et la sonde RÉELLEMENT : conteneur lancé → /health + /api/reports via curl.
@@ -49,10 +49,10 @@ jobs:
           mkdir -p deploy/reports
           # le .gitkeep suffit ; un rapport démo est déjà versionné dans deploy/reports.
       - name: Build de l'image
-        run: docker build -f deploy/Dockerfile -t xerocr-vitrine:ci .
+        run: docker build -f deploy/Dockerfile -t cinoc-vitrine:ci .
       - name: Lancer + sonder le conteneur
         run: |
-          docker run -d --name vitrine -p 7860:7860 xerocr-vitrine:ci
+          docker run -d --name vitrine -p 7860:7860 cinoc-vitrine:ci
           ok=0
           for _ in $(seq 1 40); do
             curl -sf http://127.0.0.1:7860/health >/dev/null 2>&1 && { ok=1; break; }

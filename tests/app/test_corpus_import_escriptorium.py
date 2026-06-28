@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus.escriptorium import EScriptoriumPage
-from xerocr.app.corpus_import import CorpusImportError, import_escriptorium_corpus
-from xerocr.domain.artifacts import ArtifactType
+from cinoc.adapters.corpus.escriptorium import EScriptoriumPage
+from cinoc.app.corpus_import import CorpusImportError, import_escriptorium_corpus
+from cinoc.domain.artifacts import ArtifactType
 
 
 class _FakeImporter:

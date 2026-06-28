@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.app.modules.registry import (
+from cinoc.app.modules.registry import (
     ModuleRegistry,
     ModuleResolutionError,
     register_default_modules,
 )
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.pipeline.protocols import Module
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.pipeline.protocols import Module
 
 
 def _registry() -> ModuleRegistry:
@@ -43,6 +43,7 @@ def test_kinds_listed() -> None:
         "precomputed",
         "precomputed_layout",
         "precomputed_region",
+        "remote_segmenter",
         "tesseract",
     )
 
@@ -50,6 +51,13 @@ def test_kinds_listed() -> None:
 def test_builds_tesseract_module() -> None:
     module = _registry().build("tesseract:fra", {"label": "fra", "lang": "fra"})
     assert module.name == "tesseract:fra"
+
+
+def test_tesseract_alto_kwarg_enables_alto_output() -> None:
+    plain = _registry().build("tesseract:fra", {"label": "fra"})
+    assert ArtifactType.ALTO_XML not in plain.output_types
+    with_alto = _registry().build("tesseract:fra", {"label": "fra", "alto": True})
+    assert ArtifactType.ALTO_XML in with_alto.output_types
 
 
 def test_builds_pero_and_calamari_modules() -> None:
@@ -76,6 +84,35 @@ def test_builds_ner_module() -> None:
 def test_ner_requires_label() -> None:
     with pytest.raises(ModuleResolutionError):
         _registry().build("ner:c0", {})
+
+
+def test_pp_doclayout_model_from_env_and_kwarg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # L'image Space bake la variante légère via CINOC_PPDOCLAYOUT_MODEL ; un kwarg
+    # explicite l'emporte ; défaut = -L.
+    monkeypatch.delenv("CINOC_PPDOCLAYOUT_MODEL", raising=False)
+    assert _registry().build("pp_doclayout", {})._model == "PP-DocLayout-L"
+    monkeypatch.setenv("CINOC_PPDOCLAYOUT_MODEL", "PP-DocLayout-S")
+    assert _registry().build("pp_doclayout", {})._model == "PP-DocLayout-S"
+    assert (
+        _registry().build("pp_doclayout", {"model": "PP-DocLayout-M"})._model
+        == "PP-DocLayout-M"
+    )
+
+
+def test_builds_remote_segmenter_module() -> None:
+    module = _registry().build(
+        "remote_segmenter", {"endpoint": "https://example.org/seg"}
+    )
+    assert module.name == "remote_segmenter"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.LAYOUT})
+
+
+def test_remote_segmenter_requires_endpoint() -> None:
+    with pytest.raises(ModuleResolutionError):
+        _registry().build("remote_segmenter", {})
 
 
 def test_builds_azure_di_module() -> None:

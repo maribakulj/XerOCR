@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.renderer import (
+from cinoc.reports.renderer import (
     _DETAIL_OF_MODE,
     _GROUPS,
     _SECTION_MODE,
@@ -21,7 +21,7 @@ from xerocr.reports.renderer import (
     _mode_layout,
     default_report_renderer,
 )
-from xerocr.reports.section import Html, SectionContext
+from cinoc.reports.section import Html, SectionContext
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -67,7 +67,7 @@ def test_document_structure_and_determinism() -> None:
     assert 'class="report-chrome"' in html1
     assert 'class="r-block sec' in html1  # chaque section = sa propre carte .sec
     assert "data:image/svg+xml" in html1 and "fill-opacity" in html1
-    assert 'id="xerocr-compare-btn"' in html1
+    assert 'id="cinoc-compare-btn"' in html1
     assert 'class="eng-badge"' in html1
     # 2 modes : bascule (réutilise .report-tabs) + sections « Rapport » et « Explorer »
     assert 'class="report-tabs mode-switch"' in html1

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ t.nav_segmentation }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div class="view-hero-title">
+    <div class="view-hero-eyebrow">{{ t.seg_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.nav_segmentation }}</div>
+    <div class="view-hero-desc">{{ t.seg_desc }}</div>
+  </div>
+  <div class="view-hero-stats">
+    <div class="hero-stat">
+      <div class="v">{{ n_regions }}</div>
+      <div class="k">{{ t.seg_regions }}</div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.seg_run_title }}</div>
+      <div class="sec-sub">{{ t.seg_run_desc }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    {% if corpora %}
+    <form class="seg-run-form" id="seg-run-form" autocomplete="off">
+      <div class="field">
+        <label for="seg-corpus">{{ t.seg_run_corpus }}</label>
+        <select id="seg-corpus" name="corpus_id">
+          {% for c in corpora %}
+          <option value="{{ c.id }}">{{ c.name }} · {{ c.n_documents }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="seg-engine">{{ t.seg_run_engine }}</label>
+        <select id="seg-engine" name="segmenter">
+          {% for s in segmenters %}
+          <option value="{{ s.kind }}"{% if not s.available %} disabled{% endif %}>
+            {{ s.label }}{% if not s.available %} — {{ t.seg_run_unavailable }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" id="seg-endpoint-field" hidden>
+        <label for="seg-endpoint">{{ t.seg_run_endpoint }}</label>
+        <input id="seg-endpoint" name="endpoint" type="url"
+               placeholder="{{ t.seg_run_endpoint_ph }}">
+      </div>
+      <div class="field" id="seg-token-field" hidden>
+        <label for="seg-token">{{ t.seg_run_token }}</label>
+        <input id="seg-token" name="token" type="password">
+      </div>
+      <div class="seg-run-actions">
+        <button class="btn btn-primary" type="submit" id="segment-btn">
+          {{ t.seg_run_btn }}
+        </button>
+        <span class="run-status" id="seg-run-status" role="status"
+              data-running="{{ t.seg_run_running }}"
+              data-done="{{ t.seg_run_done }}"></span>
+      </div>
+    </form>
+    {% else %}
+    <p class="empty-hint">{{ t.seg_run_no_corpus }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.seg_demo_title }}</div>
+      <div class="sec-sub">{{ t.seg_demo_desc }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="seg-canvas">{{ svg | safe }}</div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.seg_regions_title }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="table-wrap">
+      <table class="engines">
+        <thead>
+          <tr>
+            <th>{{ t.seg_col_id }}</th>
+            <th>{{ t.seg_col_type }}</th>
+            <th>{{ t.seg_col_bbox }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in regions %}
+          <tr>
+            <td class="eng-name">{{ r.id }}</td>
+            <td>{{ r.region_type or "—" }}</td>
+            <td class="eng-detail">
+              {% if r.geometry and r.geometry.bbox %}
+              {{ r.geometry.bbox.x }}, {{ r.geometry.bbox.y }} ·
+              {{ r.geometry.bbox.width }}×{{ r.geometry.bbox.height }}
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block body_end %}<script src="/static/js/segmentation.js"></script>{% endblock %}

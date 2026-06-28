@@ -42,7 +42,7 @@ et par le différé de T4f. Le nouveau cap **inverse** ça. Ce que ça implique 
 
 ## 4. Réutilisable depuis Picarones (inventaire fait)
 
-À **porter** dans l'archi propre de XerOCR (couche 8 + app/adapters), pas à recopier tel quel :
+À **porter** dans l'archi propre de Cinoc (couche 8 + app/adapters), pas à recopier tel quel :
 
 - **Lanceur** : `POST /api/benchmark/run` + statut + `cancel` + **SSE** (`stream`)
   ; worker threadé ; `JobStore` SQLite (reprise via `Last-Event-ID`).
@@ -89,7 +89,7 @@ synthesis. **Manque : segmentation** (cf. §8).
 ## 8. À concevoir — segmentation (signalé par le mainteneur)
 
 Le design ne prévoit **pas** d'écran segmentation/mise en page. Or c'est une
-**ambition réservée** de XerOCR (axe structure **T5** ; `ArtifactType.LAYOUT` +
+**ambition réservée** de Cinoc (axe structure **T5** ; `ArtifactType.LAYOUT` +
 `region_id` réservés en couche 1 depuis T1). Donc : **réserver sa place dans la
 nav dès TU1**, concevoir l'écran (régions, ordre de lecture, métriques
 structurelles) quand TU7/T5 démarre. Le backend est dimensionné ; il manque la

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture de **cassettes HTTP** pour les importeurs de corpus XerOCR (Lot E).
+"""Capture de **cassettes HTTP** pour les importeurs de corpus Cinoc (Lot E).
 
 Rejoue les **vrais** importeurs (IIIF / Gallica / eScriptorium) et la recherche
 de découverte HuggingFace contre les sources réelles, en interceptant chaque
@@ -8,14 +8,14 @@ des fichiers JSON sous ``tests/fixtures/cassettes/``. Un « transport de replay 
 (écrit séparément, côté tests) rejouera ces cassettes **hors-ligne** pour prouver
 le parsing réel — en particulier le mapping Gallica vue *i* ↔ ``…/f{i}/…texteBrut``.
 
-À lancer dans un environnement **avec réseau** (le sandbox CI/dev de XerOCR a une
+À lancer dans un environnement **avec réseau** (le sandbox CI/dev de Cinoc a une
 allowlist qui bloque la capture) :
 
     pip install -e ".[dev]"
     python scripts/capture_cassettes.py --only iiif,gallica,hf
     # eScriptorium (instance privée + token) :
-    export XEROCR_ESCRIPTORIUM_BASE_URL=https://… XEROCR_ESCRIPTORIUM_TOKEN=… \
-           XEROCR_ESCRIPTORIUM_DOC_PK=42
+    export CINOC_ESCRIPTORIUM_BASE_URL=https://… CINOC_ESCRIPTORIUM_TOKEN=… \
+           CINOC_ESCRIPTORIUM_DOC_PK=42
     python scripts/capture_cassettes.py --only escriptorium
 
 Sécurité : **aucun en-tête de requête n'est enregistré** (le token eScriptorium
@@ -49,15 +49,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
     import httpx
 
-    import xerocr.adapters.corpus._http as _http
-    from xerocr.app.corpus_import import (
+    import cinoc.adapters.corpus._http as _http
+    from cinoc.app.corpus_import import (
         import_gallica_corpus,
         import_iiif_corpus,
     )
 except ModuleNotFoundError as exc:  # paquet ou dépendance non installé
     raise SystemExit(
         f"Dépendance introuvable : {exc.name!r}.\n"
-        "Installe XerOCR et ses deps depuis la racine du repo :\n"
+        "Installe Cinoc et ses deps depuis la racine du repo :\n"
         '    pip install -e ".[dev]"\n'
         "puis relance le script."
     ) from exc
@@ -250,7 +250,7 @@ def _run_scenario(
         with _recording(
             placeholder_threshold, user_agent=user_agent
         ) as recorder, TemporaryDirectory(
-            prefix=f"xerocr-cassette-{scenario}-"
+            prefix=f"cinoc-cassette-{scenario}-"
         ) as workspace:
             body(Path(workspace))
     except Exception as exc:  # un scénario raté ne bloque pas les autres
@@ -278,19 +278,19 @@ def _capture_gallica(ark: str, max_pages: int) -> Callable[[Path], None]:
 
 
 def _capture_escriptorium(max_pages: int) -> Callable[[Path], None] | None:
-    base_url = os.environ.get("XEROCR_ESCRIPTORIUM_BASE_URL")
-    token = os.environ.get("XEROCR_ESCRIPTORIUM_TOKEN")
-    doc_pk = os.environ.get("XEROCR_ESCRIPTORIUM_DOC_PK")
+    base_url = os.environ.get("CINOC_ESCRIPTORIUM_BASE_URL")
+    token = os.environ.get("CINOC_ESCRIPTORIUM_TOKEN")
+    doc_pk = os.environ.get("CINOC_ESCRIPTORIUM_DOC_PK")
     if not (base_url and token and doc_pk):
         logger.info(
-            "• escriptorium … ignoré (XEROCR_ESCRIPTORIUM_{BASE_URL,TOKEN,DOC_PK} "
+            "• escriptorium … ignoré (CINOC_ESCRIPTORIUM_{BASE_URL,TOKEN,DOC_PK} "
             "absents)."
         )
         return None
 
     def _body(dest: Path) -> None:
         # Import paresseux : eScriptorium n'est dans le scope que si configuré.
-        from xerocr.app.corpus_import import import_escriptorium_corpus
+        from cinoc.app.corpus_import import import_escriptorium_corpus
 
         import_escriptorium_corpus(
             base_url, token, int(doc_pk), dest, name="escriptorium", limit=max_pages
@@ -303,7 +303,7 @@ def _capture_hf() -> Callable[[Path], None]:
     def _body(_dest: Path) -> None:
         # Recherche de découverte du Hub (GET httpx) — l'import de dataset
         # (lib `datasets`, streaming) est hors périmètre cassette.
-        from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue
+        from cinoc.adapters.corpus.huggingface import HuggingFaceCatalogue
 
         HuggingFaceCatalogue().search("manuscript")
 

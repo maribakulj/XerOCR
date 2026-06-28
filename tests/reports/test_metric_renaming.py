@@ -5,9 +5,9 @@ JSON/`RunResult`) restent inchangées — seul l'affichage change (comme `mer`).
 
 from __future__ import annotations
 
-from xerocr.reports.glossary import load_glossary
-from xerocr.reports.sections._tables import _METRIC_SHORT, metric_short_label
-from xerocr.reports.sections.engine_radar import _AXES
+from cinoc.reports.glossary import load_glossary
+from cinoc.reports.sections._tables import _METRIC_SHORT, metric_short_label
+from cinoc.reports.sections.engine_radar import _AXES
 
 
 def test_glossary_titles_are_descriptive_and_carry_the_criterion() -> None:

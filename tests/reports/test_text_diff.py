@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports.text_diff import char_diff
+from cinoc.reports.text_diff import char_diff
 
 
 def test_equal_strings_have_no_markup() -> None:

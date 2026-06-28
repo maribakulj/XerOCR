@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from xerocr.formats.text.normalization import (
+from cinoc.formats.text.normalization import (
     NORMALIZATION_PROFILES,
     NormalizationProfile,
     get_builtin_profile,

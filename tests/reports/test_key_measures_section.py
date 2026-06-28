@@ -5,15 +5,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     InferencePayload,
     PipelineInterval,
 )
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.key_measures import KeyMeasuresSection
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.key_measures import KeyMeasuresSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -92,7 +92,7 @@ def test_significance_as_neutral_fact_wilcoxon() -> None:
     # k=2 → Wilcoxon : le RÉSULTAT DU TEST est un fait, pas un gagnant.
     html = KeyMeasuresSection().render(_result(p=0.002), SectionContext())
     assert html is not None
-    assert "Wilcoxon" in html and "p = 0.0020" in html
+    assert "Wilcoxon" in html and "p = 0,0020" in html
     assert "significative" in html  # qualifie la DIFFÉRENCE, pas un moteur
 
 

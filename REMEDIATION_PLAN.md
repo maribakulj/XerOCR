@@ -8,7 +8,7 @@
 >
 > **Décisions produit actées** (utilisateur) :
 > - **D1** = type domaine dédié pour l'OCR-référence (≠ GT manuelle).
-> - **D2** = import HuggingFace **matérialisé**, **convention XerOCR seule** +
+> - **D2** = import HuggingFace **matérialisé**, **convention Cinoc seule** +
 >   **streaming** (pas de snapshot local complet).
 > - **D3** = vérification distante par **cassettes enregistrées** (rejouables, CI).
 
@@ -41,11 +41,11 @@
 - [x] **Évaluation** : une GT `REFERENCE_TEXT` **n'est pas scorée** par une vue par défaut (la vue `text` ne déclare pas la projection → GT ignorée, pas de faux score d'exactitude). **Matérialisé de bout en bout** (≠ type dormant) : vue *référence* dédiée (opt-in via projection `reference_text → raw_text`, projecteur `identity_text`), **construite automatiquement** par `_views_for_corpus` quand le corpus porte une GT `REFERENCE_TEXT` → **rapport distinct** (le nom de la vue porte l'avertissement « pas une vérité-terrain manuelle », rendu tel quel par le rapport).
 - [x] Round-trip JSON (valeur `reference_text` stable) ; golden démo inchangé (corpus précalculé = GT manuelle `RAW_TEXT`, non concerné).
 
-### Lot D — Import HuggingFace (D2 : convention XerOCR + streaming) ✅ (D-054)
-- [x] Doc **convention XerOCR** ([`docs/corpus_huggingface.md`](docs/corpus_huggingface.md)) : colonnes `image` (octets) + `ground_truth` requises, `segmentation` réservée (future).
+### Lot D — Import HuggingFace (D2 : convention Cinoc + streaming) ✅ (D-054)
+- [x] Doc **convention Cinoc** ([`docs/corpus_huggingface.md`](docs/corpus_huggingface.md)) : colonnes `image` (octets) + `ground_truth` requises, `segmentation` réservée (future).
 - [x] Adapter `corpus/huggingface.stream_pages` via lib `datasets` (**extra `[huggingface]`**, import paresseux, `streaming=True`, `Image(decode=False)` → octets, **pas de PIL**) → pages **une par une** (pas de snapshot) ; `loader` injectable (test sans la lib).
 - [x] Service `app.import_hf_corpus` + endpoint `POST /api/corpus/import/huggingface` (CSRF, **gate public 403**) ; dataset non conforme → **422** clair ; extra absent → **409**.
-- [x] GT d'un dataset XerOCR curé = **vraie GT** (`GroundTruthRef` `RAW_TEXT`).
+- [x] GT d'un dataset Cinoc curé = **vraie GT** (`GroundTruthRef` `RAW_TEXT`).
 
 ### Lot E — Vérification cassettes (D3) + fixture Gallica réelle ✅ (D-057, D-058 ; eScriptorium en option)
 - [x] Script de capture (`scripts/capture_cassettes.py`, réseau ouvert hors sandbox) → cassettes JSON. **Capturé & commité : IIIF + HuggingFace** (`tests/fixtures/cassettes/{iiif,hf}.json`).

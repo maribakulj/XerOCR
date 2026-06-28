@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     ModernizedToken,
     ModernizedVariant,
     PipelineTextualFidelity,
     TextualFidelityPayload,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.textual_fidelity import TextualFidelitySection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.textual_fidelity import TextualFidelitySection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -58,13 +58,13 @@ def test_renders_rare_and_modernization() -> None:
     html = TextualFidelitySection().render(_result(_payload()), SectionContext())
     assert html is not None
     assert "Fidélité textuelle" in html
-    assert "5/6" in html and "83.3%" in html  # rappel rare
+    assert "5/6" in html and "83,3%" in html  # rappel rare
     assert "louis" in html  # échantillon manqué
     # #17 flux de modernisation : forme GT (source) → variante produite (chip ×compte).
     assert 'class="wflow"' in html
     assert 'class="wf-word wf-src">maistre</span>' in html  # forme historique
     assert 'class="wf-word">maître</span>' in html and "×3" in html  # variante
-    assert "75.0%" in html  # taux de réécriture en regard
+    assert "75,0%" in html  # taux de réécriture en regard
 
 
 def test_returns_none_without_payload() -> None:

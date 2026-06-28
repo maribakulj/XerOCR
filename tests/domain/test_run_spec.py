@@ -5,11 +5,11 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.evaluation import EvaluationSpec
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run_spec import RunSpec
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.evaluation import EvaluationSpec
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run_spec import RunSpec
 
 
 def test_valid_runspec() -> None:

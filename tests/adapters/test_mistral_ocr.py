@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.mistral_ocr import MistralOCRAdapter
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.mistral_ocr import MistralOCRAdapter
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _ctx(workspace: Path) -> RunContext:
@@ -41,7 +41,7 @@ def test_execute_writes_markdown_text(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.mistral_ocr._invoke_mistral_ocr",
+        "cinoc.adapters.ocr.mistral_ocr._invoke_mistral_ocr",
         lambda **_: "# Page\n\ntexte reconnu",
     )
     out = MistralOCRAdapter(label="ocr").execute(

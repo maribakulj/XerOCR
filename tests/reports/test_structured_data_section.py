@@ -4,18 +4,18 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CategoryBreakdown,
     PipelineStructuredData,
     StructuredDataPayload,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.structured_data import StructuredDataSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.structured_data import StructuredDataSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -69,7 +69,7 @@ def test_renders_categories_and_lost_forms() -> None:
     assert html is not None
     assert "Données structurées" in html
     assert "années" in html and "foliotation" in html
-    assert "50.0%" in html and "100.0%" in html
+    assert "50,0%" in html and "100,0%" in html
     assert "1789" in html  # forme perdue affichée
 
 

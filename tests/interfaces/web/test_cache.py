@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.interfaces.web._cache import TTLCache
+from cinoc.interfaces.web._cache import TTLCache
 
 
 class _Clock:

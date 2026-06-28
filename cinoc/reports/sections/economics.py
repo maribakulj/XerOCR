@@ -1,0 +1,194 @@
+"""Section économie : coûts estimés, débit effectif, Pareto (couche 7).
+
+Rend les payloads ``economics`` de ``RunResult.analyses`` en **lecture seule**
+(tout est calculé en couche 3 — anti data-layer). Chaque nombre est une
+fonction auditable des mesures E1 + de la table de tarifs **datée** : si la
+table est périmée au moment du run (``pricing_stale``), un avertissement
+explicite est rendu — jamais un chiffre silencieusement périmé.
+"""
+
+from __future__ import annotations
+
+from cinoc.evaluation.analysis import EconomicsPayload, MarginalCost
+from cinoc.evaluation.result import RunResult
+from cinoc.reports._numbers import localize_decimal
+from cinoc.reports.engine_badges import engine_cell, engine_order
+from cinoc.reports.html import escape, localized, view_prefix
+from cinoc.reports.section import Html, SectionContext
+
+
+def _fmt(value: float | None, lang: str, pattern: str = "{:.4f}") -> str:
+    return "—" if value is None else localize_decimal(pattern.format(value), lang)
+
+
+def _marginal_row(m: MarginalCost, lang: str) -> str:
+    delta = localize_decimal(f"{m.cost_delta_eur:+.4f}", lang)
+    avoided = localize_decimal(f"{m.errors_avoided:+.1f}", lang)
+    return (
+        f'<tr><td class="eng-cell">{escape(m.pipeline)}</td>'
+        f'<td class="eng-cell">{escape(m.baseline)}</td>'
+        f'<td class="disp">{delta}</td>'
+        f'<td class="disp">{avoided}</td>'
+        f'<td class="disp">{_fmt(m.eur_per_avoided_error, lang)}</td></tr>'
+    )
+
+
+def _fmt_int(value: int | None) -> str:
+    return "—" if value is None else f"{value}"
+
+
+def _block(
+    view: str, payload: EconomicsPayload, lang: str, order: dict[str, int]
+) -> str:
+    rows: list[str] = []
+    for row in payload.pipelines:
+        badge = engine_cell(row.pipeline, order.get(row.pipeline, 0))
+        dur = _fmt(row.duration_seconds, lang, "{:.1f}")
+        pph = _fmt(row.pages_per_hour, lang, "{:.1f}")
+        pph_eff = _fmt(row.pages_per_hour_effective, lang, "{:.1f}")
+        rows.append(
+            f'<tr><td class="eng-cell">{badge}</td>'
+            f'<td class="disp">{_fmt(row.cer, lang)}</td>'
+            f'<td class="disp">{dur}</td>'
+            f'<td class="disp">{_fmt_int(row.tokens_in)}</td>'
+            f'<td class="disp">{_fmt_int(row.tokens_out)}</td>'
+            f'<td class="disp">{_fmt(row.cost_eur, lang)}</td>'
+            f'<td class="eng-cell">{escape(row.basis)}</td>'
+            f'<td class="disp">{pph}</td>'
+            f'<td class="disp">{pph_eff}</td>'
+            "</tr>"
+        )
+    stale = (
+        localized(
+            lang,
+            '<p class="verdict sig">⚠ Table de tarifs périmée au moment du run '
+            f"(valable jusqu'au {escape(payload.pricing_valid_until)}) — coûts à "
+            "revalider.</p>\n",
+            '<p class="verdict sig">⚠ Pricing table stale at run time '
+            f"(valid until {escape(payload.pricing_valid_until)}) — costs to "
+            "revalidate.</p>\n",
+        )
+        if payload.pricing_stale
+        else ""
+    )
+    marginal = ""
+    if payload.marginal:
+        items = "".join(_marginal_row(m, lang) for m in payload.marginal)
+        marginal_head = localized(
+            lang,
+            "Coût marginal (vs pipeline le moins cher)",
+            "Marginal cost (vs cheapest pipeline)",
+        )
+        th_pipeline = localized(lang, "Pipeline", "Pipeline")
+        th_baseline = localized(lang, "Référence", "Baseline")
+        th_cost_delta = localized(
+            lang,
+            f"Δ coût ({escape(payload.currency)})",
+            f"Δ cost ({escape(payload.currency)})",
+        )
+        th_errors_avoided = localized(lang, "erreurs évitées", "errors avoided")
+        th_per_avoided = localized(
+            lang,
+            f"{escape(payload.currency)}/erreur évitée",
+            f"{escape(payload.currency)}/avoided error",
+        )
+        marginal = (
+            f"<h4>{marginal_head}</h4>\n"
+            f'<table class="data">\n<thead><tr><th>{th_pipeline}</th>'
+            f"<th>{th_baseline}</th>"
+            f'<th class="num-cell">{th_cost_delta}</th>'
+            f'<th class="num-cell">{th_errors_avoided}</th>'
+            f'<th class="num-cell">{th_per_avoided}</th>'
+            f"</tr></thead>\n<tbody>{items}</tbody>\n</table>\n"
+        )
+    pareto = ""
+    if payload.pareto_cost or payload.pareto_speed:
+        cost_names = ", ".join(escape(n) for n in payload.pareto_cost) or "—"
+        speed_names = ", ".join(escape(n) for n in payload.pareto_speed) or "—"
+        pareto = localized(
+            lang,
+            f'<p class="muted">Front de Pareto {escape(payload.metric)} × coût : '
+            f"{cost_names} · {escape(payload.metric)} × durée : {speed_names}.</p>\n",
+            f'<p class="muted">Pareto front {escape(payload.metric)} × cost: '
+            f"{cost_names} · {escape(payload.metric)} × duration: {speed_names}.</p>\n",
+        )
+    head = localized(
+        lang,
+        f"{view}coûts &amp; débit",
+        f"{view}costs &amp; throughput",
+    )
+    rate = localize_decimal(f"{payload.hourly_rate_eur:g}", lang)
+    tpe = localize_decimal(f"{payload.time_per_error_seconds:g}", lang)
+    prose = localized(
+        lang,
+        '<p class="muted">Coûts <strong>indicatifs</strong> : temps machine '
+        f"(durée mesurée × {rate} "
+        f"{escape(payload.currency)}/h) + jetons cloud au tarif de la table "
+        f"(valable jusqu'au {escape(payload.pricing_valid_until)}) ; débit "
+        "effectif corrigé du temps de relecture "
+        f"({tpe} s/erreur).</p>\n",
+        '<p class="muted">Costs are <strong>indicative</strong>: machine time '
+        f"(measured duration × {rate} "
+        f"{escape(payload.currency)}/h) + cloud tokens at the table's rate "
+        f"(valid until {escape(payload.pricing_valid_until)}); effective "
+        "throughput corrected for proofreading time "
+        f"({tpe} s/error).</p>\n",
+    )
+    th_pipeline = localized(lang, "Pipeline", "Pipeline")
+    th_duration = localized(lang, "durée (s)", "duration (s)")
+    th_tokens_in = localized(lang, "jetons in", "tokens in")
+    th_tokens_out = localized(lang, "jetons out", "tokens out")
+    th_cost = localized(
+        lang,
+        f"coût ({escape(payload.currency)})",
+        f"cost ({escape(payload.currency)})",
+    )
+    th_basis = localized(lang, "base", "basis")
+    th_pages_per_hour = localized(lang, "pages/h", "pages/h")
+    th_pages_per_hour_eff = localized(
+        lang, "pages/h effectif", "pages/h effective"
+    )
+    return (
+        f"<h3>{head}</h3>\n"
+        + stale
+        + prose
+        + '<table class="data">\n'
+        f"<thead><tr><th>{th_pipeline}</th>"
+        f'<th class="num-cell">{escape(payload.metric)}</th>'
+        f'<th class="num-cell">{th_duration}</th>'
+        f'<th class="num-cell">{th_tokens_in}</th>'
+        f'<th class="num-cell">{th_tokens_out}</th>'
+        f'<th class="num-cell">{th_cost}</th>'
+        f"<th>{th_basis}</th>"
+        f'<th class="num-cell">{th_pages_per_hour}</th>'
+        f'<th class="num-cell">{th_pages_per_hour_eff}</th></tr></thead>\n'
+        f"<tbody>{''.join(rows)}</tbody>\n</table>\n"
+        + pareto
+        + marginal
+    )
+
+
+class EconomicsSection:
+    """Coûts estimés, débit effectif et fronts de Pareto, par vue."""
+
+    name = "economics"
+    requires: tuple[str, ...] = ()
+
+    def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
+        multi = len({a.view for a in result.analyses}) > 1
+        order = engine_order(p.pipeline for p in result.pipelines)
+        blocks = [
+            _block(
+                view_prefix(analysis.view, ctx.lang, multi=multi),
+                analysis.payload, ctx.lang, order
+            )
+            for analysis in result.analyses
+            if isinstance(analysis.payload, EconomicsPayload)
+        ]
+        if not blocks:
+            return None
+        title = localized(ctx.lang, "Économie", "Economics")
+        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
+
+
+__all__ = ["EconomicsSection"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.formats.pagexml import (
+from cinoc.formats.pagexml import (
     DEFAULT_PAGE_NS,
     PageDocument,
     PageGenericRegion,

@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
-from xerocr.app.history import record_run, records_from_run, series_insight
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.app.history import record_run, records_from_run, series_insight
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
 
 
 def _run(run_id: str, cer: float, when: datetime) -> RunResult:

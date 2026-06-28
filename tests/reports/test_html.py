@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports.html import _CSS, localized, view_label
+from cinoc.reports.html import _CSS, localized, view_label
 
 
 def test_card_layout_uses_grid_not_columns_masonry() -> None:

@@ -13,11 +13,11 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ner.spacy_extractor import SpacyNerExtractor
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ner.spacy_extractor import SpacyNerExtractor
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 @dataclass
@@ -98,7 +98,7 @@ def test_system_binaries_reports_versions_after_run(tmp_path: Path) -> None:
 
 
 def test_fail_closed_when_spacy_absent(tmp_path: Path) -> None:
-    # Anti-silence : SDK absent (loader réel) → AdapterStepError « xerocr[ner] »,
+    # Anti-silence : SDK absent (loader réel) → AdapterStepError « cinoc[ner] »,
     # jamais une liste vide. Skippé si spaCy est réellement installé (l'env
     # tomberait alors sur l'erreur de modèle, couverte séparément).
     import importlib.util
@@ -106,7 +106,7 @@ def test_fail_closed_when_spacy_absent(tmp_path: Path) -> None:
     if importlib.util.find_spec("spacy") is not None:
         pytest.skip("spaCy installé : le fail-closed SDK ne s'applique pas ici")
     extractor = SpacyNerExtractor(label="c0")  # loader=None → vrai chemin
-    with pytest.raises(AdapterStepError, match=r"xerocr\[ner\]"):
+    with pytest.raises(AdapterStepError, match=r"cinoc\[ner\]"):
         extractor.execute(
             _text_input(tmp_path, "Marie"), {}, _context(tmp_path), RunControl()
         )

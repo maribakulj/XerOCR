@@ -7,9 +7,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.routers.history import build_history_router
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.routers.history import build_history_router
 
 
 def _rec(run_id: str, when: str, value: float) -> HistoryRecord:

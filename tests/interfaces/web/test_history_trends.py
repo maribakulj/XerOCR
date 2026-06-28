@@ -8,10 +8,10 @@ from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.storage.history_store import HistoryRecord, HistoryStore
-from xerocr.app.segmentation import SegmentationStore, demo_layout
-from xerocr.interfaces.web.app import _TEMPLATES_DIR
-from xerocr.interfaces.web.routers.home import build_home_router
+from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
+from cinoc.app.segmentation import SegmentationStore, demo_layout
+from cinoc.interfaces.web.app import _TEMPLATES_DIR
+from cinoc.interfaces.web.routers.home import build_home_router
 
 
 def _history_body(tmp_path: Path, store: HistoryStore) -> str:

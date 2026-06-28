@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.app import run
-from xerocr.app.engines import EngineStatus
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.run_planning import (
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.app import run
+from cinoc.app.engines import EngineStatus
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.run_planning import (
     DEFAULT_METRIC_PROFILE,
     METRIC_PROFILES,
     Competitor,
@@ -21,11 +21,11 @@ from xerocr.app.run_planning import (
     metric_profile_catalog,
     plan_benchmark_run,
 )
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.pipeline import INITIAL_STEP_ID
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.pipeline import INITIAL_STEP_ID
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 
 
 def _corpus(tmp_path: Path) -> CorpusSpec:
@@ -70,6 +70,43 @@ def test_ocr_only_pipeline_shape(tmp_path: Path) -> None:
     assert pipe.name == "tesseract"
     (step,) = pipe.steps
     assert step.output_types == (ArtifactType.RAW_TEXT,)
+
+
+def test_alto_adds_output_type_and_kwarg_ocr_only(tmp_path: Path) -> None:
+    # ``alto`` → l'étape OCR déclare ALTO_XML et le kwarg ``alto`` part au module.
+    build = plan_benchmark_run(
+        (Competitor(engine="tesseract", alto=True),), _corpus(tmp_path), "r"
+    )
+    spec = build(tmp_path)
+    (pipe,) = spec.pipelines
+    (step,) = pipe.steps
+    assert step.output_types == (ArtifactType.RAW_TEXT, ArtifactType.ALTO_XML)
+    assert spec.adapter_kwargs["tesseract:c0"]["alto"] is True
+
+
+def test_alto_in_chain_targets_ocr_step(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", mode="text_only", llm="openai", alto=True)
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    ocr, _llm = pipe.steps
+    assert ocr.output_types == (ArtifactType.RAW_TEXT, ArtifactType.ALTO_XML)
+    assert spec.adapter_kwargs["tesseract:c0"]["alto"] is True
+
+
+def test_alto_absent_by_default(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert "alto" not in spec.adapter_kwargs["tesseract:c0"]
+
+
+def test_alto_rejected_for_non_tesseract(tmp_path: Path) -> None:
+    with pytest.raises(RunPlanningError, match="ALTO"):
+        plan_benchmark_run(
+            (Competitor(engine="kraken", model="m.mlmodel", alto=True),),
+            _corpus(tmp_path),
+            "r",
+        )
 
 
 def test_text_and_image_passes_image_to_llm(tmp_path: Path) -> None:
@@ -186,6 +223,89 @@ def test_ocr_only_without_model_omits_it(tmp_path: Path) -> None:
     assert "model" not in spec.adapter_kwargs["tesseract:c0"]
 
 
+def _corpus_with_entities(tmp_path: Path) -> CorpusSpec:
+    (tmp_path / "d.gt.txt").write_text("alpha", encoding="utf-8")
+    (tmp_path / "d.ent.json").write_text(
+        '{"text": "alpha", "entities": []}', encoding="utf-8"
+    )
+    return CorpusSpec(
+        name="c",
+        documents=(
+            DocumentRef(
+                id="d",
+                image_uri=str(tmp_path / "d.png"),
+                ground_truths=(
+                    GroundTruthRef(
+                        type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "d.gt.txt")
+                    ),
+                    GroundTruthRef(
+                        type=ArtifactType.ENTITIES, uri=str(tmp_path / "d.ent.json")
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
+def test_ner_step_appended_to_ocr_only(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", ner=True)
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    ocr, ner = pipe.steps
+    assert ocr.id == "ocr"
+    assert ner.id == "ner"
+    assert ner.adapter_name == "ner:c0"
+    assert ner.input_types == (ArtifactType.RAW_TEXT,)
+    assert ner.inputs_from[ArtifactType.RAW_TEXT] == "ocr"
+    assert ner.output_types == (ArtifactType.ENTITIES,)
+    # kwargs du module NER (label + modèle par défaut) → constructible.
+    kwargs = spec.adapter_kwargs["ner:c0"]
+    assert kwargs == {"label": "c0", "model": "fr_core_news_sm"}
+    assert _registry().build("ner:c0", kwargs).name == "ner:c0"
+
+
+def test_ner_step_in_chain_consumes_corrected_text(tmp_path: Path) -> None:
+    comp = Competitor(
+        engine="tesseract", mode="text_only", llm="openai", ner=True,
+        ner_model="en_core_web_sm",
+    )
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    _ocr, _llm, ner = pipe.steps
+    assert ner.input_types == (ArtifactType.CORRECTED_TEXT,)
+    assert ner.inputs_from[ArtifactType.CORRECTED_TEXT] == "llm"
+    assert spec.adapter_kwargs["ner:c0"]["model"] == "en_core_web_sm"
+
+
+def test_no_ner_step_when_disabled(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    (pipe,) = spec.pipelines
+    assert all(step.id != "ner" for step in pipe.steps)
+    assert "ner:c0" not in spec.adapter_kwargs
+
+
+def test_ner_view_added_when_corpus_has_entity_gt(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract", ner=True),),
+        _corpus_with_entities(tmp_path),
+        "r",
+    )(tmp_path)
+    names = {v.name for v in spec.evaluation.views}
+    assert "entités nommées (NER)" in names
+    ner_view = next(v for v in spec.evaluation.views if v.name.startswith("entités"))
+    assert ner_view.metric_names == ("ner_f1",)
+    assert ner_view.candidate_types == frozenset({ArtifactType.ENTITIES})
+
+
+def test_no_ner_view_without_entity_gt(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract", ner=True),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert all(not v.name.startswith("entités") for v in spec.evaluation.views)
+
+
 def test_curated_prompt_name_resolves_to_text(tmp_path: Path) -> None:
     comp = Competitor(
         engine="openai", mode="zero_shot", prompt_name="zero_shot_medieval_french"
@@ -230,14 +350,14 @@ def test_benchmark_runs_n_competitors_in_one_run(
     # tesseract (mocké → "alpha" == GT → CER 0) vs tesseract→openai (LLM mocké →
     # "beta" ≠ GT → CER > 0) : UN run, DEUX pipelines, scorés distinctement.
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "alpha"
     )
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences",
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_confidences",
         lambda **_: [],
     )
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
+        "cinoc.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion("beta")
     )
     comps = (
         Competitor(engine="tesseract"),

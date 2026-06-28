@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.evaluation import EvaluationView
-from xerocr.evaluation.analysis import LinesPayload
-from xerocr.evaluation.lines import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.evaluation import EvaluationView
+from cinoc.evaluation.analysis import LinesPayload
+from cinoc.evaluation.lines import (
     LinesCollector,
     aligned_line_cers,
     gini,

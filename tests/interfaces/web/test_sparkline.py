@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.interfaces.web.sparkline import sparkline_svg
+from cinoc.interfaces.web.sparkline import sparkline_svg
 
 
 def test_empty_values_is_empty() -> None:

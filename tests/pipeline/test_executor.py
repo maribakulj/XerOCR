@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import RunCancelledError, XerOCRError
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.usage import ResourceUsage
-from xerocr.pipeline.executor import PipelineExecutor, PipelineStepError
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import StepOutput
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import CinocError, RunCancelledError
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.usage import ResourceUsage
+from cinoc.pipeline.executor import PipelineExecutor, PipelineStepError
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import StepOutput
 
 CODE_VERSION = "test-1.0"
 
@@ -182,7 +182,7 @@ def test_cancellation_raises_before_step() -> None:
 
 
 def test_empty_code_version_rejected() -> None:
-    with pytest.raises(XerOCRError):
+    with pytest.raises(CinocError):
         PipelineExecutor("")
 
 

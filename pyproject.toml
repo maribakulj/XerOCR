@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "setuptools_scm>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "xerocr"
+name = "cinoc"
 description = "Banc d'essai déterministe de pipelines de transcription (OCR / HTR / VLM)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -38,7 +38,7 @@ mistral = ["mistralai>=1.5,<2"]  # 2.x = SDK incompatible (pas de `from mistrala
 google = ["httpx", "httpcore"]  # Vision via REST (≠ SDK gRPC lourd) — clé GOOGLE_VISION_API_KEY
 azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_INTEL_ENDPOINT + _KEY
 ollama = ["httpx", "httpcore"]
-huggingface = ["datasets"]
+huggingface = ["datasets", "huggingface_hub"]  # datasets = streaming ; huggingface_hub = publication (scripts/) + snapshot dataset curé (import_curated_hf_corpus)
 segment = ["paddlex"]
 ner = ["spacy"]  # extraction d'entités nommées — modèle téléchargé à part (`spacy download`)
 serve = ["fastapi", "uvicorn", "jinja2", "python-multipart", "httpx", "httpcore"]
@@ -49,30 +49,30 @@ images = ["Pillow"]  # vignettes réelles du rapport (redimensionnement) — dé
 hipe-oracle = ["hipe-ocrepair-scorer==0.9.9"]
 
 [project.scripts]
-xerocr = "xerocr.interfaces.cli:main"
+cinoc = "cinoc.interfaces.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["xerocr*"]
+include = ["cinoc*"]
 
 # La coquille web embarque ses gabarits + assets auto-hébergés (CSS, polices) ;
 # ils doivent voyager dans le wheel pour exister après ``pip install`` (Space/CI).
 [tool.setuptools.package-data]
-"xerocr.interfaces.web" = [
+"cinoc.interfaces.web" = [
     "templates/*.html", "static/css/*.css", "static/js/*.js", "static/fonts/*",
 ]
 # Le rapport autonome (couche 7) incorpore ses polices (data-URI) et son script
 # de comparaison (inliné) : woff2 + compare.js doivent voyager dans le wheel.
-"xerocr.reports" = ["_assets/*.woff2", "_assets/*.js"]
+"cinoc.reports" = ["_assets/*.woff2", "_assets/*.js"]
 # Glossaire pédagogique (donnée FR/EN) — doit voyager dans le wheel.
-"xerocr.reports.glossary" = ["*.yaml"]
+"cinoc.reports.glossary" = ["*.yaml"]
 # Table de tarifs (donnée datée) du calcul économique (couche 3).
-"xerocr.evaluation" = ["pricing.json"]
+"cinoc.evaluation" = ["pricing.json"]
 # Prompts curés par période (donnée LLM/VLM) — doivent voyager dans le wheel.
-"xerocr.prompts" = ["*.txt"]
+"cinoc.prompts" = ["*.txt"]
 
 [tool.setuptools_scm]
 fallback_version = "0.1.0"
-version_file = "xerocr/_version.py"
+version_file = "cinoc/_version.py"
 
 [tool.ruff]
 line-length = 88

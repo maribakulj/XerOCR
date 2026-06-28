@@ -15,7 +15,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from scipy import stats
 
-from xerocr.evaluation.longitudinal import linear_trend, pettitt
+from cinoc.evaluation.longitudinal import linear_trend, pettitt
 
 _T0 = datetime(2026, 1, 1, tzinfo=UTC)
 

@@ -15,11 +15,11 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.interfaces.web.app import create_app
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.interfaces.web.app import create_app
 
 _JS = Path(__file__).resolve().parents[3] / (
-    "xerocr/interfaces/web/static/js/benchmark.js"
+    "cinoc/interfaces/web/static/js/benchmark.js"
 )
 
 
@@ -52,6 +52,17 @@ def test_benchmark_has_corpus_and_composer_controls(tmp_path: Path) -> None:
     assert 'id="import-source"' not in body
 
 
+def test_ner_toggle_present_and_sent(tmp_path: Path) -> None:
+    # Case « NER » du composeur rendue serveur + le JS la met dans le payload du
+    # concurrent (et porte le modèle spaCy optionnel).
+    body = _client(tmp_path).get("/benchmark").text
+    assert 'id="draft-ner"' in body
+    assert 'id="draft-ner-model"' in body
+    js = _JS.read_text(encoding="utf-8")
+    assert "entry.ner = true" in js
+    assert "ner_model" in js
+
+
 def test_char_exclude_field_present_and_sent(tmp_path: Path) -> None:
     # 3c : champ « caractères à exclure » + le JS le met dans le payload du run.
     body = _client(tmp_path).get("/benchmark").text
@@ -77,7 +88,7 @@ def test_config_io_controls_present_and_wired(tmp_path: Path) -> None:
     assert 'id="config-import"' in body  # input fichier d'import
     js = _JS.read_text(encoding="utf-8")
     assert "/api/runs/config" in js  # le JS valide la config déposée
-    assert "xerocr-config.json" in js  # nom du fichier exporté
+    assert "cinoc-config.json" in js  # nom du fichier exporté
 
 
 def test_normalization_preview_widget_and_api_wired(tmp_path: Path) -> None:
@@ -188,11 +199,11 @@ def _benchmark_body(
     from fastapi import FastAPI
     from fastapi.templating import Jinja2Templates
 
-    from xerocr.adapters.storage.history_store import HistoryStore
-    from xerocr.app.engines import EngineStatus
-    from xerocr.app.segmentation import SegmentationStore, demo_layout
-    from xerocr.interfaces.web.app import _TEMPLATES_DIR
-    from xerocr.interfaces.web.routers.home import build_home_router
+    from cinoc.adapters.storage.history_store import HistoryStore
+    from cinoc.app.engines import EngineStatus
+    from cinoc.app.segmentation import SegmentationStore, demo_layout
+    from cinoc.interfaces.web.app import _TEMPLATES_DIR
+    from cinoc.interfaces.web.routers.home import build_home_router
 
     seg_store = SegmentationStore(tmp_path / "seg")
     seg_id = seg_store.save(demo_layout())
@@ -226,8 +237,8 @@ def test_segmentation_is_not_exposed_in_benchmark_shell(tmp_path: Path) -> None:
 
 
 def test_benchmark_corpus_select_lists_corpora(tmp_path: Path) -> None:
-    from xerocr.domain.corpus import CorpusSpec
-    from xerocr.domain.documents import DocumentRef
+    from cinoc.domain.corpus import CorpusSpec
+    from cinoc.domain.documents import DocumentRef
 
     store = CorpusStore(tmp_path / "corpora")
     store.materialize(

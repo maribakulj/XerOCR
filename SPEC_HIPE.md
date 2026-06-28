@@ -1,12 +1,12 @@
-# SPEC v1.2 — Métriques HIPE-compatibles dans XerOCR (famille 4g)
+# SPEC v1.2 — Métriques HIPE-compatibles dans Cinoc (famille 4g)
 
 > **Statut** : v1.2 — 2026-06-11. Remplace les v1.0/v1.1 (2026-06-10) qui ciblaient
-> Picarones : **la cible est XerOCR** (Picarones gèle après la 1.0,
+> Picarones : **la cible est Cinoc** (Picarones gèle après la 1.0,
 > `PLAN_FIN_MIGRATION.md` §5b) et la décision de dépendance est **inversée** (§5).
 > Arbitrage produit **« plan A »** : la famille livre **avant la 1.0**, intégrée à
 > l'Étape 4 sous le nom **4g** (sous-tranches 4g.1/4g.2) — la 1.0 revendique la
 > conformité. Réconciliation métrique-par-métrique :
-> [`xerocr/evaluation/ANALYSE_ETAPE_4.md`](xerocr/evaluation/ANALYSE_ETAPE_4.md)
+> [`cinoc/evaluation/ANALYSE_ETAPE_4.md`](cinoc/evaluation/ANALYSE_ETAPE_4.md)
 > (§0 C9-C10, bloc « Arbitrages actés », §4g).
 > Épistémique (`CLAUDE.md` §9) : l'enveloppe ci-dessous est durable ; chaque détail
 > de surface est **PROVISOIRE — à confirmer au build**.
@@ -30,14 +30,14 @@ distributionnelle) · Kanerva et al. 2025 (RESOURCEFUL — écarts entre folds).
 
 ---
 
-## 1. Problème (inchangé v1.1, reformulé XerOCR)
+## 1. Problème (inchangé v1.1, reformulé Cinoc)
 
 1. **CER non borné** : un VLM qui hallucine produit un CER > 100 % — la comparaison
    moteurs classiques vs génératifs est faussée au moment où c'est la mission du banc.
-   (Le `cer` XerOCR n'est volontairement pas tronqué — c'est un signal — mais il
+   (Le `cer` Cinoc n'est volontairement pas tronqué — c'est un signal — mais il
    manque la métrique **bornée** comparable : le MER caractère.)
 2. **Non-régression invisible** : un agrégat masque un correcteur qui améliore 60 %
-   des pages et en détruit 20 %. XerOCR a les pires lignes (payload `diagnostics`),
+   des pages et en détruit 20 %. Cinoc a les pires lignes (payload `diagnostics`),
    pas le **triplet par document** ni le taux de régression catastrophique.
 3. **Altération éditoriale non mesurée dans les deux sens** : modernisation (perte de
    formes historiques) ET sur-historicisation (insertion d'archaïsmes — documentée
@@ -99,7 +99,7 @@ Conservés de la v1.1 (ils conditionnent l'implémentation et le golden) :
 - **4.6 Sorties absentes** : hypothèse manquante/malformée/`"None"` → scorée comme
   chaîne vide (erreur maximale) + warning.
 - **4.7 Empaquetage** : MIT, `jiwer>=3.0`, `numpy>=1.24`, `jsonschema>=4.0`,
-  **`requires-python >= 3.12`** — incompatible avec la matrice CI XerOCR (3.11 + 3.12)
+  **`requires-python >= 3.12`** — incompatible avec la matrice CI Cinoc (3.11 + 3.12)
   en dépendance runtime.
 - **4.8 Format d'entrée** : JSONL par unité — `document_metadata{document_id,
   primary_dataset_name,…}`, `ground_truth{transcription_unit}`,
@@ -109,7 +109,7 @@ Conservés de la v1.1 (ils conditionnent l'implémentation et le golden) :
 ## 5. Architecture — implémenter in-tree, le scorer en ORACLE DE TEST (décision inversée vs v1.1)
 
 **Décision** : les 8 métriques officielles + `norm()` sont **implémentées dans
-XerOCR** (couches 2/3) ; `hipe-ocrepair-scorer` est **épinglé en dépendance de
+Cinoc** (couches 2/3) ; `hipe-ocrepair-scorer` est **épinglé en dépendance de
 test** (extra `dev`) et sert d'**oracle golden** : à chaque CI, le corpus d'exemple
 officiel est scoré par les deux chemins, échec si divergence > 1e-9 (scores
 ponctuels). Le golden tourne sur le job **3.12** de la matrice, `skipif` explicite
@@ -147,7 +147,7 @@ pour elle que le golden 1e-9 + les tests de sensibilité Unicode existent (§11)
 | Scalaire `cmer` | **3** (registre) | comptes H/S/D/I caractère via `rapidfuzz.editops` (la plein-matrice maison de `_align` serait trop chère au caractère) |
 | `ConformityPayload` + `CorrectionPayload` | **3** (`analysis.py`) | membres de l'union `analyses` (frozen, `extra="forbid"`) — **pas de dict ouvert** (le « dict ouvert » §10 v1.1 est rejeté : cf. bugs de clés fantômes C6/C7 d'ANALYSE_ETAPE_4) |
 | Sections conformité / correction | **7** (`reports/sections`) | lecture seule ; mention du profil sur chaque nombre |
-| Export JSONL HIPE | **6** (`app`) | le JSONL porte les **textes** (GT/raw/system), pas les scores → il faut corpus + `pipeline_outputs`, que seule l'app détient ; flag CLI `xerocr run --hipe-jsonl` |
+| Export JSONL HIPE | **6** (`app`) | le JSONL porte les **textes** (GT/raw/system), pas les scores → il faut corpus + `pipeline_outputs`, que seule l'app détient ; flag CLI `cinoc run --hipe-jsonl` |
 | Golden + property tests | tests | extra dev `hipe-ocrepair-scorer==0.9.9` épinglé ; job CI 3.12 |
 
 **Mapping des noms** : les clés internes restent au style maison (`cer`, `mer`,
@@ -158,7 +158,7 @@ niveau mot — vérifié) : **aucune clé jumelle au registre**.
 
 ## 6. Modèle de données (mappé sur l'existant)
 
-- **Unité de transcription = le document XerOCR** (la page) — répond Q3 v1.1 ;
+- **Unité de transcription = le document Cinoc** (la page) — répond Q3 v1.1 ;
   l'unité est inscrite au rapport (l'interprétation micro/macro en dépend).
 - `ground_truth` = GT de la vue ; `ocr_raw` = artefact `RAW_TEXT` de l'étage 1 ;
   `system_output` = candidat aval (`CORRECTED_TEXT` si présent, sinon `RAW_TEXT`).
@@ -202,11 +202,11 @@ exigent la paire raw/system). Noms HIPE à la frontière (Annexe A).
 ### 7.3 Sémantique des sorties manquantes (R-1.8)
 Dans **cette famille**, sortie absente → matérialisée `""` (erreur maximale) +
 warning — alignement §4.6. Partout ailleurs, `None` = non applicable (convention
-XerOCR). **Double convention documentée côte à côte** ; docs dégénérés (réf vide,
+Cinoc). **Double convention documentée côte à côte** ; docs dégénérés (réf vide,
 sortie absente) inclus dans le golden.
 
 ### 7.4 Export JSONL HIPE
-- [x] `xerocr run --hipe-jsonl out.jsonl` produit le format §4.8 — un fichier
+- [x] `cinoc run --hipe-jsonl out.jsonl` produit le format §4.8 — un fichier
   par pipeline, R-1.8 appliqué (`tests/app/test_hipe_export.py`) ; la validation
   contre le schéma embarqué du scorer se vendorise avec le golden (réserve).
 
@@ -302,7 +302,7 @@ Les clés et sémantiques gèlent à la 1.0. Trois décisions **avant** le gel :
 |---|---|---|
 | Q1 | Python ≥ 3.12 ? | **Résolue** : scorer en dépendance de test, golden sur job CI 3.12, `skipif` ailleurs |
 | Q2 | worst-pages : UI ou export ? | **Résolue** : extension du `DiagnosticsPayload`/section existants (T11) |
-| Q3 | granularité de l'unité ? | **Résolue** : document (page) XerOCR, inscrite au rapport |
+| Q3 | granularité de l'unité ? | **Résolue** : document (page) Cinoc, inscrite au rapport |
 | Q4 | liste `C` par défaut ? | **Actée (2026-06-11)** : défaut = `archaic_core` trans-langue (œ/æ/ß/ç **exclus** — langue-relatifs) ; `air` actif par défaut, `hcpr` sur liste configurée ; listes nommées package-data + override par run, nom + hash tracés (détail §9). Au build : dénominateur AIR + étage brut |
 | Q5 | revendiquer la conformité au README/papier ? | **Actée (plan A)** : oui, à la 1.0 |
 | Q6 | lib CEV ou implémentation directe ? | **Résolue** : implémentation directe de la JSD |
@@ -334,7 +334,7 @@ la 1.0 porte l'argument de conformité.
 
 ## Annexe B — Décisions consignées (v1.1 → v1.2)
 
-Retarget Picarones → XerOCR (gel) · **dépendance inversée** : in-tree + scorer en
+Retarget Picarones → Cinoc (gel) · **dépendance inversée** : in-tree + scorer en
 oracle de test épinglé (§5, 6 motifs) · conformité = scores ponctuels, IC =
 bootstrap maison T9 · « dict ouvert » rejeté → payloads typés `extra="forbid"` ·
 HCPR/AIR → 4b avec **liste archaïque unique** (la liste « diacritiques modernes »
@@ -351,7 +351,7 @@ configurée (§9, §12).
 Risque : sur des textes célèbres ou massivement numérisés (Gallica), un VLM/LLM
 peut **reconstituer** le texte depuis son entraînement au lieu de le **lire** — un
 CER excellent qui ne mesure pas la reconnaissance (Levchenko 2025). Conséquences
-pour tout benchmark XerOCR comparant des modèles génératifs :
+pour tout benchmark Cinoc comparant des modèles génératifs :
 
 1. Inclure une part de matériel **improbable à l'entraînement** (pages inédites,
    GT interne, documents non diffusés).

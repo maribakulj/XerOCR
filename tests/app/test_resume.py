@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.app.modules.registry import ModuleRegistry
-from xerocr.app.orchestrator import run
-from xerocr.app.resume import ResumeStore, unit_key
-from xerocr.domain.artifacts import Artifact, ArtifactType, compute_content_hash
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run_spec import RunSpec
-from xerocr.pipeline.types import StepOutput
+from cinoc.app.modules.registry import ModuleRegistry
+from cinoc.app.orchestrator import run
+from cinoc.app.resume import ResumeStore, unit_key
+from cinoc.domain.artifacts import Artifact, ArtifactType, compute_content_hash
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run_spec import RunSpec
+from cinoc.pipeline.types import StepOutput
 
 
 class _CountingOCR:

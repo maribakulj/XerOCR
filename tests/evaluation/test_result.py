@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.domain.usage import ResourceUsage
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.domain.usage import ResourceUsage
+from cinoc.evaluation.result import (
     DocumentUsage,
     MetricScore,
     PipelineResult,

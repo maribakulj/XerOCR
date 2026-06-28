@@ -11,7 +11,7 @@
 
 | Fichier | Rôle |
 |---|---|
-| `<id>.gt.txt` | **Vérité-terrain**, extraite des **ALTO v4 BNL** via le parser ALTO de XerOCR. |
+| `<id>.gt.txt` | **Vérité-terrain**, extraite des **ALTO v4 BNL** via le parser ALTO de Cinoc. |
 | `<id>.frk.txt` | Tesseract 5.3.4 `-l frk` — Fraktur legacy, `--psm 3`. |
 | `<id>.deu.txt` | Tesseract 5.3.4 `-l deu` — allemand moderne. |
 | `<id>.fra.txt` | Tesseract 5.3.4 `-l fra` — français. |

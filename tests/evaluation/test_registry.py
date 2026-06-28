@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 
 
 def test_default_metrics_registration_is_idempotent() -> None:

@@ -12,12 +12,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.evaluation.representations import load_representation
-from xerocr.formats.pagexml import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.evaluation.representations import load_representation
+from cinoc.formats.pagexml import (
     PageDocument,
     PageGenericRegion,
     PagePage,
@@ -27,7 +27,7 @@ from xerocr.formats.pagexml import (
     ReadingOrderRef,
     write_pagexml,
 )
-from xerocr.formats.pagexml.layout_map import page_to_layout
+from cinoc.formats.pagexml.layout_map import page_to_layout
 
 
 def _text_region(rid: str, text: str) -> PageTextRegion:

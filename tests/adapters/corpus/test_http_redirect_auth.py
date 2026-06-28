@@ -9,8 +9,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus._http import fetch_json
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus._http import fetch_json
 
 _AUTH = {"Authorization": "Token SECRET"}
 _seen: dict[str, str | None] = {}

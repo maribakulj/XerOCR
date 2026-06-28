@@ -10,21 +10,21 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import RomanNumeralsPayload, StructuredDataPayload
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.roman import (
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import RomanNumeralsPayload, StructuredDataPayload
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.roman import (
     RomanNumeralsCollector,
     classify,
     detect_roman_numerals,
     roman_to_int,
 )
-from xerocr.evaluation.runner import evaluate_run
+from cinoc.evaluation.runner import evaluate_run
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

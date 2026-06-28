@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus.iiif import IIIFImage
-from xerocr.app.corpus_import import CorpusImportError, import_iiif_corpus
+from cinoc.adapters.corpus.iiif import IIIFImage
+from cinoc.app.corpus_import import CorpusImportError, import_iiif_corpus
 
 
 class _FakeImporter:

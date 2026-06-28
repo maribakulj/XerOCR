@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from xerocr.interfaces.cli import demo_to_html, main
+from cinoc.interfaces.cli import demo_to_html, main
 
 
 def test_demo_html_is_deterministic() -> None:

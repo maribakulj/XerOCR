@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion, normalize_llm_content
-from xerocr.adapters.llm.openai import OpenAIAdapter
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError, RunCancelledError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.llm._base import LLMCompletion, normalize_llm_content
+from cinoc.adapters.llm.openai import OpenAIAdapter
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError, RunCancelledError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _raw_text(path: Path) -> Artifact:
@@ -45,13 +45,13 @@ def _ctx(workspace: Path) -> RunContext:
 
 def _mock_text(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion(text)
+        "cinoc.adapters.llm.openai._invoke_openai", lambda **_: LLMCompletion(text)
     )
 
 
 def _mock_vision(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai_vision",
+        "cinoc.adapters.llm.openai._invoke_openai_vision",
         lambda **_: LLMCompletion(text),
     )
 

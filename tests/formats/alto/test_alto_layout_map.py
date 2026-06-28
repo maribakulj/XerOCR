@@ -12,17 +12,17 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.layout import BBox
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.representations import load_representation
-from xerocr.evaluation.runner import evaluate_run
-from xerocr.formats.alto import (
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.layout import BBox
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.representations import load_representation
+from cinoc.evaluation.runner import evaluate_run
+from cinoc.formats.alto import (
     AltoBBox,
     AltoComposedBlock,
     AltoDocument,
@@ -34,7 +34,7 @@ from xerocr.formats.alto import (
     parse_alto,
     write_alto,
 )
-from xerocr.formats.alto.layout_map import alto_to_layout, layout_to_alto
+from cinoc.formats.alto.layout_map import alto_to_layout, layout_to_alto
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

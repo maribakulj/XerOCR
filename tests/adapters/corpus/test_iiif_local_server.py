@@ -22,8 +22,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.app.corpus_import import import_iiif_corpus
+from cinoc.adapters.corpus import _http
+from cinoc.app.corpus_import import import_iiif_corpus
 
 # PNG 1×1 valide (suffit à prouver le download octet-exact).
 _PNG = base64.b64decode(

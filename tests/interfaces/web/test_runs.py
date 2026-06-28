@@ -10,10 +10,10 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from xerocr.app.engines import engine_statuses
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.routers.runs import LaunchRequest
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.app.engines import EngineStatus, engine_statuses
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.routers.runs import LaunchRequest
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 
@@ -206,6 +206,65 @@ def test_public_mode_blocks_cloud_llm_in_chain_403(tmp_path: Path) -> None:
     assert resp.status_code == 403
 
 
+def _force_tesseract_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Stub direct du provider : tesseract « disponible » sans dépendre des sondes
+    # réelles (binaire ET module pytesseract) — la CI n'installe pas l'extra
+    # [tesseract], donc forcer le seul binaire ne suffisait pas (run 409 au gate
+    # moteur avant d'atteindre le gate NER). Isole bien le gate NER (4bis).
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.app.engine_statuses",
+        lambda **kw: (
+            EngineStatus(
+                kind="tesseract", label="Tesseract", available=True, detail="ok"
+            ),
+        ),
+    )
+
+
+def _patch_ner(monkeypatch: pytest.MonkeyPatch, *, available: bool) -> None:
+    detail = (
+        "prêt (spaCy installé)" if available else "spaCy non installé (extra [ner])"
+    )
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.app.ner_status",
+        lambda **kw: EngineStatus(
+            kind="ner", label="NER (spaCy)", available=available, detail=detail
+        ),
+    )
+
+
+def test_ner_requested_without_spacy_is_409(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Étape NER demandée mais spaCy absent → 409 AVANT le lancement (pas d'échec
+    # d'étape en cours de run). tesseract forcé dispo → on atteint bien le gate NER.
+    _force_tesseract_available(monkeypatch)
+    _patch_ner(monkeypatch, available=False)
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {"competitors": [{"engine": "tesseract", "ner": True}], "corpus_id": corpus_id},
+    )
+    assert resp.status_code == 409
+    assert "[ner]" in resp.json()["detail"]
+
+
+def test_ner_requested_with_spacy_passes_gate(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # spaCy dispo → le gate NER passe (le run est lancé : 201).
+    _force_tesseract_available(monkeypatch)
+    _patch_ner(monkeypatch, available=True)
+    client = _client(tmp_path)
+    corpus_id = _upload_demo_corpus(client)
+    resp = _post(
+        client,
+        {"competitors": [{"engine": "tesseract", "ner": True}], "corpus_id": corpus_id},
+    )
+    assert resp.status_code == 201
+
+
 def test_public_mode_allows_free_tesseract(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -213,7 +272,7 @@ def test_public_mode_allows_free_tesseract(
     # (pas de 403). Binaire forcé absent → il tombe sur la dispo (409), prouvant
     # qu'il a franchi le verrou public et atteint la vérification runtime.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
     )
     resp = _post(
@@ -242,7 +301,7 @@ def test_unavailable_engine_is_409(
 ) -> None:
     # binaire forcé absent → tesseract indisponible (déterministe), sans corpus.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(has_binary=lambda _name: None, **kw),
     )
     resp = _post(_client(tmp_path), {"competitors": [{"engine": "tesseract"}]})
@@ -254,7 +313,7 @@ def test_unknown_normalization_is_422(
 ) -> None:
     # moteurs forcés disponibles → on atteint le plan ; profil inconnu → 422.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(
             has_binary=lambda _n: "/usr/bin/tesseract",
             has_module=lambda _n: True,
@@ -291,7 +350,7 @@ def test_ocr_llm_chain_reaches_availability_not_preblocked(
     # dispo, openai indispo (pas de clé/SDK en CI) → 409 sur openai : la chaîne
     # atteint bien la garde de disponibilité.
     monkeypatch.setattr(
-        "xerocr.interfaces.web.app.engine_statuses",
+        "cinoc.interfaces.web.app.engine_statuses",
         lambda **kw: engine_statuses(
             has_binary=lambda _name: "/usr/bin/tesseract", **kw
         ),

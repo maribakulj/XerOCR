@@ -1,0 +1,329 @@
+"""Registre + factory de modules (couche 6).
+
+Résout un ``adapter_name`` (convention ``<kind>:<label>``) vers une instance de
+``Module`` (couche 4) en appelant un **builder** enregistré pour le ``kind``.
+C'est le **seul** point d'extension du produit : le socle est enregistré
+**en dur** (``register_default_modules``) ; la **découverte de plugins tiers**
+(entry-points ``cinoc.modules``, cf. ``app.modules.discovery``) — même résolution
+``name → Module``, source différente.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+
+from cinoc.domain.errors import CinocError
+from cinoc.pipeline.protocols import Module, ParamValue
+
+#: Construit une instance de module depuis ses kwargs de construction.
+ModuleBuilder = Callable[[Mapping[str, ParamValue]], Module]
+
+
+class ModuleResolutionError(CinocError):
+    """``kind`` inconnu, kwargs invalides, ou nom construit incohérent."""
+
+
+class ModuleRegistry:
+    """Associe un ``kind`` à un builder, et construit les modules d'un run."""
+
+    def __init__(self) -> None:
+        self._builders: dict[str, ModuleBuilder] = {}
+
+    def register_builder(self, kind: str, builder: ModuleBuilder) -> None:
+        """Enregistre (ou remplace) le builder d'un ``kind``. Idempotent."""
+        self._builders[kind] = builder
+
+    def kinds(self) -> tuple[str, ...]:
+        return tuple(sorted(self._builders))
+
+    def build(self, adapter_name: str, kwargs: Mapping[str, ParamValue]) -> Module:
+        """Construit le module ``adapter_name`` (``kind`` = avant le ``:``)."""
+        kind = adapter_name.split(":", 1)[0]
+        builder = self._builders.get(kind)
+        if builder is None:
+            raise ModuleResolutionError(
+                f"aucun builder pour le kind {kind!r} (module {adapter_name!r})."
+            )
+        module = builder(kwargs)
+        if module.name != adapter_name:
+            raise ModuleResolutionError(
+                f"module construit {module.name!r} ≠ nom déclaré "
+                f"{adapter_name!r} (kwargs incohérents ?)."
+            )
+        return module
+
+
+def _build_precomputed(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("source_label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "precomputed : 'source_label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.precomputed import PrecomputedTextAdapter
+
+    return PrecomputedTextAdapter(source_label=label)
+
+
+def _build_kraken(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "kraken : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "kraken : 'model' (chemin .mlmodel) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.kraken import KrakenAdapter
+
+    return KrakenAdapter(label=label, model=model)
+
+
+def _build_mistral_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "mistral_ocr : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.mistral_ocr import MistralOCRAdapter
+
+    return MistralOCRAdapter(
+        label=label, model=str(kwargs.get("model", "mistral-ocr-latest"))
+    )
+
+
+def _build_pero(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError("pero : 'label' (str) requis dans adapter_kwargs.")
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "pero : 'model' (chemin de config PERO) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.pero import PeroAdapter
+
+    return PeroAdapter(label=label, model=model)
+
+
+def _build_calamari(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    model = kwargs.get("model")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "calamari : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(model, str) or not model:
+        raise ModuleResolutionError(
+            "calamari : 'model' (checkpoint) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.calamari import CalamariAdapter
+
+    return CalamariAdapter(label=label, model=model)
+
+
+def _build_google_vision(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "google_vision : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.google_vision import GoogleVisionAdapter
+
+    # `lang` (passé par le planificateur à tout moteur OCR) est ignoré : Vision
+    # détecte la langue en `DOCUMENT_TEXT_DETECTION` (pas de hint fragile à mapper).
+    return GoogleVisionAdapter(label=label)
+
+
+def _build_azure_di(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "azure_di : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.azure_di import AzureDocIntelAdapter
+
+    # `lang` (passé par le planificateur à tout moteur OCR) ignoré : le modèle
+    # `prebuilt-read` détecte la langue (pas de paramètre de langue à mapper).
+    return AzureDocIntelAdapter(label=label)
+
+
+def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "tesseract : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.ocr.tesseract import TesseractAdapter
+
+    return TesseractAdapter(
+        label=label,
+        lang=str(kwargs.get("lang", "fra")),
+        psm=int(kwargs.get("psm", 6)),
+        oem=int(kwargs.get("oem", 3)),
+        alto=bool(kwargs.get("alto", False)),
+    )
+
+
+def _build_openai(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "openai : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.llm.openai import OpenAIAdapter
+
+    prompt = kwargs.get("prompt")
+    return OpenAIAdapter(
+        label=label,
+        model=str(kwargs.get("model", "gpt-4o-mini")),
+        role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
+    )
+
+
+def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "ollama : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.llm.ollama import OllamaAdapter
+
+    prompt = kwargs.get("prompt")
+    extra = {"prompt": prompt} if isinstance(prompt, str) else {}
+    return OllamaAdapter(
+        label=label,
+        model=str(kwargs.get("model", "llama3")),
+        host=str(kwargs.get("host", "http://localhost:11434")),
+        **extra,
+    )
+
+
+def _build_mistral(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "mistral : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.llm.mistral import MistralAdapter
+
+    prompt = kwargs.get("prompt")
+    return MistralAdapter(
+        label=label,
+        model=str(kwargs.get("model", "mistral-small-latest")),
+        role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
+    )
+
+
+def _build_anthropic(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "anthropic : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.llm.anthropic import AnthropicAdapter
+
+    prompt = kwargs.get("prompt")
+    return AnthropicAdapter(
+        label=label,
+        model=str(kwargs.get("model", "claude-haiku-4-5-20251001")),
+        role=str(kwargs.get("role", "text_only")),
+        prompt=prompt if isinstance(prompt, str) else None,
+    )
+
+
+def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
+    from cinoc.adapters.layout.precomputed import PrecomputedLayoutSource
+
+    return PrecomputedLayoutSource()
+
+
+def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:
+    import os
+
+    from cinoc.adapters.layout.pp_doclayout import PPDocLayoutSegmenter
+
+    # Variante du modèle : kwarg explicite > env (l'image Space bake la variante
+    # légère via ``CINOC_PPDOCLAYOUT_MODEL=PP-DocLayout-S``) > défaut (-L qualité).
+    model = kwargs.get("model")
+    if not isinstance(model, str) or not model:
+        model = os.environ.get("CINOC_PPDOCLAYOUT_MODEL", "PP-DocLayout-L")
+    return PPDocLayoutSegmenter(model=model)
+
+
+def _build_remote_segmenter(kwargs: Mapping[str, ParamValue]) -> Module:
+    endpoint = kwargs.get("endpoint")
+    if not isinstance(endpoint, str) or not endpoint:
+        raise ModuleResolutionError(
+            "remote_segmenter : 'endpoint' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.layout.remote import RemoteSegmenter
+
+    token = kwargs.get("token")
+    min_score = kwargs.get("min_score")
+    return RemoteSegmenter(
+        endpoint=endpoint,
+        token=token if isinstance(token, str) else None,
+        min_score=float(min_score) if isinstance(min_score, (int, float)) else 0.5,
+    )
+
+
+def _build_precomputed_region(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("source_label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "precomputed_region : 'source_label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.layout.precomputed import PrecomputedRegionRecognizer
+
+    return PrecomputedRegionRecognizer(source_label=label)
+
+
+def _build_alto_assembler(kwargs: Mapping[str, ParamValue]) -> Module:
+    from cinoc.adapters.layout.assembler import AltoAssembler
+
+    return AltoAssembler()
+
+
+def _build_ner(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError("ner : 'label' (str) requis dans adapter_kwargs.")
+    from cinoc.adapters.ner.spacy_extractor import SpacyNerExtractor
+
+    return SpacyNerExtractor(
+        label=label, model=str(kwargs.get("model", "fr_core_news_sm"))
+    )
+
+
+def register_default_modules(registry: ModuleRegistry) -> None:
+    """Enregistre le socle (starter pack). Aucun effet de bord à l'import."""
+    registry.register_builder("precomputed", _build_precomputed)
+    registry.register_builder("tesseract", _build_tesseract)
+    registry.register_builder("kraken", _build_kraken)
+    registry.register_builder("pero", _build_pero)
+    registry.register_builder("calamari", _build_calamari)
+    registry.register_builder("mistral_ocr", _build_mistral_ocr)
+    registry.register_builder("google_vision", _build_google_vision)
+    registry.register_builder("azure_di", _build_azure_di)
+    registry.register_builder("openai", _build_openai)
+    registry.register_builder("ollama", _build_ollama)
+    registry.register_builder("mistral", _build_mistral)
+    registry.register_builder("anthropic", _build_anthropic)
+    registry.register_builder("precomputed_layout", _build_precomputed_layout)
+    registry.register_builder("pp_doclayout", _build_pp_doclayout)
+    registry.register_builder("remote_segmenter", _build_remote_segmenter)
+    registry.register_builder("precomputed_region", _build_precomputed_region)
+    registry.register_builder("alto_assembler", _build_alto_assembler)
+    registry.register_builder("ner", _build_ner)
+
+
+__all__ = [
+    "ModuleBuilder",
+    "ModuleRegistry",
+    "ModuleResolutionError",
+    "register_default_modules",
+]

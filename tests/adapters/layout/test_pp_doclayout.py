@@ -11,16 +11,16 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.layout.pp_doclayout import (
+from cinoc.adapters.layout.pp_doclayout import (
     DetectedRegion,
     LayoutDetection,
     PPDocLayoutSegmenter,
 )
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
-from xerocr.domain.layout import CanonicalLayout
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.layout import CanonicalLayout
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _detection(*regions: DetectedRegion, w: int = 600, h: int = 800) -> LayoutDetection:
@@ -144,6 +144,13 @@ def test_execute_requires_workspace(tmp_path: Path) -> None:
 def test_invalid_min_score_rejected() -> None:
     with pytest.raises(AdapterStepError, match="min_score"):
         PPDocLayoutSegmenter(min_score=1.5)
+
+
+def test_model_defaults_to_large_and_is_configurable() -> None:
+    # Le défaut reste la variante qualité ; la variante légère se choisit (image
+    # Space) pour tester l'option sans peser sur le free-tier.
+    assert PPDocLayoutSegmenter()._model == "PP-DocLayout-L"
+    assert PPDocLayoutSegmenter(model="PP-DocLayout-S")._model == "PP-DocLayout-S"
 
 
 @pytest.mark.skipif(

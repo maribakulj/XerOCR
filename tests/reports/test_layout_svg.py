@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
-from xerocr.reports.layout_svg import layout_to_svg
+from cinoc.domain.layout import BBox, CanonicalLayout, Geometry, LayoutPage, Region
+from cinoc.reports.layout_svg import layout_to_svg
 
 
 def _layout(*regions: Region, width: int = 200, height: int = 100) -> CanonicalLayout:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.reports.engine_badges import (
+from cinoc.reports.engine_badges import (
     engine_accent,
     engine_cell,
     engine_letter,

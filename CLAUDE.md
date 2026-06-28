@@ -1,7 +1,7 @@
-# CLAUDE.md — XerOCR
+# CLAUDE.md — Cinoc
 
 Réécriture propre de **Picarones** (plateforme de benchmark OCR/HTR/VLM pour
-documents patrimoniaux) sous le nouveau nom **XerOCR**. Ce fichier est le
+documents patrimoniaux) sous le nouveau nom **Cinoc**. Ce fichier est le
 contrat de travail de toute conversation de migration. **Le lire en entier
 avant d'écrire la moindre ligne.**
 
@@ -43,7 +43,7 @@ avant d'écrire la moindre ligne.**
   indisponible » en dégradé gracieux). **Axe moteur complet** : T1→T4 ✅ ·
   **T5** (structure/segmentation : `CanonicalLayout`, fan-out par région, pipeline
   hybride seg→OCR par bloc) · **T6** (extensibilité tierce : découverte entry-points
-  `xerocr.modules`, plugin de réf, fail-closed public) · **T7** (importeurs cœur,
+  `cinoc.modules`, plugin de réf, fail-closed public) · **T7** (importeurs cœur,
   longitudinal, philologie, `synthesis`) **livrés**. **Space S1→S5 ✅** ; **S6 en
   cours** : importeurs distants (API) + pages `/history`/`/library` + forms d'import
   + **segmentation** (page `/segmentation`, segmenteur **réel** PP-DocLayout en
@@ -56,14 +56,14 @@ avant d'écrire la moindre ligne.**
 
 ---
 
-## 1. Ce qu'est XerOCR
+## 1. Ce qu'est Cinoc
 
 Un banc d'essai **déterministe et reproductible** pour comparer des pipelines de
 transcription (OCR, HTR, VLM, OCR+LLM) sur des corpus à vérité-terrain
 patrimoniaux, et produire un **verdict factuel chiffré** (métriques + tests
 statistiques) sous forme d'un rapport HTML autonome.
 
-XerOCR n'est PAS un fork. C'est une réécriture qui **recopie le noyau métier
+Cinoc n'est PAS un fork. C'est une réécriture qui **recopie le noyau métier
 sain** de Picarones et **abandonne sa dette**. Picarones est disponible en
 lecture seule comme source de référence à porter (`../Picarones/`).
 
@@ -133,7 +133,7 @@ seulement (le reste incrémental) :
 2. **Registre + factory** — la spec YAML référence un `adapter_name` (string),
    résolu au runtime. Couches `app`/`adapters`.
 3. **Découverte de plugins** (absente de Picarones) — **entry-points Python**
-   (`xerocr.modules`) pour brancher un paquet pip sans forker, + un `register()`
+   (`cinoc.modules`) pour brancher un paquet pip sans forker, + un `register()`
    pour un module local. Couche `app`.
 
 Règle des deux axes : on conçoit le contrat + registre + découverte d'office ;
@@ -142,15 +142,15 @@ module = incrémental.
 
 ### Socle intégré vs plugins tiers (extensible ≠ vide)
 
-- **Extensible ≠ livré vide.** XerOCR embarque un **socle de modules « maison »**
+- **Extensible ≠ livré vide.** Cinoc embarque un **socle de modules « maison »**
   enregistrés d'office, qui utilisent **le même `Protocol`** que les modules
-  tiers. Seule diffère la livraison : intégré (`xerocr/adapters/`) vs
+  tiers. Seule diffère la livraison : intégré (`cinoc/adapters/`) vs
   installé/déposé.
 - **Starter pack** : `precomputed` (0 dép), `tesseract` (binaire requis),
   `openai` + `ollama` (LLM), un segmenteur de référence. Le reste = incrémental
   via plugin.
 - **Dépendances lourdes = extras optionnels.** L'adapter est intégré, son SDK
-  est un extra (`pip install xerocr[llm]`). Sans l'extra, le module reste listé
+  est un extra (`pip install cinoc[llm]`). Sans l'extra, le module reste listé
   mais signale qu'il faut l'installer (+ clé API) — il ne plante pas.
 - **Adapter sain ≠ shim.** Un module enveloppe une lib externe pour la traduire
   vers le `Protocol` (sain, rôle de la couche 5). Interdit : un double contrat
@@ -180,7 +180,7 @@ un `CanonicalLayout` à régions sans lignes.
 - Couche 1 : `ArtifactType.LAYOUT` + `region_id` optionnel sur `Artifact`. Le type
   `CanonicalLayout` vit en `domain`, **matérialisé à la tranche segmentation** (backlog) —
   **pas en couche 2** : sans standard externe ni consommateur, le figer maintenant serait
-  spéculatif (cf. `xerocr/formats/MIGRATION_COUCHE_2.md`, L10). Le **nom**
+  spéculatif (cf. `cinoc/formats/MIGRATION_COUCHE_2.md`, L10). Le **nom**
   `ArtifactType.LAYOUT` reste réservé en couche 1.
 - Couche 4 : fan-out — reconnaissance une fois par région, collecte des N
   résultats, gestion des échecs partiels, réassemblage par ordre de lecture.
@@ -199,7 +199,7 @@ un `CanonicalLayout` à régions sans lignes.
 2. **Couches 3-8 : approche par tranches verticales (squelette ambulant).**
    Une fois `domain`+`formats` posées, construire d'abord une tranche fine qui
    traverse toutes les couches pour qu'un cas minimal tourne de bout en bout
-   (ex. `xerocr demo` : corpus pré-calculé → 1 CER → HTML basique → CLI).
+   (ex. `cinoc demo` : corpus pré-calculé → 1 CER → HTML basique → CLI).
    **Le squelette n'est pas « petite ambition » : il est fin mais de pleine
    profondeur, et son rôle est de prouver que l'enveloppe dimensionnée tient
    debout avant d'y verser des features.** Puis épaissir feature par feature.
@@ -247,7 +247,7 @@ les sens ». Ils étaient absents de Picarones.
   `reports/narrative/` abandonné. Le rapport affiche chiffres et tableaux bruts.
 - **Purge du legacy résiduel** : `LEGACY_VALUE_ALIASES` (artifacts), shim
   `pipeline_names` + `_accept_legacy_pipeline_names` du `RunManifest`.
-- **Renommage racine d'erreurs** : `PicaronesError` → `XerOCRError`.
+- **Renommage racine d'erreurs** : `PicaronesError` → `CinocError`.
 - **Nettoyage transverse** : aucune annotation de sprint (`S4`, `A14`, `Phase
   7.1`…), aucune référence à `BACKLOG_POST_LIVRAISON.md`.
 - **Bibliothèque = hub de préparation des corpus** (D-065, décision produit) :
@@ -263,8 +263,8 @@ les sens ». Ils étaient absents de Picarones.
   dans `RunResult` (jamais les octets) ; **saveurs** fichier/dossier/réfs IIIF/
   servie ; budget d'octets + drill-in plafonné ; onglets 4 ; zoom medium **sans**
   deep-zoom. Nuance assumée de l'anti « rapport-application » du §8 (≠ retour à la
-  SPA). Détail : `xerocr/reports/DECISION_RAPPORT_INTERACTIF.md` + vision banc de
-  corpus HF `VISION_DATASET_XEROCR.md`.
+  SPA). Détail : `cinoc/reports/DECISION_RAPPORT_INTERACTIF.md` + vision banc de
+  corpus HF `VISION_DATASET_CINOC.md`.
 
 ---
 
@@ -312,7 +312,7 @@ couche 3), DTO web (transport → couche 8).
   constantes.
 - **Types purs uniquement en `domain/`** : stdlib + `pydantic` + `pydantic_core`.
   Aucun I/O, aucun calcul métier.
-- **Erreurs typées** : lever une sous-classe de `XerOCRError`, jamais
+- **Erreurs typées** : lever une sous-classe de `CinocError`, jamais
   `Exception`/`ValueError` brut quand l'erreur a un sens métier.
 - **Jamais `except Exception: pass`.** Toujours
   `logger.warning("[module] dégradé : %s", e)`.
@@ -344,7 +344,7 @@ couche 3), DTO web (transport → couche 8).
    (Les profils de normalisation, eux, sont de la **donnée**, pas de la surface
    exécutable : on garde l'ensemble pertinent — 14 : les 12 retenus, profils
    anglais retirés, + les 2 profils de conformité HIPE (D-115) —
-   cf. `xerocr/formats/MIGRATION_COUCHE_2.md`.)
+   cf. `cinoc/formats/MIGRATION_COUCHE_2.md`.)
 9. Dossiers de tests vides « par symétrie », `docs/archive`, `CHANGELOG` de
    97 sprints, scripts de refactor morts.
 
@@ -358,13 +358,13 @@ couche 3), DTO web (transport → couche 8).
   - **Analyse de la *source* Picarones** (rôle réel de chaque fichier, bugs, code
     mort, doublons, risques) → **durable** : Picarones est gelé (lecture seule),
     cette analyse ne périme jamais. Vaut d'être produite d'avance.
-  - **Design *cible* XerOCR** (réorganisation, verdicts précis) → **périssable** :
+  - **Design *cible* Cinoc** (réorganisation, verdicts précis) → **périssable** :
     se précise au contact du code ; le design aval dépend de contrats amont non
     encore figés. À confirmer juste-à-temps, pas à figer d'avance.
 - **Deux types de session, à NE PAS confondre :**
   - **Session d'ANALYSE** (par couche, ou par sous-paquet d'une grosse couche) :
     profonde, budget plein, **ne code rien**. Produit un guide de portage durable
-    `xerocr/<couche>/ANALYSE_COUCHE_<N>.md` — **scannable** (tableaux + verdicts,
+    `cinoc/<couche>/ANALYSE_COUCHE_<N>.md` — **scannable** (tableaux + verdicts,
     prose minimale), verdicts garde/modifie/déplace/supprime **marqués
     « PROVISOIRE — à confirmer au build »** (le contact du code corrige souvent
     l'analyse). Prompt prêt à l'emploi :
@@ -410,7 +410,7 @@ make ci                      # gate complet local (avec coverage) — ponctuel
 make lint                    # ruff
 make type                    # mypy
 make test                    # pytest complet (parallèle, sans coverage)
-xerocr demo --output r.html  # rapport démo sans moteur (squelette)
+cinoc demo --output r.html  # rapport démo sans moteur (squelette)
 ```
 
 **Règle de vérification (non négociable)** : avant tout push local, lancer
@@ -425,7 +425,7 @@ coverage en moins.
 (`.github/workflows/ci.yml`), exécuté sur push/PR — **pas** de chaque push local
 (sinon on paie ~3× le temps à chaque itération). `make ci` (avec coverage) reste
 disponible en local pour une vérif ponctuelle, mais l'autorité du seuil est
-GitHub. Les tests `live`/`network` sont opt-in (skippés sans `XEROCR_LIVE_*` /
+GitHub. Les tests `live`/`network` sont opt-in (skippés sans `CINOC_LIVE_*` /
 env requis) : ils ne dispensent pas du reste.
 
 ---

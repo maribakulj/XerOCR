@@ -11,15 +11,15 @@ from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 
-from xerocr.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
-from xerocr.adapters.corpus.huggingface import HuggingFaceDataset
-from xerocr.adapters.storage.history_store import HistoryStore
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.app.segmentation import SegmentationStore, demo_layout
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef
-from xerocr.interfaces.web.app import _TEMPLATES_DIR, create_app
-from xerocr.interfaces.web.routers.home import build_home_router
+from cinoc.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
+from cinoc.adapters.corpus.huggingface import HuggingFaceDataset
+from cinoc.adapters.storage.history_store import HistoryStore
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.app.segmentation import SegmentationStore, demo_layout
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef
+from cinoc.interfaces.web.app import _TEMPLATES_DIR, create_app
+from cinoc.interfaces.web.routers.home import build_home_router
 
 
 def _seg(tmp_path: Path) -> tuple[SegmentationStore, str]:
@@ -65,13 +65,14 @@ def _client(
     *,
     catalogue: HTRUnitedCatalogue = _HTR_REMOTE,
     corpus_store: CorpusStore | None = None,
+    curated_author: str | None = None,
     public_mode: bool = False,
 ) -> TestClient:
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
+        "cinoc.interfaces.web.routers.home.fetch_catalogue", lambda: catalogue
     )
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
+        "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
     seg_store, seg_id = _seg(tmp_path)
@@ -86,6 +87,7 @@ def _client(
             segmentation_store=seg_store,
             demo_segmentation_id=seg_id,
             corpus_store=corpus_store,
+            curated_author=curated_author,
             public_mode=public_mode,
         )
     )
@@ -104,10 +106,10 @@ def test_library_caches_catalogue_across_loads(
         return _HTR_REMOTE
 
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.fetch_catalogue", counting_fetch
+        "cinoc.interfaces.web.routers.home.fetch_catalogue", counting_fetch
     )
     monkeypatch.setattr(
-        "xerocr.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
+        "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
     seg_store, seg_id = _seg(tmp_path)
@@ -214,12 +216,12 @@ def test_library_has_upload_and_import_controls(
     body = _client(tmp_path, monkeypatch).get("/library").text
     assert 'id="corpus-file"' in body  # upload ZIP
     assert 'id="dropzone"' in body  # zone de glisser-déposer
-    for source in ("iiif", "gallica", "escriptorium", "huggingface"):
+    for source in ("iiif", "gallica", "escriptorium", "huggingface", "curated"):
         assert f'data-source-tab="{source}"' in body
-    for source in ("iiif", "gallica", "escriptorium"):
+    for source in ("iiif", "gallica", "escriptorium", "curated"):
         assert f'data-import-source="{source}"' in body
     assert 'data-import-source="huggingface"' in body
-    for name in ("manifest_url", "ark", "base_url", "token"):
+    for name in ("manifest_url", "ark", "base_url", "token", "repo_id", "revision"):
         assert f'name="{name}"' in body
 
 
@@ -236,7 +238,46 @@ def test_corpus_js_syntax_is_valid() -> None:
     if node is None:
         pytest.skip("node absent : vérification de syntaxe JS ignorée")
     js = Path(__file__).resolve().parents[3] / (
-        "xerocr/interfaces/web/static/js/corpus.js"
+        "cinoc/interfaces/web/static/js/corpus.js"
     )
     result = subprocess.run([node, "--check", str(js)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
+
+
+# --- Découverte des datasets curés du compte (CINOC_HF_AUTHOR) -----------------
+
+
+def test_curated_datasets_listed_with_one_click_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from cinoc.adapters.corpus.huggingface import CuratedDatasetRef
+
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.routers.home.discover_curated",
+        lambda author, **_: (
+            CuratedDatasetRef(
+                repo_id=f"{author}/Cinoc-Dresden",
+                title=f"{author}/Cinoc-Dresden",
+                revision="abc123def",
+                last_modified="2026-06-01",
+            ),
+        ),
+    )
+    body = _client(tmp_path, monkeypatch, curated_author="me").get("/library").text
+    # carte rendue + bouton d'import en un clic (repo_id + révision pinnée).
+    assert "me/Cinoc-Dresden" in body
+    assert 'data-repo-id="me/Cinoc-Dresden"' in body
+    assert 'data-revision="abc123def"' in body
+
+
+def test_no_curated_section_without_author(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def boom(author: str, **_: object) -> object:
+        raise AssertionError("aucune découverte sans compte configuré")
+
+    monkeypatch.setattr(
+        "cinoc.interfaces.web.routers.home.discover_curated", boom
+    )
+    body = _client(tmp_path, monkeypatch).get("/library").text
+    assert "data-repo-id=" not in body  # pas de carte curée découverte

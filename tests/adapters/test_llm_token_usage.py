@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from xerocr.adapters.llm.anthropic import _completion_from_message
-from xerocr.adapters.llm.mistral import _completion_from_chat as mistral_completion
-from xerocr.adapters.llm.openai import _completion_from_chat as openai_completion
+from cinoc.adapters.llm.anthropic import _completion_from_message
+from cinoc.adapters.llm.mistral import _completion_from_chat as mistral_completion
+from cinoc.adapters.llm.openai import _completion_from_chat as openai_completion
 
 
 def _chat_response(text: str, prompt_tokens: int, completion_tokens: int) -> object:

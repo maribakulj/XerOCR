@@ -13,8 +13,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus.huggingface import HuggingFaceCatalogue
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus.huggingface import HuggingFaceCatalogue
 
 _PAYLOAD = json.dumps(
     [

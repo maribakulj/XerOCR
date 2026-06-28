@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
-from xerocr.app.results import dump_run_result
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.interfaces.cli import main
+from cinoc.app.results import dump_run_result
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.interfaces.cli import main
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

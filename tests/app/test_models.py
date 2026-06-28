@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from xerocr.app.models import ModelInfo, provider_models
+from cinoc.app.models import ModelInfo, provider_models
 
 
 def test_known_providers_list_models() -> None:

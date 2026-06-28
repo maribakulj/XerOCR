@@ -6,8 +6,8 @@ import threading
 
 import pytest
 
-from xerocr.domain.errors import RunCancelledError
-from xerocr.pipeline.run_control import RunControl
+from cinoc.domain.errors import RunCancelledError
+from cinoc.pipeline.run_control import RunControl
 
 
 def test_not_cancelled_by_default() -> None:

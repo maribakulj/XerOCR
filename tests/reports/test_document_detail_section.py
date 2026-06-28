@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     DiagnosticsPayload,
     DocumentHallucination,
@@ -18,14 +18,14 @@ from xerocr.evaluation.analysis import (
     PipelineHallucination,
     WorstLine,
 )
-from xerocr.evaluation.result import (
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.document_detail import DocumentDetailSection
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.document_detail import DocumentDetailSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -106,7 +106,7 @@ def test_panel_shows_cer_per_engine() -> None:
     html = DocumentDetailSection().render(_result(), SectionContext())
     assert html is not None
     assert "CER par moteur" in html
-    assert "20.0 %" in html and "10.0 %" in html  # folio_1 : tesseract / pero
+    assert "20,0 %" in html and "10,0 %" in html  # folio_1 : tesseract / pero
 
 
 def test_worst_lines_diff_when_present() -> None:

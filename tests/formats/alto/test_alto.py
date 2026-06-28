@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.formats.alto import (
+from cinoc.formats.alto import (
     AltoBBox,
     AltoComposedBlock,
     AltoDocument,
@@ -18,7 +18,7 @@ from xerocr.formats.alto import (
     parse_alto,
     write_alto,
 )
-from xerocr.formats.alto.writer import AltoWriteError
+from cinoc.formats.alto.writer import AltoWriteError
 
 _ALTO_V4 = b"""<?xml version="1.0" encoding="UTF-8"?>
 <alto xmlns="http://www.loc.gov/standards/alto/ns-v4#">

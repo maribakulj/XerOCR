@@ -12,17 +12,17 @@ from datetime import UTC, datetime
 
 import pytest
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run import RunManifest
-from xerocr.domain.usage import ResourceUsage
-from xerocr.evaluation.analysis import EconomicsPayload
-from xerocr.evaluation.economics import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run import RunManifest
+from cinoc.domain.usage import ResourceUsage
+from cinoc.evaluation.analysis import EconomicsPayload
+from cinoc.evaluation.economics import (
     economics_analysis,
     load_pricing,
     pareto_front,
 )
-from xerocr.evaluation.result import DocumentUsage, MetricScore
+from cinoc.evaluation.result import DocumentUsage, MetricScore
 
 FIXED = datetime(2026, 6, 1, tzinfo=UTC)
 
@@ -238,7 +238,7 @@ def test_packaged_pricing_table_loads_and_is_dated() -> None:
 
 
 def test_payload_round_trips_through_run_result_json() -> None:
-    from xerocr.evaluation.result import RunResult
+    from cinoc.evaluation.result import RunResult
 
     analysis = economics_analysis(
         "text", "cer", _series(), _usage(), _manifest(), pricing=_PRICING

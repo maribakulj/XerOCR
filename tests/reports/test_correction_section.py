@@ -4,19 +4,19 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     CorrectionPayload,
     OverNormalizedWord,
     PipelineCorrection,
     RegressionSample,
 )
-from xerocr.evaluation.result import RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.correction import CorrectionSection
+from cinoc.evaluation.result import RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.correction import CorrectionSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -96,9 +96,9 @@ def test_renders_balance_and_samples() -> None:
     )
     assert html is not None
     assert "Bilan de correction" in html
-    assert "chain" in html and "50.0%" in html
-    assert "+0.0000" in html  # pref signé
-    assert "2.0000" in html  # change_ratio
+    assert "chain" in html and "50,0%" in html
+    assert "+0,0000" in html  # pref signé
+    assert "2,0000" in html  # change_ratio
     assert "Pires régressions" in html and "doc2" in html
     # #16 sur-normalisation : flux mot OCR-juste (référence) → forme du correcteur.
     assert "Mots sur-normalisés" in html and 'class="wf-row"' in html

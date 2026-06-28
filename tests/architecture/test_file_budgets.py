@@ -1,6 +1,6 @@
 """Garde-fou contre la croissance silencieuse des fichiers (`CLAUDE.md` §5).
 
-Tout fichier de ``xerocr/`` qui atteint le seuil doit avoir une entrée
+Tout fichier de ``cinoc/`` qui atteint le seuil doit avoir une entrée
 **justifiée** dans :data:`FILE_BUDGETS`. Sinon le test échoue et force un choix
 conscient :
 
@@ -8,7 +8,7 @@ conscient :
 2. **Relever le budget délibérément** : ajouter une entrée ici, justifiée dans le
    message de commit. La hausse devient un acte conscient, pas une dérive.
 
-XerOCR démarre avec une table **vide** : aucun fichier ≥ 600 LOC aujourd'hui. La
+Cinoc démarre avec une table **vide** : aucun fichier ≥ 600 LOC aujourd'hui. La
 table se remplira au fil des tranches, chaque entrée portant sa justification.
 """
 
@@ -18,13 +18,13 @@ from pathlib import Path
 
 import pytest
 
-XEROCR = Path(__file__).resolve().parents[2] / "xerocr"
+CINOC = Path(__file__).resolve().parents[2] / "cinoc"
 
 #: Seuil de surveillance. Sous ce seuil, la couverture suffit ; au-dessus, une
 #: entrée justifiée est obligatoire. (Détendu de 400 → 600 : changement de règle.)
 THRESHOLD = 600
 
-#: Chemin relatif (depuis ``xerocr/``) → budget en lignes. Vide au démarrage.
+#: Chemin relatif (depuis ``cinoc/``) → budget en lignes. Vide au démarrage.
 FILE_BUDGETS: dict[str, int] = {
     # Hub des payloads ``analyses`` : une **union discriminée** unique (un
     # membre par famille de métriques) + ses sous-modèles. La cohésion du
@@ -38,7 +38,15 @@ FILE_BUDGETS: dict[str, int] = {
     # d'autonomie — aucun fichier externe) + helpers d'assemblage. Cohésion du
     # design system > éclatement ; grandit avec les composants (axe 2). Budget
     # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
-    "reports/html.py": 705,
+    "reports/html.py": 730,
+    # Planification de run (couche 6) : **source unique** des specs (benchmark +
+    # segmentation) à partir des choix UI/CLI — catalogue moteurs par rôle,
+    # profils de métriques, vues d'évaluation par type de GT, composition des
+    # pipelines par concurrent (OCR/zero-shot/chaîne LLM-VLM + étape NER
+    # optionnelle), segmenteurs local/distant. La cohésion « tout ce qui traduit
+    # un choix en RunSpec » prime sur l'éclatement ; grandit d'une brique à la
+    # fois (axe 2). Budget re-basé au courant (662 LOC, ajout étape NER) + ~15 %.
+    "app/run_planning.py": 760,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu
@@ -55,7 +63,7 @@ def _line_count(path: Path) -> int:
 
 @pytest.mark.parametrize(("rel_path", "budget"), sorted(FILE_BUDGETS.items()))
 def test_file_size_within_budget(rel_path: str, budget: int) -> None:
-    path = XEROCR / rel_path
+    path = CINOC / rel_path
     assert path.exists(), (
         f"Fichier disparu : {rel_path}. Retire l'entrée de FILE_BUDGETS."
     )
@@ -68,7 +76,7 @@ def test_file_size_within_budget(rel_path: str, budget: int) -> None:
 
 
 def test_no_orphaned_budget_entries() -> None:
-    missing = [p for p in FILE_BUDGETS if not (XEROCR / p).exists()]
+    missing = [p for p in FILE_BUDGETS if not (CINOC / p).exists()]
     assert not missing, f"Entrées orphelines dans FILE_BUDGETS : {missing}."
 
 
@@ -78,10 +86,10 @@ def test_budget_table_covers_all_large_files() -> None:
     Empêche un fichier nouveau ou subitement gros d'échapper à la surveillance.
     """
     untracked: list[tuple[str, int]] = []
-    for path in XEROCR.rglob("*.py"):
+    for path in CINOC.rglob("*.py"):
         if "__pycache__" in path.parts:
             continue
-        rel = path.relative_to(XEROCR).as_posix()
+        rel = path.relative_to(CINOC).as_posix()
         if rel in FILE_BUDGETS:
             continue
         count = _line_count(path)

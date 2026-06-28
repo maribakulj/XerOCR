@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.results import RunResultError, dump_run_result, load_run_result
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.evaluation import EvaluationView
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.app.results import RunResultError, dump_run_result, load_run_result
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.evaluation import EvaluationView
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 

@@ -13,14 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Line, Region
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.evaluation.representations import load_representation
-from xerocr.pipeline.executor import PipelineExecutor
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.evaluation.representations import load_representation
+from cinoc.pipeline.executor import PipelineExecutor
 
 CODE_VERSION = "test-1.0"
 

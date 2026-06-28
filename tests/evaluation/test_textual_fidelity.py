@@ -7,8 +7,8 @@ rares ≤ 2 = {charles, est, le, louis}, `roi` exclu).
 
 from __future__ import annotations
 
-from xerocr.evaluation.analysis import TextualFidelityPayload
-from xerocr.evaluation.textual_fidelity import (
+from cinoc.evaluation.analysis import TextualFidelityPayload
+from cinoc.evaluation.textual_fidelity import (
     TextualFidelityCollector,
     corpus_frequencies,
     modernization_counts,

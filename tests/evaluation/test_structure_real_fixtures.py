@@ -23,18 +23,18 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.layout import CanonicalLayout, Line
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.layout import region_cer
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.representations import load_representation
-from xerocr.evaluation.runner import evaluate_run
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.layout import CanonicalLayout, Line
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.layout import region_cer
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.representations import load_representation
+from cinoc.evaluation.runner import evaluate_run
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "formats" / "fixtures"
 _ESCRIPTORIUM = str(_FIXTURES / "escriptorium.page.xml")

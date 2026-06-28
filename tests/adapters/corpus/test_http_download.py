@@ -14,8 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.corpus import _http
-from xerocr.adapters.corpus._http import HttpFetchError, download
+from cinoc.adapters.corpus import _http
+from cinoc.adapters.corpus._http import HttpFetchError, download
 
 _seen_auth: dict[str, str | None] = {}
 

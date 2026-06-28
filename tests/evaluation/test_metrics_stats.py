@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.evaluation.context import CrossEngineContext
-from xerocr.evaluation.metrics.stats import significance
+from cinoc.evaluation.context import CrossEngineContext
+from cinoc.evaluation.metrics.stats import significance
 
 
 def _ctx(per_pipeline: dict[str, tuple[float | None, ...]]) -> CrossEngineContext:

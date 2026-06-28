@@ -1,4 +1,4 @@
-"""Benchmark XerOCR sur **données réelles** : corpus BNL (presse historique
+"""Benchmark Cinoc sur **données réelles** : corpus BNL (presse historique
 luxembourgeoise, **multilingue** allemand Fraktur + français), **5 pipelines** :
 4 Tesseract — ``frk`` (Fraktur legacy) · ``deu`` (allemand) · ``fra`` (français)
 · ``deu_latf`` (Fraktur LSTM « best ») — **et ``easyocr``** (deep-learning, autre
@@ -20,17 +20,17 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.app import resolve_code_version
-from xerocr.app import run as run_orchestrator
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run_spec import RunSpec
-from xerocr.evaluation.result import RunResult
-from xerocr.reports import default_report_renderer
+from cinoc.app import resolve_code_version
+from cinoc.app import run as run_orchestrator
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run_spec import RunSpec
+from cinoc.evaluation.result import RunResult
+from cinoc.reports import default_report_renderer
 
 _FIXTURES = (
     Path(__file__).resolve().parent.parent
@@ -213,6 +213,6 @@ def test_bnl_cross_engine_significance_is_live(bnl_result: RunResult) -> None:
 
 def test_bnl_report_is_octet_stable(bnl_result: RunResult) -> None:
     renderer = default_report_renderer()
-    assert renderer.render(bnl_result, title="XerOCR — BNL") == renderer.render(
-        bnl_result, title="XerOCR — BNL"
+    assert renderer.render(bnl_result, title="Cinoc — BNL") == renderer.render(
+        bnl_result, title="Cinoc — BNL"
     )

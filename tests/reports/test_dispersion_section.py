@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import (
     MetricScore,
     PipelineResult,
     RunDocumentResult,
     RunResult,
 )
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.dispersion import DispersionSection
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.dispersion import DispersionSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -58,7 +58,7 @@ def test_renders_one_strip_per_engine() -> None:
     assert html.count('class="box-plot"') == 2  # une boîte SVG par moteur
     # labels min·Q1·méd·µ·Q3·max en pourcentage (échelle commune : max 30 %)
     assert (
-        "min 10.0 % · Q1 5.0 % · méd 20.0 % · µ 20.0 % · Q3 35.0 % · max 30.0 %"
+        "min 10,0 % · Q1 5,0 % · méd 20,0 % · µ 20,0 % · Q3 35,0 % · max 30,0 %"
         in html
     )  # tesseract
 

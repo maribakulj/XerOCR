@@ -19,7 +19,7 @@ from pathlib import Path
 
 ROUTERS = (
     Path(__file__).resolve().parents[2]
-    / "xerocr"
+    / "cinoc"
     / "interfaces"
     / "web"
     / "routers"

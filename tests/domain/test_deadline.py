@@ -5,8 +5,8 @@ import pickle
 import pytest
 from pydantic import BaseModel
 
-from xerocr.domain import Deadline
-from xerocr.domain.errors import XerOCRError
+from cinoc.domain import Deadline
+from cinoc.domain.errors import CinocError
 
 # ``in_seconds(b)`` stocke ``monotonic() + b`` (un grand flottant) ; le calcul
 # de ``remaining = (monotonic() + b) - monotonic()`` peut, par arrondi du flottant,
@@ -31,7 +31,7 @@ def test_in_seconds_positive():
 
 
 def test_in_seconds_rejects_nonpositive():
-    with pytest.raises(XerOCRError):
+    with pytest.raises(CinocError):
         Deadline.in_seconds(0)
 
 

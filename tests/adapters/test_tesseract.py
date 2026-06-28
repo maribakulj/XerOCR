@@ -9,13 +9,13 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.ocr.tesseract import TesseractAdapter, tesseract_binary_version
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.confidence import ConfidenceToken
-from xerocr.domain.errors import AdapterStepError, RunCancelledError
-from xerocr.pipeline.protocols import Module
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext
+from cinoc.adapters.ocr.tesseract import TesseractAdapter, tesseract_binary_version
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.confidence import ConfidenceToken
+from cinoc.domain.errors import AdapterStepError, RunCancelledError
+from cinoc.pipeline.protocols import Module
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext
 
 
 def _image(path: Path) -> Artifact:
@@ -38,10 +38,10 @@ def _ctx(workspace: Path | None) -> RunContext:
 
 def _mock_ocr(monkeypatch: pytest.MonkeyPatch, text: str) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: text
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract", lambda **_: text
     )
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences",
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_confidences",
         lambda **_: [ConfidenceToken(text="mot", confidence=0.93)],
     )
 
@@ -155,19 +155,68 @@ def test_execute_writes_confidences_sidecar(
     assert tokens == [{"text": "mot", "confidence": 0.93}]
 
 
+def test_alto_disabled_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Sans ``alto`` : pas d'ALTO_XML déclaré ni produit (rétro-compatible).
+    _mock_ocr(monkeypatch, "mot")
+    adapter = TesseractAdapter(label="fra", lang="fra")
+    assert ArtifactType.ALTO_XML not in adapter.output_types
+    out = adapter.execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    assert ArtifactType.ALTO_XML not in out.artifacts
+
+
+def test_alto_emits_artifact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # ``alto=True`` : un artefact ALTO_XML est déclaré et produit (octets fidèles).
+    _mock_ocr(monkeypatch, "mot")
+    monkeypatch.setattr(
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_alto",
+        lambda **_: b"<alto>geom</alto>",
+    )
+    adapter = TesseractAdapter(label="fra", lang="fra", alto=True)
+    assert ArtifactType.ALTO_XML in adapter.output_types
+    out = adapter.execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    alto = out.artifacts[ArtifactType.ALTO_XML]
+    assert alto.type == ArtifactType.ALTO_XML
+    assert alto.uri is not None and alto.uri.endswith(".alto.xml")
+    assert Path(alto.uri).read_bytes() == b"<alto>geom</alto>"
+    assert alto.content_hash is not None
+
+
+def test_alto_failure_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # ALTO = livrable demandé : un échec lève (≠ confidences best-effort).
+    _mock_ocr(monkeypatch, "mot")
+
+    def boom(**_: object) -> bytes:
+        raise AdapterStepError("alto cassé")
+
+    monkeypatch.setattr(
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_alto", boom
+    )
+    adapter = TesseractAdapter(label="fra", lang="fra", alto=True)
+    with pytest.raises(AdapterStepError):
+        adapter.execute(
+            {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+        )
+
+
 def test_confidences_failure_degrades_to_empty_sidecar(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Best-effort : l'extraction qui casse ne fait pas échouer l'OCR.
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "mot"
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "mot"
     )
 
     def boom(**_: object) -> list[ConfidenceToken]:
         raise RuntimeError("tsv illisible")
 
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences", boom
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_confidences", boom
     )
     out = TesseractAdapter(label="fra", lang="fra").execute(
         {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
@@ -216,7 +265,7 @@ def test_binary_version_none_when_absent() -> None:
 def test_system_binaries_hook_reports_version(monkeypatch: pytest.MonkeyPatch) -> None:
     # Le hook de provenance expose la version baquée → alimente system_binaries_lock.
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract.tesseract_binary_version",
+        "cinoc.adapters.ocr.tesseract.tesseract_binary_version",
         lambda: "tesseract 5.3.0",
     )
     assert TesseractAdapter(label="fra").system_binaries() == {
@@ -228,6 +277,6 @@ def test_system_binaries_hook_empty_when_binary_absent(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract.tesseract_binary_version", lambda: None
+        "cinoc.adapters.ocr.tesseract.tesseract_binary_version", lambda: None
     )
     assert TesseractAdapter(label="fra").system_binaries() == {}

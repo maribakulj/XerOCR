@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     ComplementarityDocument,
     EngineTokenRecall,
@@ -21,9 +21,9 @@ from xerocr.evaluation.analysis import (
     PipelineRank,
     TaxonomyDivergencePair,
 )
-from xerocr.evaluation.result import MetricScore, RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.cross_engine import CrossEngineSection
+from cinoc.evaluation.result import MetricScore, RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.cross_engine import CrossEngineSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -54,7 +54,7 @@ def test_significant_verdict_and_parsed_columns() -> None:
     assert "Significativité" in html
     # clé éclatée en colonnes Vue / Métrique (vue affichée en libellé humain)
     assert ">Texte brut<" in html and ">cer<" in html
-    assert "0.0300" in html
+    assert "0,0300" in html
     assert "significatif" in html  # p=0,03 < 0,05
 
 
@@ -105,9 +105,9 @@ def test_inference_block_renders_ranks_cd_and_intervals() -> None:
     )
     html = CrossEngineSection().render(result, SectionContext())
     assert html is not None
-    assert "CD = 1.1715" in html
+    assert "CD = 1,1715" in html
     assert "rang moyen" in html
-    assert "[0.0950 ; 0.1162]" in html
+    assert "[0,0950 ; 0,1162]" in html
     assert "{alpha}" in html and "{beta}" in html
     # Déterminisme bit-à-bit du rendu.
     assert html == CrossEngineSection().render(result, SectionContext())
@@ -180,11 +180,11 @@ def test_inter_engine_blocks_render_with_documented_bound() -> None:
     assert "complémentarité" in html
     assert "oracle" in html
     assert "Borne supérieure" in html and "ordre est ignoré" in html
-    assert "95.0%" in html and "90.0%" in html  # oracle + meilleur seul
+    assert "95,0%" in html and "90,0%" in html  # oracle + meilleur seul
     assert "alpha" in html and "beta" in html
-    assert "d2" in html and "20.0%" in html  # document au plus fort écart
+    assert "d2" in html and "20,0%" in html  # document au plus fort écart
     assert "Jensen-Shannon" in html
-    assert "0.1887" in html  # divergence de la paire (et de max_pair)
+    assert "0,1887" in html  # divergence de la paire (et de max_pair)
     # Déterminisme bit-à-bit du rendu.
     assert html == CrossEngineSection().render(_inter_engine_result(), SectionContext())
 
@@ -220,4 +220,4 @@ def test_divergence_without_max_pair_says_identical_profiles() -> None:
     html = CrossEngineSection().render(result, SectionContext())
     assert html is not None
     assert "identiques" in html  # pas de « paire la plus divergente » inventée
-    assert "0.0000" in html
+    assert "0,0000" in html

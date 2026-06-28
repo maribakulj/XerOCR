@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.structured_data import (
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.structured_data import (
     detect_sequences,
     numseq_strict,
     numseq_value,
     sequence_counts,
 )
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 
 
 def _keys(text: str, category: str) -> list[str]:

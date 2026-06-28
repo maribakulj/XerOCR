@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.analysis import (
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.analysis import (
     Analysis,
     PipelineTaxonomy,
     TaxonomyCount,
     TaxonomyPayload,
 )
-from xerocr.evaluation.result import PipelineResult, RunResult
-from xerocr.reports.section import Section, SectionContext
-from xerocr.reports.sections.taxonomy import TaxonomySection, _class_label
+from cinoc.evaluation.result import PipelineResult, RunResult
+from cinoc.reports.section import Section, SectionContext
+from cinoc.reports.sections.taxonomy import TaxonomySection, _class_label
 
 
 def test_class_labels_rename_other_to_substitution() -> None:

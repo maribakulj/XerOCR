@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.app.normalization_preview import (
+from cinoc.app.normalization_preview import (
     NormalizationPreviewError,
     preview_normalization,
 )

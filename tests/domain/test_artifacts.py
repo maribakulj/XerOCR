@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from xerocr.domain import Artifact, ArtifactType, compute_content_hash
-from xerocr.domain.errors import ArtifactValidationError
+from cinoc.domain import Artifact, ArtifactType, compute_content_hash
+from cinoc.domain.errors import ArtifactValidationError
 
 
 def test_layout_is_first_class():

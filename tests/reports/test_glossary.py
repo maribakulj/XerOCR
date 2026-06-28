@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from xerocr.reports.glossary import load_glossary
-from xerocr.reports.glossary_panel import glossary_chrome_link, glossary_dialog
+from cinoc.reports.glossary import load_glossary
+from cinoc.reports.glossary_panel import glossary_chrome_link, glossary_dialog
 
 #: Métriques réellement calculées par le moteur → chacune doit avoir une entrée.
 REAL_METRICS = (

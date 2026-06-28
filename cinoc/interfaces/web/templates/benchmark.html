@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block title %}{{ t.bench_title }}{% endblock %}
+{% block main %}
+<section class="view-hero">
+  <div class="view-hero-title">
+    <div class="view-hero-eyebrow">{{ t.bench_eyebrow }}</div>
+    <div class="view-hero-name">{{ t.bench_title }}</div>
+    <div class="view-hero-desc">{{ t.bench_desc }}</div>
+  </div>
+  <div class="view-hero-stats">
+    <div class="hero-stat"><div class="v">{{ corpora|length }}</div><div class="k">{{ t.bench_corpus }}</div></div>
+    <div class="hero-stat"><div class="v">{{ profiles|length }}</div><div class="k">{{ t.bench_options }}</div></div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.bench_corpus }}</div>
+      <div class="sec-sub">{{ t.bench_corpus_select_hint }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="panel corpus-select-card">
+      <div class="stack-head">
+        <div class="stack-title">{{ t.bench_corpus_selected }}</div>
+        <div class="stack-sub">{{ t.bench_corpus_select_hint }}</div>
+      </div>
+      <label class="label" for="corpus-select">{{ t.bench_corpus }}</label>
+      <div class="corpus-select-row">
+        <select id="corpus-select" class="select">
+          <option value="">{{ t.bench_corpus_none }}</option>
+          {% for c in corpora %}
+          <option value="{{ c.id }}">{{ c.name }} · {{ c.n_documents }} {{ t.library_doc_preview }}</option>
+          {% endfor %}
+        </select>
+        <a class="btn btn-sm" href="/library?lang={{ lang }}#corpora">{{ t.bench_corpus_prepare }}</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.bench_competitors }}</div>
+      <div class="sec-sub">{{ t.bench_queue_hint }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="panel composer-shell">
+      <div class="tabs mode-tabs" role="tablist" aria-label="{{ t.bench_mode }}">
+        <button class="on" type="button" role="tab" aria-selected="true"
+                data-mode="ocr_only">{{ t.bench_mode_ocr }}</button>
+        <button type="button" role="tab" aria-selected="false"
+                data-mode="text_only">{{ t.bench_mode_text }}</button>
+        <button type="button" role="tab" aria-selected="false"
+                data-mode="text_and_image">{{ t.bench_mode_image }}</button>
+        <button type="button" role="tab" aria-selected="false"
+                data-mode="zero_shot">{{ t.bench_mode_vlm }}</button>
+      </div>
+
+      <div class="composer-draft">
+        <label class="comp-field" data-show="ocr_only text_only text_and_image">
+          <span class="comp-label">{{ t.bench_ocr_engine }}</span>
+          <select id="draft-ocr" class="select">
+            {% for e in catalog.ocr %}
+            <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+              {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="comp-field" data-show="text_only">
+          <span class="comp-label">{{ t.bench_llm }}</span>
+          <select id="draft-llm" class="select">
+            {% for e in catalog.llm %}
+            <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+              {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="comp-field" data-show="text_and_image zero_shot">
+          <span class="comp-label">{{ t.bench_vlm }}</span>
+          <select id="draft-vlm" class="select">
+            {% for e in catalog.vlm %}
+            <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+              {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+
+        <label class="comp-field"
+               data-show="ocr_only text_only text_and_image zero_shot">
+          <span class="comp-label">{{ t.bench_model }}</span>
+          <input id="draft-model" class="input" type="text"
+                 placeholder="{{ t.bench_model_ph }}">
+          <span id="model-hint" class="dropzone-meta"></span>
+        </label>
+
+        <label class="comp-field comp-field-prompt"
+               data-show="text_only text_and_image zero_shot">
+          <span class="comp-label">{{ t.bench_prompt }}</span>
+          {% if curated_prompts %}
+          <select id="draft-prompt-curated" class="select">
+            <option value="">{{ t.bench_prompt_curated_none }}</option>
+            {% for name in curated_prompts %}
+            <option value="{{ name }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
+          <textarea id="draft-prompt" class="input comp-prompt" rows="3"
+                    placeholder="{{ t.bench_prompt_ph }}"></textarea>
+          <span class="dropzone-meta">{{ t.bench_prompt_hint }}</span>
+        </label>
+
+        <label class="comp-field comp-field-ner"
+               data-show="ocr_only text_only text_and_image zero_shot">
+          <span class="comp-label">
+            <input id="draft-ner" type="checkbox"
+                   {% if not ner or not ner.available %}disabled{% endif %}>
+            {{ t.bench_ner }}{% if ner and not ner.available %} — {{ t.engine_unavailable }}{% endif %}
+          </span>
+          <input id="draft-ner-model" class="input" type="text"
+                 placeholder="{{ t.bench_ner_model_ph }}"
+                 {% if not ner or not ner.available %}disabled{% endif %}>
+          <span class="dropzone-meta">{{ t.bench_ner_hint }}</span>
+        </label>
+
+        <label class="comp-field comp-field-alto"
+               data-show="ocr_only text_only text_and_image">
+          <span class="comp-label">
+            <input id="draft-alto" type="checkbox">
+            {{ t.bench_alto }}
+          </span>
+          <span class="dropzone-meta">{{ t.bench_alto_hint }}</span>
+        </label>
+
+        {# Suggestions canoniques openai/anthropic — peuplée par benchmark.js
+           depuis /api/models/{provider} (avec capacité vision). #}
+        <datalist id="api-model-list"></datalist>
+        {% if ollama_models %}
+        <datalist id="ollama-models">
+          {% for m in ollama_models %}<option value="{{ m }}"></option>{% endfor %}
+        </datalist>
+        {% endif %}
+        {% if mistral_models %}
+        <datalist id="mistral-models">
+          {% for m in mistral_models %}<option value="{{ m }}"></option>{% endfor %}
+        </datalist>
+        {% endif %}
+
+        <button id="add-competitor" class="btn btn-primary" type="button">+ {{ t.bench_add_competitor }}</button>
+      </div>
+    </div>
+
+    <div class="panel queue-panel">
+      <div class="stack-head">
+        <div class="stack-title">{{ t.bench_queue_title }}</div>
+        <div class="stack-sub">{{ t.bench_queue_hint }}</div>
+      </div>
+      <div id="queue-list" class="queue-list"
+           data-label-ocr="OCR"
+           data-label-ocr-llm="OCR → LLM"
+           data-label-ocr-vlm="OCR → VLM"
+           data-label-vlm="VLM"></div>
+      <p id="queue-empty" class="empty">{{ t.bench_queue_empty }}</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.bench_options }}</div>
+      <div class="sec-sub">{{ t.bench_normalization }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="panel stack-panel">
+      <label class="label" for="normalization">{{ t.bench_normalization }}</label>
+      <select id="normalization" class="select">
+        <option value="">{{ t.bench_norm_none }}</option>
+        {% for p in profiles %}
+        <option value="{{ p.name }}">{{ p.name }} — {{ p.description }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="panel stack-panel">
+      <label class="label" for="norm-sample">{{ t.bench_norm_preview }}</label>
+      <textarea id="norm-sample" class="input" rows="2"
+                placeholder="{{ t.bench_norm_sample_ph }}"></textarea>
+      <details class="norm-custom">
+        <summary class="dropzone-meta">{{ t.bench_norm_custom }}</summary>
+        <textarea id="norm-config" class="input" rows="3"
+                  placeholder="{{ t.bench_norm_config_ph }}"></textarea>
+      </details>
+      <button id="norm-preview-btn" class="btn" type="button">{{ t.bench_norm_preview_btn }}</button>
+      <pre id="norm-result" class="norm-result" aria-live="polite"></pre>
+    </div>
+    <div class="panel stack-panel">
+      <label class="label" for="char-exclude">{{ t.bench_char_exclude }}</label>
+      <input id="char-exclude" class="input" type="text"
+             placeholder="{{ t.bench_char_exclude_ph }}">
+      <span class="dropzone-meta">{{ t.bench_char_exclude_hint }}</span>
+    </div>
+    <div class="panel stack-panel">
+      <label class="label" for="metric-profile">{{ t.bench_metric_profile }}</label>
+      <select id="metric-profile" class="select">
+        {% for mp in metric_profiles %}
+        <option value="{{ mp.name }}"{% if mp.name == 'standard' %} selected{% endif %}>
+          {{ mp.name }} — {{ mp.metrics|join(' · ') }}
+        </option>
+        {% endfor %}
+      </select>
+      <span class="dropzone-meta">{{ t.bench_metric_profile_hint }}</span>
+    </div>
+    <div class="panel stack-panel">
+      <label class="label">{{ t.bench_config_io }}</label>
+      <div class="config-io">
+        <button id="config-export" class="btn btn-sm" type="button">{{ t.bench_config_export }}</button>
+        <label class="btn btn-sm" for="config-import">{{ t.bench_config_import }}</label>
+        <input id="config-import" type="file" accept="application/json,.json" hidden>
+      </div>
+      <span id="config-feedback" class="dropzone-meta" aria-live="polite"
+            data-loaded="{{ t.bench_config_loaded }}"
+            data-invalid="{{ t.bench_config_invalid }}"></span>
+      <span class="dropzone-meta">{{ t.bench_config_hint }}</span>
+    </div>
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
+      <div class="sec-title">{{ t.bench_run }}</div>
+      <div class="sec-sub">{{ t.bench_execute_desc }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    <div class="panel run-panel">
+      <div class="run-line">
+        <button id="launch" class="btn btn-primary"
+                data-launching="{{ t.bench_launching }}">{{ t.bench_run }}</button>
+        <span class="label">{{ t.bench_status }}</span>
+        <span id="run-status" class="run-status">{{ t.bench_idle }}</span>
+      </div>
+
+      <div id="run-progress" class="run-progress" hidden role="status" aria-live="polite">
+        <div id="run-progress-rail" class="progress" role="progressbar"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+             aria-label="{{ t.bench_progress_label }}">
+          <div id="run-progress-bar" class="progress-bar"></div>
+        </div>
+        <span id="run-progress-text" class="run-progress-text mono"></span>
+      </div>
+
+      <div id="run-result" class="run-result"
+           data-open="{{ t.open_report_full }}"
+           data-neterror="{{ t.bench_net_error }}"
+           data-error-403="{{ t.bench_error_403 }}"
+           data-error-404="{{ t.bench_error_404 }}"
+           data-error-409="{{ t.bench_error_409 }}"
+           data-error-422="{{ t.bench_error_422 }}"
+           data-error-fallback="{{ t.bench_error_fallback }}"></div>
+
+      <details class="run-log-shell" id="run-log-shell" hidden>
+        <summary>{{ t.bench_log }}</summary>
+        <pre id="run-log" class="run-log" aria-live="polite"></pre>
+      </details>
+    </div>
+  </div>
+</section>
+
+<template id="queue-row-tpl">
+  <article class="queue-row">
+    <div class="queue-id mono"></div>
+    <div class="queue-main">
+      <div class="queue-label"></div>
+      <div class="queue-meta"></div>
+    </div>
+    <button class="c-del queue-remove" type="button"
+            title="{{ t.bench_remove }}" aria-label="{{ t.bench_remove }}">{{ t.bench_remove }}</button>
+  </article>
+</template>
+{% endblock %}
+{% block body_end %}<script src="/static/js/benchmark.js"></script>{% endblock %}

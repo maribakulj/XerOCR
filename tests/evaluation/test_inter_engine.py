@@ -10,14 +10,14 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.analysis import (
+from cinoc.evaluation.analysis import (
     Analysis,
     InterEnginePayload,
     PipelineTaxonomy,
     TaxonomyCount,
     TaxonomyPayload,
 )
-from xerocr.evaluation.inter_engine import (
+from cinoc.evaluation.inter_engine import (
     InterEngineCollector,
     jensen_shannon_divergence,
 )

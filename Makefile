@@ -2,7 +2,7 @@
 
 # Flags de coverage : injectés UNIQUEMENT par le gate (cov/ci), jamais dans
 # addopts — sinon chaque run local (y compris un sous-ensemble) paierait ×3,4.
-COV := --cov=xerocr --cov-report=term-missing --cov-fail-under=85
+COV := --cov=cinoc --cov-report=term-missing --cov-fail-under=85
 # Parallélisme : pytest-xdist répartit la suite sur tous les cœurs (gate ~3× plus
 # court). pytest-cov agrège la couverture des workers → le seuil 85 % tient.
 PAR := -n auto
@@ -11,10 +11,10 @@ install:
 	pip install -e ".[dev]"
 
 lint:
-	ruff check xerocr/ tests/
+	ruff check cinoc/ tests/
 
 type:
-	python -m mypy -p xerocr
+	python -m mypy -p cinoc
 
 # Boucle locale : suite SANS coverage (~3× plus rapide). Itérer là-dessus
 # (ou sur un sous-ensemble ciblé) ; le gate complet ne tourne qu'avant push.

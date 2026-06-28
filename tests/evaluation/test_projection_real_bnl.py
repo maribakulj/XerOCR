@@ -5,7 +5,7 @@ Deux niveaux :
   texte allemand réel et traverse le runner (réserve §9 ProjectionSpec levée sur
   du vrai) ;
 - **`live`** (opt-in) : un vrai Tesseract sur une vraie image (chemin via
-  ``XEROCR_BNL_IMAGE``) → ALTO → mêmes mappers → projection — le chemin compétitif
+  ``CINOC_BNL_IMAGE``) → ALTO → mêmes mappers → projection — le chemin compétitif
   réel, sans committer d'image lourde.
 """
 
@@ -20,17 +20,17 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.projection import ProjectionSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.projectors import layout_to_text
-from xerocr.evaluation.registry import MetricRegistry, register_default_metrics
-from xerocr.evaluation.representations import load_representation
-from xerocr.evaluation.runner import evaluate_run
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.projection import ProjectionSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.projectors import layout_to_text
+from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
+from cinoc.evaluation.representations import load_representation
+from cinoc.evaluation.runner import evaluate_run
 
 _FIXTURE = (
     Path(__file__).resolve().parents[1]
@@ -106,15 +106,15 @@ def test_real_alto_scored_through_runner() -> None:
 def test_live_tesseract_real_image_through_mappers() -> None:
     """Vrai Tesseract sur une vraie image → ALTO → mappers → projection texte.
 
-    Opt-in : exige le binaire ``tesseract`` et ``XEROCR_BNL_IMAGE`` pointant une
+    Opt-in : exige le binaire ``tesseract`` et ``CINOC_BNL_IMAGE`` pointant une
     image réelle (TIFF/PNG non committé). Prouve le chemin compétitif de bout en
     bout sur de la vraie donnée.
     """
     if shutil.which("tesseract") is None:
         pytest.skip("binaire tesseract absent")
-    image = os.environ.get("XEROCR_BNL_IMAGE")
+    image = os.environ.get("CINOC_BNL_IMAGE")
     if not image or not Path(image).is_file():
-        pytest.skip("XEROCR_BNL_IMAGE non fourni")
+        pytest.skip("CINOC_BNL_IMAGE non fourni")
     with tempfile.TemporaryDirectory() as tmp:
         base = Path(tmp) / "out"
         subprocess.run(

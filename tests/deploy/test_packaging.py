@@ -28,9 +28,9 @@ def test_requirements_cover_core_and_serve() -> None:
 
 def test_dockerfile_serves_readonly_vitrine() -> None:
     text = (DEPLOY / "Dockerfile").read_text(encoding="utf-8")
-    assert "xerocr" in text and "serve" in text  # lance bien la vitrine
+    assert "cinoc" in text and "serve" in text  # lance bien la vitrine
     assert "--port" in text and "7860" in text  # port convention HF Space
-    assert "USER xerocr" in text  # non-root
+    assert "USER cinoc" in text  # non-root
 
 
 def test_requirements_embark_no_heavy_engine() -> None:
@@ -52,8 +52,8 @@ def test_engine_dockerfile_bakes_free_ocr() -> None:
         assert token in text, f"langue {token} non baquée"
     assert "OMP_THREAD_LIMIT=1" in text  # garde deadlock free-tier (leçon Picarones)
     assert "TESSDATA_PREFIX" in text
-    assert "XEROCR_PUBLIC_MODE=true" in text  # fail-closed par défaut sur le Space
-    assert "USER xerocr" in text  # non-root
+    assert "CINOC_PUBLIC_MODE=true" in text  # fail-closed par défaut sur le Space
+    assert "USER cinoc" in text  # non-root
     assert "--list-langs" in text and "grep -qx fra" in text  # smoke fra
     assert "serve" in text and "7860" in text  # lance le serveur
 
@@ -62,7 +62,7 @@ def test_deploy_workflow_builds_engine_and_smoke_ocr() -> None:
     # Le déploiement construit l'image MOTEUR et fait un smoke OCR RÉEL avant push.
     wf = (ROOT / ".github/workflows/deploy-space.yml").read_text(encoding="utf-8")
     assert "Dockerfile.engine" in wf  # le Space déploie le moteur, pas la vitrine
-    assert "docker build" in wf and "xerocr-engine" in wf
+    assert "docker build" in wf and "cinoc-engine" in wf
     assert "tesseract /tmp/hello.png" in wf  # OCR réel d'une image de texte générée
 
 

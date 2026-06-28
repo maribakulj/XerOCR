@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.pipeline import PipelineSpec
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.structure import StructureSection
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.pipeline import PipelineSpec
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.structure import StructureSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -41,7 +41,7 @@ def test_renders_region_f1_and_cer() -> None:
     html = StructureSection().render(_result((pipe,)), SectionContext())
     assert html is not None
     assert "Region-F1" in html
-    assert "0.8200" in html and "0.0345" in html
+    assert "0,8200" in html and "0,0345" in html
 
 
 def test_absent_without_region_metrics() -> None:

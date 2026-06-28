@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import (
+from cinoc.adapters.llm._base import (
     DEFAULT_CORRECTION_PROMPT,
     DEFAULT_TRANSCRIPTION_PROMPT,
     default_prompt_for_role,
@@ -17,8 +17,8 @@ from xerocr.adapters.llm._base import (
     validate_role,
     write_text_artifact,
 )
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.errors import AdapterStepError
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.errors import AdapterStepError
 
 
 def _image_inputs(path: Path, data: bytes) -> dict[ArtifactType, Artifact]:

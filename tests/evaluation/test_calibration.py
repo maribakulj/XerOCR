@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.evaluation.calibration import (
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.evaluation.calibration import (
     calibration_analysis,
     calibration_from_pairs,
     load_confidence_tokens,

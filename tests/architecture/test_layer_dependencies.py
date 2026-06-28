@@ -6,7 +6,7 @@ import ast
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2] / "xerocr"
+ROOT = Path(__file__).resolve().parents[2] / "cinoc"
 DOMAIN = ROOT / "domain"
 FORMATS = ROOT / "formats"
 ALLOWED_EXT = {"pydantic", "pydantic_core", "typing_extensions", "annotated_types"}
@@ -23,7 +23,7 @@ def _imported_modules(path: Path):
                 yield alias.name
         elif isinstance(node, ast.ImportFrom):
             if node.level and node.level > 0:
-                yield "xerocr.domain"
+                yield "cinoc.domain"
             elif node.module:
                 yield node.module
 
@@ -34,7 +34,7 @@ def test_domain_imports_are_pure():
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or mod.startswith("xerocr.domain"):
+            if mod == "cinoc" or mod.startswith("cinoc.domain"):
                 continue
             if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
                 continue
@@ -53,9 +53,9 @@ def test_formats_imports_are_allowed():
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
             if (
-                mod == "xerocr"
-                or mod.startswith("xerocr.domain")
-                or mod.startswith("xerocr.formats")
+                mod == "cinoc"
+                or mod.startswith("cinoc.domain")
+                or mod.startswith("cinoc.formats")
             ):
                 continue
             if mod == "__future__" or top in FORMATS_ALLOWED_EXT or top in STDLIB:
@@ -75,9 +75,9 @@ def test_pipeline_imports_are_allowed():
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
             if (
-                mod == "xerocr"
-                or mod.startswith("xerocr.domain")
-                or mod.startswith("xerocr.pipeline")
+                mod == "cinoc"
+                or mod.startswith("cinoc.domain")
+                or mod.startswith("cinoc.pipeline")
             ):
                 continue
             if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
@@ -92,10 +92,10 @@ def test_pipeline_imports_are_allowed():
 #: ``Module`` Protocol ; elle peut donc parler domain + pipeline + formats, et
 #: ses extras moteur seront ajoutés ici au fil des tranches.
 ADAPTERS_ALLOWED_PKG = (
-    "xerocr.domain",
-    "xerocr.pipeline",
-    "xerocr.formats",
-    "xerocr.adapters",
+    "cinoc.domain",
+    "cinoc.pipeline",
+    "cinoc.formats",
+    "cinoc.adapters",
 )
 #: Libs de moteur autorisées en adapters (ajoutées à la tranche qui les introduit).
 #: ``PIL`` : découpage des blocs (``layout/crop``) du pipeline hybride seg→OCR.
@@ -103,12 +103,13 @@ ADAPTERS_ALLOWED_PKG = (
 #: ``httpcore`` : moteur de transport de ``httpx`` (toujours co-installé), requis
 #: pour l'épinglage d'IP anti-DNS-rebinding (``corpus/_http._PinnedBackend``).
 #: ``datasets`` : import de corpus HuggingFace en streaming (extra ``[huggingface]``,
-#: import paresseux dans ``corpus/huggingface``).
+#: import paresseux dans ``corpus/huggingface``). ``huggingface_hub`` : snapshot
+#: partiel d'un dataset curé publié (même extra, même import paresseux).
 #: ``paddlex`` : segmenteur de mise en page PP-DocLayout (extra ``[segment]``,
 #: import paresseux dans ``layout/pp_doclayout``).
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
-    "datasets", "PIL", "yaml", "paddlex", "kraken",
+    "datasets", "huggingface_hub", "PIL", "yaml", "paddlex", "kraken",
     # Moteurs OCR/HTR locaux in-tree (extras `[pero]`/`[calamari]`, D-078).
     "pero_ocr", "calamari_ocr", "cv2", "numpy",
     # Extracteur d'entités nommées (extra `[ner]`, import paresseux dans
@@ -123,7 +124,7 @@ def test_adapters_imports_are_allowed():
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or any(
+            if mod == "cinoc" or any(
                 mod.startswith(pkg) for pkg in ADAPTERS_ALLOWED_PKG
             ):
                 continue
@@ -149,10 +150,10 @@ def test_evaluation_imports_are_allowed():
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
             if (
-                mod == "xerocr"
-                or mod.startswith("xerocr.domain")
-                or mod.startswith("xerocr.formats")
-                or mod.startswith("xerocr.evaluation")
+                mod == "cinoc"
+                or mod.startswith("cinoc.domain")
+                or mod.startswith("cinoc.formats")
+                or mod.startswith("cinoc.evaluation")
             ):
                 continue
             if mod == "__future__" or top in EVAL_ALLOWED_EXT or top in STDLIB:
@@ -166,14 +167,14 @@ def test_evaluation_imports_are_allowed():
 #: app câble toutes les couches internes (domain..adapters) ; il orchestre, ne
 #: calcule pas. Pas de lib métier directe (métriques/moteurs) — il délègue.
 APP_ALLOWED_PKG = (
-    "xerocr.domain",
-    "xerocr.formats",
-    "xerocr.evaluation",
-    "xerocr.pipeline",
-    "xerocr.adapters",
-    "xerocr.app",
+    "cinoc.domain",
+    "cinoc.formats",
+    "cinoc.evaluation",
+    "cinoc.pipeline",
+    "cinoc.adapters",
+    "cinoc.app",
     # Paquet de **données** (prompts curés), loader pur (stdlib + domain) — leaf.
-    "xerocr.prompts",
+    "cinoc.prompts",
 )
 #: app charge des specs YAML (loader) → ``yaml`` autorisé.
 APP_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
@@ -187,7 +188,7 @@ def test_prompts_imports_are_pure():
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or mod.startswith("xerocr.domain"):
+            if mod == "cinoc" or mod.startswith("cinoc.domain"):
                 continue
             if mod == "__future__" or top in ALLOWED_EXT or top in STDLIB:
                 continue
@@ -203,7 +204,7 @@ def test_app_imports_are_allowed():
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or any(
+            if mod == "cinoc" or any(
                 mod.startswith(pkg) for pkg in APP_ALLOWED_PKG
             ):
                 continue
@@ -222,13 +223,13 @@ REPORTS_ALLOWED_EXT = ALLOWED_EXT | {"yaml"}
 def test_reports_imports_are_allowed():
     """reports lit le RunResult : domain + evaluation seulement (jamais app/
     pipeline/adapters). Pas de data-layer, pas de moteur."""
-    allowed = ("xerocr.domain", "xerocr.evaluation", "xerocr.reports")
+    allowed = ("cinoc.domain", "cinoc.evaluation", "cinoc.reports")
     offenders: dict[str, list[str]] = {}
     for path in (ROOT / "reports").rglob("*.py"):
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
+            if mod == "cinoc" or any(mod.startswith(pkg) for pkg in allowed):
                 continue
             if mod == "__future__" or top in REPORTS_ALLOWED_EXT or top in STDLIB:
                 continue
@@ -246,21 +247,21 @@ INTERFACES_ALLOWED_EXT = ALLOWED_EXT | {"fastapi", "starlette", "uvicorn"}
 def test_interfaces_imports_are_allowed():
     """interfaces = feuille : peut câbler toutes les couches internes."""
     allowed = (
-        "xerocr.domain",
-        "xerocr.formats",
-        "xerocr.evaluation",
-        "xerocr.pipeline",
-        "xerocr.adapters",
-        "xerocr.app",
-        "xerocr.reports",
-        "xerocr.interfaces",
+        "cinoc.domain",
+        "cinoc.formats",
+        "cinoc.evaluation",
+        "cinoc.pipeline",
+        "cinoc.adapters",
+        "cinoc.app",
+        "cinoc.reports",
+        "cinoc.interfaces",
     )
     offenders: dict[str, list[str]] = {}
     for path in (ROOT / "interfaces").rglob("*.py"):
         bad: list[str] = []
         for mod in _imported_modules(path):
             top = mod.split(".")[0]
-            if mod == "xerocr" or any(mod.startswith(pkg) for pkg in allowed):
+            if mod == "cinoc" or any(mod.startswith(pkg) for pkg in allowed):
                 continue
             if mod == "__future__" or top in INTERFACES_ALLOWED_EXT or top in STDLIB:
                 continue

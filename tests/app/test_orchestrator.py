@@ -6,19 +6,19 @@ from pathlib import Path
 
 import pytest
 
-from xerocr.adapters.llm._base import LLMCompletion
-from xerocr.app import run
-from xerocr.app.modules.registry import ModuleRegistry, register_default_modules
-from xerocr.app.orchestrator import OrchestrationError, PipelineOutputs
-from xerocr.domain.artifacts import ArtifactType
-from xerocr.domain.corpus import CorpusSpec
-from xerocr.domain.documents import DocumentRef, GroundTruthRef
-from xerocr.domain.evaluation import EvaluationSpec, EvaluationView
-from xerocr.domain.layout import CanonicalLayout, LayoutPage, Region
-from xerocr.domain.pipeline import PipelineSpec, PipelineStep
-from xerocr.domain.run import RunManifest
-from xerocr.domain.run_spec import RunSpec
-from xerocr.evaluation.result import RunResult
+from cinoc.adapters.llm._base import LLMCompletion
+from cinoc.app import run
+from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
+from cinoc.app.orchestrator import OrchestrationError, PipelineOutputs
+from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.corpus import CorpusSpec
+from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
+from cinoc.domain.layout import CanonicalLayout, LayoutPage, Region
+from cinoc.domain.pipeline import PipelineSpec, PipelineStep
+from cinoc.domain.run import RunManifest
+from cinoc.domain.run_spec import RunSpec
+from cinoc.evaluation.result import RunResult
 
 TEXT_VIEW = EvaluationView(
     name="text",
@@ -229,7 +229,7 @@ def test_pipelines_sharing_a_writer_do_not_contaminate(
     # LLM mocké : renvoie le texte OCR reçu (dernier segment du prompt) → la
     # sortie corrigée diffère par pipeline puisque l'OCR amont diffère.
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai",
+        "cinoc.adapters.llm.openai._invoke_openai",
         lambda *, model, prompt, deadline: LLMCompletion(prompt.rsplit("\n\n", 1)[-1]),
     )
     result = run(
@@ -245,7 +245,7 @@ def test_manifest_captures_module_versions(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai",
+        "cinoc.adapters.llm.openai._invoke_openai",
         lambda *, model, prompt, deadline: LLMCompletion("x"),
     )
     result = run(
@@ -287,13 +287,13 @@ def test_manifest_captures_tesseract_binary_version(
     # Déterminisme (§12) : la version du binaire tesseract atterrit dans le
     # manifeste via le hook de provenance `system_binaries()` (duck-typing).
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "abcd"
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract", lambda **_: "abcd"
     )
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract._invoke_tesseract_confidences", lambda **_: []
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_confidences", lambda **_: []
     )
     monkeypatch.setattr(
-        "xerocr.adapters.ocr.tesseract.tesseract_binary_version",
+        "cinoc.adapters.ocr.tesseract.tesseract_binary_version",
         lambda: "tesseract 5.3.0",
     )
     (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
@@ -380,7 +380,7 @@ def test_run_result_carries_sorted_usage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        "xerocr.adapters.llm.openai._invoke_openai",
+        "cinoc.adapters.llm.openai._invoke_openai",
         lambda *, model, prompt, deadline: LLMCompletion("x", 11, 7),
     )
     result = run(

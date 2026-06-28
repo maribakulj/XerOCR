@@ -8,10 +8,10 @@ aux comptes bruts du moteur, sur des cas aux valeurs dérivées à la main.
 
 from __future__ import annotations
 
-from xerocr.evaluation.context import DocContext
-from xerocr.evaluation.metrics.diacritics import diacritic_error
-from xerocr.evaluation.metrics.philology import mufi_error
-from xerocr.evaluation.preservation import preservation_counts
+from cinoc.evaluation.context import DocContext
+from cinoc.evaluation.metrics.diacritics import diacritic_error
+from cinoc.evaluation.metrics.philology import mufi_error
+from cinoc.evaluation.preservation import preservation_counts
 
 _LONG_S = "ſ"
 _THORN = "þ"

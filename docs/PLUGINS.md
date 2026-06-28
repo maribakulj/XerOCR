@@ -1,6 +1,6 @@
-# Écrire un module XerOCR (plugin tiers)
+# Écrire un module Cinoc (plugin tiers)
 
-XerOCR a **un seul point d'extension** : une **brique de pipeline** (segmenteur,
+Cinoc a **un seul point d'extension** : une **brique de pipeline** (segmenteur,
 OCR/HTR, VLM, post-correcteur LLM, assembleur d'ALTO, ordre de lecture, NER…).
 Tout le reste — métriques, importeurs de corpus, sections de rapport, tests
 statistiques — reste **interne (first-party)**, non extensible. Une seule prise,
@@ -14,8 +14,8 @@ Protocol. Il n'y a **aucune discrimination** de contrat. La seule différence :
 
 | | Socle (first-party) | Plugin (tiers) |
 |---|---|---|
-| Livraison | intégré (`xerocr/adapters/`), enregistré par `register_default_modules` | paquet pip séparé, découvert par entry-points |
-| Dépendance lourde | extra optionnel (`xerocr[kraken]`…) | dépendance du plugin |
+| Livraison | intégré (`cinoc/adapters/`), enregistré par `register_default_modules` | paquet pip séparé, découvert par entry-points |
+| Dépendance lourde | extra optionnel (`cinoc[kraken]`…) | dépendance du plugin |
 | Mode public (Space exposé) | exécutable si dans `PUBLIC_ENGINE_KINDS` (socle gratuit) | **désactivé (fail-closed)** — pas de code tiers in-process |
 
 Autrement dit : « tout est déjà module ». Mettre une brique in-tree ou en plugin
@@ -24,10 +24,10 @@ est un choix de **packaging**, pas de contrat.
 ## Le contrat : `Module` Protocol (couche `pipeline`)
 
 ```python
-from xerocr.domain.artifacts import Artifact, ArtifactType
-from xerocr.pipeline.protocols import ParamValue
-from xerocr.pipeline.run_control import RunControl
-from xerocr.pipeline.types import RunContext, StepOutput
+from cinoc.domain.artifacts import Artifact, ArtifactType
+from cinoc.pipeline.protocols import ParamValue
+from cinoc.pipeline.run_control import RunControl
+from cinoc.pipeline.types import RunContext, StepOutput
 
 
 class MyOCR:
@@ -68,17 +68,17 @@ Garanties (runner ↔ module) : le runner fournit tous les `input_types`, une
 `Deadline` et l'annulation coopérative ; le module renseigne tous ses
 `output_types`, n'avale aucune exception, et lève à l'expiration de la deadline.
 Enveloppez une lib externe pour la traduire vers ce Protocol — **jamais** un
-second contrat interne (la dette que XerOCR abandonne).
+second contrat interne (la dette que Cinoc abandonne).
 
 ## Le builder + l'entry-point
 
 Un **builder** construit l'instance depuis ses kwargs ; le paquet le déclare dans
-le groupe `xerocr.modules` :
+le groupe `cinoc.modules` :
 
 ```python
 # mon_paquet/seg.py
 from collections.abc import Mapping
-from xerocr.pipeline.protocols import Module, ParamValue
+from cinoc.pipeline.protocols import Module, ParamValue
 
 def build_my_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
     return MyOCR(label=str(kwargs["label"]), model=str(kwargs["model"]))
@@ -86,7 +86,7 @@ def build_my_ocr(kwargs: Mapping[str, ParamValue]) -> Module:
 
 ```toml
 # pyproject.toml du plugin
-[project.entry-points."xerocr.modules"]
+[project.entry-points."cinoc.modules"]
 my_ocr = "mon_paquet.seg:build_my_ocr"
 ```
 

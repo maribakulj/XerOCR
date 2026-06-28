@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from xerocr.evaluation.inference import (
+from cinoc.evaluation.inference import (
     MIN_SUPPORT,
     bootstrap_ci,
     inference_analysis,

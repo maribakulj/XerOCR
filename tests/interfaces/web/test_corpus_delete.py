@@ -8,9 +8,9 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from xerocr.app.corpus_upload import CorpusStore
-from xerocr.interfaces.web.app import create_app
-from xerocr.interfaces.web.security.csrf import CSRF_HEADER
+from cinoc.app.corpus_upload import CorpusStore
+from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.security.csrf import CSRF_HEADER
 
 _CSRF = {CSRF_HEADER: "1"}
 _PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32

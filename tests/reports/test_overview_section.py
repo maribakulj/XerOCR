@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from xerocr.domain.run import RunManifest
-from xerocr.evaluation.result import MetricScore, PipelineResult, RunResult
-from xerocr.reports.section import SectionContext
-from xerocr.reports.sections.overview import OverviewSection
+from cinoc.domain.run import RunManifest
+from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
+from cinoc.reports.section import SectionContext
+from cinoc.reports.sections.overview import OverviewSection
 
 FIXED = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -37,7 +37,7 @@ def test_renders_table_with_values() -> None:
     html = OverviewSection().render(_result(0.25), SectionContext())
     assert html is not None
     assert "tesseract" in html
-    assert "0.2500" in html
+    assert "0,2500" in html
     assert "demo" in html
     assert "cer" in html
 
