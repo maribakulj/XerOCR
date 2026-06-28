@@ -1,15 +1,10 @@
-"""Ancrage Phase 1 — char-MER calculé à DEUX endroits doit rester d'accord.
+"""Ancrage char-MER — primitive d'alignement unique (Phase 1 → fusionnée Phase 3.1).
 
-La Phase 3 fusionnera les deux implémentations actuelles du Match Error Rate
-caractère en un seul helper ``char_mer`` :
-
-- ``evaluation.metrics.conformity.cmer`` (métrique de socle, ``Observation``) ;
-- ``evaluation.correction._cmer`` (interne au collecteur de correction).
-
-Ce test **fige les valeurs attendues à la main** sur des paires contrôlées, et
-**vérifie qu'aujourd'hui les deux chemins produisent exactement les mêmes
-nombres**. Après la fusion (Phase 3.1), ``char_mer`` devra reproduire ces valeurs
-au bit près — sinon ce test casse et signale une dérive.
+Le Match Error Rate caractère vivait à DEUX endroits (``metrics/conformity.cmer``
+et ``correction._cmer``). La Phase 3.1 les a fusionnés dans une seule primitive,
+``evaluation._alignment.char_mer``. Ce fichier fige (1) les valeurs canoniques de
+``char_mer`` sur des cas dérivés à la main, et (2) que ``conformity.cmer`` **délègue**
+bien à cette primitive — toute ré-introduction d'un calcul jumeau divergent casse.
 
 Convention (SPEC_HIPE §4.1) : ``value = (S+D+I) / (len(ref) + I)`` ; dénominateur
 ``H+S+D+I`` = ``weight`` ; deux textes vides → ``0.0``.
@@ -19,8 +14,8 @@ from __future__ import annotations
 
 import pytest
 
+from cinoc.evaluation._alignment import char_mer
 from cinoc.evaluation.context import DocContext
-from cinoc.evaluation.correction import _cmer
 from cinoc.evaluation.metrics.conformity import cmer
 
 #: (référence, hypothèse, value attendue, dénominateur attendu, edits attendus).
@@ -36,30 +31,24 @@ _CASES = [
 
 
 @pytest.mark.parametrize(("ref", "hyp", "value", "denom", "edits"), _CASES)
-def test_conformity_cmer_pinned(
+def test_char_mer_pinned(
     ref: str, hyp: str, value: float, denom: int, edits: int
 ) -> None:
-    observation = cmer.fn(DocContext(document_id="d", reference=ref, hypothesis=hyp))
-    assert observation.value == pytest.approx(value)
-    assert observation.weight == denom
-
-
-@pytest.mark.parametrize(("ref", "hyp", "value", "denom", "edits"), _CASES)
-def test_correction_cmer_matches_conformity(
-    ref: str, hyp: str, value: float, denom: int, edits: int
-) -> None:
-    got_value, got_edits, got_denom = _cmer(ref, hyp)
+    got_value, got_edits, got_denom = char_mer(ref, hyp)
     assert got_value == pytest.approx(value)
     assert got_edits == edits
     assert got_denom == denom
 
 
 @pytest.mark.parametrize(("ref", "hyp", "value", "denom", "edits"), _CASES)
-def test_two_implementations_agree(
+def test_conformity_cmer_delegates_to_char_mer(
     ref: str, hyp: str, value: float, denom: int, edits: int
 ) -> None:
-    """Le pin central : conformity.cmer et correction._cmer ne divergent pas."""
+    """La métrique de socle ``cmer`` produit exactement ``char_mer`` (valeur+poids)."""
     observation = cmer.fn(DocContext(document_id="d", reference=ref, hypothesis=hyp))
-    got_value, _got_edits, got_denom = _cmer(ref, hyp)
-    assert observation.value == pytest.approx(got_value)
-    assert observation.weight == got_denom
+    primitive_value, _edits, primitive_denom = char_mer(ref, hyp)
+    assert observation.value == pytest.approx(primitive_value)
+    assert observation.weight == primitive_denom
+    # et ces valeurs sont bien les valeurs canoniques figées
+    assert observation.value == pytest.approx(value)
+    assert observation.weight == denom

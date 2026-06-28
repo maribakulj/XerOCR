@@ -35,6 +35,7 @@ from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef
 from cinoc.domain.evaluation import EvaluationView
+from cinoc.evaluation._alignment import char_counts, char_mer
 from cinoc.evaluation.analysis import (
     Analysis,
     CorrectionPayload,
@@ -62,27 +63,6 @@ _MAX_WORD_SAMPLES = 12
 _MAX_REGRESSIONS = 10
 
 _Outputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
-
-
-def _counts(reference: str, hypothesis: str) -> tuple[int, int, int]:
-    """(substitutions, suppressions, insertions) de l'alignement caractère."""
-    substitutions = deletions = insertions = 0
-    for op in Levenshtein.editops(reference, hypothesis):
-        if op.tag == "replace":
-            substitutions += 1
-        elif op.tag == "delete":
-            deletions += 1
-        else:
-            insertions += 1
-    return substitutions, deletions, insertions
-
-
-def _cmer(reference: str, hypothesis: str) -> tuple[float, int, int]:
-    """``(cmer, edits, dénominateur)`` — dénominateur = H+S+D+I = len(ref)+I."""
-    s, d, i = _counts(reference, hypothesis)
-    total = len(reference) + i
-    edits = s + d + i
-    return (edits / total if total else 0.0), edits, total
 
 
 def _edit_runs(reference: str, hypothesis: str) -> list[int]:
@@ -213,10 +193,10 @@ def _pipeline_correction(
             corrected = ""
         n_documents += 1
 
-        cmer_raw, raw_doc_edits, raw_doc_total = _cmer(reference, raw)
+        cmer_raw, raw_doc_edits, raw_doc_total = char_mer(reference, raw)
         raw_edits += raw_doc_edits
         raw_total += raw_doc_total
-        s, d, i = _counts(reference, corrected)
+        s, d, i = char_counts(reference, corrected)
         sys_edits, sys_denom = s + d + i, len(reference) + i
         cmer_corrected = sys_edits / sys_denom if sys_denom else 0.0
         sys_insertions += i
@@ -250,7 +230,7 @@ def _pipeline_correction(
             max(-1.0, min(1.0, q_sys)) if q_raw == 0 else (q_sys - q_raw) / q_raw
         )
 
-        ccr_doc, edits, total = _cmer(raw, corrected)
+        ccr_doc, edits, total = char_mer(raw, corrected)
         ccr_edits += edits
         ccr_total += total
         if cmer_raw > 0 and ccr_doc / cmer_raw > _OVEREDIT_THRESHOLD:
