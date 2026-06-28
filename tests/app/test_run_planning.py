@@ -72,6 +72,43 @@ def test_ocr_only_pipeline_shape(tmp_path: Path) -> None:
     assert step.output_types == (ArtifactType.RAW_TEXT,)
 
 
+def test_alto_adds_output_type_and_kwarg_ocr_only(tmp_path: Path) -> None:
+    # ``alto`` → l'étape OCR déclare ALTO_XML et le kwarg ``alto`` part au module.
+    build = plan_benchmark_run(
+        (Competitor(engine="tesseract", alto=True),), _corpus(tmp_path), "r"
+    )
+    spec = build(tmp_path)
+    (pipe,) = spec.pipelines
+    (step,) = pipe.steps
+    assert step.output_types == (ArtifactType.RAW_TEXT, ArtifactType.ALTO_XML)
+    assert spec.adapter_kwargs["tesseract:c0"]["alto"] is True
+
+
+def test_alto_in_chain_targets_ocr_step(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", mode="text_only", llm="openai", alto=True)
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    ocr, _llm = pipe.steps
+    assert ocr.output_types == (ArtifactType.RAW_TEXT, ArtifactType.ALTO_XML)
+    assert spec.adapter_kwargs["tesseract:c0"]["alto"] is True
+
+
+def test_alto_absent_by_default(tmp_path: Path) -> None:
+    spec = plan_benchmark_run(
+        (Competitor(engine="tesseract"),), _corpus(tmp_path), "r"
+    )(tmp_path)
+    assert "alto" not in spec.adapter_kwargs["tesseract:c0"]
+
+
+def test_alto_rejected_for_non_tesseract(tmp_path: Path) -> None:
+    with pytest.raises(RunPlanningError, match="ALTO"):
+        plan_benchmark_run(
+            (Competitor(engine="kraken", model="m.mlmodel", alto=True),),
+            _corpus(tmp_path),
+            "r",
+        )
+
+
 def test_text_and_image_passes_image_to_llm(tmp_path: Path) -> None:
     comp = Competitor(engine="tesseract", mode="text_and_image", llm="openai")
     build = plan_benchmark_run((comp,), _corpus(tmp_path), "r")

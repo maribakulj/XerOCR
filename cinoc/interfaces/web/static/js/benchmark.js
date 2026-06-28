@@ -88,6 +88,7 @@
     var draftPromptCurated = document.getElementById("draft-prompt-curated");
     var draftNer = document.getElementById("draft-ner");
     var draftNerModel = document.getElementById("draft-ner-model");
+    var draftAlto = document.getElementById("draft-alto");
     var queueLabels = {
       ocr: queueList.getAttribute("data-label-ocr") || "OCR",
       ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
@@ -247,6 +248,9 @@
         ner && draftNerModel && draftNerModel.value
           ? draftNerModel.value.trim()
           : "";
+      // ALTO : export tesseract uniquement (la case est masquée en zero_shot, sans
+      // étape OCR) ; le serveur refuse l'option avec un autre moteur.
+      var alto = !!(draftAlto && draftAlto.checked) && activeMode !== "zero_shot";
       if (activeMode === "ocr_only") {
         // En OCR seul, `model` = le modèle du moteur (kraken/pero/calamari : path ;
         // mistral_ocr : nom). Tesseract/Google/Azure l'ignorent.
@@ -256,6 +260,7 @@
           model: model,
           ner: ner,
           nerModel: nerModel,
+          alto: alto,
         };
       }
       if (activeMode === "text_only") {
@@ -268,6 +273,7 @@
           promptName: promptName,
           ner: ner,
           nerModel: nerModel,
+          alto: alto,
         };
       }
       if (activeMode === "text_and_image") {
@@ -280,6 +286,7 @@
           promptName: promptName,
           ner: ner,
           nerModel: nerModel,
+          alto: alto,
         };
       }
       return {
@@ -290,6 +297,7 @@
         promptName: promptName,
         ner: ner,
         nerModel: nerModel,
+        alto: false,
       };
     }
 
@@ -307,6 +315,7 @@
           entry.ner = true;
           if (queue[i].nerModel) entry.ner_model = queue[i].nerModel;
         }
+        if (queue[i].alto) entry.alto = true;
         out.push(entry);
       }
       return out;
@@ -351,6 +360,7 @@
           promptName: c.prompt_name || "",
           ner: !!c.ner,
           nerModel: c.ner_model || "",
+          alto: !!c.alto,
         });
       }
       renderQueue();

@@ -33,6 +33,10 @@
         </a>
         <a class="r-zip" href="{{ r.zip_href }}" download
            title="{{ t.download_zip }}">⬇ {{ t.download_zip }}</a>
+        {% if r.alto_href %}
+        <a class="r-zip" href="{{ r.alto_href }}" download
+           title="{{ t.download_alto }}">⬇ {{ t.download_alto }}</a>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

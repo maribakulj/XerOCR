@@ -131,6 +131,15 @@
           <span class="dropzone-meta">{{ t.bench_ner_hint }}</span>
         </label>
 
+        <label class="comp-field comp-field-alto"
+               data-show="ocr_only text_only text_and_image">
+          <span class="comp-label">
+            <input id="draft-alto" type="checkbox">
+            {{ t.bench_alto }}
+          </span>
+          <span class="dropzone-meta">{{ t.bench_alto_hint }}</span>
+        </label>
+
         {# Suggestions canoniques openai/anthropic — peuplée par benchmark.js
            depuis /api/models/{provider} (avec capacité vision). #}
         <datalist id="api-model-list"></datalist>

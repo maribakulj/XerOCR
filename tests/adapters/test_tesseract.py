@@ -155,6 +155,55 @@ def test_execute_writes_confidences_sidecar(
     assert tokens == [{"text": "mot", "confidence": 0.93}]
 
 
+def test_alto_disabled_by_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Sans ``alto`` : pas d'ALTO_XML déclaré ni produit (rétro-compatible).
+    _mock_ocr(monkeypatch, "mot")
+    adapter = TesseractAdapter(label="fra", lang="fra")
+    assert ArtifactType.ALTO_XML not in adapter.output_types
+    out = adapter.execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    assert ArtifactType.ALTO_XML not in out.artifacts
+
+
+def test_alto_emits_artifact(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # ``alto=True`` : un artefact ALTO_XML est déclaré et produit (octets fidèles).
+    _mock_ocr(monkeypatch, "mot")
+    monkeypatch.setattr(
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_alto",
+        lambda **_: b"<alto>geom</alto>",
+    )
+    adapter = TesseractAdapter(label="fra", lang="fra", alto=True)
+    assert ArtifactType.ALTO_XML in adapter.output_types
+    out = adapter.execute(
+        {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+    )
+    alto = out.artifacts[ArtifactType.ALTO_XML]
+    assert alto.type == ArtifactType.ALTO_XML
+    assert alto.uri is not None and alto.uri.endswith(".alto.xml")
+    assert Path(alto.uri).read_bytes() == b"<alto>geom</alto>"
+    assert alto.content_hash is not None
+
+
+def test_alto_failure_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    # ALTO = livrable demandé : un échec lève (≠ confidences best-effort).
+    _mock_ocr(monkeypatch, "mot")
+
+    def boom(**_: object) -> bytes:
+        raise AdapterStepError("alto cassé")
+
+    monkeypatch.setattr(
+        "cinoc.adapters.ocr.tesseract._invoke_tesseract_alto", boom
+    )
+    adapter = TesseractAdapter(label="fra", lang="fra", alto=True)
+    with pytest.raises(AdapterStepError):
+        adapter.execute(
+            {ArtifactType.IMAGE: _image(tmp_path)}, {}, _ctx(tmp_path), RunControl()
+        )
+
+
 def test_confidences_failure_degrades_to_empty_sidecar(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

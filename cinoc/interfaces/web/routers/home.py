@@ -28,6 +28,7 @@ from cinoc.adapters.corpus.huggingface import (
 )
 from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
 from cinoc.app import resolve_code_version
+from cinoc.app.alto_store import AltoStore
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.engines import (
     EngineStatus,
@@ -173,6 +174,7 @@ def build_home_router(
     corpus_store: CorpusStore | None = None,
     curated_author: str | None = None,
     public_mode: bool = False,
+    alto_store: AltoStore | None = None,
 ) -> APIRouter:
     """Construit le routeur des vues de la coquille (monté par ``create_app``)."""
     router = APIRouter()
@@ -224,6 +226,13 @@ def build_home_router(
                 "name": name,
                 "href": f"/reports/{quote(name, safe='')}",
                 "zip_href": f"/reports/{quote(name, safe='')}/bundle.zip",
+                # Lien ALTO présent seulement si le run a produit un export (sinon
+                # l'endpoint répondrait 404) → pas de bouton mort dans la liste.
+                "alto_href": (
+                    f"/reports/{quote(name, safe='')}/alto.zip"
+                    if alto_store is not None and alto_store.has(name)
+                    else None
+                ),
             }
             for name in names
         ]

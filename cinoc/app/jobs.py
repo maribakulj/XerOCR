@@ -17,20 +17,21 @@ from __future__ import annotations
 
 import logging
 import threading
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from cinoc.adapters.storage.history_store import HistoryStore
 from cinoc.adapters.storage.job_store import JobState, JobStore
 from cinoc.adapters.storage.publisher import NoopPublisher, ResultPublisher
+from cinoc.app.alto_store import AltoStore
 from cinoc.app.history import record_run
 from cinoc.app.modules.registry import ModuleRegistry
 from cinoc.app.orchestrator import PipelineOutputs
 from cinoc.app.orchestrator import run as run_orchestrator
 from cinoc.app.results import dump_run_result
 from cinoc.app.segmentation import SegmentationStore
-from cinoc.domain.artifacts import ArtifactType
+from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.errors import CinocError, RunCancelledError
 from cinoc.domain.layout import CanonicalLayout
 from cinoc.domain.run import RunManifest
@@ -58,6 +59,7 @@ class JobRunner:
         publisher: ResultPublisher | None = None,
         history_store: HistoryStore | None = None,
         segmentation_store: SegmentationStore | None = None,
+        alto_store: AltoStore | None = None,
     ) -> None:
         self._store = store
         self._registry = registry
@@ -72,6 +74,9 @@ class JobRunner:
         #: Segmentation : persiste les ``LAYOUT`` produits pour /segmentation.
         #: ``None`` → pas de persistance de mise en page (rétro-compatible).
         self._segmentation = segmentation_store
+        #: Export ALTO : persiste les ``ALTO_XML`` produits (téléchargeables par
+        #: run). ``None`` → pas d'export ALTO (rétro-compatible).
+        self._alto = alto_store
         self._controls: dict[str, RunControl] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._lock = threading.Lock()
@@ -132,7 +137,7 @@ class JobRunner:
                     registry=self._registry,
                     code_version=self._code_version,
                     control=control,
-                    artifact_sink=self._persist_layouts,
+                    artifact_sink=self._persist_artifacts,
                     on_progress=_on_progress,
                 )
                 self._reports_dir.mkdir(parents=True, exist_ok=True)
@@ -160,31 +165,66 @@ class JobRunner:
                 published_url=published_url,
             )
 
-    def _persist_layouts(
+    def _persist_artifacts(
         self, outputs: PipelineOutputs, manifest: RunManifest
     ) -> None:
-        """Sink LAYOUT (best-effort) : persiste chaque mise en page produite dans
-        le ``SegmentationStore`` pour que ``/segmentation`` visualise les runs
-        réels. Un seul exécuteur : la géométrie est un **artefact du run**, pas un
-        second chemin. Sans store, ou run sans LAYOUT → no-op. Un échec n'abat pas
-        le run (son ``RunResult`` est l'output ; la viz est secondaire)."""
-        if self._segmentation is None:
-            return
+        """Sink des artefacts durables (best-effort) : ``LAYOUT`` (→ segmentation)
+        et ``ALTO_XML`` (→ export téléchargeable). Un seul exécuteur : ces artefacts
+        sont produits par le run et le workspace temporaire les détruit — on les
+        capte ici avant nettoyage. Sans store dédié, ou run sans l'artefact → no-op.
+        Un échec n'abat pas le run (son ``RunResult`` est l'output)."""
         for pipeline_name, per_document in outputs.items():
             for document_id, artifacts in per_document.items():
-                layout_art = artifacts.get(ArtifactType.LAYOUT)
-                if layout_art is None or layout_art.uri is None:
-                    continue
-                try:
-                    layout = CanonicalLayout.model_validate_json(
-                        Path(layout_art.uri).read_bytes()
-                    )
-                    self._segmentation.save(layout)
-                except (OSError, ValueError) as exc:
-                    logger.warning(
-                        "[jobs] persistance LAYOUT (%s/%s) échouée : %s",
-                        pipeline_name, document_id, exc,
-                    )
+                self._persist_layout(pipeline_name, document_id, artifacts)
+                self._persist_alto(
+                    manifest.run_id, pipeline_name, document_id, artifacts
+                )
+
+    def _persist_layout(
+        self,
+        pipeline_name: str,
+        document_id: str,
+        artifacts: Mapping[ArtifactType, Artifact],
+    ) -> None:
+        """Persiste un ``LAYOUT`` produit dans le ``SegmentationStore`` (viz)."""
+        if self._segmentation is None:
+            return
+        layout_art = artifacts.get(ArtifactType.LAYOUT)
+        if layout_art is None or layout_art.uri is None:
+            return
+        try:
+            layout = CanonicalLayout.model_validate_json(
+                Path(layout_art.uri).read_bytes()
+            )
+            self._segmentation.save(layout)
+        except (OSError, ValueError) as exc:
+            logger.warning(
+                "[jobs] persistance LAYOUT (%s/%s) échouée : %s",
+                pipeline_name, document_id, exc,
+            )
+
+    def _persist_alto(
+        self,
+        run_id: str,
+        pipeline_name: str,
+        document_id: str,
+        artifacts: Mapping[ArtifactType, Artifact],
+    ) -> None:
+        """Persiste un ``ALTO_XML`` produit dans l'``AltoStore`` (export par run)."""
+        if self._alto is None:
+            return
+        alto_art = artifacts.get(ArtifactType.ALTO_XML)
+        if alto_art is None or alto_art.uri is None:
+            return
+        try:
+            self._alto.save(
+                run_id, document_id, pipeline_name, Path(alto_art.uri).read_bytes()
+            )
+        except OSError as exc:
+            logger.warning(
+                "[jobs] persistance ALTO (%s/%s) échouée : %s",
+                pipeline_name, document_id, exc,
+            )
 
     def _record_safe(self, result: RunResult) -> None:
         """Enregistre le run dans l'historique (best-effort) : un échec d'écriture

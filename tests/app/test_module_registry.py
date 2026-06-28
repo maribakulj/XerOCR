@@ -53,6 +53,13 @@ def test_builds_tesseract_module() -> None:
     assert module.name == "tesseract:fra"
 
 
+def test_tesseract_alto_kwarg_enables_alto_output() -> None:
+    plain = _registry().build("tesseract:fra", {"label": "fra"})
+    assert ArtifactType.ALTO_XML not in plain.output_types
+    with_alto = _registry().build("tesseract:fra", {"label": "fra", "alto": True})
+    assert ArtifactType.ALTO_XML in with_alto.output_types
+
+
 def test_builds_pero_and_calamari_modules() -> None:
     pero = _registry().build("pero:c0", {"label": "c0", "model": "config.ini"})
     assert pero.name == "pero:c0"

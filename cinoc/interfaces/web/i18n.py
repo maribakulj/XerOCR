@@ -34,6 +34,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_empty": "aucun rapport disponible pour l'instant.",
         "open_report": "Ouvrir",
         "download_zip": "Télécharger (ZIP)",
+        "download_alto": "Télécharger l'ALTO (ZIP)",
         # Banc d'essai (lanceur interactif)
         "bench_eyebrow": "Banc d'essai · comparer",
         "bench_title": "Banc d'essai",
@@ -77,6 +78,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_ner_model_ph": "modèle spaCy (défaut fr_core_news_sm)",
         "bench_ner_hint": "Ajoute une étape NER en fin de pipeline ; scorée "
         "(F1) si le corpus porte une vérité-terrain d'entités.",
+        "bench_alto": "Exporter l'ALTO (XML)",
+        "bench_alto_hint": "Tesseract uniquement : produit un ALTO XML par "
+        "document (géométrie + texte), téléchargeable depuis le rapport — "
+        "ré-importable dans eScriptorium ou Transkribus.",
         "bench_normalization": "Normalisation",
         "bench_norm_preview": "Aperçu de normalisation",
         "bench_norm_sample_ph": "Colle un échantillon de texte pour voir l'effet…",
@@ -265,6 +270,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "reports_empty": "no report available yet.",
         "open_report": "Open",
         "download_zip": "Download (ZIP)",
+        "download_alto": "Download ALTO (ZIP)",
         "bench_eyebrow": "Benchmark · compare",
         "bench_title": "Benchmark",
         "bench_desc": "Compose competitors (OCR, OCR→LLM, VLM) and compare them "
@@ -307,6 +313,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_ner_model_ph": "spaCy model (default fr_core_news_sm)",
         "bench_ner_hint": "Adds a NER step at the end of the pipeline; scored "
         "(F1) if the corpus carries an entity ground truth.",
+        "bench_alto": "Export ALTO (XML)",
+        "bench_alto_hint": "Tesseract only: produces one ALTO XML per document "
+        "(geometry + text), downloadable from the report — re-importable into "
+        "eScriptorium or Transkribus.",
         "bench_normalization": "Normalization",
         "bench_norm_preview": "Normalization preview",
         "bench_norm_sample_ph": "Paste a text sample to see the effect…",

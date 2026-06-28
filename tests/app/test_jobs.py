@@ -347,3 +347,97 @@ def test_run_without_segmentation_store_still_done(tmp_path: Path) -> None:
     assert runner.join(job_id, timeout=30)
     job = runner.store.get(job_id)
     assert job is not None and job.state is JobState.DONE
+
+
+# --- Sink ALTO_XML → AltoStore -------------------------------------------------
+
+class _AltoModule:
+    """Module de test qui produit un artefact ALTO_XML écrit dans le workspace."""
+
+    name = "alto:test"
+    version = "1.0"
+    input_types = frozenset({ArtifactType.IMAGE})
+    output_types = frozenset({ArtifactType.ALTO_XML})
+
+    def execute(
+        self,
+        inputs: dict[ArtifactType, Artifact],
+        params: dict[str, ParamValue],
+        context: RunContext,
+        control: RunControl,
+    ) -> StepOutput:
+        assert context.workspace_uri is not None
+        path = Path(context.workspace_uri) / f"{context.document_id}.alto.xml"
+        path.write_bytes(b"<alto>hello</alto>")
+        return StepOutput(
+            artifacts={
+                ArtifactType.ALTO_XML: Artifact(
+                    id=f"{context.document_id}:alto:test:alto_xml",
+                    document_id=context.document_id,
+                    type=ArtifactType.ALTO_XML,
+                    uri=str(path),
+                )
+            }
+        )
+
+
+def _alto_build(ws: Path) -> RunSpec:
+    image = ws / "doc1.png"
+    image.write_bytes(b"\x89PNG stub")
+    step = PipelineStep(
+        id="ocr", kind="ocr", adapter_name="alto:test",
+        input_types=(ArtifactType.IMAGE,), output_types=(ArtifactType.ALTO_XML,),
+    )
+    return RunSpec(
+        corpus=CorpusSpec(
+            name="c", documents=(DocumentRef(id="doc1", image_uri=str(image)),)
+        ),
+        pipelines=(
+            PipelineSpec(
+                name="ocr", initial_inputs=(ArtifactType.IMAGE,), steps=(step,)
+            ),
+        ),
+        evaluation=EvaluationSpec(views=()),
+        run_id="alto-run",
+    )
+
+
+def test_run_persists_alto_to_alto_store(tmp_path: Path) -> None:
+    from cinoc.app.alto_store import AltoStore
+
+    alto = AltoStore(tmp_path / "alto")
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    registry.register_builder("alto", lambda _kwargs: _AltoModule())
+    runner = JobRunner(
+        store=JobStore(), registry=registry, reports_dir=tmp_path,
+        code_version="1.0", alto_store=alto,
+    )
+    job_id = runner.launch(_alto_build)
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE
+    # le run_id est celui du manifeste (alto-run) → l'archive existe et porte l'XML
+    assert alto.has("alto-run")
+    archive = alto.archive("alto-run")
+    assert archive is not None
+    import io
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(archive)) as z:
+        names = z.namelist()
+        assert names and z.read(names[0]) == b"<alto>hello</alto>"
+
+
+def test_run_without_alto_store_still_done(tmp_path: Path) -> None:
+    # Sink optionnel : sans store, un run produisant un ALTO_XML aboutit quand même.
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    registry.register_builder("alto", lambda _kwargs: _AltoModule())
+    runner = JobRunner(
+        store=JobStore(), registry=registry, reports_dir=tmp_path, code_version="1.0"
+    )
+    job_id = runner.launch(_alto_build)
+    assert runner.join(job_id, timeout=30)
+    job = runner.store.get(job_id)
+    assert job is not None and job.state is JobState.DONE

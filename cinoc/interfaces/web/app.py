@@ -28,6 +28,7 @@ from cinoc.adapters.storage import JobStore
 from cinoc.adapters.storage.history_store import HistoryStore
 from cinoc.adapters.storage.publisher import resolve_publisher
 from cinoc.app import resolve_code_version
+from cinoc.app.alto_store import AltoStore
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.data_dir import resolve_data_dir
 from cinoc.app.engines import (
@@ -210,6 +211,10 @@ def create_app(
     demo_seg_id = seg_store.save(
         demo_layout(), image_ext=".png", image_bytes=demo_page_image()
     )
+    # Export ALTO : un store disque par application, indexé par run_id. Le sink du
+    # runner y dépose les ``ALTO_XML`` produits ; le routeur des rapports les
+    # rezippe à la demande (téléchargement par run).
+    alto_store = AltoStore(Path(tempfile.mkdtemp(prefix="cinoc-alto-")))
     runner = JobRunner(
         store=JobStore(),
         registry=registry,
@@ -220,6 +225,7 @@ def create_app(
         publisher=resolve_publisher(),
         history_store=history_store,
         segmentation_store=seg_store,
+        alto_store=alto_store,
     )
     corpus_store = CorpusStore(_resolve_uploads_dir(uploads_dir))
 
@@ -252,9 +258,10 @@ def create_app(
             corpus_store=corpus_store,
             curated_author=os.environ.get(HF_AUTHOR_ENV, "").strip() or None,
             public_mode=is_public,
+            alto_store=alto_store,
         )
     )
-    app.include_router(build_reports_router(runtime_dir))
+    app.include_router(build_reports_router(runtime_dir, alto_store=alto_store))
     app.include_router(
         build_segmentation_router(
             seg_store,

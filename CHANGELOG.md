@@ -31,6 +31,9 @@ architecture 8 couches, surface fonctionnelle complétée incrémentalement.
   l'affichage, couches machine en point).
 - **Saveurs de rapport** : fichier unique (images inline), dossier/ZIP (images
   séparées), références IIIF/HF (images chargées depuis HuggingFace).
+- **Export ALTO XML** (Tesseract) : option *Exporter l'ALTO* au lanceur →
+  un ALTO par document (géométrie + texte), téléchargeable depuis le rapport
+  (`alto.zip`) — ré-importable dans eScriptorium ou Transkribus.
 - **Bibliothèque de corpus** : upload ZIP, imports IIIF / Gallica /
   eScriptorium / HuggingFace, datasets curés Cinoc (import + découverte
   automatique par compte + tag).

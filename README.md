@@ -112,6 +112,10 @@ localisés (virgule en français) ; les couches **machine** (export JSON/CSV,
 `data-sort`) restent en point — pour toute consommation par un outil, utiliser
 l'export JSON.
 
+**Export ALTO** : avec l'option *Exporter l'ALTO* (Tesseract), chaque document
+produit un ALTO XML (géométrie + texte) téléchargeable depuis le rapport
+(`alto.zip`) — ré-importable dans eScriptorium ou Transkribus pour relecture.
+
 ## Interface web / Space
 
 ```bash

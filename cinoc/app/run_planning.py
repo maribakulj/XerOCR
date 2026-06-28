@@ -100,6 +100,11 @@ class Competitor(BaseModel):
     #: Modèle spaCy de l'étape NER (défaut ``fr_core_news_sm``). Ignoré si
     #: ``ner`` est ``False``.
     ner_model: str | None = Field(default=None, max_length=128)
+    #: Demande l'export **ALTO XML** (géométrie + texte par mot) de l'étape OCR —
+    #: la forme ré-importable dans un outil de relecture (eScriptorium, Transkribus).
+    #: Réservé à ``tesseract`` (seul moteur du socle à émettre de l'ALTO natif) ;
+    #: demandé avec un autre moteur → ``RunPlanningError``. ``False`` par défaut.
+    alto: bool = False
 
 
 #: Types de candidat scorés par toute vue benchmark : ``RAW_TEXT`` (OCR/zero-shot)
@@ -336,6 +341,18 @@ def _pipeline_for_competitor(
     ses propres instances de modules — pas de collision entre concurrents.
     """
     suffix = f"c{index}"
+    # ALTO natif : réservé à tesseract (seul moteur du socle qui l'émet). Refusé
+    # AVANT le dispatch de mode → message clair, jamais un export muet ignoré.
+    if comp.alto and comp.engine != "tesseract":
+        raise RunPlanningError(
+            f"export ALTO : réservé à tesseract, pas à {comp.engine!r}."
+        )
+    # Types de sortie de l'étape OCR tesseract : ``RAW_TEXT`` + ``ALTO_XML`` si export.
+    ocr_outputs: tuple[ArtifactType, ...] = (
+        (ArtifactType.RAW_TEXT, ArtifactType.ALTO_XML)
+        if comp.alto
+        else (ArtifactType.RAW_TEXT,)
+    )
     if comp.mode is None:
         if comp.engine not in _OCR_ENGINES:
             raise RunPlanningError(f"OCR seul : moteur non câblé : {comp.engine!r}.")
@@ -347,12 +364,14 @@ def _pipeline_for_competitor(
             kind="ocr",
             adapter_name=name,
             input_types=(ArtifactType.IMAGE,),
-            output_types=(ArtifactType.RAW_TEXT,),
+            output_types=ocr_outputs,
         )
         steps: list[PipelineStep] = [step]
         ocr_kwargs: dict[str, dict[str, str | int | float | bool]] = {
             name: {"label": suffix, "lang": comp.lang}
         }
+        if comp.alto:
+            ocr_kwargs[name]["alto"] = True
         # En OCR seul, ``model`` est le **modèle du moteur** (chemin .mlmodel
         # kraken, config PERO, checkpoint Calamari, nom Mistral OCR) — requis par
         # ces moteurs. Tesseract/Google/Azure ignorent ce kwarg. (En chaîne,
@@ -419,7 +438,7 @@ def _pipeline_for_competitor(
         kind="ocr",
         adapter_name=ocr_name,
         input_types=(ArtifactType.IMAGE,),
-        output_types=(ArtifactType.RAW_TEXT,),
+        output_types=ocr_outputs,
     )
     llm_inputs: tuple[ArtifactType, ...]
     inputs_from: dict[ArtifactType, str]
@@ -445,6 +464,8 @@ def _pipeline_for_competitor(
         ocr_name: {"label": suffix, "lang": comp.lang},
         llm_name: _llm_kwargs(suffix, comp, comp.mode),
     }
+    if comp.alto:
+        kwargs[ocr_name]["alto"] = True
     if comp.ner:
         chain_steps.append(_ner_step(suffix, ArtifactType.CORRECTED_TEXT, "llm"))
         kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)

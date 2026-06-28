@@ -11,7 +11,13 @@ est borné par la ``Deadline`` (un sous-processus figé ne doit pas geler le run
 Les **confidences** par mot (TSV natif, 0-100 → [0,1]) sont écrites en
 sidecar JSON (``ConfidenceToken``) et publiées comme artefact ``CONFIDENCES``
 — best-effort : un échec d'extraction dégrade en sidecar vide, jamais en
-panne de l'OCR. ALTO natif reste différé (pas de consommateur).
+panne de l'OCR.
+
+**ALTO natif** (``alto=True``) : Tesseract émet en plus un artefact
+``ALTO_XML`` (géométrie + texte par mot, ``image_to_alto_xml``) — la forme
+ré-importable dans un outil de relecture (eScriptorium, Transkribus). Contrairement
+aux confidences, l'ALTO est ici le **livrable demandé** : un échec d'émission lève
+(``AdapterStepError``), il ne dégrade pas en silence.
 """
 
 from __future__ import annotations
@@ -100,6 +106,38 @@ def _invoke_tesseract(  # pragma: no cover -- binaire requis (cf. marqueur 'live
     return str(text).strip()
 
 
+def _invoke_tesseract_alto(  # pragma: no cover -- binaire requis ('live')
+    *, image_path: str, lang: str, psm: int, oem: int, timeout: float
+) -> bytes:
+    """ALTO XML natif via ``image_to_alto_xml`` (géométrie + texte par mot).
+
+    Renvoie les octets XML bruts (déjà conformes ALTO) — destinés à la
+    ré-importation dans un outil de relecture. Une panne du binaire lève
+    ``AdapterStepError`` : l'ALTO est le livrable demandé, pas un extra dégradable.
+    """
+    try:
+        import pytesseract  # type: ignore[import-not-found, import-untyped]
+    except ImportError as exc:
+        raise AdapterStepError(
+            "tesseract : pytesseract non installé "
+            "(pip install 'cinoc[tesseract]' + binaire tesseract)."
+        ) from exc
+    try:
+        xml = pytesseract.image_to_alto_xml(
+            image_path, lang=lang, config=f"--oem {oem} --psm {psm}", timeout=timeout
+        )
+    except (
+        pytesseract.TesseractNotFoundError,
+        pytesseract.TesseractError,
+        RuntimeError,
+    ) as exc:
+        raise AdapterStepError(
+            f"tesseract ALTO a échoué sur {image_path!r} : "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
+    return bytes(xml)
+
+
 def _invoke_tesseract_confidences(  # pragma: no cover -- binaire requis ('live')
     *, image_path: str, lang: str, psm: int, oem: int, timeout: float
 ) -> list[ConfidenceToken]:
@@ -130,7 +168,13 @@ class TesseractAdapter:
     """OCR Tesseract 5 ; écrit le texte dans le workspace, renvoie un ``RAW_TEXT``."""
 
     def __init__(
-        self, *, label: str, lang: str = "fra", psm: int = 6, oem: int = 3
+        self,
+        *,
+        label: str,
+        lang: str = "fra",
+        psm: int = 6,
+        oem: int = 3,
+        alto: bool = False,
     ) -> None:
         if not label or not all(c.isalnum() or c in "_-" for c in label):
             raise AdapterStepError(
@@ -150,6 +194,8 @@ class TesseractAdapter:
         self._lang = lang
         self._psm = psm
         self._oem = oem
+        #: Émet en plus un artefact ``ALTO_XML`` (ré-import eScriptorium/Transkribus).
+        self._alto = alto
 
     @property
     def name(self) -> str:
@@ -176,7 +222,10 @@ class TesseractAdapter:
 
     @property
     def output_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.RAW_TEXT, ArtifactType.CONFIDENCES})
+        types = {ArtifactType.RAW_TEXT, ArtifactType.CONFIDENCES}
+        if self._alto:
+            types.add(ArtifactType.ALTO_XML)
+        return frozenset(types)
 
     def execute(
         self,
@@ -238,24 +287,46 @@ class TesseractAdapter:
             "confidences.json",
         )
         sidecar_path.write_bytes(sidecar)
-        return StepOutput(
-            artifacts={
-                ArtifactType.RAW_TEXT: Artifact(
-                    id=f"{context.document_id}:{self.name}:raw_text",
-                    document_id=context.document_id,
-                    type=ArtifactType.RAW_TEXT,
-                    uri=str(output_path),
-                    content_hash=compute_content_hash(text.encode("utf-8")),
-                ),
-                ArtifactType.CONFIDENCES: Artifact(
-                    id=f"{context.document_id}:{self.name}:confidences",
-                    document_id=context.document_id,
-                    type=ArtifactType.CONFIDENCES,
-                    uri=str(sidecar_path),
-                    content_hash=compute_content_hash(sidecar),
-                ),
-            }
-        )
+        artifacts: dict[ArtifactType, Artifact] = {
+            ArtifactType.RAW_TEXT: Artifact(
+                id=f"{context.document_id}:{self.name}:raw_text",
+                document_id=context.document_id,
+                type=ArtifactType.RAW_TEXT,
+                uri=str(output_path),
+                content_hash=compute_content_hash(text.encode("utf-8")),
+            ),
+            ArtifactType.CONFIDENCES: Artifact(
+                id=f"{context.document_id}:{self.name}:confidences",
+                document_id=context.document_id,
+                type=ArtifactType.CONFIDENCES,
+                uri=str(sidecar_path),
+                content_hash=compute_content_hash(sidecar),
+            ),
+        }
+        if self._alto:
+            # ALTO demandé → livrable : un échec lève (≠ confidences best-effort).
+            alto_bytes = _invoke_tesseract_alto(
+                image_path=image.uri,
+                lang=self._lang,
+                psm=self._psm,
+                oem=self._oem,
+                timeout=timeout,
+            )
+            alto_path = workspace_artifact_path(
+                context.workspace_uri,
+                context.document_id,
+                self._label,
+                "alto.xml",
+            )
+            alto_path.write_bytes(alto_bytes)
+            artifacts[ArtifactType.ALTO_XML] = Artifact(
+                id=f"{context.document_id}:{self.name}:alto_xml",
+                document_id=context.document_id,
+                type=ArtifactType.ALTO_XML,
+                uri=str(alto_path),
+                content_hash=compute_content_hash(alto_bytes),
+            )
+        return StepOutput(artifacts=artifacts)
 
 
 __all__ = ["TesseractAdapter", "tesseract_binary_version"]

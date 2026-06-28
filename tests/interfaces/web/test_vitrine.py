@@ -111,6 +111,49 @@ def test_report_bundle_traversal_is_blocked(tmp_path: Path) -> None:
     assert resp.status_code != 200
 
 
+def test_alto_archive_404_without_export(tmp_path: Path) -> None:
+    # Run sans export ALTO → l'endpoint répond 404 (pas d'archive vide).
+    _write_report(tmp_path, "run1")
+    assert _client(tmp_path).get("/reports/run1/alto.zip").status_code == 404
+
+
+def test_alto_archive_downloads_when_present(tmp_path: Path) -> None:
+    import io
+    import zipfile
+
+    from fastapi import FastAPI
+
+    from cinoc.app.alto_store import AltoStore
+    from cinoc.interfaces.web.routers.reports import build_reports_router
+
+    _write_report(tmp_path, "run1")
+    store = AltoStore(tmp_path / "alto")
+    store.save("run1", "doc-a", "tesseract", b"<alto>A</alto>")
+    app = FastAPI()
+    app.include_router(build_reports_router(tmp_path, alto_store=store))
+    resp = TestClient(app).get("/reports/run1/alto.zip")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/zip"
+    assert 'filename="run1-alto.zip"' in resp.headers["content-disposition"]
+    with zipfile.ZipFile(io.BytesIO(resp.content)) as archive:
+        names = archive.namelist()
+        assert names and all(n.endswith(".alto.xml") for n in names)
+        assert archive.read(names[0]) == b"<alto>A</alto>"
+
+
+def test_alto_archive_unknown_report_is_404(tmp_path: Path) -> None:
+    from fastapi import FastAPI
+
+    from cinoc.app.alto_store import AltoStore
+    from cinoc.interfaces.web.routers.reports import build_reports_router
+
+    app = FastAPI()
+    app.include_router(
+        build_reports_router(tmp_path, alto_store=AltoStore(tmp_path / "alto"))
+    )
+    assert TestClient(app).get("/reports/nope/alto.zip").status_code == 404
+
+
 def test_home_lists_and_links_reports(tmp_path: Path) -> None:
     _write_report(tmp_path, "run1")
     resp = _client(tmp_path).get("/")
@@ -119,6 +162,8 @@ def test_home_lists_and_links_reports(tmp_path: Path) -> None:
     assert 'href="/reports/run1"' in resp.text
     # lien de téléchargement ZIP (saveur dossier) à côté de chaque rapport
     assert 'href="/reports/run1/bundle.zip"' in resp.text
+    # pas d'export ALTO pour ce run → pas de lien ALTO mort
+    assert "/reports/run1/alto.zip" not in resp.text
 
 
 def test_home_empty_when_no_reports(tmp_path: Path) -> None:

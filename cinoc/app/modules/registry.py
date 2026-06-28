@@ -162,6 +162,7 @@ def _build_tesseract(kwargs: Mapping[str, ParamValue]) -> Module:
         lang=str(kwargs.get("lang", "fra")),
         psm=int(kwargs.get("psm", 6)),
         oem=int(kwargs.get("oem", 3)),
+        alto=bool(kwargs.get("alto", False)),
     )
 
 
