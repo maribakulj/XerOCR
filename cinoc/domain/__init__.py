@@ -15,7 +15,6 @@ agrègent des objets de couches plus externes (``evaluation``,
 
 from __future__ import annotations
 
-from cinoc.domain.artifact_key import ArtifactKey
 from cinoc.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from cinoc.domain.confidence import ConfidenceToken
 from cinoc.domain.corpus import CorpusSpec
@@ -47,7 +46,6 @@ __all__ = [
     "Artifact",
     "ArtifactType",
     "compute_content_hash",
-    "ArtifactKey",
     # Corpus + documents
     "CorpusSpec",
     "DocumentRef",
