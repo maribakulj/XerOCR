@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from cinoc.adapters._resilience import call_resilient
 from cinoc.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -80,7 +81,14 @@ def _openai_client(  # pragma: no cover -- réseau + clé API (cf. marqueur 'liv
         kwargs["timeout"] = timeout
     try:
         # SDK openai typé strictement ; kwargs valides à l'exécution (tests live).
-        response = OpenAI(api_key=api_key).chat.completions.create(**kwargs)  # type: ignore[call-overload]
+        client = OpenAI(api_key=api_key)
+
+        def _create() -> Any:
+            return client.chat.completions.create(**kwargs)  # type: ignore[call-overload]
+
+        # Cap de concurrence (≤ N appels OpenAI simultanés) + retry borné sur
+        # 429/5xx (Retry-After respecté) — par défaut, sans configuration UI.
+        response = call_resilient("openai", _create)
     except OpenAIError as exc:
         raise AdapterStepError(
             f"openai a échoué ({model}) : {type(exc).__name__}: {exc}"

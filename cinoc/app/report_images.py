@@ -21,7 +21,7 @@ from __future__ import annotations
 import io
 import tempfile
 import zipfile
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol
 
@@ -122,12 +122,16 @@ def _build_sidecar(
     max_px: int,
     suffix: str,
     max_docs: int | None,
-    resolve: Callable[[str, Path, str], str | None],
 ) -> dict[str, str]:
+    """``{document_id: href relatif}`` ; écrit un dérivé JPEG par document image.
+
+    Les deux saveurs (vignette / fac-similé) ne diffèrent que par ``max_px`` et
+    ``suffix`` — la résolution (``thumbnail_to_file``) est la même, appelée
+    directement (pas d'indirection ``resolve``)."""
     out: dict[str, str] = {}
     for doc_id, ref in _ordered_refs(result, max_docs=max_docs):
         stem = safe_stem(doc_id, suffix=suffix, fallback="doc")
-        href = resolve(ref, assets_dir, stem)
+        href = thumbnail_to_file(ref, assets_dir, stem, max_px=max_px)
         if href is not None:
             out[doc_id] = href
     return out
@@ -150,9 +154,6 @@ def build_sidecar_thumbnails(
         max_px=max_px,
         suffix="",
         max_docs=max_docs,
-        resolve=lambda ref, folder, stem: thumbnail_to_file(
-            ref, folder, stem, max_px=max_px
-        ),
     )
 
 
@@ -170,9 +171,6 @@ def build_sidecar_facsimiles(
         max_px=max_px,
         suffix=_FACSIMILE_SUFFIX,
         max_docs=max_docs,
-        resolve=lambda ref, folder, stem: thumbnail_to_file(
-            ref, folder, stem, max_px=max_px
-        ),
     )
 
 

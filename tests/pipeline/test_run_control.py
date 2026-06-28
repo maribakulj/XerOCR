@@ -13,7 +13,6 @@ from cinoc.pipeline.run_control import RunControl
 def test_not_cancelled_by_default() -> None:
     c = RunControl()
     assert c.is_cancelled() is False
-    assert c.cancel_triggered is False
     c.raise_if_cancelled()  # ne lève pas
 
 
@@ -21,7 +20,6 @@ def test_trigger_then_raises() -> None:
     c = RunControl()
     c.trigger_cancel()
     assert c.is_cancelled() is True
-    assert c.cancel_triggered is True
     with pytest.raises(RunCancelledError):
         c.raise_if_cancelled()
 

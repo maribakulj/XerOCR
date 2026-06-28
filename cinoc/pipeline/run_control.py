@@ -75,10 +75,8 @@ class RunControl:
         handle()
 
     def is_cancelled(self) -> bool:
-        return self._cancel.is_set()
-
-    @property
-    def cancel_triggered(self) -> bool:
+        """Sonde **non levante** de l'annulation (poll coopératif, p. ex. boucle
+        worker). ``raise_if_cancelled`` est la variante qui lève."""
         return self._cancel.is_set()
 
     def raise_if_cancelled(self) -> None:
