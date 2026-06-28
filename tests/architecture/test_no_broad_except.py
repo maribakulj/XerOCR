@@ -13,13 +13,15 @@ ou ``except BaseException``) est un *avaleur* si son corps **ne contient aucun
 plugin tiers) sont nommés dans une **allowlist temporaire** par fichier : verte
 aujourd'hui, elle bloque toute **nouvelle** occurrence ailleurs.
 
-Allowlist temporaire — à vider aux phases suivantes :
-- ``app/modules/discovery.py`` / ``app/jobs.py`` : avalage **justifié** (un
-  worker daemon ou un sink best-effort ne doit pas mourir/échouer en silence ; il
-  trace et continue) → restera, mais reste listé explicitement ;
-- ``adapters/llm/mistral.py`` : ``list_mistral_models`` (l.204) avale **tout** et
-  renvoie ``()`` (commodité UI) — **offender connu à corriger en Phase 3**
-  (narrower + ``logger.warning``), puis à retirer de l'allowlist.
+Allowlist des avaleurs **légitimes** (chacun trace et continue ; aucun n'est un
+``pass`` muet). Tous revus en Phase 6 — résolus, pas pendants :
+- ``app/modules/discovery.py`` / ``app/jobs.py`` : worker daemon / sink
+  best-effort qui ne doit pas mourir ou faire échouer un run réussi en silence ;
+- ``adapters/llm/mistral.py`` : ``list_mistral_models`` (commodité UI) — le SDK
+  mistralai **enveloppe** ses erreurs HTTP dans ses propres types (≠ ollama qui
+  appelle httpx en direct et narrow donc proprement) ; un catch-all est ici la
+  **bonne** sémantique (« ne jamais casser la page du composeur ») et il **trace**
+  désormais (§7). Narrower laisserait fuir une erreur SDK non anticipée.
 """
 
 from __future__ import annotations
@@ -29,12 +31,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2] / "cinoc"
 
-#: Fichiers autorisés (temporairement) à contenir un ``except`` large avaleur.
+#: Avaleurs larges **légitimes** (best-effort qui trace et continue ; cf. module
+#: docstring pour la justification par fichier). Bloque toute NOUVELLE occurrence.
 _ALLOWLIST = frozenset(
     {
         "app/modules/discovery.py",
         "app/jobs.py",
-        "adapters/llm/mistral.py",  # offender connu (l.204) — à corriger en Phase 3
+        # list_mistral_models : SDK enveloppant → catch-all assumé + tracé.
+        "adapters/llm/mistral.py",
     }
 )
 

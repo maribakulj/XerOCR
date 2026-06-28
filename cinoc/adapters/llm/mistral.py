@@ -9,6 +9,7 @@ corrigé), ``zero_shot`` (Pixtral : image → texte). Clé ``MISTRAL_API_KEY`` ;
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from cinoc.adapters._resilience import call_resilient
@@ -30,6 +31,8 @@ from cinoc.domain.pipeline import PipelineMode
 from cinoc.pipeline.protocols import ParamValue
 from cinoc.pipeline.run_control import RunControl
 from cinoc.pipeline.types import RunContext, StepOutput
+
+logger = logging.getLogger(__name__)
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "mistral-small-latest"
@@ -201,7 +204,14 @@ def list_mistral_models(*, timeout: float = 5.0) -> tuple[str, ...]:
     try:
         client = Mistral(api_key=api_key, timeout_ms=int(timeout * 1000))
         response = client.models.list()
-    except Exception:  # noqa: BLE001 — commodité UI : ne jamais casser la page
+    except Exception as exc:  # noqa: BLE001 — voir rationale ci-dessous
+        # Catch-all **assumé** : commodité d'UI qui ne doit jamais casser la
+        # page du composeur. Le SDK mistralai **enveloppe** ses erreurs HTTP
+        # (auth/429/5xx) dans ses propres types + propage des erreurs httpx pour
+        # le transport ; narrower au seul ``httpx.HTTPError`` (comme ollama, qui
+        # appelle httpx en direct) laisserait fuir une erreur SDK et casserait la
+        # page. On trace (§7) et on retombe sur la saisie libre.
+        logger.warning("[mistral] liste des modèles indisponible : %s", exc)
         return ()
     data = getattr(response, "data", None) or ()
     ids = [m.id for m in data if isinstance(getattr(m, "id", None), str)]
