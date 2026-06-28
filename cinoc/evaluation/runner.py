@@ -20,21 +20,14 @@ from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef, GroundTruthRef
 from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
 from cinoc.domain.run import RunManifest
+from cinoc.evaluation._view_collectors import ViewCollectors
 from cinoc.evaluation.calibration import calibration_analysis
 from cinoc.evaluation.conformity import conformity_analysis
 from cinoc.evaluation.context import CrossEngineContext, DocContext
 from cinoc.evaluation.correction import correction_analysis
-from cinoc.evaluation.diagnostics import DiagnosticsCollector
-from cinoc.evaluation.document_hallucination import DocumentHallucinationCollector
-from cinoc.evaluation.document_lines import DocumentLinesCollector
-from cinoc.evaluation.document_texts import DocumentTextsCollector
 from cinoc.evaluation.economics import economics_analysis
 from cinoc.evaluation.errors import EvaluationError
 from cinoc.evaluation.inference import inference_analysis
-from cinoc.evaluation.inter_engine import InterEngineCollector
-from cinoc.evaluation.lines import LinesCollector, newline_preserved
-from cinoc.evaluation.markers import MarkerCollector
-from cinoc.evaluation.ner import EntitiesCollector, EntitySet
 from cinoc.evaluation.projectors import get_projector
 from cinoc.evaluation.registry import MetricRegistry
 from cinoc.evaluation.representations import load_representation, prepare_text
@@ -46,11 +39,6 @@ from cinoc.evaluation.result import (
     RunDocumentResult,
     RunResult,
 )
-from cinoc.evaluation.roman import RomanNumeralsCollector
-from cinoc.evaluation.structured_data import StructuredDataCollector
-from cinoc.evaluation.taxonomy import TaxonomyCollector
-from cinoc.evaluation.textual_fidelity import TextualFidelityCollector
-from cinoc.evaluation.word_errors import WordErrorCollector
 
 #: { pipeline_name: { document_id: { ArtifactType: Artifact } } }
 PipelineOutputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
@@ -99,21 +87,7 @@ def evaluate_run(
 
     for view in evaluation.views:
         series: _Series = {name: {} for name in view.metric_names}
-        diagnostics = DiagnosticsCollector()
-        taxonomy = TaxonomyCollector()
-        doc_hallucination = DocumentHallucinationCollector()
-        doc_texts = DocumentTextsCollector()
-        structured = StructuredDataCollector()
-        markers = MarkerCollector()
-        roman = RomanNumeralsCollector()
-        textual_fidelity = TextualFidelityCollector()
-        inter_engine = InterEngineCollector()
-        word_errors = WordErrorCollector()
-        entities = EntitiesCollector()
-        # Distribution par ligne : applicable seulement si la normalisation de
-        # la vue préserve les sauts de ligne (sonde comportementale).
-        lines = LinesCollector(enabled=newline_preserved(view))
-        doc_lines = DocumentLinesCollector(enabled=newline_preserved(view))
+        collectors = ViewCollectors(view)
         for pipeline_name in pipeline_order:
             for name in view.metric_names:
                 series[name][pipeline_name] = []
@@ -124,87 +98,13 @@ def evaluate_run(
                 scores, text_context, entity_context = _score_document(
                     view, document, candidate, registry
                 )
-                if (
-                    entity_context is not None
-                    and isinstance(entity_context.reference, EntitySet)
-                    and isinstance(entity_context.hypothesis, EntitySet)
-                ):
-                    entities.observe(
-                        pipeline_name,
-                        entity_context.reference,
-                        entity_context.hypothesis,
-                    )
-                if text_context is not None:
-                    diagnostics.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    taxonomy.observe(
-                        pipeline_name,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    doc_hallucination.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    structured.observe(
-                        pipeline_name,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    markers.observe(
-                        pipeline_name,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    roman.observe(
-                        pipeline_name,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    lines.observe(
-                        pipeline_name,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    doc_lines.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    textual_fidelity.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    inter_engine.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    word_errors.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                    )
-                    doc_texts.observe(
-                        pipeline_name,
-                        document.id,
-                        str(text_context.reference),
-                        str(text_context.hypothesis),
-                        next(
-                            (s.value for s in scores if s.metric == "cer"), None
-                        ),
-                    )
+                collectors.observe(
+                    pipeline_name,
+                    document.id,
+                    scores,
+                    text_context,
+                    entity_context,
+                )
                 for score in scores:
                     series[score.metric][pipeline_name].append(score)
                 documents.append(
@@ -229,55 +129,18 @@ def evaluate_run(
             )
         cross_engine.extend(_cross_engine_scores(view, series, registry))
         analyses.extend(_inference_analyses(view, series))
-        diagnostic = diagnostics.build(
-            view.name,
-            "cer",
-            [document.id for document in corpus.documents],
-            series.get("cer", {}),
+        analyses.extend(
+            collectors.build(
+                view.name,
+                [document.id for document in corpus.documents],
+                series.get("cer", {}),
+            )
         )
-        if diagnostic is not None:
-            analyses.append(diagnostic)
+        # Analyses **autonomes** (≠ collecteurs) : elles lisent corpus /
+        # pipeline_outputs / usage directement, hors du cycle observe→build.
         calibration = calibration_analysis(view.name, corpus, pipeline_outputs)
         if calibration is not None:
             analyses.append(calibration)
-        taxonomy_analysis = taxonomy.build(view.name)
-        if taxonomy_analysis is not None:
-            analyses.append(taxonomy_analysis)
-        doc_hallucination_analysis = doc_hallucination.build(view.name)
-        if doc_hallucination_analysis is not None:
-            analyses.append(doc_hallucination_analysis)
-        # Post-passe cross-payload : l'inter-moteurs lit les comptages taxonomy
-        # de la même vue (zéro re-classification) — cf. ``inter_engine``.
-        inter_engine_analysis = inter_engine.build(view.name, taxonomy_analysis)
-        if inter_engine_analysis is not None:
-            analyses.append(inter_engine_analysis)
-        word_errors_analysis = word_errors.build(view.name)
-        if word_errors_analysis is not None:
-            analyses.append(word_errors_analysis)
-        structured_analysis = structured.build(view.name)
-        if structured_analysis is not None:
-            analyses.append(structured_analysis)
-        markers_analysis = markers.build(view.name)
-        if markers_analysis is not None:
-            analyses.append(markers_analysis)
-        roman_analysis = roman.build(view.name)
-        if roman_analysis is not None:
-            analyses.append(roman_analysis)
-        fidelity_analysis = textual_fidelity.build(view.name)
-        if fidelity_analysis is not None:
-            analyses.append(fidelity_analysis)
-        lines_analysis = lines.build(view.name)
-        if lines_analysis is not None:
-            analyses.append(lines_analysis)
-        doc_lines_analysis = doc_lines.build(view.name)
-        if doc_lines_analysis is not None:
-            analyses.append(doc_lines_analysis)
-        entities_analysis = entities.build(view.name)
-        if entities_analysis is not None:
-            analyses.append(entities_analysis)
-        texts_analysis = doc_texts.build(view.name)
-        if texts_analysis is not None:
-            analyses.append(texts_analysis)
         if "cer" in view.metric_names:
             economics = economics_analysis(
                 view.name, "cer", series["cer"], usage, manifest
