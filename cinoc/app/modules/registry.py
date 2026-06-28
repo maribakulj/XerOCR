@@ -313,12 +313,20 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)
     registry.register_builder("anthropic", _build_anthropic)
-    registry.register_builder("precomputed_layout", _build_precomputed_layout)
+    # Segmenteurs réels (étape IMAGE → LAYOUT), composables dès aujourd'hui.
     registry.register_builder("pp_doclayout", _build_pp_doclayout)
     registry.register_builder("remote_segmenter", _build_remote_segmenter)
+    registry.register_builder("ner", _build_ner)
+    # --- Enveloppe T5 : pipeline hybride seg → reconnaissance par région → ALTO ---
+    # Ces 3 briques implémentent le contrat ``Module`` mais ne sont PAS encore
+    # composées par un planificateur (``run_planning`` ne fabrique pas le pipeline
+    # hybride). Conservées SCIEMMENT comme enveloppe de la finition T5 ; le
+    # consommateur attendu (le planner hybride à livrer) est documenté par le test
+    # skip nommé ``tests/pipeline/test_t5_envelope.py``. NE PAS retirer du socle —
+    # leur retrait casserait la livraison T5 à venir.
+    registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
-    registry.register_builder("ner", _build_ner)
 
 
 __all__ = [
