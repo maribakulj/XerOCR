@@ -30,6 +30,14 @@ HERITAGE = get_builtin_profile("heritage")
         ("a_b", "a b"),  # underscore → espace
         ("l'an 1515.", "l an 1515"),  # ponctuation → espace, bords rognés
         ("ligne1\nligne2", "ligne1 ligne2"),  # saut de ligne = non-mot
+        # Conformité au pliage ``lower`` du scorer (PAS casefold) : ſ et ﬀ GARDÉS
+        # (casefold les replierait en s/ff — divergence trouvée puis corrigée).
+        ("ſchön", "ſchön"),  # s long conservé (lower ≠ casefold)
+        ("aﬀaire", "aﬀaire"),  # ligature ﬀ conservée
+        # Invisibles (Cf) → espace via ``\\W → espace`` (le scorer ne les supprime
+        # pas) : soft-hyphen scinde le mot, pas de recollage.
+        ("Zu­kunft", "zu kunft"),  # soft-hyphen U+00AD → espace
+        ("a​b", "a b"),  # zero-width U+200B → espace
     ],
 )
 def test_hipe_profile_hand_cases(raw: str, expected: str) -> None:
@@ -56,6 +64,17 @@ def test_heritage_documented_limits() -> None:
     scorer — détruirait la marque combinante isolée)."""
     assert HERITAGE.normalize("Straße") == "strasse"
     assert HERITAGE.normalize("haͤuser") == "häuser"
+
+
+def test_hipe_vs_heritage_casing_is_intentional() -> None:
+    """Contraste VOULU des deux profils (≠ bug) : ``hipe`` plie via ``lower`` pour
+    coller au scorer officiel (ſ/ﬀ gardés, invisibles → espace) ; ``heritage``
+    plie via ``casefold`` (ſ→s, ﬀ→ff) et nettoie les invisibles. Le golden
+    verrouille la conformité de ``hipe`` ; ``heritage`` est une autre lentille."""
+    assert HIPE.normalize("ſchön") == "ſchön"  # conforme scorer (lower)
+    assert HERITAGE.normalize("ſchön") == "schön"  # casefold patrimonial
+    assert HIPE.normalize("Zu­kunft") == "zu kunft"  # invisible → espace (scinde)
+    assert HERITAGE.normalize("Zu­kunft") == "zukunft"  # invisible supprimé (recolle)
 
 
 def test_profiles_registered() -> None:

@@ -16,23 +16,12 @@ documentés de ``norm()`` (§4.3) : diacritiques préservées, ligatures œ/æ/�
 umlaut décomposé aͤ, césure DTA ``—\\n``, ponctuation → espace, casse, compactage,
 + cas dégénérés (réf vide, sortie vide).
 
-⚠️ **Divergences connues, EXCLUES du corpus** (le golden ne les couvre donc pas —
-à trancher dans le registre de décision, hors Phase 1 qui ne change aucun
-comportement). Mesurées en comparant ``get_builtin_profile("hipe").normalize`` au
-``norm()`` officiel :
-
-1. **``casefold()`` vs ``.lower()``** — le profil ``hipe`` plie la casse avec
-   ``str.casefold()`` (``caseless=True``), le scorer avec ``str.lower()``.
-   ``casefold`` sur-plie : ``ſ→s``, ``ﬀ→ff``, ``ﬁ→fi`` (le scorer les **garde** ;
-   ``ß→ss`` coïncide). ``ſ`` (s long) est **fréquent en OCR patrimonial** → écart
-   matériel sur ces entrées.
-2. **Hygiène des invisibles** — ``_strip_invisible`` **supprime** les Cf
-   (soft-hyphen U+00AD, zero-width U+200B…), le scorer les mappe en **espace**
-   (non-``\\w`` → espace) : nous **recollons** un mot là où le scorer le **scinde**.
-
-Tant que ces deux points ne sont pas tranchés (aligner le profil sur le scorer,
-ou documenter l'écart comme assumé), ne PAS ajouter ces classes au corpus : le
-golden deviendrait rouge — ce qui est précisément le signal à traiter sciemment.
+Le corpus couvre aussi les classes jadis divergentes, désormais **alignées** sur
+le scorer (le profil ``hipe`` plie via ``lower`` et route les invisibles en espace
+— cf. ``case_mode``/``strip_invisible``) : ``ſ`` (s long) et ``ﬀ`` **gardés** (le
+scorer les garde aussi : ``lower`` ≠ ``casefold``), soft-hyphen U+00AD et
+zero-width U+200B → **espace** (non-``\\w``). Ces docs verrouillent la conformité
+complète à 1e-9 ; toute régression du profil les ferait virer au rouge.
 """
 
 from __future__ import annotations
@@ -60,6 +49,11 @@ CORPUS: list[tuple[str, str, str, str]] = [
     ("doc10_multi_error", "Bonjour le monde", "B0nj0ur l3 m0nde", "Bonjur le mnde"),
     ("doc11_case_ws", "  PLEINE   Lune  ", "pleine lune", "Pleine Lune"),
     ("doc12_clean", "Stadt und Land", "Stadt und Land", "Stadt und Land"),
+    # Classes jadis divergentes, désormais conformes (lower + invisibles→espace).
+    ("doc13_long_s", "ſchön wetter", "schon wetter", "schön wetter"),
+    ("doc14_ligature_ff", "aﬀaire publique", "affaire publique", "affaire publique"),
+    ("doc15_soft_hyphen", "Zu­kunft naht", "Zukunft naht", "Zukunft naht"),
+    ("doc16_zero_width", "a​b test", "ab test", "ab test"),
 ]
 
 
