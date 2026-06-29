@@ -145,6 +145,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "seg_run_running": "Segmentation en cours…",
         "seg_run_done": "Segmentation terminée.",
         "seg_run_open": "Voir la segmentation",
+        # Run hybride (transcription) — panneau de lancement (page /segmentation)
+        "hyb_run_title": "Transcrire un corpus (hybride)",
+        "hyb_run_desc": "Segmente chaque page, OCRise chaque bloc avec Tesseract, "
+        "puis assemble un ALTO par page (géométrie + texte). Téléchargeable une "
+        "fois terminé ; les régions détectées s'affichent ci-dessous.",
+        "hyb_run_btn": "Transcrire",
+        "hyb_run_done": "Transcription terminée.",
+        "hyb_run_download": "Télécharger l'ALTO (zip)",
+        "hyb_run_no_ocr": "Tesseract indisponible — la transcription hybride "
+        "exige le binaire Tesseract (socle OCR).",
         # Segmentation (squelette de visualisation)
         "seg_eyebrow": "Vitrine · mise en page",
         "seg_desc": "Visualisation des régions d'une page segmentée "
@@ -379,6 +389,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "seg_run_running": "Segmenting…",
         "seg_run_done": "Segmentation complete.",
         "seg_run_open": "View the segmentation",
+        # Hybrid (transcription) run — launch panel (/segmentation page)
+        "hyb_run_title": "Transcribe a corpus (hybrid)",
+        "hyb_run_desc": "Segments each page, OCRs each block with Tesseract, then "
+        "assembles one ALTO per page (geometry + text). Downloadable once done; "
+        "the detected regions show below.",
+        "hyb_run_btn": "Transcribe",
+        "hyb_run_done": "Transcription complete.",
+        "hyb_run_download": "Download the ALTO (zip)",
+        "hyb_run_no_ocr": "Tesseract unavailable — hybrid transcription requires "
+        "the Tesseract binary (OCR base).",
         # Segmentation (visualization skeleton)
         "seg_eyebrow": "Showcase · layout",
         "seg_desc": "Region visualization of a segmented page "

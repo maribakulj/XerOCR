@@ -293,6 +293,11 @@ def build_home_router(
         # OCR → le lanceur vit ici, pas dans la coquille benchmark.
         context["corpora"] = _corpora_summaries(corpus_store)
         context["segmenters"] = list(segmenters())
+        # Transcription hybride : OCR Tesseract par bloc → gate UI sur sa dispo
+        # (binaire absent → on n'offre pas un bouton voué au 409).
+        context["tesseract_available"] = any(
+            s.kind == "tesseract" and s.available for s in statuses()
+        )
         return templates.TemplateResponse(request, "segmentation.html", context)
 
     @router.get("/library", response_class=HTMLResponse)
