@@ -57,6 +57,7 @@ def test_hybrid_planner_composes_the_three_bricks() -> None:
     # Étage 2 : reconnaissance par région (fan-out couche 4), LAYOUT+IMAGE → LAYOUT.
     assert recognize.adapter_name == "precomputed_region:eng"
     assert recognize.fanout is True
+    assert recognize.crop is False  # precomputed lit par region_id, aucun pixel
     assert recognize.input_types == (ArtifactType.LAYOUT, ArtifactType.IMAGE)
     assert recognize.output_types == (ArtifactType.LAYOUT,)
     assert recognize.inputs_from == {ArtifactType.LAYOUT: "segment"}
@@ -79,6 +80,7 @@ def test_hybrid_planner_real_default_is_ppdoclayout_plus_tesseract() -> None:
     assert segment.adapter_name == "pp_doclayout"
     assert recognize.adapter_name == "tesseract:hybrid"
     assert recognize.fanout is True
+    assert recognize.crop is True  # OCR réel par bloc → découpe l'image
     assert assemble.adapter_name == "alto_assembler"
     assert run_spec.adapter_kwargs["tesseract:hybrid"] == {"label": "hybrid"}
 

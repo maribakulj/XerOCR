@@ -184,6 +184,50 @@ def _run_config(
     return 0
 
 
+def _run_hybrid(
+    images: str,
+    out: str,
+    *,
+    segmenter: str,
+    ocr: str,
+    label: str,
+    source_label: str | None,
+) -> int:
+    """Transcription **hybride** : segmente, OCR par bloc, assemble un ALTO/page.
+
+    Part d'un dossier d'images (sans GT) → ``CorpusSpec`` → ``plan_hybrid_run``
+    (pp_doclayout + tesseract par défaut) → orchestrateur ; les ``ALTO_XML`` sont
+    écrits dans ``out`` par un sink (avant nettoyage du workspace).
+    """
+    from cinoc.app.orchestrator import PipelineOutputs
+    from cinoc.app.run_planning import plan_hybrid_run
+    from cinoc.app.transcription import corpus_from_images, write_alto_files
+    from cinoc.domain.run import RunManifest
+
+    corpus = corpus_from_images(images)
+    registry = ModuleRegistry()
+    register_default_modules(registry)
+    discover_plugins(registry, enabled=True)  # CLI local : code de confiance
+    spec = plan_hybrid_run(
+        corpus, "hybrid", segmenter=segmenter, ocr=ocr, label=label,
+        source_label=source_label,
+    )(Path(out))
+    out_dir = Path(out)
+    written: list[Path] = []
+
+    def _sink(outputs: PipelineOutputs, manifest: RunManifest) -> None:
+        written.extend(write_alto_files(out_dir, outputs))
+
+    run_orchestrator(
+        spec,
+        registry=registry,
+        code_version=resolve_code_version(),
+        artifact_sink=_sink,
+    )
+    print(f"{len(written)} ALTO écrit(s) dans {out_dir}")
+    return 0
+
+
 def _compare_command(path_a: str, path_b: str, output: str) -> int:
     run_a = load_run_result(path_a)
     run_b = load_run_result(path_b)
@@ -338,6 +382,33 @@ def main(argv: list[str] | None = None) -> int:
     compare_cmd.add_argument(
         "-o", "--output", default="comparaison.html", help="Fichier HTML de sortie."
     )
+    hybrid_cmd = subparsers.add_parser(
+        "hybrid",
+        help="Transcription hybride : segmente → OCR par bloc → ALTO/page.",
+    )
+    hybrid_cmd.add_argument("images", help="Dossier d'images à transcrire.")
+    hybrid_cmd.add_argument(
+        "--out", default="alto", help="Dossier de sortie des ALTO (défaut : alto/)."
+    )
+    hybrid_cmd.add_argument(
+        "--segmenter",
+        default="pp_doclayout",
+        help="Segmenteur (pp_doclayout, remote_segmenter, precomputed_layout).",
+    )
+    hybrid_cmd.add_argument(
+        "--ocr",
+        default="tesseract",
+        help="OCR par région (tesseract, precomputed_region).",
+    )
+    hybrid_cmd.add_argument(
+        "--label", default="hybrid", help="Étiquette du moteur OCR (identité)."
+    )
+    hybrid_cmd.add_argument(
+        "--source-label",
+        default=None,
+        help="Jeu de textes par région (mode precomputed_region).",
+    )
+
     serve_cmd = subparsers.add_parser(
         "serve", help="Sert la vitrine web des rapports (extra [serve])."
     )
@@ -372,6 +443,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "history":
             return _run_history(
                 args.db, args.view, args.metric, args.pipeline, args.threshold
+            )
+        if args.command == "hybrid":
+            return _run_hybrid(
+                args.images,
+                args.out,
+                segmenter=args.segmenter,
+                ocr=args.ocr,
+                label=args.label,
+                source_label=args.source_label,
             )
         if args.command == "compare":
             return _compare_command(args.run_a, args.run_b, args.output)

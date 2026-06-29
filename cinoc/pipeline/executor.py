@@ -127,7 +127,9 @@ class PipelineExecutor:
             context=context,
             control=control,
             params=dict(step.params),
-            cropper=cropper,
+            # ``crop`` déclaré par l'étape : OCR réel par bloc → découpe ; sinon
+            # (``precomputed``) image page entière + ``region_id``, aucun pixel lu.
+            cropper=cropper if step.crop else None,
         )
 
     def _resolve_inputs(

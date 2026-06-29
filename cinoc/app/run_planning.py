@@ -701,6 +701,7 @@ def _hybrid_spec(
     *,
     segmenter: str,
     recognizer: str,
+    crop: bool,
     adapter_kwargs: _HybridKwargs,
 ) -> RunSpec:
     """Pipeline **hybride** à 3 étages en **une** ``PipelineSpec`` :
@@ -728,6 +729,7 @@ def _hybrid_spec(
             output_types=(ArtifactType.LAYOUT,),
             inputs_from={ArtifactType.LAYOUT: "segment"},
             fanout=True,
+            crop=crop,
         ),
         PipelineStep(
             id="assemble",
@@ -782,6 +784,9 @@ def plan_hybrid_run(
     recognizer, reco_kwargs = _hybrid_recognizer(
         ocr, label=label, source_label=source_label
     )
+    # OCR réel par bloc → découpe l'image ; ``precomputed_region`` lit un texte
+    # figé par ``region_id`` (page entière, aucun pixel) → pas de crop.
+    crop = ocr != "precomputed_region"
     adapter_kwargs: _HybridKwargs = {recognizer: reco_kwargs}
     if segmenter == "remote_segmenter":
         if not endpoint:
@@ -797,6 +802,7 @@ def plan_hybrid_run(
         run_id,
         segmenter=segmenter,
         recognizer=recognizer,
+        crop=crop,
         adapter_kwargs=adapter_kwargs,
     )
 

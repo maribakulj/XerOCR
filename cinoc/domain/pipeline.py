@@ -62,6 +62,12 @@ class PipelineStep(BaseModel):
         **une fois par région** du ``LAYOUT`` d'entrée, et ses sorties sont
         réassemblées en un ``LAYOUT`` rempli (orchestration couche 4). Exige
         ``LAYOUT`` + ``IMAGE`` en entrée et ``LAYOUT`` en sortie.
+    crop:
+        N'a de sens que sur une étape ``fanout``. Si vrai, chaque bloc est
+        **découpé** de l'image (OCR réel par région) ; sinon l'image page entière
+        est passée au reconnaisseur avec son ``region_id`` (cas ``precomputed`` :
+        la donnée par région est figée, aucun pixel n'est lu). Déclaratif : le
+        *planner* sait, selon le reconnaisseur choisi, s'il faut découper.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -74,6 +80,7 @@ class PipelineStep(BaseModel):
     output_types: tuple[ArtifactType, ...] = Field(default_factory=tuple)
     inputs_from: dict[ArtifactType, str] = Field(default_factory=dict)
     fanout: bool = False
+    crop: bool = False
 
     @model_validator(mode="after")
     def _check_fanout_contract(self) -> PipelineStep:
