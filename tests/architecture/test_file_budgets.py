@@ -40,13 +40,14 @@ FILE_BUDGETS: dict[str, int] = {
     # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
     "reports/html.py": 730,
     # Planification de run (couche 6) : **source unique** des specs (benchmark +
-    # segmentation) à partir des choix UI/CLI — catalogue moteurs par rôle,
-    # profils de métriques, vues d'évaluation par type de GT, composition des
-    # pipelines par concurrent (OCR/zero-shot/chaîne LLM-VLM + étape NER
-    # optionnelle), segmenteurs local/distant. La cohésion « tout ce qui traduit
-    # un choix en RunSpec » prime sur l'éclatement ; grandit d'une brique à la
-    # fois (axe 2). Budget re-basé au courant (662 LOC, ajout étape NER) + ~15 %.
-    "app/run_planning.py": 760,
+    # segmentation + hybride seg→reco→ALTO) à partir des choix UI/CLI — catalogue
+    # moteurs par rôle, profils de métriques, vues d'évaluation par type de GT,
+    # composition des pipelines par concurrent (OCR/zero-shot/chaîne LLM-VLM +
+    # étape NER optionnelle), segmenteurs local/distant, **planner hybride T5**
+    # (3 briques fan-out). La cohésion « tout ce qui traduit un choix en RunSpec »
+    # prime sur l'éclatement ; grandit d'une brique à la fois (axe 2). Budget
+    # re-basé au courant (762 LOC, ajout planner hybride T5) + ~5 %.
+    "app/run_planning.py": 800,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu

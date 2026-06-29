@@ -669,6 +669,84 @@ def plan_segmentation_run(
     )
 
 
+def _hybrid_spec(corpus: CorpusSpec, run_id: str, *, source_label: str) -> RunSpec:
+    """Pipeline **hybride** à 3 étages en **une** ``PipelineSpec`` :
+
+    1. ``precomputed_layout`` : ``IMAGE → LAYOUT`` (régions seules) ;
+    2. ``precomputed_region`` : reconnaissance **par région** (``fanout=True`` →
+       ``LAYOUT`` + ``IMAGE`` → ``LAYOUT`` rempli ; l'exécuteur boucle sur les
+       régions, couche 4) ;
+    3. ``alto_assembler`` : ``LAYOUT`` rempli → ``ALTO_XML`` (déterministe).
+
+    Tout ``precomputed`` (0 dépendance, déterministe, CI-safe) : c'est l'enveloppe
+    de composition. Le segmenteur réel (``pp_doclayout``) et l'OCR par bloc (crop
+    PIL réel, F-4c) sont des **épaississements** branchables sur la même forme,
+    hors périmètre de l'enveloppe.
+    """
+    recognizer = f"precomputed_region:{source_label}"
+    steps = (
+        PipelineStep(
+            id="segment",
+            kind="segmentation",
+            adapter_name="precomputed_layout",
+            input_types=(ArtifactType.IMAGE,),
+            output_types=(ArtifactType.LAYOUT,),
+        ),
+        PipelineStep(
+            id="recognize",
+            kind="recognition",
+            adapter_name=recognizer,
+            input_types=(ArtifactType.LAYOUT, ArtifactType.IMAGE),
+            output_types=(ArtifactType.LAYOUT,),
+            inputs_from={ArtifactType.LAYOUT: "segment"},
+            fanout=True,
+        ),
+        PipelineStep(
+            id="assemble",
+            kind="assembly",
+            adapter_name="alto_assembler",
+            input_types=(ArtifactType.LAYOUT,),
+            output_types=(ArtifactType.ALTO_XML,),
+            inputs_from={ArtifactType.LAYOUT: "recognize"},
+        ),
+    )
+    return RunSpec(
+        corpus=corpus,
+        pipelines=(
+            PipelineSpec(
+                name="hybrid",
+                initial_inputs=(ArtifactType.IMAGE,),
+                steps=steps,
+            ),
+        ),
+        # Pas de vue : un run hybride **produit** l'ALTO (géométrie + texte) ;
+        # le scoring d'une métrique de structure est un épaississement (F-3b),
+        # soumis à la preuve d'informativité (réflexe T7) avant câblage.
+        evaluation=EvaluationSpec(views=()),
+        adapter_kwargs={recognizer: {"source_label": source_label}},
+        run_id=run_id,
+    )
+
+
+def plan_hybrid_run(
+    corpus: CorpusSpec,
+    run_id: str,
+    *,
+    source_label: str = "eng",
+) -> Callable[[Path], RunSpec]:
+    """Builder de spec d'un run **hybride** seg → reconnaissance par région → ALTO.
+
+    Compose les 3 briques du socle (``precomputed_layout`` / ``precomputed_region``
+    / ``alto_assembler``) en une ``PipelineSpec`` à fan-out — la **finition T5** :
+    la composition, jusqu'ici prouvée seulement en test, est désormais **fabriquée
+    par un planner** (les feuilles de transport délèguent ici). ``source_label``
+    nomme le jeu de textes par région précalculés (``<stem>.<label>.regions.json``).
+    """
+    if not source_label:
+        raise RunPlanningError("plan_hybrid_run : 'source_label' requis (non vide).")
+    return lambda _ws: _hybrid_spec(corpus, run_id, source_label=source_label)
+
+
 __all__ = [
     "DEFAULT_METRIC_PROFILE",
     "METRIC_PROFILES",
@@ -679,5 +757,6 @@ __all__ = [
     "benchmark_engine_catalog",
     "metric_profile_catalog",
     "plan_benchmark_run",
+    "plan_hybrid_run",
     "plan_segmentation_run",
 ]

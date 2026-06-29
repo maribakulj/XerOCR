@@ -318,12 +318,10 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("remote_segmenter", _build_remote_segmenter)
     registry.register_builder("ner", _build_ner)
     # --- Enveloppe T5 : pipeline hybride seg → reconnaissance par région → ALTO ---
-    # Ces 3 briques implémentent le contrat ``Module`` mais ne sont PAS encore
-    # composées par un planificateur (``run_planning`` ne fabrique pas le pipeline
-    # hybride). Conservées SCIEMMENT comme enveloppe de la finition T5 ; le
-    # consommateur attendu (le planner hybride à livrer) est documenté par le test
-    # skip nommé ``tests/pipeline/test_t5_envelope.py``. NE PAS retirer du socle —
-    # leur retrait casserait la livraison T5 à venir.
+    # Ces 3 briques (``Module`` Protocol) sont composées par
+    # ``run_planning.plan_hybrid_run`` (finition T5 livrée) : segmentation →
+    # reconnaissance par région (fanout, couche 4) → assemblage ALTO. Consommateur
+    # vérifié de bout en bout par ``tests/pipeline/test_t5_envelope.py``.
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
