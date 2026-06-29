@@ -1,5 +1,5 @@
 ---
-title: Cinoc — OCR gratuit
+title: Cinoc — banc d'essai OCR/HTR/VLM
 emoji: 📜
 colorFrom: indigo
 colorTo: gray
@@ -9,7 +9,7 @@ pinned: false
 license: apache-2.0
 ---
 
-# Cinoc — banc d'essai OCR gratuit
+# Cinoc — banc d'essai OCR/HTR/VLM
 
 Banc d'essai **déterministe** de pipelines de transcription (OCR / HTR / VLM).
 Ce Space **exécute un vrai OCR Tesseract gratuitement** — **sans clé ni
