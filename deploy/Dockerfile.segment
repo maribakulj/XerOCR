@@ -30,7 +30,8 @@ RUN apt-get update -o Acquire::Retries=3 \
 # ── Variables d'exécution ──────────────────────────────────────────────────────
 ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 ENV OMP_THREAD_LIMIT=1
-ENV CINOC_PUBLIC_MODE=true
+# Verrou public *fail-closed* **non forcé** (opt-in via CINOC_PUBLIC_MODE=true) —
+# par défaut l'instance exécute ses moteurs avec la clé de l'opérateur.
 ENV PYTHONUNBUFFERED=1
 # Variante LÉGÈRE du segmenteur local (bakée ci-dessous) : le builder du socle la
 # lit pour construire `pp_doclayout` avec ce modèle. Mettre `PP-DocLayout-L` pour

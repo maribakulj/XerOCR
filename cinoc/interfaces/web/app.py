@@ -57,7 +57,6 @@ from cinoc.interfaces.web.security import (
     RateLimitMiddleware,
     SecurityHeadersMiddleware,
 )
-from cinoc.interfaces.web.security.headers import is_huggingface_space
 
 #: Assets de la coquille (CSS + polices auto-hébergées) et gabarits Jinja2,
 #: livrés **dans le paquet** (cf. ``[tool.setuptools.package-data]``) pour être
@@ -107,26 +106,21 @@ def _resolve_uploads_dir(uploads_dir: Path | str | None) -> Path:
 
 
 def _resolve_public_mode(public_mode: bool | None) -> bool:
-    """Mode public : arg explicite > env (``true``/``false``) > Space HF > ``False``.
+    """Mode public (verrou *fail-closed*) : arg explicite > env ``CINOC_PUBLIC_MODE``
+    > ``False``.
 
-    Un Space est exposé publiquement : sans choix explicite ni variable d'env, on
-    **verrouille par défaut** (moteurs cloud masqués, imports distants refusés,
-    découverte de plugins tiers désactivée) plutôt que d'ouvrir la surface sur une
-    instance publique.
-
-    L'opérateur peut **forcer** via ``CINOC_PUBLIC_MODE`` : ``true`` pour
-    verrouiller, ``false`` pour **ouvrir** (ex. un Space **privé** exécutant des
-    moteurs cloud avec sa propre clé — il assume l'exposition). Le ``false``
-    explicite est nécessaire : sur un Space, le défaut reste verrouillé.
+    **Désactivé par défaut, partout — y compris sur un Space.** Une instance
+    exécute ses moteurs (cloud compris) dès qu'une clé est présente, sans blocage :
+    c'est l'opérateur qui maîtrise sa clé. Le verrou reste disponible **en option**
+    via ``CINOC_PUBLIC_MODE=true`` (masque les moteurs cloud, refuse les imports
+    distants, désactive la découverte de plugins tiers) — pour qui expose un Space
+    **public** avec une clé qu'un visiteur ne doit pas pouvoir dépenser. ``false``
+    ou absent ⇒ surface ouverte (l'opérateur assume l'exposition de sa clé ;
+    cf. ``deploy/README_SPACE.md``).
     """
     if public_mode is not None:
         return public_mode
-    raw = os.environ.get(PUBLIC_MODE_ENV, "").strip().lower()
-    if raw in {"1", "true", "yes"}:
-        return True
-    if raw in {"0", "false", "no"}:
-        return False
-    return is_huggingface_space()
+    return os.environ.get(PUBLIC_MODE_ENV, "").strip().lower() in {"1", "true", "yes"}
 
 
 def _resolve_metrics(metrics: bool | None) -> bool:

@@ -86,7 +86,7 @@ Far beyond CER/WER — every family ships with its own report section and tests 
 - **Deterministic** — same spec + same corpus + same code → identical artifacts (same hash), identical metrics, identical report.
 - **Reproducible** — every run carries a `RunManifest` (code version, dependency versions, engine binaries, parameter fingerprint).
 - **Anti‑hallucination** — no LLM writes a single word of the report; every figure is an auditable function of the inputs.
-- **Secure** — hardened XML (`safe_parse_xml`: no DTD/DOCTYPE/external entity/network), all user paths validated (anti‑traversal), anti‑SSRF on remote fetches, public *fail‑closed* mode on the hosted Space (only the free base runs).
+- **Secure** — hardened XML (`safe_parse_xml`: no DTD/DOCTYPE/external entity/network), all user paths validated (anti‑traversal), anti‑SSRF on remote fetches, and an **opt‑in** public *fail‑closed* mode for protecting a key on a public Space (only the free base runs).
 
 ---
 
@@ -172,7 +172,7 @@ cinoc serve --port 8080                          # local web app
 - **Segmentation** — segment a page and inspect regions; launch a **hybrid transcription** (segment → per‑region OCR → downloadable ALTO).
 - **Reports / History** — browse rendered reports and longitudinal trends.
 
-In **public mode** (`CINOC_PUBLIC_MODE`), the Space is *fail‑closed*: only the free first‑party base (Tesseract — no key, no billed call) runs; cloud engines and third‑party plugins are refused (`403`). See [`deploy/`](deploy/) for the HuggingFace Space image.
+By default an instance runs its engines with the operator's own key (no gate). The **opt‑in** public mode (`CINOC_PUBLIC_MODE=true`) makes a deployment *fail‑closed* — only the free first‑party base (Tesseract — no key, no billed call) runs; cloud engines and third‑party plugins are refused (`403`) — for protecting a key on a *public* Space. See [`deploy/`](deploy/) for the HuggingFace Space image.
 
 Report **flavors**: single file (inline base64 images), folder/ZIP (separate images, offline), and IIIF/HF references (light HTML, images loaded from HuggingFace). The report is **bilingual FR/EN** (`?lang=en`).
 

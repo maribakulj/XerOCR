@@ -38,10 +38,10 @@ ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 # documenté côté Picarones, 2026-05-16) — l'OCR gèle et chaque document timeoute.
 # Mono-thread par appel = plus rapide ET déterministe ici.
 ENV OMP_THREAD_LIMIT=1
-# Mode public **verrouillé** : seul le socle gratuit (tesseract) s'exécute ; cloud
-# et plugins sont refusés (403, fail-closed). L'opérateur d'un Space privé peut
-# ouvrir via CINOC_PUBLIC_MODE=false + ses propres clés.
-ENV CINOC_PUBLIC_MODE=true
+# Mode public (verrou *fail-closed*) **non forcé** : par défaut l'instance exécute
+# ses moteurs (cloud compris) avec la clé de l'opérateur — pas de 403. Qui expose
+# un Space **public** et veut protéger sa clé d'un visiteur pose lui-même
+# CINOC_PUBLIC_MODE=true (alors seul le socle gratuit tesseract s'exécute).
 ENV PYTHONUNBUFFERED=1
 
 # ── Smoke-test du binaire au BUILD (fail-fast) ─────────────────────────────────
