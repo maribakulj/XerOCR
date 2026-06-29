@@ -44,10 +44,13 @@ FILE_BUDGETS: dict[str, int] = {
     # moteurs par rôle, profils de métriques, vues d'évaluation par type de GT,
     # composition des pipelines par concurrent (OCR/zero-shot/chaîne LLM-VLM +
     # étape NER optionnelle), segmenteurs local/distant, **planner hybride T5**
-    # (3 briques fan-out). La cohésion « tout ce qui traduit un choix en RunSpec »
-    # prime sur l'éclatement ; grandit d'une brique à la fois (axe 2). Budget
-    # re-basé au courant (762 LOC, ajout planner hybride T5) + ~5 %.
-    "app/run_planning.py": 800,
+    # réel (pp_doclayout + tesseract par région + assemblage ALTO). La cohésion
+    # « tout ce qui traduit un choix en RunSpec » prime sur l'éclatement ; grandit
+    # d'une brique à la fois (axe 2). Budget re-basé au courant (816 LOC, planner
+    # hybride réel) + ~4 %. ⚠️ Seuil de découpe atteint : la planification de run
+    # **structure** (segmentation + hybride) est un candidat à l'extraction vers un
+    # module sœur si elle grandit encore (suivi : surface T5).
+    "app/run_planning.py": 850,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu

@@ -41,9 +41,13 @@ def test_t5_bricks_stay_registered() -> None:
 
 
 def test_hybrid_planner_composes_the_three_bricks() -> None:
-    """``plan_hybrid_run`` fabrique seg → reco par région (fanout) → assemblage."""
+    """``plan_hybrid_run`` (mode démo) fabrique seg → reco région (fanout) → ALTO."""
     run_spec = plan_hybrid_run(
-        CorpusSpec(name="c", documents=()), "r", source_label="eng"
+        CorpusSpec(name="c", documents=()),
+        "r",
+        segmenter="precomputed_layout",
+        ocr="precomputed_region",
+        source_label="eng",
     )(Path("/unused"))
     spec = run_spec.pipelines[0]
     assert tuple(s.id for s in spec.steps) == ("segment", "recognize", "assemble")
@@ -63,6 +67,20 @@ def test_hybrid_planner_composes_the_three_bricks() -> None:
     assert run_spec.adapter_kwargs["precomputed_region:eng"] == {
         "source_label": "eng"
     }
+
+
+def test_hybrid_planner_real_default_is_ppdoclayout_plus_tesseract() -> None:
+    """Par défaut le planner compose un pipeline **réel** : pp_doclayout + tesseract
+    par région (le crop est injecté par l'orchestrateur, cf. F-4c)."""
+    run_spec = plan_hybrid_run(CorpusSpec(name="c", documents=()), "r")(
+        Path("/unused")
+    )
+    segment, recognize, assemble = run_spec.pipelines[0].steps
+    assert segment.adapter_name == "pp_doclayout"
+    assert recognize.adapter_name == "tesseract:hybrid"
+    assert recognize.fanout is True
+    assert assemble.adapter_name == "alto_assembler"
+    assert run_spec.adapter_kwargs["tesseract:hybrid"] == {"label": "hybrid"}
 
 
 def _scene(tmp_path: Path, regions: dict[str, str]) -> Artifact:
@@ -97,7 +115,11 @@ def _scene(tmp_path: Path, regions: dict[str, str]) -> Artifact:
 def test_hybrid_planner_spec_runs_end_to_end(tmp_path: Path) -> None:
     """La spec du planner s'exécute : l'ALTO assemblé porte le texte reconnu."""
     run_spec = plan_hybrid_run(
-        CorpusSpec(name="c", documents=()), "r", source_label="eng"
+        CorpusSpec(name="c", documents=()),
+        "r",
+        segmenter="precomputed_layout",
+        ocr="precomputed_region",
+        source_label="eng",
     )(tmp_path)
     spec = run_spec.pipelines[0]
     registry = ModuleRegistry()
