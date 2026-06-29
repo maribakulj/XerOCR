@@ -46,13 +46,16 @@ def test_requirements_embark_no_heavy_engine() -> None:
 
 def test_engine_dockerfile_bakes_free_ocr() -> None:
     # Contrat de l'image moteur (Étape 1) : Tesseract + langues baquées, garde
-    # anti-deadlock OpenMP, mode public verrouillé, non-root, smoke build fail-fast.
+    # anti-deadlock OpenMP, non-root, smoke build fail-fast.
     text = (DEPLOY / "Dockerfile.engine").read_text(encoding="utf-8")
     for token in ("tesseract-ocr-fra", "tesseract-ocr-lat", "tesseract-ocr-eng"):
         assert token in text, f"langue {token} non baquée"
     assert "OMP_THREAD_LIMIT=1" in text  # garde deadlock free-tier (leçon Picarones)
     assert "TESSDATA_PREFIX" in text
-    assert "CINOC_PUBLIC_MODE=true" in text  # fail-closed par défaut sur le Space
+    # Le verrou public n'est **pas** forcé par l'image (opt-in) : pas de directive
+    # ``ENV CINOC_PUBLIC_MODE=true`` (un visiteur d'un Space privé exécute les
+    # moteurs avec la clé de l'opérateur — choix assumé, cf. README_SPACE).
+    assert "ENV CINOC_PUBLIC_MODE=true" not in text
     assert "USER cinoc" in text  # non-root
     assert "--list-langs" in text and "grep -qx fra" in text  # smoke fra
     assert "serve" in text and "7860" in text  # lance le serveur

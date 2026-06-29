@@ -22,30 +22,30 @@ réel. Il sert aussi des rapports `RunResult` pré-calculés, rendus en HTML aut
 - `/reports/<nom>` — un rapport rendu en HTML
 - `/health` — sonde de vivacité
 
-En **mode public** (le défaut sur ce Space), seul le **socle gratuit** s'exécute
-(Tesseract — aucun secret, aucun appel facturé). Les moteurs **cloud** (clé) et les
-**plugins tiers** sont **refusés** (`403`, fail-closed) : aucun secret n'est requis
-ni stocké. Pour les pipelines lourds (OCR→LLM, VLM), lancez-les **hors ligne** via la
-CLI `cinoc run`, avec vos clés et vos moteurs.
+**Par défaut, l'instance exécute ses moteurs avec la clé de son opérateur** —
+aucun blocage. Sans clé posée, seul le **socle gratuit** tourne (Tesseract, aucun
+secret, aucun appel facturé) ; dès qu'une clé est présente (`MISTRAL_API_KEY`,
+`OPENAI_API_KEY`…), les moteurs **cloud** (OCR→LLM, VLM) s'exécutent normalement.
 
-## Activer les moteurs cloud (Mistral…) — ⚠️ Space PRIVÉ uniquement
+## Utiliser un moteur cloud (Mistral, OpenAI…)
 
-Le mode public est **fail-closed** : un moteur cloud est **refusé** (`403`) sur ce
-Space **même si une clé est posée** — pour qu'un visiteur ne puisse **jamais**
-dépenser votre clé. Pour les ouvrir, sur **votre** Space :
+1. **Secret** : `MISTRAL_API_KEY` = votre clé (Settings → Variables and secrets).
+   Le SDK `mistralai` est déjà dans `requirements.txt`. Redéployez.
+2. C'est tout : le menu déroulant « Modèle » du Banc d'essai se remplit directement
+   depuis l'API Mistral (`models.list`) et les prompts sont éditables par concurrent.
 
-> 🔴 **Sécurité** : ouvrir les moteurs cloud expose votre clé à tout visiteur.
-> Rendez le Space **Private** (Settings → Visibility → Private) **avant** d'ouvrir.
+> 🔴 **Sécurité** : sur un Space **public**, la clé que vous posez est dépensable par
+> n'importe quel visiteur. Rendez le Space **Private** (Settings → Visibility →
+> Private) si vous y posez une clé facturée, **ou** activez le verrou ci-dessous.
 
-1. **Rendre le Space privé** (Settings → Visibility → **Private**).
-2. **Désactiver le mode public** : variable `CINOC_PUBLIC_MODE` = `false`
-   (Settings → Variables and secrets). C'est ce qui lève le verrou fail-closed sur
-   les moteurs cloud **et** sur les imports distants (IIIF/Gallica/…) / plugins tiers.
-3. **Secret** : `MISTRAL_API_KEY` = votre clé. Le SDK `mistralai` est déjà dans
-   `requirements.txt`. Redéployez.
+## Verrou « mode public » — opt-in, pour protéger une clé sur un Space public
 
-Le menu déroulant « Modèle » du Banc d'essai se remplit alors directement depuis
-l'API Mistral (`models.list`), et les prompts sont éditables par concurrent.
+Si vous tenez à exposer un Space **public** *tout en* gardant une clé posée sans
+qu'un visiteur puisse la dépenser, activez le verrou **fail-closed** : variable
+`CINOC_PUBLIC_MODE` = `true` (Settings → Variables and secrets). Alors seul le
+**socle gratuit** (Tesseract) s'exécute ; les moteurs **cloud**, les **imports
+distants** (IIIF/Gallica/…) et les **plugins tiers** sont **refusés** (`403`). Le
+verrou est **désactivé par défaut** : ne le posez que si ce scénario est le vôtre.
 
 > Ce fichier est l'en-tête de configuration du Space Hugging Face (`sdk: docker`).
 > Au déploiement, il devient le `README.md` racine du dépôt du Space ; le

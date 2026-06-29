@@ -270,6 +270,8 @@
           </article>
           {% endfor %}
         </div>
+        {% else %}
+        <p class="empty-hint">{{ t.library_curated_empty }}</p>
         {% endif %}
         <div class="panel import-card">
           <div class="source-headline">

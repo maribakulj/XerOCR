@@ -23,7 +23,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from cinoc.app.corpus_upload import CorpusStore
 from cinoc.app.engines import StatusProvider
 from cinoc.app.jobs import JobRunner
-from cinoc.app.run_planning import RunPlanningError, plan_hybrid_run
+from cinoc.app.run_planning import RunPlanningError
+from cinoc.app.structure_planning import plan_hybrid_run
 from cinoc.interfaces.web.security.csrf import csrf_protect
 
 #: Briques ``precomputed`` (démo/CI) : aucun extra/binaire → pas de gate de dispo.
@@ -47,6 +48,9 @@ class HybridRunRequest(BaseModel):
     source_label: str | None = Field(default=None, max_length=64)
     endpoint: str | None = Field(default=None, max_length=2048)
     token: str | None = Field(default=None, max_length=512)
+    lang: str = Field(default="fra", max_length=32)
+    model: str | None = Field(default=None, max_length=128)
+    prompt: str | None = Field(default=None, max_length=4096)
 
 
 def build_hybrid_router(
@@ -91,11 +95,14 @@ def build_hybrid_router(
                 source_label=req.source_label,
                 endpoint=req.endpoint,
                 token=req.token,
+                lang=req.lang,
+                model=req.model,
+                prompt=req.prompt,
             )
         except RunPlanningError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         _require_available(req.segmenter, segmenters, "segmenteur")
-        _require_available(req.ocr, engines, "moteur OCR par région")
+        _require_available(req.ocr, engines, "reconnaisseur par région")
         return {"job_id": runner.launch(plan), "run_id": run_id}
 
     return router

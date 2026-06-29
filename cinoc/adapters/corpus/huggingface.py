@@ -365,6 +365,38 @@ def _parse_curated(payload: object, *, tag: str) -> tuple[CuratedDatasetRef, ...
     return tuple(out)
 
 
+def whoami(
+    token: str,
+    *,
+    api_base: str = HF_API_BASE,
+    timeout: float = DEFAULT_TIMEOUT,
+    fetcher: Callable[[str], object] | None = None,
+) -> str | None:
+    """Handle du compte HF derrière un ``token`` (``/api/whoami-v2``). Best-effort.
+
+    Sert à faire **apparaître automatiquement** les datasets curés de l'opérateur
+    sans qu'il colle son identifiant : on résout son handle depuis sa clé. Échec
+    réseau / token invalide → ``None`` (repli sur ``CINOC_HF_AUTHOR`` ou l'import
+    manuel). Le token n'est jamais journalisé (cf. ``_http``)."""
+    if not token:
+        return None
+    get = fetcher or (
+        lambda url: fetch_json(
+            url, timeout=timeout, headers={"Authorization": f"Bearer {token}"}
+        )
+    )
+    try:
+        payload = get(f"{api_base.rstrip('/')}/whoami-v2")
+    except CorpusHttpError as exc:
+        logger.warning("[huggingface] whoami indisponible : %s", exc)
+        return None
+    if isinstance(payload, dict):
+        name = payload.get("name")
+        if isinstance(name, str) and name.strip():
+            return name.strip()
+    return None
+
+
 def discover_curated(
     author: str,
     *,
@@ -447,4 +479,5 @@ __all__ = [
     "search_reference",
     "snapshot_curated_layout",
     "stream_pages",
+    "whoami",
 ]

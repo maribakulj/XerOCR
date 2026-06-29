@@ -61,8 +61,12 @@
     var form = document.getElementById(opts.formId);
     if (!form) return;
     var engine = document.getElementById(opts.engineId);
+    var ocr = opts.ocrId ? document.getElementById(opts.ocrId) : null;
     var endpointField = document.getElementById(opts.endpointFieldId);
     var tokenField = document.getElementById(opts.tokenFieldId);
+    var promptField = opts.promptFieldId
+      ? document.getElementById(opts.promptFieldId)
+      : null;
     var status = document.getElementById(opts.statusId);
     var button = document.getElementById(opts.buttonId);
 
@@ -71,8 +75,17 @@
       if (endpointField) endpointField.hidden = !isRemote;
       if (tokenField) tokenField.hidden = !isRemote;
     }
+    function syncPromptField() {
+      // Le champ prompt n'a de sens que pour un reconnaisseur VLM (zero-shot).
+      if (!promptField || !ocr) return;
+      var opt = ocr.options[ocr.selectedIndex];
+      var isVlm = opt && opt.getAttribute("data-vlm") === "1";
+      promptField.hidden = !isVlm;
+    }
     if (engine) engine.addEventListener("change", syncRemoteFields);
+    if (ocr) ocr.addEventListener("change", syncPromptField);
     syncRemoteFields();
+    syncPromptField();
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -85,7 +98,7 @@
         var tok = (form.elements.token.value || "").trim();
         if (tok) payload.token = tok;
       }
-      if (opts.extra) opts.extra(payload);
+      if (opts.extra) opts.extra(payload, form);
       var headers = { "Content-Type": "application/json" };
       headers[CSRF] = "1";
       if (button) button.disabled = true;
@@ -123,18 +136,27 @@
         window.location.reload();
       },
     });
-    // Hybride : OCR Tesseract par bloc → ALTO. Révèle le lien de téléchargement
-    // (le LAYOUT est aussi persisté → visible en rechargeant la page).
+    // Hybride : reconnaissance par bloc (OCR réel ou VLM zero-shot) → ALTO.
+    // Révèle le lien de téléchargement (le LAYOUT est aussi persisté → visible
+    // en rechargeant la page).
     wireForm({
       formId: "hyb-run-form",
       engineId: "hyb-engine",
+      ocrId: "hyb-ocr",
+      promptFieldId: "hyb-prompt-field",
       endpointFieldId: "hyb-endpoint-field",
       tokenFieldId: "hyb-token-field",
       statusId: "hyb-run-status",
       buttonId: "hybrid-btn",
       url: "/api/hybrid/run",
-      extra: function (payload) {
-        payload.ocr = "tesseract";
+      extra: function (payload, form) {
+        var ocr = document.getElementById("hyb-ocr");
+        payload.ocr = ocr ? ocr.value : "tesseract";
+        var promptField = document.getElementById("hyb-prompt-field");
+        if (promptField && !promptField.hidden && form.elements.prompt) {
+          var p = (form.elements.prompt.value || "").trim();
+          if (p) payload.prompt = p;
+        }
       },
       onDone: function (body, status, button) {
         if (button) button.disabled = false;

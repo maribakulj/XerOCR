@@ -141,6 +141,53 @@ def test_hybrid_run_unknown_ocr_422(tmp_path: Path) -> None:
     assert resp.status_code == 422
 
 
+def test_hybrid_run_real_recognizer_known_but_unavailable_409(tmp_path: Path) -> None:
+    # mistral_ocr (et les VLM) sont désormais des reconnaisseurs **valides** par
+    # bloc : sans clé, le plan réussit (pas de 422 « inconnu ») et c'est le gate
+    # de disponibilité qui refuse en 409 — preuve que le périmètre est ouvert.
+    engines = (
+        EngineStatus(
+            kind="mistral_ocr", label="Mistral OCR", available=False,
+            detail="clé MISTRAL_API_KEY absente",
+        ),
+    )
+    client, _runner, _alto, corpus_store = _client(tmp_path, engines=engines)
+    corpus_id = _add_corpus(corpus_store, {"r1": "x"})
+    resp = client.post(
+        "/api/hybrid/run",
+        json={
+            "corpus_id": corpus_id,
+            "segmenter": "precomputed_layout",
+            "ocr": "mistral_ocr",
+        },
+        headers=_CSRF,
+    )
+    assert resp.status_code == 409
+
+
+def test_hybrid_run_vlm_recognizer_known_but_unavailable_409(tmp_path: Path) -> None:
+    # Un VLM (openai) en transcription zero-shot par bloc est aussi accepté au
+    # plan ; gate de dispo → 409 sans clé (jamais 422 « inconnu »).
+    engines = (
+        EngineStatus(
+            kind="openai", label="OpenAI", available=False, detail="clé absente"
+        ),
+    )
+    client, _runner, _alto, corpus_store = _client(tmp_path, engines=engines)
+    corpus_id = _add_corpus(corpus_store, {"r1": "x"})
+    resp = client.post(
+        "/api/hybrid/run",
+        json={
+            "corpus_id": corpus_id,
+            "segmenter": "precomputed_layout",
+            "ocr": "openai",
+            "prompt": "Transcris ce bloc fidèlement.",
+        },
+        headers=_CSRF,
+    )
+    assert resp.status_code == 409
+
+
 def test_hybrid_run_unavailable_segmenter_409(tmp_path: Path) -> None:
     segmenters = (
         EngineStatus(
