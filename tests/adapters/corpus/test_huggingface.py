@@ -13,6 +13,7 @@ from cinoc.adapters.corpus.huggingface import (
     _parse_curated,
     discover_curated,
     search_reference,
+    whoami,
 )
 
 
@@ -118,3 +119,33 @@ def test_discover_curated_api_failure_is_best_effort() -> None:
         raise HttpFetchError("API down")
 
     assert discover_curated("me", fetcher=boom) == ()
+
+
+def test_whoami_resolves_handle_from_token() -> None:
+    seen: dict[str, str] = {}
+
+    def fake(url: str) -> object:
+        seen["url"] = url
+        return {"name": "alice", "type": "user"}
+
+    assert whoami("hf_secret", fetcher=fake) == "alice"
+    assert "whoami-v2" in seen["url"]
+
+
+def test_whoami_empty_token_skips_network() -> None:
+    def boom(url: str) -> object:
+        raise AssertionError("aucun appel sans jeton")
+
+    assert whoami("", fetcher=boom) is None
+
+
+def test_whoami_api_failure_is_none() -> None:
+    def boom(url: str) -> object:
+        raise HttpFetchError("401")
+
+    assert whoami("hf_secret", fetcher=boom) is None
+
+
+def test_whoami_without_name_is_none() -> None:
+    assert whoami("hf_secret", fetcher=lambda _u: {"type": "user"}) is None
+    assert whoami("hf_secret", fetcher=lambda _u: ["not", "a", "dict"]) is None

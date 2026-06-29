@@ -147,14 +147,21 @@ _STRINGS: dict[str, dict[str, str]] = {
         "seg_run_open": "Voir la segmentation",
         # Run hybride (transcription) — panneau de lancement (page /segmentation)
         "hyb_run_title": "Transcrire un corpus (hybride)",
-        "hyb_run_desc": "Segmente chaque page, OCRise chaque bloc avec Tesseract, "
-        "puis assemble un ALTO par page (géométrie + texte). Téléchargeable une "
-        "fois terminé ; les régions détectées s'affichent ci-dessous.",
+        "hyb_run_desc": "Segmente chaque page, reconnaît chaque bloc avec le moteur "
+        "choisi (OCR réel ou VLM zero-shot), puis assemble un ALTO par page "
+        "(géométrie + texte). Téléchargeable une fois terminé ; les régions "
+        "détectées s'affichent ci-dessous.",
         "hyb_run_btn": "Transcrire",
         "hyb_run_done": "Transcription terminée.",
         "hyb_run_download": "Télécharger l'ALTO (zip)",
-        "hyb_run_no_ocr": "Tesseract indisponible — la transcription hybride "
-        "exige le binaire Tesseract (socle OCR).",
+        "hyb_run_no_ocr": "Aucun reconnaisseur disponible — la transcription "
+        "hybride exige au moins un OCR (ex. Tesseract) ou un VLM avec sa clé.",
+        "hyb_run_recognizer": "Reconnaisseur par bloc",
+        "hyb_run_recognizer_hint": "Le moteur appliqué à chaque bloc découpé : un "
+        "OCR réel, ou un VLM qui transcrit l'image du bloc (zero-shot).",
+        "hyb_run_vlm": "VLM, zero-shot",
+        "hyb_run_prompt": "Prompt VLM (optionnel)",
+        "hyb_run_prompt_ph": "Consigne de transcription du bloc (défaut intégré)",
         # Segmentation (squelette de visualisation)
         "seg_eyebrow": "Vitrine · mise en page",
         "seg_desc": "Visualisation des régions d'une page segmentée "
@@ -243,6 +250,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_curated_yours": "Vos datasets curés",
         "library_curated_yours_hint": "Datasets curés Cinoc détectés sur votre "
         "compte HuggingFace (tag cinoc-corpus) — importez-en un en un clic.",
+        "library_curated_empty": "Aucun dataset curé détecté automatiquement. Sur "
+        "un Space, vos datasets tagués cinoc-corpus apparaissent ici sans réglage ; "
+        "en local, posez un jeton HF ou CINOC_HF_AUTHOR. Sinon, importez par "
+        "identifiant ci-dessous.",
         "library_zip_meta": "ZIP · max 500 MB · paires auto-détectées",
         "library_ready": "prêt pour benchmark",
         "library_add_desc": "Téléversez un ZIP (glisser-déposer) ou importez "
@@ -391,14 +402,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "seg_run_open": "View the segmentation",
         # Hybrid (transcription) run — launch panel (/segmentation page)
         "hyb_run_title": "Transcribe a corpus (hybrid)",
-        "hyb_run_desc": "Segments each page, OCRs each block with Tesseract, then "
-        "assembles one ALTO per page (geometry + text). Downloadable once done; "
-        "the detected regions show below.",
+        "hyb_run_desc": "Segments each page, recognises each block with the chosen "
+        "engine (real OCR or a zero-shot VLM), then assembles one ALTO per page "
+        "(geometry + text). Downloadable once done; the detected regions show below.",
         "hyb_run_btn": "Transcribe",
         "hyb_run_done": "Transcription complete.",
         "hyb_run_download": "Download the ALTO (zip)",
-        "hyb_run_no_ocr": "Tesseract unavailable — hybrid transcription requires "
-        "the Tesseract binary (OCR base).",
+        "hyb_run_no_ocr": "No recognizer available — hybrid transcription needs at "
+        "least one OCR (e.g. Tesseract) or a VLM with its key.",
+        "hyb_run_recognizer": "Per-block recognizer",
+        "hyb_run_recognizer_hint": "The engine applied to each cropped block: a "
+        "real OCR, or a VLM transcribing the block image (zero-shot).",
+        "hyb_run_vlm": "VLM, zero-shot",
+        "hyb_run_prompt": "VLM prompt (optional)",
+        "hyb_run_prompt_ph": "Block transcription instruction (built-in default)",
         # Segmentation (visualization skeleton)
         "seg_eyebrow": "Showcase · layout",
         "seg_desc": "Region visualization of a segmented page "
@@ -486,6 +503,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_curated_yours": "Your curated datasets",
         "library_curated_yours_hint": "Cinoc curated datasets found on your "
         "HuggingFace account (cinoc-corpus tag) — import one in a click.",
+        "library_curated_empty": "No curated dataset detected automatically. On a "
+        "Space, your cinoc-corpus-tagged datasets appear here with no setup; locally, "
+        "set an HF token or CINOC_HF_AUTHOR. Otherwise, import by id below.",
         "library_zip_meta": "ZIP · max 500 MB · pairs auto-detected",
         "library_ready": "ready for benchmark",
         "library_add_desc": "Upload a ZIP (drag-and-drop) or import from a "

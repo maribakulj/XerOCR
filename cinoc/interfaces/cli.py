@@ -192,15 +192,19 @@ def _run_hybrid(
     ocr: str,
     label: str,
     source_label: str | None,
+    lang: str = "fra",
+    model: str | None = None,
+    prompt: str | None = None,
 ) -> int:
-    """Transcription **hybride** : segmente, OCR par bloc, assemble un ALTO/page.
+    """Transcription **hybride** : segmente, reconnaît par bloc, assemble un ALTO/page.
 
     Part d'un dossier d'images (sans GT) → ``CorpusSpec`` → ``plan_hybrid_run``
-    (pp_doclayout + tesseract par défaut) → orchestrateur ; les ``ALTO_XML`` sont
-    écrits dans ``out`` par un sink (avant nettoyage du workspace).
+    (pp_doclayout + tesseract par défaut ; tout OCR réel ou un VLM zero-shot via
+    ``--ocr``) → orchestrateur ; les ``ALTO_XML`` sont écrits dans ``out`` par un
+    sink (avant nettoyage du workspace).
     """
     from cinoc.app.orchestrator import PipelineOutputs
-    from cinoc.app.run_planning import plan_hybrid_run
+    from cinoc.app.structure_planning import plan_hybrid_run
     from cinoc.app.transcription import corpus_from_images, write_alto_files
     from cinoc.domain.run import RunManifest
 
@@ -210,7 +214,7 @@ def _run_hybrid(
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
     spec = plan_hybrid_run(
         corpus, "hybrid", segmenter=segmenter, ocr=ocr, label=label,
-        source_label=source_label,
+        source_label=source_label, lang=lang, model=model, prompt=prompt,
     )(Path(out))
     out_dir = Path(out)
     written: list[Path] = []
@@ -398,15 +402,30 @@ def main(argv: list[str] | None = None) -> int:
     hybrid_cmd.add_argument(
         "--ocr",
         default="tesseract",
-        help="OCR par région (tesseract, precomputed_region).",
+        help="Reconnaisseur par bloc : OCR réel (tesseract, mistral_ocr, "
+        "google_vision, azure_di, kraken, pero, calamari) ou VLM zero-shot "
+        "(openai, anthropic, mistral) ; precomputed_region en démo.",
     )
     hybrid_cmd.add_argument(
-        "--label", default="hybrid", help="Étiquette du moteur OCR (identité)."
+        "--label", default="hybrid", help="Étiquette du moteur (identité)."
     )
     hybrid_cmd.add_argument(
         "--source-label",
         default=None,
         help="Jeu de textes par région (mode precomputed_region).",
+    )
+    hybrid_cmd.add_argument(
+        "--lang", default="fra", help="Langue OCR par bloc (moteurs OCR réels)."
+    )
+    hybrid_cmd.add_argument(
+        "--model",
+        default=None,
+        help="Modèle du reconnaisseur (chemin/checkpoint OCR ou modèle VLM).",
+    )
+    hybrid_cmd.add_argument(
+        "--prompt",
+        default=None,
+        help="Prompt de transcription pour un reconnaisseur VLM (zero-shot).",
     )
 
     serve_cmd = subparsers.add_parser(
@@ -452,6 +471,9 @@ def main(argv: list[str] | None = None) -> int:
                 ocr=args.ocr,
                 label=args.label,
                 source_label=args.source_label,
+                lang=args.lang,
+                model=args.model,
+                prompt=args.prompt,
             )
         if args.command == "compare":
             return _compare_command(args.run_a, args.run_b, args.output)

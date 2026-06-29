@@ -2,6 +2,14 @@
 
 # Cinoc
 
+[![CI](https://github.com/maribakulj/cinoc/actions/workflows/ci.yml/badge.svg)](https://github.com/maribakulj/cinoc/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20|%203.12%20|%203.13-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+[![Coverage](https://img.shields.io/badge/coverage-%E2%89%A585%25-brightgreen.svg)](#development)
+[![Lint: Ruff](https://img.shields.io/badge/lint-ruff-261230.svg)](https://github.com/astral-sh/ruff)
+[![Types: mypy strict](https://img.shields.io/badge/types-mypy%20strict-1f5082.svg)](https://mypy-lang.org/)
+[![Determinism: hash‑locked](https://img.shields.io/badge/runs-deterministic-6e40c9.svg)](#invariants)
+
 **A deterministic benchmark for transcription *pipelines* — OCR, HTR, VLM, OCR→LLM — on heritage documents.**
 
 Cinoc runs competing transcription pipelines over a ground-truth corpus and produces a **factual, quantified verdict** — metrics plus statistical tests — as a **self‑contained interactive HTML report**. No LLM writes the report: every number is an **auditable** function of the inputs.
@@ -26,21 +34,7 @@ Existing OCR benchmarks were not built for this. They assume one engine, clean m
 
 Cinoc is the bench you run **before** committing a corpus to a pipeline: reproducible, engine‑agnostic, and honest about what it does and does not measure.
 
----
-
-## Screenshots
-
-**The report** — every run produces one self‑contained HTML file: per‑engine scores, per‑view metrics with heat‑mapped cells, corpus strata, comparison and significance, drill‑in by document — exportable to CSV/JSON.
-
-![Cinoc report](docs/screenshots/report.png)
-
-**The benchmark composer** — compose competitors (OCR, OCR→LLM text, OCR→LLM image+text, VLM zero‑shot), toggle a NER step or ALTO export, pick a normalisation profile, and launch — all in one run.
-
-![Cinoc benchmark composer](docs/screenshots/launcher.png)
-
-**Layout & hybrid transcription** — segment a page into regions, then transcribe **block by block** (segmentation → per‑region OCR → assembled ALTO). The panel degrades gracefully when an engine is unavailable rather than failing.
-
-![Cinoc segmentation & hybrid transcription](docs/screenshots/segmentation.png)
+*(Screenshots are at the [bottom of this page](#screenshots).)*
 
 ---
 
@@ -54,7 +48,7 @@ Cinoc is the bench you run **before** committing a corpus to a pipeline: reprodu
 | **OCR → LLM** (`text_only`) | an OCR engine, then an LLM corrects the text |
 | **OCR → VLM** (`text_and_image`) | an OCR engine, then a VLM sees **image + text** together |
 | **VLM zero‑shot** | a VLM transcribes the image directly, no OCR upstream |
-| **Hybrid** (seg → reco → ALTO) | layout segmentation → recognition **per region** (fan‑out) → assembled ALTO XML |
+| **Hybrid** (seg → reco → ALTO) | layout segmentation → recognition **per region** (fan‑out) by **any OCR or a VLM (zero‑shot) per block** → assembled ALTO XML |
 | **+ NER** (optional terminal step) | `text → entities`, scored if the corpus carries entity ground truth |
 
 Engines are **interchangeable bricks** behind a single `Module` protocol. Heavy dependencies are **optional extras**: an engine is always listed, and tells you clearly if it needs its extra or API key instead of crashing.
@@ -167,9 +161,9 @@ cinoc serve --port 8080                          # local web app
 
 `cinoc serve` (or the hosted Space) gives you the interactive surface:
 
-- **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**; auto‑discover your curated Cinoc datasets (`CINOC_HF_AUTHOR` + the `cinoc-corpus` tag), where images stay as revision‑pinned IIIF references.
-- **Benchmark** — the composer above: pick a corpus, add competitors, launch (live progress over SSE).
-- **Segmentation** — segment a page and inspect regions; launch a **hybrid transcription** (segment → per‑region OCR → downloadable ALTO).
+- **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**. Your curated Cinoc datasets (tagged `cinoc-corpus`) appear **automatically** — your handle is resolved from the Space (`SPACE_ID`) or an HF token, with `CINOC_HF_AUTHOR` as an explicit override; images stay as revision‑pinned IIIF references.
+- **Benchmark** — the composer: pick a corpus, add competitors, launch (live progress over SSE).
+- **Segmentation** — segment a page and inspect regions; launch a **hybrid transcription** (segment → per‑region **OCR or VLM** → downloadable ALTO).
 - **Reports / History** — browse rendered reports and longitudinal trends.
 
 By default an instance runs its engines with the operator's own key (no gate). The **opt‑in** public mode (`CINOC_PUBLIC_MODE=true`) makes a deployment *fail‑closed* — only the free first‑party base (Tesseract — no key, no billed call) runs; cloud engines and third‑party plugins are refused (`403`) — for protecting a key on a *public* Space. See [`deploy/`](deploy/) for the HuggingFace Space image.
@@ -195,6 +189,28 @@ make ci           # full gate, with coverage threshold
 ```
 
 CI runs on Linux/macOS/Windows × Python 3.11/3.12/3.13 and enforces the coverage threshold. Detailed roadmap and decision log: [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md); notable changes: [`CHANGELOG.md`](CHANGELOG.md); working contract: [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## Screenshots
+
+<details open>
+<summary><strong>The report</strong> — one self‑contained HTML file: per‑engine scores, heat‑mapped per‑view metrics, corpus strata, comparison & significance, drill‑in by document, CSV/JSON export.</summary>
+
+![Cinoc report](docs/screenshots/report.png)
+</details>
+
+<details>
+<summary><strong>The benchmark composer</strong> — compose competitors (OCR, OCR→LLM, OCR→VLM image+text, VLM zero‑shot), toggle a NER step or ALTO export, pick a normalisation profile, launch.</summary>
+
+![Cinoc benchmark composer](docs/screenshots/launcher.png)
+</details>
+
+<details>
+<summary><strong>Layout & hybrid transcription</strong> — segment a page, then transcribe block by block (segmentation → per‑region OCR/VLM → assembled ALTO). Degrades gracefully when an engine is unavailable.</summary>
+
+![Cinoc segmentation & hybrid transcription](docs/screenshots/segmentation.png)
+</details>
 
 ---
 

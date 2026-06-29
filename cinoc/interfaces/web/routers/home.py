@@ -40,6 +40,7 @@ from cinoc.app.engines import (
 from cinoc.app.history import series_insight
 from cinoc.app.run_planning import benchmark_engine_catalog, metric_profile_catalog
 from cinoc.app.segmentation import SegmentationStore
+from cinoc.app.structure_planning import hybrid_recognizer_catalog
 from cinoc.formats.text import NORMALIZATION_PROFILES
 from cinoc.interfaces.web._cache import TTLCache
 from cinoc.interfaces.web.catalog import available_reports
@@ -293,11 +294,15 @@ def build_home_router(
         # OCR → le lanceur vit ici, pas dans la coquille benchmark.
         context["corpora"] = _corpora_summaries(corpus_store)
         context["segmenters"] = list(segmenters())
-        # Transcription hybride : OCR Tesseract par bloc → gate UI sur sa dispo
-        # (binaire absent → on n'offre pas un bouton voué au 409).
-        context["tesseract_available"] = any(
-            s.kind == "tesseract" and s.available for s in statuses()
-        )
+        # Transcription hybride : reconnaisseur **par bloc** au choix — tout OCR
+        # réel (tesseract, mistral_ocr, google_vision, azure_di, kraken/pero/
+        # calamari) **ou** un VLM en transcription zero-shot. Source unique du
+        # ``<select>`` + de ce que le planner accepte (anti-vide). Le panneau
+        # n'est offert que si **au moins un** reconnaisseur est disponible (sinon
+        # tout bouton serait voué au 409).
+        recognizers = hybrid_recognizer_catalog(statuses())
+        context["recognizers"] = recognizers
+        context["hybrid_available"] = any(r["available"] for r in recognizers)
         return templates.TemplateResponse(request, "segmentation.html", context)
 
     @router.get("/library", response_class=HTMLResponse)

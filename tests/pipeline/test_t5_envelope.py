@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 
 from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
-from cinoc.app.run_planning import plan_hybrid_run
+from cinoc.app.structure_planning import plan_hybrid_run
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.layout import CanonicalLayout, LayoutPage, Region
@@ -82,7 +82,10 @@ def test_hybrid_planner_real_default_is_ppdoclayout_plus_tesseract() -> None:
     assert recognize.fanout is True
     assert recognize.crop is True  # OCR réel par bloc → découpe l'image
     assert assemble.adapter_name == "alto_assembler"
-    assert run_spec.adapter_kwargs["tesseract:hybrid"] == {"label": "hybrid"}
+    assert run_spec.adapter_kwargs["tesseract:hybrid"] == {
+        "label": "hybrid",
+        "lang": "fra",
+    }
 
 
 def _scene(tmp_path: Path, regions: dict[str, str]) -> Artifact:

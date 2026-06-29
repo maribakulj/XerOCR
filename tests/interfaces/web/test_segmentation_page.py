@@ -93,12 +93,12 @@ def _home_with(tmp_path: Path, *, statuses, segmenters, corpus_store=None):
     return TestClient(app)
 
 
-def test_hybrid_panel_gated_without_tesseract(tmp_path: Path) -> None:
-    # Tesseract absent → le panneau hybride affiche le hint, pas le formulaire.
+def test_hybrid_panel_gated_without_any_recognizer(tmp_path: Path) -> None:
+    # Aucun reconnaisseur disponible → le panneau affiche le hint, pas le formulaire.
     client = _home_with(tmp_path, statuses=lambda: (), segmenters=lambda: ())
     body = client.get("/segmentation").text
     assert "hyb-run-form" not in body
-    assert "Tesseract indisponible" in body
+    assert "Aucun reconnaisseur disponible" in body
 
 
 def test_hybrid_form_offered_with_tesseract_and_corpus(tmp_path: Path) -> None:
@@ -124,6 +124,12 @@ def test_hybrid_form_offered_with_tesseract_and_corpus(tmp_path: Path) -> None:
             EngineStatus(
                 kind="tesseract", label="Tesseract", available=True, detail="ok"
             ),
+            EngineStatus(
+                kind="mistral_ocr", label="Mistral OCR", available=True, detail="ok"
+            ),
+            EngineStatus(
+                kind="openai", label="OpenAI", available=True, detail="ok"
+            ),
         ),
         segmenters=lambda: (
             EngineStatus(
@@ -137,6 +143,10 @@ def test_hybrid_form_offered_with_tesseract_and_corpus(tmp_path: Path) -> None:
     assert 'id="hyb-run-form"' in body
     assert 'id="hybrid-btn"' in body
     assert 'id="hyb-download"' in body
+    # Le <select> reconnaisseur par bloc liste OCR réels ET VLM (zero-shot).
+    assert 'id="hyb-ocr"' in body
+    assert 'value="mistral_ocr"' in body  # OCR cloud câblé par bloc
+    assert 'value="openai"' in body and 'data-vlm="1"' in body  # VLM par bloc
 
 
 def test_segmentation_page_shows_latest_persisted_run(tmp_path: Path) -> None:

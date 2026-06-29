@@ -39,18 +39,15 @@ FILE_BUDGETS: dict[str, int] = {
     # design system > éclatement ; grandit avec les composants (axe 2). Budget
     # re-basé au courant (611 LOC, refonte mise en page R1→R5) + ~15 %.
     "reports/html.py": 730,
-    # Planification de run (couche 6) : **source unique** des specs (benchmark +
-    # segmentation + hybride seg→reco→ALTO) à partir des choix UI/CLI — catalogue
-    # moteurs par rôle, profils de métriques, vues d'évaluation par type de GT,
-    # composition des pipelines par concurrent (OCR/zero-shot/chaîne LLM-VLM +
-    # étape NER optionnelle), segmenteurs local/distant, **planner hybride T5**
-    # réel (pp_doclayout + tesseract par région + assemblage ALTO). La cohésion
-    # « tout ce qui traduit un choix en RunSpec » prime sur l'éclatement ; grandit
-    # d'une brique à la fois (axe 2). Budget re-basé au courant (816 LOC, planner
-    # hybride réel) + ~4 %. ⚠️ Seuil de découpe atteint : la planification de run
-    # **structure** (segmentation + hybride) est un candidat à l'extraction vers un
-    # module sœur si elle grandit encore (suivi : surface T5).
-    "app/run_planning.py": 850,
+    # Planification de run **benchmark** (couche 6) : **source unique** des specs
+    # texte à partir des choix UI/CLI — catalogue moteurs par rôle, profils de
+    # métriques, vues d'évaluation par type de GT, composition des pipelines par
+    # concurrent (OCR/zero-shot/chaîne LLM-VLM + étape NER optionnelle). La
+    # planification de run **structure** (segmentation + hybride seg→reco→ALTO) a
+    # été **extraite** vers ``app/structure_planning.py`` quand le seuil de découpe
+    # a été atteint (surface T5 : reconnaisseur par bloc OCR **ou** VLM zero-shot).
+    # Budget re-basé au courant après extraction (~605 LOC) + ~9 %.
+    "app/run_planning.py": 660,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu
