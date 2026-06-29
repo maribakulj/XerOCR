@@ -21,6 +21,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_segmentation": "Segmentation",
         "nav_history": "Historique",
         "nav_engines": "Moteurs",
+        "nav_secondary": "Mise en page & moteurs",
         "wordmark_sub": "OCR · HTR · VLM",
         "hero_eyebrow": "Vitrine · lecture seule",
         "hero_desc": "Rapports de benchmark déterministes — "
@@ -279,6 +280,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_segmentation": "Segmentation",
         "nav_history": "History",
         "nav_engines": "Engines",
+        "nav_secondary": "Layout & engines",
         "wordmark_sub": "OCR · HTR · VLM",
         "hero_eyebrow": "Showcase · read-only",
         "hero_desc": "Deterministic benchmark reports — "

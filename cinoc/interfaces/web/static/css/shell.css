@@ -279,6 +279,12 @@ select:focus-visible {
   text-transform: uppercase;
 }
 .nav-item.active .nav-meta { color: rgba(239, 237, 232, 0.55); }
+/* Groupe secondaire (mise en page / moteurs) : séparé du nav principal. */
+.rail-nav-secondary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--g-50);
+}
 
 /* === System block === */
 .rail-system {

@@ -44,6 +44,18 @@
         </a>
         {% endfor %}
       </nav>
+      {% if secondary_nav %}
+      <nav class="rail-nav rail-nav-secondary" aria-label="{{ t.nav_secondary }}">
+        {% for item in secondary_nav %}
+        <a class="nav-item{% if item.state == 'active' %} active{% endif %}"
+           href="{{ item.href }}"{% if item.state == 'active' %} aria-current="page"{% endif %}>
+          <span class="nav-glyph">{{ glyph(item.id) }}</span>
+          <span class="nav-label">{{ item.label }}</span>
+          <span class="nav-meta">{{ item.meta }}</span>
+        </a>
+        {% endfor %}
+      </nav>
+      {% endif %}
     </div>
 
     <div class="rail-system">
