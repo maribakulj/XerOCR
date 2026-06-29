@@ -56,8 +56,88 @@
     });
   }
 
+  // Aperçu de mise en page (mode hybride) : lance une segmentation sur le corpus
+  // choisi et injecte le SVG des régions (rendu serveur). Remplace l'ancienne page
+  // /segmentation — la visualisation vit désormais dans le lanceur.
+  function wireSegPreview() {
+    var btn = document.getElementById("seg-preview-btn");
+    var container = document.getElementById("seg-preview");
+    if (!btn || !container) return;
+    var status = document.getElementById("seg-preview-status");
+    var corpusSelect = document.getElementById("corpus-select");
+    var segmenter = document.getElementById("draft-segmenter");
+    var endpoint = document.getElementById("draft-seg-endpoint");
+    var token = document.getElementById("draft-seg-token");
+
+    function poll(jobId) {
+      fetchJson("/api/runs/" + encodeURIComponent(jobId)).then(function (res) {
+        var state = res.body && res.body.state;
+        if (state === "done") {
+          // Le sink clé le store par id propre → on lit le dernier layout persisté.
+          fetch("/api/segmentation/preview")
+            .then(function (r) {
+              return r.ok ? r.text() : "";
+            })
+            .then(function (svg) {
+              container.innerHTML = svg;
+              if (status) status.textContent = "";
+              btn.disabled = false;
+            });
+          return;
+        }
+        if (state === "failed" || state === "cancelled" || !res.ok) {
+          if (status) {
+            status.textContent =
+              (res.body && res.body.error) || "HTTP " + res.status;
+          }
+          btn.disabled = false;
+          return;
+        }
+        window.setTimeout(function () {
+          poll(jobId);
+        }, 1500);
+      });
+    }
+
+    btn.addEventListener("click", function () {
+      var corpusId = corpusSelect && corpusSelect.value;
+      if (!corpusId) {
+        if (status) status.textContent = btn.getAttribute("data-no-corpus") || "";
+        return;
+      }
+      var payload = {
+        corpus_id: corpusId,
+        segmenter: segmenter ? segmenter.value : "pp_doclayout",
+      };
+      if (payload.segmenter === "remote_segmenter") {
+        if (endpoint && endpoint.value.trim()) payload.endpoint = endpoint.value.trim();
+        if (token && token.value.trim()) payload.token = token.value.trim();
+      }
+      var headers = { "Content-Type": "application/json" };
+      headers[CSRF] = "1";
+      btn.disabled = true;
+      if (status) status.textContent = status.getAttribute("data-running") || "…";
+      fetchJson("/api/segmentation/run", {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(payload),
+      }).then(function (res) {
+        if (!res.ok) {
+          if (status) {
+            status.textContent =
+              (res.body && res.body.detail) || "HTTP " + res.status;
+          }
+          btn.disabled = false;
+          return;
+        }
+        poll(res.body.job_id);
+      });
+    });
+  }
+
   ready(function () {
     wireNormalizationPreview();
+    wireSegPreview();
     var launchBtn = document.getElementById("launch");
     var statusEl = document.getElementById("run-status");
     var resultEl = document.getElementById("run-result");
@@ -83,6 +163,12 @@
     var draftOcr = document.getElementById("draft-ocr");
     var draftLlm = document.getElementById("draft-llm");
     var draftVlm = document.getElementById("draft-vlm");
+    var draftSegmenter = document.getElementById("draft-segmenter");
+    var draftRecognizer = document.getElementById("draft-recognizer");
+    var draftSegEndpoint = document.getElementById("draft-seg-endpoint");
+    var draftSegToken = document.getElementById("draft-seg-token");
+    var draftSegEndpointField = document.getElementById("draft-seg-endpoint-field");
+    var draftSegTokenField = document.getElementById("draft-seg-token-field");
     var draftModel = document.getElementById("draft-model");
     var draftPrompt = document.getElementById("draft-prompt");
     var draftPromptCurated = document.getElementById("draft-prompt-curated");
@@ -94,7 +180,19 @@
       ocrLlm: queueList.getAttribute("data-label-ocr-llm") || "OCR → LLM",
       ocrVlm: queueList.getAttribute("data-label-ocr-vlm") || "OCR → VLM",
       vlm: queueList.getAttribute("data-label-vlm") || "VLM",
+      hybrid: queueList.getAttribute("data-label-hybrid") || "Hybride",
     };
+
+    // Endpoint/jeton du segmenteur distant : visibles seulement en mode hybride
+    // ET quand ``remote_segmenter`` est choisi (sinon ils n'ont aucun sens).
+    function syncSegFields() {
+      if (!draftSegmenter) return;
+      var isRemote =
+        activeMode === "hybrid" && draftSegmenter.value === "remote_segmenter";
+      if (draftSegEndpointField) draftSegEndpointField.hidden = !isRemote;
+      if (draftSegTokenField) draftSegTokenField.hidden = !isRemote;
+    }
+    if (draftSegmenter) draftSegmenter.addEventListener("change", syncSegFields);
 
     function currentCorpusId() {
       return corpusSelect && corpusSelect.value ? corpusSelect.value : null;
@@ -139,6 +237,8 @@
       if (activeMode === "text_and_image" || activeMode === "zero_shot") {
         return draftVlm && draftVlm.value;
       }
+      // En hybride, le « modèle » cible le reconnaisseur par bloc (utile aux VLM).
+      if (activeMode === "hybrid") return draftRecognizer && draftRecognizer.value;
       return "";
     }
 
@@ -186,6 +286,7 @@
         var shown = draftFields[j].getAttribute("data-show").split(" ");
         draftFields[j].hidden = shown.indexOf(mode) < 0;
       }
+      syncSegFields();
       updateModelList();
     }
 
@@ -206,6 +307,14 @@
         return {
           label: queueLabels.ocrVlm,
           meta: entry.engine + " → " + entry.llm + (entry.model ? " · " + entry.model : ""),
+        };
+      }
+      if (entry.mode === "hybrid") {
+        return {
+          label: queueLabels.hybrid,
+          meta:
+            entry.segmenter + " → " + entry.engine +
+            (entry.model ? " · " + entry.model : ""),
         };
       }
       return {
@@ -289,6 +398,27 @@
           alto: alto,
         };
       }
+      if (activeMode === "hybrid") {
+        // Hybride : segmenteur en tête, ``engine`` = reconnaisseur par bloc (OCR
+        // ou VLM zero-shot). ``model``/``prompt`` ciblent le reconnaisseur.
+        var seg = draftSegmenter ? draftSegmenter.value : "";
+        var remote = seg === "remote_segmenter";
+        return {
+          engine: draftRecognizer ? draftRecognizer.value : "",
+          mode: "hybrid",
+          segmenter: seg,
+          segmenterEndpoint:
+            remote && draftSegEndpoint ? draftSegEndpoint.value.trim() : "",
+          segmenterToken:
+            remote && draftSegToken ? draftSegToken.value.trim() : "",
+          model: model,
+          prompt: prompt,
+          promptName: promptName,
+          ner: ner,
+          nerModel: nerModel,
+          alto: alto,
+        };
+      }
       return {
         engine: draftVlm.value,
         mode: "zero_shot",
@@ -306,7 +436,20 @@
       for (var i = 0; i < queue.length; i++) {
         var entry = {};
         entry.engine = queue[i].engine;
-        if (queue[i].mode !== "ocr_only") entry.mode = queue[i].mode;
+        // ``ocr_only`` et ``hybrid`` n'ont pas de ``mode`` côté serveur (l'hybride
+        // est signalé par ``segmenter``). Les autres portent leur PipelineMode.
+        if (queue[i].mode !== "ocr_only" && queue[i].mode !== "hybrid") {
+          entry.mode = queue[i].mode;
+        }
+        if (queue[i].segmenter) {
+          entry.segmenter = queue[i].segmenter;
+          if (queue[i].segmenterEndpoint) {
+            entry.segmenter_endpoint = queue[i].segmenterEndpoint;
+          }
+          if (queue[i].segmenterToken) {
+            entry.segmenter_token = queue[i].segmenterToken;
+          }
+        }
         if (queue[i].llm) entry.llm = queue[i].llm;
         if (queue[i].model) entry.model = queue[i].model;
         if (queue[i].prompt) entry.prompt = queue[i].prompt;
@@ -352,8 +495,13 @@
       for (var i = 0; i < comps.length; i++) {
         var c = comps[i];
         queue.push({
+          // ``segmenter`` posé ⇒ concurrent hybride (mode interne « hybrid »,
+          // jamais envoyé au serveur) ; sinon ``mode`` explicite ou OCR seul.
           engine: c.engine,
-          mode: c.mode || "ocr_only",
+          mode: c.segmenter ? "hybrid" : c.mode || "ocr_only",
+          segmenter: c.segmenter || "",
+          segmenterEndpoint: c.segmenter_endpoint || "",
+          segmenterToken: c.segmenter_token || "",
           llm: c.llm || "",
           model: c.model || "",
           prompt: c.prompt || "",

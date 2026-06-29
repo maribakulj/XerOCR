@@ -50,7 +50,6 @@ from cinoc.interfaces.web.metrics import MetricsMiddleware, RequestMetrics
 from cinoc.interfaces.web.routers.corpus import build_corpus_router
 from cinoc.interfaces.web.routers.engines import build_engines_router
 from cinoc.interfaces.web.routers.home import build_home_router
-from cinoc.interfaces.web.routers.hybrid import build_hybrid_router
 from cinoc.interfaces.web.routers.reports import build_reports_router
 from cinoc.interfaces.web.routers.runs import build_runs_router
 from cinoc.interfaces.web.routers.segmentation import build_segmentation_router
@@ -300,22 +299,15 @@ def create_app(
             segmenters=segmenter_status_provider,
         )
     )
-    # Transcription hybride (seg → OCR par région → ALTO) : même JobRunner ; les
-    # ALTO produits se téléchargent via /reports/{run_id}/alto.zip, le LAYOUT se
-    # visualise via /segmentation (sinks AltoStore + SegmentationStore déjà câblés).
-    app.include_router(
-        build_hybrid_router(
-            runner=runner,
-            corpus_store=corpus_store,
-            segmenters=segmenter_status_provider,
-            engines=engine_status_provider,
-        )
-    )
+    # Le lanceur exécute aussi les concurrents **hybrides** (segmenteur →
+    # reconnaissance par bloc → texte scoré) : pas de second chemin d'exécution.
+    # Les ALTO produits (option) se téléchargent via /reports/{run_id}/alto.zip.
     app.include_router(
         build_runs_router(
             runner,
             corpus_store,
             statuses=engine_status_provider,
+            segmenters=segmenter_status_provider,
             ner_available=lambda: ner_status_provider().available,
             public_mode=is_public,
         )

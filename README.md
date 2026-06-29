@@ -162,8 +162,7 @@ cinoc serve --port 8080                          # local web app
 `cinoc serve` (or the hosted Space) gives you the interactive surface:
 
 - **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**. Your curated Cinoc datasets (tagged `cinoc-corpus`) appear **automatically** — your handle is resolved from the Space (`SPACE_ID`) or an HF token, with `CINOC_HF_AUTHOR` as an explicit override; images stay as revision‑pinned IIIF references.
-- **Benchmark** — the composer: pick a corpus, add competitors, launch (live progress over SSE).
-- **Segmentation** — segment a page and inspect regions; launch a **hybrid transcription** (segment → per‑region **OCR or VLM** → downloadable ALTO).
+- **Benchmark** — the composer: pick a corpus, add competitors (OCR, OCR→LLM, VLM, **Hybrid**), launch (live progress over SSE). The **Hybrid** mode composes *segmenter → per‑region OCR/VLM → assembled text*, scored side‑by‑side with flat pipelines; a **layout preview** panel shows the detected regions before you launch. (There is no separate segmentation tab — it lives here.)
 - **Reports / History** — browse rendered reports and longitudinal trends.
 
 By default an instance runs its engines with the operator's own key (no gate). The **opt‑in** public mode (`CINOC_PUBLIC_MODE=true`) makes a deployment *fail‑closed* — only the free first‑party base (Tesseract — no key, no billed call) runs; cloud engines and third‑party plugins are refused (`403`) — for protecting a key on a *public* Space. See [`deploy/`](deploy/) for the HuggingFace Space image.

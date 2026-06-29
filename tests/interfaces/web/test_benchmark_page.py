@@ -111,7 +111,7 @@ def test_model_field_shown_in_ocr_only_mode(tmp_path: Path) -> None:
     # 3c : le champ « Modèle » est désormais visible aussi en OCR seul (pour
     # kraken/pero/calamari/mistral_ocr qui exigent un modèle) — gap 2c refermé.
     body = _client(tmp_path).get("/benchmark").text
-    assert 'data-show="ocr_only text_only text_and_image zero_shot"' in body
+    assert 'data-show="ocr_only text_only text_and_image zero_shot hybrid"' in body
     assert 'id="draft-model"' in body
 
 
@@ -230,10 +230,14 @@ def _benchmark_body(
     return TestClient(app).get("/benchmark").text
 
 
-def test_segmentation_is_not_exposed_in_benchmark_shell(tmp_path: Path) -> None:
+def test_hybrid_mode_exposed_in_benchmark_composer(tmp_path: Path) -> None:
+    # La segmentation N'A PLUS de page dédiée : elle se compose comme un mode
+    # **Hybride** du Banc d'essai (segmenteur + reconnaisseur par bloc).
     body = _benchmark_body(tmp_path, segmenter_available=True)
-    assert 'id="segment-btn"' not in body
-    assert "PP-DocLayout" not in body
+    assert 'data-mode="hybrid"' in body
+    assert 'id="draft-segmenter"' in body
+    assert 'id="draft-recognizer"' in body
+    assert "PP-DocLayout" in body  # le segmenteur du socle est listé dans le mode
 
 
 def test_benchmark_corpus_select_lists_corpora(tmp_path: Path) -> None:

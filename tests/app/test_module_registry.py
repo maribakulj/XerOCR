@@ -33,6 +33,7 @@ def test_kinds_listed() -> None:
         "calamari",
         "google_vision",
         "kraken",
+        "layout_to_text",
         "mistral",
         "mistral_ocr",
         "ner",

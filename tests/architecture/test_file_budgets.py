@@ -43,11 +43,13 @@ FILE_BUDGETS: dict[str, int] = {
     # texte à partir des choix UI/CLI — catalogue moteurs par rôle, profils de
     # métriques, vues d'évaluation par type de GT, composition des pipelines par
     # concurrent (OCR/zero-shot/chaîne LLM-VLM + étape NER optionnelle). La
-    # planification de run **structure** (segmentation + hybride seg→reco→ALTO) a
-    # été **extraite** vers ``app/structure_planning.py`` quand le seuil de découpe
-    # a été atteint (surface T5 : reconnaisseur par bloc OCR **ou** VLM zero-shot).
-    # Budget re-basé au courant après extraction (~605 LOC) + ~9 %.
-    "app/run_planning.py": 660,
+    # planification de run **structure** (segmentation + hybride *autonome*
+    # seg→reco→ALTO) vit dans ``app/structure_planning.py`` (extraite au seuil de
+    # découpe). Ce fichier garde le **benchmark**, dont le mode **hybride comme
+    # concurrent** (segmenteur → reconnaissance par bloc → texte scoré CER/WER,
+    # comparé côte à côte avec un pipeline à plat) — concern benchmark, distinct
+    # du run structure autonome. Budget re-basé au courant (~727 LOC) + ~5 %.
+    "app/run_planning.py": 760,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu
@@ -69,8 +71,11 @@ ASSET_THRESHOLD = 500
 ASSET_BUDGETS: dict[str, int] = {
     # CSS de la coquille web (design system inline auto-hébergé).
     "interfaces/web/static/css/shell.css": 1477,
-    # Script du composeur Banc d'essai (formulaire interactif).
-    "interfaces/web/static/js/benchmark.js": 631,
+    # Script du composeur Banc d'essai (formulaire interactif) : + mode **hybride**
+    # (segmenteur + reconnaisseur par bloc) et **aperçu de mise en page** (lance une
+    # segmentation et injecte le SVG des régions — remplace l'ancienne page dédiée).
+    # Re-basé au courant (~697 LOC) + ~5 %.
+    "interfaces/web/static/js/benchmark.js": 730,
     # Script du rapport autonome (enrichissement progressif, CSP-hashé).
     "reports/_assets/report.js": 714,
 }

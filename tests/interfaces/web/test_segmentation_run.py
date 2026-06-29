@@ -209,3 +209,45 @@ def test_run_missing_corpus_id_is_422(tmp_path: Path) -> None:
     client, _, _, _ = _client(tmp_path)
     resp = client.post("/api/segmentation/run", json={}, headers=_CSRF)
     assert resp.status_code == 422
+
+
+# --- Aperçu de mise en page (panneau du lanceur, remplace la page /segmentation) ---
+
+
+def test_preview_renders_svg_of_latest_layout(tmp_path: Path) -> None:
+    # Après un run, l'aperçu rend le SVG des régions du dernier layout persisté.
+    client, runner, _seg_store, corpus_store = _client(tmp_path)
+    corpus_id = _add_corpus(corpus_store)
+    job_id = client.post(
+        "/api/segmentation/run", json={"corpus_id": corpus_id}, headers=_CSRF
+    ).json()["job_id"]
+    assert runner.join(job_id, timeout=30)
+    resp = client.get("/api/segmentation/preview")
+    assert resp.status_code == 200
+    assert "<svg" in resp.text
+
+
+def test_preview_without_any_segmentation_is_404(tmp_path: Path) -> None:
+    client, *_ = _client(tmp_path)
+    assert client.get("/api/segmentation/preview").status_code == 404
+
+
+def test_image_endpoint_serves_persisted_png(tmp_path: Path) -> None:
+    from cinoc.domain.layout import CanonicalLayout, LayoutPage
+
+    client, _runner, seg_store, _corpus = _client(tmp_path)
+    seg_id = seg_store.save(
+        CanonicalLayout(pages=(LayoutPage(),)),
+        image_ext=".png",
+        image_bytes=b"\x89PNG\r\n\x1a\n",
+    )
+    resp = client.get(f"/api/segmentation/{seg_id}/image")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/png"
+
+
+def test_image_endpoint_traversal_is_404(tmp_path: Path) -> None:
+    client, *_ = _client(tmp_path)
+    assert (
+        client.get("/api/segmentation/..%2F..%2Fsecret/image").status_code == 404
+    )

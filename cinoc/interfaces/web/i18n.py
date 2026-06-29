@@ -63,7 +63,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_mode_text": "OCR → LLM (texte)",
         "bench_mode_image": "OCR → LLM (image+texte)",
         "bench_mode_vlm": "VLM (zero-shot)",
+        "bench_mode_hybrid": "Hybride (segmentation)",
         "bench_ocr_engine": "Moteur OCR",
+        "bench_segmenter": "Segmenteur",
+        "bench_segmenter_hint": "Détecte les régions en tête de pipeline ; le "
+        "distant délègue à un endpoint HF (modèle changé via l'URL).",
+        "bench_recognizer": "Reconnaisseur par bloc",
+        "bench_recognizer_hint": "Moteur appliqué à chaque bloc découpé : un OCR "
+        "réel, ou un VLM qui transcrit l'image du bloc (zero-shot). Texte assemblé "
+        "scoré CER/WER comme un pipeline à plat.",
+        "bench_seg_preview": "Aperçu des régions",
+        "bench_seg_preview_btn": "Prévisualiser la segmentation",
+        "bench_seg_preview_hint": "Lance le segmenteur sur le corpus choisi et "
+        "affiche les régions détectées (avant de lancer le benchmark).",
+        "bench_seg_preview_no_corpus": "Choisis d'abord un corpus.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
         "bench_model": "Modèle",
@@ -319,7 +332,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_mode_text": "OCR → LLM (text)",
         "bench_mode_image": "OCR → LLM (image+text)",
         "bench_mode_vlm": "VLM (zero-shot)",
+        "bench_mode_hybrid": "Hybrid (segmentation)",
         "bench_ocr_engine": "OCR engine",
+        "bench_segmenter": "Segmenter",
+        "bench_segmenter_hint": "Detects regions at the head of the pipeline; the "
+        "remote one delegates to an HF endpoint (swap the model via the URL).",
+        "bench_recognizer": "Per-block recognizer",
+        "bench_recognizer_hint": "Engine applied to each cropped block: a real OCR, "
+        "or a VLM transcribing the block image (zero-shot). Assembled text scored "
+        "CER/WER like a flat pipeline.",
+        "bench_seg_preview": "Region preview",
+        "bench_seg_preview_btn": "Preview segmentation",
+        "bench_seg_preview_hint": "Runs the segmenter on the chosen corpus and shows "
+        "the detected regions (before launching the benchmark).",
+        "bench_seg_preview_no_corpus": "Pick a corpus first.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
         "bench_model": "Model",

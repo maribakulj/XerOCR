@@ -46,7 +46,6 @@ from cinoc.interfaces.web._cache import TTLCache
 from cinoc.interfaces.web.catalog import available_reports
 from cinoc.interfaces.web.i18n import normalize_lang, strings_for
 from cinoc.interfaces.web.sparkline import sparkline_svg
-from cinoc.reports.layout_svg import layout_to_svg
 
 logger = logging.getLogger(__name__)
 
@@ -54,17 +53,17 @@ logger = logging.getLogger(__name__)
 #: à chaque chargement. Fenêtre courte — la fraîcheur prime sur le cache.
 _CATALOGUE_TTL_SECONDS = 300.0
 
-#: Vues **vivantes** : id de nav → chemin.
+#: Vues **vivantes** : id de nav → chemin. (La segmentation n'a plus de page
+#: dédiée : elle se compose comme un concurrent *hybride* du Banc d'essai.)
 _VIEW_PATHS = {
     "library": "/library",
     "reports": "/",
     "benchmark": "/benchmark",
-    "segmentation": "/segmentation",
     "history": "/history",
     "engines": "/engines",
 }
 _PRIMARY_NAV_IDS = ("library", "benchmark", "reports", "history")
-_SECONDARY_NAV_IDS = ("segmentation", "engines")
+_SECONDARY_NAV_IDS = ("engines",)
 
 
 def _nav_items(
@@ -247,6 +246,12 @@ def build_home_router(
         # Catalogue moteurs par rôle (ocr/llm/vlm) : options rendues **serveur**
         # (testables) ; le composeur JS ne fait qu'assembler les concurrents.
         context["catalog"] = benchmark_engine_catalog(statuses())
+        # Mode **hybride** du composeur : segmenteurs du socle + reconnaisseurs
+        # par bloc (OCR réels + VLM zero-shot) — mêmes ensembles que le planner
+        # accepte (anti-vide). Le « segmenteur → bloc → texte » devient un
+        # concurrent scoré côte à côte avec les pipelines à plat.
+        context["segmenters"] = list(segmenters())
+        context["recognizers"] = hybrid_recognizer_catalog(statuses())
         # Modèles ollama installés → menu déroulant (au lieu d'une saisie à
         # l'aveugle). Best-effort : serveur éteint → liste vide, saisie libre.
         context["ollama_models"] = installed_ollama_models()
@@ -270,40 +275,6 @@ def build_home_router(
         # composeur (désactivée + motif si spaCy absent).
         context["ner"] = ner() if ner is not None else None
         return templates.TemplateResponse(request, "benchmark.html", context)
-
-    @router.get("/segmentation", response_class=HTMLResponse)
-    def segmentation(request: Request, lang: str = "fr") -> HTMLResponse:
-        lang = normalize_lang(lang)
-        # Affiche le **run le plus récent** persisté par le sink (run réel >
-        # graine de démo) ; à défaut, la démo. Même store que le runner → un
-        # vrai run de segmentation apparaît ici sans second chemin.
-        current_id = segmentation_store.latest() or demo_segmentation_id
-        layout = segmentation_store.get_layout(current_id)
-        page = layout.pages[0] if layout and layout.pages else None
-        regions = page.regions if page else ()
-        image_href = f"/api/segmentation/{quote(current_id, safe='')}/image"
-        metas = {"segmentation": str(len(regions))}
-        context = _base_context(lang, "segmentation", metas)
-        context["svg"] = layout_to_svg(layout, image_href=image_href) if layout else ""
-        context["regions"] = regions
-        context["n_regions"] = len(regions)
-        # Panneau de lancement : corpus préparés + segmenteurs du socle (local
-        # PP-DocLayout + distant HF). Le distant **délègue** à un endpoint
-        # object-detection → on change de segmenteur (un YOLO d'HF…) en
-        # changeant l'URL, sans rien réinstaller. Catégorie séparée des moteurs
-        # OCR → le lanceur vit ici, pas dans la coquille benchmark.
-        context["corpora"] = _corpora_summaries(corpus_store)
-        context["segmenters"] = list(segmenters())
-        # Transcription hybride : reconnaisseur **par bloc** au choix — tout OCR
-        # réel (tesseract, mistral_ocr, google_vision, azure_di, kraken/pero/
-        # calamari) **ou** un VLM en transcription zero-shot. Source unique du
-        # ``<select>`` + de ce que le planner accepte (anti-vide). Le panneau
-        # n'est offert que si **au moins un** reconnaisseur est disponible (sinon
-        # tout bouton serait voué au 409).
-        recognizers = hybrid_recognizer_catalog(statuses())
-        context["recognizers"] = recognizers
-        context["hybrid_available"] = any(r["available"] for r in recognizers)
-        return templates.TemplateResponse(request, "segmentation.html", context)
 
     @router.get("/library", response_class=HTMLResponse)
     def library(request: Request, lang: str = "fr", q: str = "") -> HTMLResponse:
