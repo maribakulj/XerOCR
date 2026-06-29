@@ -10,6 +10,7 @@ from cinoc.app.results import dump_run_result
 from cinoc.domain.run import RunManifest, utcnow
 from cinoc.evaluation.result import MetricScore, PipelineResult, RunResult
 from cinoc.interfaces.web.app import create_app
+from cinoc.interfaces.web.catalog import available_reports
 
 
 def _write_report(reports_dir: Path, name: str = "run1", *, metric: str = "") -> None:
@@ -43,17 +44,15 @@ def _client(reports_dir: Path) -> TestClient:
 
 
 def test_lists_reports_sorted(tmp_path: Path) -> None:
+    # ``available_reports`` = la logique de listing, rendue côté serveur sur
+    # l'accueil (plus d'endpoint JSON ``/api/reports`` : rendu serveur).
     _write_report(tmp_path, "run2")
     _write_report(tmp_path, "run1")
-    resp = _client(tmp_path).get("/api/reports")
-    assert resp.status_code == 200
-    assert resp.json() == {"reports": ["run1", "run2"]}
+    assert available_reports(tmp_path) == ["run1", "run2"]
 
 
 def test_missing_dir_lists_nothing(tmp_path: Path) -> None:
-    resp = _client(tmp_path / "absent").get("/api/reports")
-    assert resp.status_code == 200
-    assert resp.json() == {"reports": []}
+    assert available_reports(tmp_path / "absent") == []
 
 
 def test_renders_report_as_html(tmp_path: Path) -> None:

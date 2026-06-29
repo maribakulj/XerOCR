@@ -37,10 +37,6 @@ from cinoc.evaluation.analysis import (
 from cinoc.evaluation.errors import EvaluationError
 from cinoc.evaluation.result import DocumentUsage, MetricScore
 
-#: Kinds facturés au jeton ; les kinds **à la page** sont dans la table
-#: (``cloud_page_kinds``) ; le reste : temps machine seul.
-_CLOUD_KINDS = frozenset({"openai", "anthropic", "mistral"})
-
 
 def load_pricing() -> dict[str, Any]:
     """Charge la table packagée — à l'appel, pas à l'import (zéro effet de bord)."""
@@ -89,12 +85,19 @@ def _cloud_model_keys(
     spec: PipelineSpec, adapter_kwargs: Mapping[str, Mapping[str, object]],
     pricing: Mapping[str, Any],
 ) -> list[str]:
-    """Clés ``kind/modèle`` des étages cloud du pipeline (déduplication triée)."""
+    """Clés ``kind/modèle`` des étages cloud du pipeline (déduplication triée).
+
+    Un *kind cloud* (facturé au jeton) = un fournisseur listé dans
+    ``default_models`` de la table — la source datée fait foi (pas de liste
+    codée en dur qui dériverait quand la table gagne un fournisseur). Les kinds
+    **à la page** vivent dans ``cloud_page_kinds`` (cf. ``_page_rate``) ; le
+    reste (``local_kinds``) : temps machine seul.
+    """
     defaults = pricing.get("default_models", {})
     keys: set[str] = set()
     for step in spec.steps:
         kind = step.adapter_name.split(":", 1)[0]
-        if kind not in _CLOUD_KINDS:
+        if kind not in defaults:
             continue
         kwargs = adapter_kwargs.get(step.adapter_name, {})
         model = kwargs.get("model")

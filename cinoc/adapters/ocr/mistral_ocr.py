@@ -12,8 +12,8 @@ from __future__ import annotations
 from base64 import b64encode
 from pathlib import Path
 
-from cinoc.adapters._workspace import workspace_artifact_path
-from cinoc.domain.artifacts import Artifact, ArtifactType, compute_content_hash
+from cinoc.adapters.ocr._base import run_image_to_text
+from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.deadline import Deadline
 from cinoc.domain.errors import AdapterStepError
 from cinoc.pipeline.protocols import ParamValue
@@ -98,31 +98,15 @@ class MistralOCRAdapter:
         context: RunContext,
         control: RunControl,
     ) -> StepOutput:
-        control.raise_if_cancelled()
-        image = inputs.get(ArtifactType.IMAGE)
-        if image is None or image.uri is None:
-            raise AdapterStepError(
-                f"{self.name} : artefact IMAGE manquant ou sans URI."
-            )
-        if context.workspace_uri is None:
-            raise AdapterStepError(f"{self.name} : workspace requis.")
-        text = _invoke_mistral_ocr(
-            model=self._model, image_path=image.uri, deadline=context.deadline
-        )
-        output_path = workspace_artifact_path(
-            context.workspace_uri, context.document_id, self._label, "txt"
-        )
-        output_path.write_text(text, encoding="utf-8")
-        return StepOutput(
-            artifacts={
-                ArtifactType.RAW_TEXT: Artifact(
-                    id=f"{context.document_id}:{self.name}:raw_text",
-                    document_id=context.document_id,
-                    type=ArtifactType.RAW_TEXT,
-                    uri=str(output_path),
-                    content_hash=compute_content_hash(text.encode("utf-8")),
-                )
-            }
+        return run_image_to_text(
+            name=self.name,
+            label=self._label,
+            inputs=inputs,
+            context=context,
+            control=control,
+            recognize=lambda image_uri: _invoke_mistral_ocr(
+                model=self._model, image_path=image_uri, deadline=context.deadline
+            ),
         )
 
 

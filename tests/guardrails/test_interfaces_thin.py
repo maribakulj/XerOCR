@@ -7,9 +7,13 @@ assembler une spec est un acte de la couche ``app``, jamais d'une feuille de
 transport. Le test d'``layer_dependencies`` autorise (légalement) ``interfaces``
 à importer ``domain`` ; il ne capture donc pas cette fuite d'orchestration.
 
-La construction des specs vit en couche ``app`` (``run_planning``) ; les routeurs
-délèguent. Verrou de non-régression : ce test échoue si un routeur se remet à
-fabriquer une spec d'orchestration.
+La construction des specs vit en couche ``app`` (``run_planning``, ``demo``) ;
+les routeurs délèguent. Verrou de non-régression : ce test échoue si un routeur
+se remet à fabriquer une spec d'orchestration.
+
+Phase 5.2 : ``demo.py`` (constructeurs de specs de la démonstration) a été
+déplacé de ``interfaces`` vers ``app`` — l'exemption temporaire est **levée**.
+Plus aucune feuille de transport ne fabrique de spec.
 """
 
 from __future__ import annotations
@@ -17,12 +21,8 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-ROUTERS = (
-    Path(__file__).resolve().parents[2]
-    / "cinoc"
-    / "interfaces"
-    / "web"
-    / "routers"
+INTERFACES = (
+    Path(__file__).resolve().parents[2] / "cinoc" / "interfaces"
 )
 
 #: Constructeurs de specs d'orchestration : leur instanciation appartient à la
@@ -58,13 +58,15 @@ def _spec_constructions(path: Path) -> list[str]:
     return found
 
 
-def test_routers_do_not_build_orchestration_specs() -> None:
+def test_interfaces_do_not_build_orchestration_specs() -> None:
+    """Aucune feuille de transport (``interfaces/**``) ne fabrique de spec
+    d'orchestration (la planification de run vit en couche ``app``)."""
     offenders: dict[str, list[str]] = {}
-    for path in sorted(ROUTERS.glob("*.py")):
+    for path in sorted(INTERFACES.rglob("*.py")):
         hits = _spec_constructions(path)
         if hits:
-            offenders[path.name] = hits
+            offenders[str(path.relative_to(INTERFACES))] = hits
     assert not offenders, (
-        "Construction de specs d'orchestration dans des routeurs de transport "
+        "Construction de specs d'orchestration dans une feuille de transport "
         f"(doit vivre en couche app) : {offenders}"
     )

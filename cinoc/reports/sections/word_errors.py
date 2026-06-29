@@ -28,8 +28,9 @@ from cinoc.reports.engine_badges import (
     engine_letter,
     engine_order,
 )
-from cinoc.reports.html import escape, view_prefix
+from cinoc.reports.html import escape
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 from cinoc.reports.svg import donut_chart, word_engine_heatmap, word_overlap_venn
 from cinoc.reports.text_diff import char_diff
 
@@ -410,20 +411,15 @@ class WordErrorsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
-        blocks = [
-            _block(
-                view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, order, ctx.lang
-            )
-            for analysis in result.analyses
-            if isinstance(analysis.payload, WordErrorPayload)
-        ]
-        if not blocks:
-            return None
         text = _TEXT.get(ctx.lang, _TEXT["fr"])
-        return Html(f"<h2>{text['title']}</h2>\n" + "".join(blocks))
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=WordErrorPayload,
+            title=text["title"],
+            block=lambda view, payload: _block(view, payload, order, ctx.lang),
+        )
 
 
 __all__ = ["WordErrorsSection"]

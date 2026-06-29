@@ -15,6 +15,7 @@ import pytest
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.errors import ProjectionError
 from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
 from cinoc.domain.layout import CanonicalLayout, LayoutPage, Line, Region
 from cinoc.domain.pipeline import PipelineSpec
@@ -63,7 +64,7 @@ def test_layout_to_text_flattens_nested_regions() -> None:
 
 
 def test_layout_to_text_rejects_non_layout() -> None:
-    with pytest.raises(EvaluationError, match="CanonicalLayout"):
+    with pytest.raises(ProjectionError, match="CanonicalLayout"):
         layout_to_text("not a layout", {})
 
 

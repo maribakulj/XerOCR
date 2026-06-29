@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from cinoc.adapters.layout.pp_doclayout import DetectedRegion, LayoutDetection
+from cinoc.adapters.layout._base import DetectedRegion, LayoutDetection
 from cinoc.adapters.layout.remote import RemoteSegmenter, parse_hf_detections
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.errors import AdapterStepError

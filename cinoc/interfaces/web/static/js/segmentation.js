@@ -1,9 +1,10 @@
-/* Segmentation — lancement d'un run depuis la page /segmentation.
+/* Segmentation & transcription hybride — lancement d'un run depuis /segmentation.
  *
  * La page reste rendue serveur : ce script ne fait que révéler les champs du
  * segmenteur distant (endpoint/jeton) selon le choix, poster sur l'endpoint de
- * run existant, attendre la fin du job, puis recharger pour que le HTML serveur
- * (le dernier layout persisté) reste la source de vérité.
+ * run, attendre la fin du job, puis agir selon le formulaire :
+ *  - segmentation → recharge (le HTML serveur, dernier layout persisté, fait foi) ;
+ *  - hybride      → révèle le lien de téléchargement de l'ALTO assemblé.
  */
 (function () {
   "use strict";
@@ -35,14 +36,35 @@
     return "HTTP " + response.status;
   }
 
-  ready(function () {
-    var form = document.getElementById("seg-run-form");
+  function pollJob(jobId, status, button, onDone) {
+    fetchJson("/api/runs/" + encodeURIComponent(jobId)).then(function (res) {
+      var state = res.body && res.body.state;
+      if (state === "done") {
+        onDone();
+        return;
+      }
+      if (state === "failed" || state === "cancelled" || !res.ok) {
+        var msg = res.body && res.body.error ? res.body.error : errorText(res);
+        if (status) status.textContent = msg;
+        if (button) button.disabled = false;
+        return;
+      }
+      window.setTimeout(function () {
+        pollJob(jobId, status, button, onDone);
+      }, POLL_MS);
+    });
+  }
+
+  /* Câble un formulaire de lancement (segmentation ou hybride). ``onDone`` reçoit
+   * le corps de la réponse de lancement (``{job_id, run_id}``) à la fin du job. */
+  function wireForm(opts) {
+    var form = document.getElementById(opts.formId);
     if (!form) return;
-    var engine = document.getElementById("seg-engine");
-    var endpointField = document.getElementById("seg-endpoint-field");
-    var tokenField = document.getElementById("seg-token-field");
-    var status = document.getElementById("seg-run-status");
-    var button = document.getElementById("segment-btn");
+    var engine = document.getElementById(opts.engineId);
+    var endpointField = document.getElementById(opts.endpointFieldId);
+    var tokenField = document.getElementById(opts.tokenFieldId);
+    var status = document.getElementById(opts.statusId);
+    var button = document.getElementById(opts.buttonId);
 
     function syncRemoteFields() {
       var isRemote = engine && engine.value === "remote_segmenter";
@@ -51,32 +73,6 @@
     }
     if (engine) engine.addEventListener("change", syncRemoteFields);
     syncRemoteFields();
-
-    function strings() {
-      return {
-        running: status ? status.getAttribute("data-running") : "",
-        done: status ? status.getAttribute("data-done") : "",
-      };
-    }
-
-    function poll(jobId) {
-      fetchJson("/api/runs/" + encodeURIComponent(jobId)).then(function (res) {
-        var state = res.body && res.body.state;
-        if (state === "done") {
-          window.location.reload();
-          return;
-        }
-        if (state === "failed" || state === "cancelled" || !res.ok) {
-          var msg = res.body && res.body.error ? res.body.error : errorText(res);
-          if (status) status.textContent = msg;
-          if (button) button.disabled = false;
-          return;
-        }
-        window.setTimeout(function () {
-          poll(jobId);
-        }, POLL_MS);
-      });
-    }
 
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -89,11 +85,14 @@
         var tok = (form.elements.token.value || "").trim();
         if (tok) payload.token = tok;
       }
+      if (opts.extra) opts.extra(payload);
       var headers = { "Content-Type": "application/json" };
       headers[CSRF] = "1";
       if (button) button.disabled = true;
-      if (status) status.textContent = strings().running;
-      fetchJson("/api/segmentation/run", {
+      if (status) {
+        status.textContent = status.getAttribute("data-running") || "";
+      }
+      fetchJson(opts.url, {
         method: "POST",
         headers: headers,
         body: JSON.stringify(payload),
@@ -103,8 +102,49 @@
           if (button) button.disabled = false;
           return;
         }
-        poll(res.body.job_id);
+        pollJob(res.body.job_id, status, button, function () {
+          opts.onDone(res.body, status, button);
+        });
       });
+    });
+  }
+
+  ready(function () {
+    // Segmentation : recharge pour afficher le dernier layout persisté.
+    wireForm({
+      formId: "seg-run-form",
+      engineId: "seg-engine",
+      endpointFieldId: "seg-endpoint-field",
+      tokenFieldId: "seg-token-field",
+      statusId: "seg-run-status",
+      buttonId: "segment-btn",
+      url: "/api/segmentation/run",
+      onDone: function () {
+        window.location.reload();
+      },
+    });
+    // Hybride : OCR Tesseract par bloc → ALTO. Révèle le lien de téléchargement
+    // (le LAYOUT est aussi persisté → visible en rechargeant la page).
+    wireForm({
+      formId: "hyb-run-form",
+      engineId: "hyb-engine",
+      endpointFieldId: "hyb-endpoint-field",
+      tokenFieldId: "hyb-token-field",
+      statusId: "hyb-run-status",
+      buttonId: "hybrid-btn",
+      url: "/api/hybrid/run",
+      extra: function (payload) {
+        payload.ocr = "tesseract";
+      },
+      onDone: function (body, status, button) {
+        if (button) button.disabled = false;
+        if (status) status.textContent = status.getAttribute("data-done") || "";
+        var link = document.getElementById("hyb-download");
+        if (link && body && body.run_id) {
+          link.href = "/reports/" + encodeURIComponent(body.run_id) + "/alto.zip";
+          link.hidden = false;
+        }
+      },
     });
   });
 })();

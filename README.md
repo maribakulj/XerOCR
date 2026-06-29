@@ -1,153 +1,207 @@
+<div align="center">
+
 # Cinoc
 
-**Banc d'essai déterministe de pipelines de transcription (OCR / HTR / VLM)
-pour documents patrimoniaux.**
+**A deterministic benchmark for transcription *pipelines* — OCR, HTR, VLM, OCR→LLM — on heritage documents.**
 
-Cinoc compare des pipelines de transcription (OCR, HTR, VLM, OCR→LLM) sur des
-corpus à **vérité-terrain** et produit un **verdict factuel chiffré** —
-métriques + tests statistiques — sous la forme d'un **rapport HTML autonome**.
-Aucun LLM ne rédige le rapport : chaque nombre est une fonction **auditable** des
-données d'entrée.
+Cinoc runs competing transcription pipelines over a ground-truth corpus and produces a **factual, quantified verdict** — metrics plus statistical tests — as a **self‑contained interactive HTML report**. No LLM writes the report: every number is an **auditable** function of the inputs.
+
+</div>
+
+---
+
+## Why Cinoc exists
+
+Transcribing heritage documents — medieval manuscripts, early printed books, 19th‑century press — is no longer a single OCR call. It is a **pipeline**, and AI has multiplied the ways to build one:
+
+- an **OCR** engine feeding an **LLM** post‑corrector — does the LLM *fix* errors, or *invent* plausible text the original never contained?
+- a **VLM** transcribing straight from the image, with or without **layout segmentation** first;
+- a **post‑correction LLM** paired with **anti‑hallucination** measurement — how much does it rewrite that was already correct?
+
+Existing OCR benchmarks were not built for this. They assume one engine, clean modern text, and a single error rate. Heritage material breaks all three assumptions, and **AI breaks the metrics themselves**:
+
+- **CER/WER are no longer enough.** A pipeline can lower the character error rate while *hallucinating* named entities, destroying diacritics, modernising archaic spellings, or mangling dates and folio numbers — exactly the things a historian actually cites.
+- **A pipeline that wins on one corpus loses on another.** What is best for 19th‑century print is not what is best for a 15th‑century hand.
+- **The "best" pipeline depends on who is asking.** An institution may weigh **cost**, **throughput**, results **per region** vs **per page**, or robustness on a specific stratum — differently. Cinoc never declares a winner; it gives you the numbers and the significance tests, and the judgement stays yours.
+
+Cinoc is the bench you run **before** committing a corpus to a pipeline: reproducible, engine‑agnostic, and honest about what it does and does not measure.
+
+---
+
+## Screenshots
+
+**The report** — every run produces one self‑contained HTML file: per‑engine scores, per‑view metrics with heat‑mapped cells, corpus strata, comparison and significance, drill‑in by document — exportable to CSV/JSON.
+
+![Cinoc report](docs/screenshots/report.png)
+
+**The benchmark composer** — compose competitors (OCR, OCR→LLM text, OCR→LLM image+text, VLM zero‑shot), toggle a NER step or ALTO export, pick a normalisation profile, and launch — all in one run.
+
+![Cinoc benchmark composer](docs/screenshots/launcher.png)
+
+**Layout & hybrid transcription** — segment a page into regions, then transcribe **block by block** (segmentation → per‑region OCR → assembled ALTO). The panel degrades gracefully when an engine is unavailable rather than failing.
+
+![Cinoc segmentation & hybrid transcription](docs/screenshots/segmentation.png)
+
+---
+
+## What you can build and measure
+
+### Pipelines (composed, not hard‑wired)
+
+| Pipeline | What it does |
+|---|---|
+| **OCR / HTR** | Tesseract · Kraken · Pero · Calamari · Mistral OCR · Google Vision · Azure Document Intelligence |
+| **OCR → LLM** (`text_only`) | an OCR engine, then an LLM corrects the text |
+| **OCR → VLM** (`text_and_image`) | an OCR engine, then a VLM sees **image + text** together |
+| **VLM zero‑shot** | a VLM transcribes the image directly, no OCR upstream |
+| **Hybrid** (seg → reco → ALTO) | layout segmentation → recognition **per region** (fan‑out) → assembled ALTO XML |
+| **+ NER** (optional terminal step) | `text → entities`, scored if the corpus carries entity ground truth |
+
+Engines are **interchangeable bricks** behind a single `Module` protocol. Heavy dependencies are **optional extras**: an engine is always listed, and tells you clearly if it needs its extra or API key instead of crashing.
+
+### Metrics (built for the AI era)
+
+Far beyond CER/WER — every family ships with its own report section and tests against externally‑computed values:
+
+- **Character / word** — CER, diplomatic CER, WER, MER, median/min/max, Gini concentration.
+- **Philology** — diacritics, MUFI (Medieval Unicode) overlap, abbreviations, early‑modern forms, modern‑archive conventions, Roman numerals, archaism rates (AIR/HCPR).
+- **HIPE conformity** — cMER under the HIPE‑OCRepair norm, micro/macro, JSONL export.
+- **Correction balance** *(the "did the LLM help?" family)* — improvement/regression/no‑change triplet, pcis, change ratio (CCR), **over‑normalisation** (correct words the corrector degraded), heavy‑insertion / **hallucination** flags, consecutive‑edit runs, worst regressions.
+- **Structured data** — survival of dates, foliation, amounts, regnal years (strict form *and* equivalent value).
+- **Textual fidelity** — rare‑token recall, lexical modernisation flow.
+- **Named entities (NER)** — precision/recall/F1 per category, missed & hallucinated entities, IoU span matching in GT coordinates.
+- **Inter‑engine** — Jensen‑Shannon divergence, oracle gap, complementarity; **Wilcoxon / Friedman / Nemenyi** significance and bootstrap CIs.
+- **Per‑line distribution** — percentiles, Gini, catastrophic‑line rate, positional heat‑map.
+- **Calibration** — ECE / MCE on engine confidences.
+- **Image quality** — sharpness, noise, contrast, skew (per document).
+- **Economics** — **measured** tokens × dated price table + **measured** wall‑clock → cost and effective throughput, Pareto fronts, marginal cost per avoided error (no invented CO₂, no estimates).
+- **Longitudinal** — OLS trend + Pettitt change‑point across runs (on the `/history` page).
+
+> Levels that don't apply return **`None`**, never a misleading `0` — an absent measurement is reported as absent.
+
+---
 
 ## Invariants
 
-- **Déterministe** : même spec + même corpus + même code → mêmes artefacts (hash
-  identique), mêmes métriques, même rapport.
-- **Reproductible** : chaque run porte un `RunManifest` (version du code,
-  dépendances, binaires, empreinte des paramètres).
-- **Anti-hallucination** : le rapport n'affiche que des chiffres et des tableaux
-  bruts — aucune prose générée.
-- **Sûr** : XML durci (`safe_parse_xml` : pas de DTD/DOCTYPE/entité externe),
-  chemins utilisateur validés (anti-traversal), mode public *fail-closed* sur le
-  Space (seul le socle gratuit s'exécute).
+- **Deterministic** — same spec + same corpus + same code → identical artifacts (same hash), identical metrics, identical report.
+- **Reproducible** — every run carries a `RunManifest` (code version, dependency versions, engine binaries, parameter fingerprint).
+- **Anti‑hallucination** — no LLM writes a single word of the report; every figure is an auditable function of the inputs.
+- **Secure** — hardened XML (`safe_parse_xml`: no DTD/DOCTYPE/external entity/network), all user paths validated (anti‑traversal), anti‑SSRF on remote fetches, public *fail‑closed* mode on the hosted Space (only the free base runs).
 
-## Architecture — 8 couches concentriques
+---
 
+## Architecture — eight concentric layers
+
+A layer may import **only** layers more internal than itself. This is enforced mechanically by the architecture test‑suite. The envelope is dimensioned for the full scope; surface (engines, metrics, renderers) is filled in incrementally.
+
+```mermaid
+flowchart LR
+    domain --> formats --> evaluation --> pipeline --> adapters --> app --> reports --> interfaces
 ```
-domain ← formats ← evaluation ← pipeline ← adapters ← app ← reports ← interfaces
+
+| Layer | Role |
+|---|---|
+| **domain** | pure types & contracts (Pydantic, frozen) — `Artifact`, `PipelineSpec`, `RunResult`, `RunManifest`, `CanonicalLayout` |
+| **formats** | ALTO / PAGE / text parsing & writing, XML hardening, normalisation profiles |
+| **evaluation** | metrics, statistical tests, projectors, the `RunResult` assembler — pure compute, no I/O |
+| **pipeline** | the executable `Module` protocol, cooperative cancellation/deadline, **region fan‑out** |
+| **adapters** | engine wrappers (OCR/HTR/VLM/LLM), segmenters, storage, corpus importers |
+| **app** | orchestration, run planning, job runner, corpus & report stores |
+| **reports** | the self‑contained interactive HTML report (server‑rendered SVG, zero compute JS) |
+| **interfaces** | thin transport — CLI and the FastAPI web app / HF Space |
+
+A transcription pipeline is composed declaratively and executed left‑to‑right:
+
+```mermaid
+flowchart LR
+    IMG[Image] --> SEG[Segmenter] --> LAY[Layout: regions]
+    LAY --> FAN[Per-region OCR — fan-out]
+    IMG --> FAN
+    FAN --> FILL[Filled layout] --> ALTO[ALTO XML]
+    IMG -. OCR-only .-> OCR[OCR] --> TXT[Text] --> LLM[LLM post-correction] --> COR[Corrected text]
 ```
 
-Une couche n'importe que des couches plus internes (vérifié par les tests
-d'architecture). Détail : [`CLAUDE.md`](CLAUDE.md) et
-[`MIGRATION_PLAN.md`](MIGRATION_PLAN.md).
+---
 
 ## Installation
 
+Requires **Python ≥ 3.11**.
+
 ```bash
-pip install -e ".[dev]"            # cœur + outils de dev (Python ≥ 3.11)
-pip install -e ".[dev,serve]"      # + interface web locale
+pip install -e ".[dev]"          # core + dev tooling
+pip install -e ".[dev,serve]"    # + local web app
 ```
 
-Les dépendances lourdes sont des **extras optionnels** : un adapter est toujours
-listé, mais signale clairement s'il faut installer son extra (et sa clé d'API)
-plutôt que de planter.
+Heavy dependencies are **optional extras** — install only what you use:
 
-| Brique | Extra | Notes |
+| Brick | Extra | Notes |
 |---|---|---|
-| Tesseract (OCR) | `[tesseract]` | binaire `tesseract` requis |
-| Kraken · Pero · Calamari (HTR/OCR local) | `[kraken]` `[pero]` `[calamari]` | non déployés au Space |
-| OpenAI · Anthropic · Mistral · Ollama (LLM/VLM) | `[openai]` `[anthropic]` `[mistral]` `[ollama]` | clé d'API |
-| Google Vision · Azure Document Intelligence | `[google]` `[azure]` | REST, clé d'API |
-| Segmenteur PP-DocLayout (local) | `[segment]` | poids PaddleX |
-| Segmenteur distant (HF) | `[serve]` | délégué à un endpoint object-detection |
-| NER (entités nommées) | `[ner]` | spaCy + modèle (`spacy download …`) |
-| Import / publication HuggingFace | `[huggingface]` | datasets + `huggingface_hub` |
-| Vignettes réelles du rapport | `[images]` | Pillow (dégradé gracieux sans) |
+| Tesseract (OCR) | `[tesseract]` | the `tesseract` binary is required |
+| Kraken · Pero · Calamari (local HTR/OCR) | `[kraken]` `[pero]` `[calamari]` | not deployed on the Space |
+| OpenAI · Anthropic · Mistral · Ollama (LLM/VLM) | `[openai]` `[anthropic]` `[mistral]` `[ollama]` | API key |
+| Google Vision · Azure Document Intelligence | `[google]` `[azure]` | REST, API key |
+| PP‑DocLayout segmenter (local) | `[segment]` | PaddleX + weights |
+| Named‑entity step (NER) | `[ner]` | spaCy + a model (`spacy download …`) |
+| HuggingFace import / publish | `[huggingface]` | `datasets` + `huggingface_hub` |
+| Real report thumbnails | `[images]` | Pillow (graceful fallback without) |
 
-## Démarrage rapide
+A remote segmenter needs no local extra — it delegates to a HuggingFace object‑detection endpoint (swap the model by swapping the URL).
+
+---
+
+## Quickstart
 
 ```bash
-cinoc demo --output rapport.html              # rapport de démonstration (sans moteur)
-cinoc run config.yaml -o rapport.html         # exécute un run décrit en YAML
-cinoc run config.yaml --report-dir bundle/    # rapport en dossier (HTML + images séparées)
-cinoc run config.yaml --json run.json         # exporte aussi le RunResult (machine)
-cinoc compare a.json b.json -o diff.html      # compare deux runs (deltas)
-cinoc serve --port 8080                        # interface web locale
+cinoc demo  --output report.html                 # demo report, no engine required
+cinoc run   config.yaml -o report.html           # run a benchmark described in YAML
+cinoc run   config.yaml --report-dir bundle/     # folder report (HTML + separate images)
+cinoc run   config.yaml --json run.json          # also export the machine-readable RunResult
+cinoc hybrid images/ --out alto/                 # segment → per-block OCR → one ALTO per page
+cinoc compare a.json b.json -o diff.html         # compare two runs (deltas)
+cinoc serve --port 8080                          # local web app
 ```
 
-## Moteurs et modules (socle first-party)
+---
 
-- **OCR/HTR** : Tesseract, Kraken, Pero, Calamari, Mistral OCR, Google Vision,
-  Azure Document Intelligence.
-- **LLM (post-correction texte)** : OpenAI, Anthropic, Mistral, Ollama.
-- **VLM (zero-shot ou image+texte)** : OpenAI, Anthropic, Mistral.
-- **Segmentation** : PP-DocLayout (local) ou **segmenteur distant** (un modèle
-  object-detection hébergé sur HuggingFace, sélectionnable avant le run — on
-  change de modèle en changeant l'URL).
-- **NER** : étape optionnelle `texte → entités` (spaCy), scorée si le corpus
-  porte une vérité-terrain d'entités.
+## The web app & HuggingFace Space
 
-**Modes de pipeline OCR+LLM** : `zero_shot` (le VLM transcrit l'image
-directement), `text_only` (OCR → LLM corrige le texte), `text_and_image` (OCR →
-le VLM voit image + texte).
+`cinoc serve` (or the hosted Space) gives you the interactive surface:
 
-## Extension par modules tiers
+- **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**; auto‑discover your curated Cinoc datasets (`CINOC_HF_AUTHOR` + the `cinoc-corpus` tag), where images stay as revision‑pinned IIIF references.
+- **Benchmark** — the composer above: pick a corpus, add competitors, launch (live progress over SSE).
+- **Segmentation** — segment a page and inspect regions; launch a **hybrid transcription** (segment → per‑region OCR → downloadable ALTO).
+- **Reports / History** — browse rendered reports and longitudinal trends.
 
-Le **seul** point d'extension public = les **briques de pipeline** (segmenteur,
-OCR/HTR, VLM, post-correcteur, NER…). Un paquet pip qui expose un entry-point
-`cinoc.modules` est découvert au runtime (fail-closed en mode public). Tout le
-reste (métriques, importeurs, sections de rapport, tests statistiques) est
-first-party, non pluggable — une seule prise, par design.
+In **public mode** (`CINOC_PUBLIC_MODE`), the Space is *fail‑closed*: only the free first‑party base (Tesseract — no key, no billed call) runs; cloud engines and third‑party plugins are refused (`403`). See [`deploy/`](deploy/) for the HuggingFace Space image.
 
-## Bibliothèque de corpus
+Report **flavors**: single file (inline base64 images), folder/ZIP (separate images, offline), and IIIF/HF references (light HTML, images loaded from HuggingFace). The report is **bilingual FR/EN** (`?lang=en`).
 
-- **Upload ZIP** (glisser-déposer) ou **imports distants** : IIIF, Gallica,
-  eScriptorium, HuggingFace.
-- **Datasets curés Cinoc** publiés sur HuggingFace : import par identifiant +
-  **découverte automatique** des datasets de ton compte (variable
-  `CINOC_HF_AUTHOR` + tag `cinoc-corpus`) — les images restent des références
-  IIIF épinglées à une révision, seuls le manifeste + la vérité-terrain sont
-  rapatriés.
+---
 
-## Saveurs de rapport
+## Extensibility — one public socket, by design
 
-| Saveur | Forme | Hors-ligne |
-|---|---|---|
-| Fichier unique | un `.html` (images base64 inline, plafonnées) | ✅ |
-| Dossier / ZIP | `report.html` + `report-assets/` (images séparées) | ✅ |
-| Réfs IIIF / HF | `.html` léger, images chargées depuis HuggingFace | ❌ |
+The **only** public extension point is the **pipeline brick** (segmenter, OCR/HTR, VLM, post‑corrector, ALTO builder, NER…). A pip package exposing a `cinoc.modules` entry‑point is discovered at runtime (fail‑closed in public mode). Everything else — metrics, importers, report sections, statistical tests — is first‑party and intentionally **not** pluggable: a single, stable socket rather than many.
 
-Rapport **bilingue FR/EN** (`?lang=en` côté web). Les nombres **affichés** sont
-localisés (virgule en français) ; les couches **machine** (export JSON/CSV,
-`data-sort`) restent en point — pour toute consommation par un outil, utiliser
-l'export JSON.
+---
 
-**Export ALTO** : avec l'option *Exporter l'ALTO* (Tesseract), chaque document
-produit un ALTO XML (géométrie + texte) téléchargeable depuis le rapport
-(`alto.zip`) — ré-importable dans eScriptorium ou Transkribus pour relecture.
-
-## Interface web / Space
+## Development
 
 ```bash
-cinoc serve                 # local
-```
-
-Déploiement HuggingFace Space : voir [`deploy/`](deploy/). Variables
-d'environnement principales :
-
-| Variable | Rôle |
-|---|---|
-| `CINOC_PUBLIC_MODE` | mode public *fail-closed* (socle gratuit seul) |
-| `CINOC_REPORTS_DIR` · `CINOC_DATA_DIR` | dossiers rapports / runtime |
-| `CINOC_HF_AUTHOR` | compte HF pour la découverte des datasets curés |
-| `CINOC_MAX_WORKERS` · `CINOC_NETWORK_CONCURRENCY` | parallélisme / plafond réseau |
-| `CINOC_METRICS` | expose `/metrics` (Prometheus), opt-in |
-
-Clés d'API (selon moteurs) : `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`,
-`MISTRAL_API_KEY`, `GOOGLE_VISION_API_KEY`, `AZURE_DOC_INTEL_ENDPOINT` /
-`AZURE_DOC_INTEL_KEY`.
-
-## Développement
-
-```bash
-make check-fast   # ruff + mypy + toute la suite (pré-push)
+make check-fast   # ruff + mypy --strict + the whole test suite (pre-push)
 make lint         # ruff
 make type         # mypy
-make test         # pytest (parallèle)
-make ci           # gate complet (avec couverture)
+make test         # pytest (parallel)
+make ci           # full gate, with coverage threshold
 ```
 
-La CI GitHub Actions tourne sur Linux/macOS/Windows × Python 3.11/3.12/3.13 et
-porte le seuil de couverture. Parcours détaillé et journal des décisions :
-[`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) · changements notables :
-[`CHANGELOG.md`](CHANGELOG.md).
+CI runs on Linux/macOS/Windows × Python 3.11/3.12/3.13 and enforces the coverage threshold. Detailed roadmap and decision log: [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md); notable changes: [`CHANGELOG.md`](CHANGELOG.md); working contract: [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## The name
+
+*Cinoc* is a nod to a character in the fiction of **Georges Perec**.
+
+## License
+
+Apache‑2.0.

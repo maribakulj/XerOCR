@@ -70,6 +70,61 @@
 <section class="sec">
   <div class="sec-head">
     <div class="sec-copy">
+      <div class="sec-title">{{ t.hyb_run_title }}</div>
+      <div class="sec-sub">{{ t.hyb_run_desc }}</div>
+    </div>
+  </div>
+  <div class="sec-body">
+    {% if not tesseract_available %}
+    <p class="empty-hint">{{ t.hyb_run_no_ocr }}</p>
+    {% elif corpora %}
+    <form class="seg-run-form" id="hyb-run-form" autocomplete="off">
+      <div class="field">
+        <label for="hyb-corpus">{{ t.seg_run_corpus }}</label>
+        <select id="hyb-corpus" name="corpus_id">
+          {% for c in corpora %}
+          <option value="{{ c.id }}">{{ c.name }} · {{ c.n_documents }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label for="hyb-engine">{{ t.seg_run_engine }}</label>
+        <select id="hyb-engine" name="segmenter">
+          {% for s in segmenters %}
+          <option value="{{ s.kind }}"{% if not s.available %} disabled{% endif %}>
+            {{ s.label }}{% if not s.available %} — {{ t.seg_run_unavailable }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field" id="hyb-endpoint-field" hidden>
+        <label for="hyb-endpoint">{{ t.seg_run_endpoint }}</label>
+        <input id="hyb-endpoint" name="endpoint" type="url"
+               placeholder="{{ t.seg_run_endpoint_ph }}">
+      </div>
+      <div class="field" id="hyb-token-field" hidden>
+        <label for="hyb-token">{{ t.seg_run_token }}</label>
+        <input id="hyb-token" name="token" type="password">
+      </div>
+      <div class="seg-run-actions">
+        <button class="btn btn-primary" type="submit" id="hybrid-btn">
+          {{ t.hyb_run_btn }}
+        </button>
+        <span class="run-status" id="hyb-run-status" role="status"
+              data-running="{{ t.seg_run_running }}"
+              data-done="{{ t.hyb_run_done }}"></span>
+        <a class="btn" id="hyb-download" hidden download>{{ t.hyb_run_download }}</a>
+      </div>
+    </form>
+    {% else %}
+    <p class="empty-hint">{{ t.seg_run_no_corpus }}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="sec">
+  <div class="sec-head">
+    <div class="sec-copy">
       <div class="sec-title">{{ t.seg_demo_title }}</div>
       <div class="sec-sub">{{ t.seg_demo_desc }}</div>
     </div>

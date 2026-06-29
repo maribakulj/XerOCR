@@ -16,11 +16,11 @@ import pytest
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef, GroundTruthRef
+from cinoc.domain.errors import ProjectionError
 from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
 from cinoc.domain.pipeline import PipelineSpec
 from cinoc.domain.projection import ProjectionSpec
 from cinoc.domain.run import RunManifest
-from cinoc.evaluation.errors import EvaluationError
 from cinoc.evaluation.projectors import identity_text
 from cinoc.evaluation.registry import MetricRegistry, register_default_metrics
 from cinoc.evaluation.runner import evaluate_run
@@ -39,7 +39,7 @@ def test_identity_text_returns_str_unchanged() -> None:
 
 
 def test_identity_text_rejects_non_str() -> None:
-    with pytest.raises(EvaluationError, match="identity_text"):
+    with pytest.raises(ProjectionError, match="identity_text"):
         identity_text(123, {})
 
 

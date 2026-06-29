@@ -96,7 +96,6 @@ def test_config_endpoint_requires_csrf(tmp_path: Path) -> None:
 def test_post_without_csrf_is_403(tmp_path: Path) -> None:
     resp = _client(tmp_path).post("/api/runs")
     assert resp.status_code == 403
-    assert _client(tmp_path).get("/api/reports").json() == {"reports": []}
 
 
 def test_cancel_without_csrf_is_403(tmp_path: Path) -> None:
@@ -119,7 +118,7 @@ def test_launch_runs_and_result_appears(tmp_path: Path) -> None:
     job = _poll_until_terminal(client, job_id)
     assert job["state"] == "done"
     name = job["report_name"]
-    assert name in client.get("/api/reports").json()["reports"]
+    # le rapport produit est servable (preuve qu'il existe + est rendu)
     assert client.get(f"/reports/{name}").status_code == 200
 
 

@@ -313,12 +313,18 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("ollama", _build_ollama)
     registry.register_builder("mistral", _build_mistral)
     registry.register_builder("anthropic", _build_anthropic)
-    registry.register_builder("precomputed_layout", _build_precomputed_layout)
+    # Segmenteurs réels (étape IMAGE → LAYOUT), composables dès aujourd'hui.
     registry.register_builder("pp_doclayout", _build_pp_doclayout)
     registry.register_builder("remote_segmenter", _build_remote_segmenter)
+    registry.register_builder("ner", _build_ner)
+    # --- Enveloppe T5 : pipeline hybride seg → reconnaissance par région → ALTO ---
+    # Ces 3 briques (``Module`` Protocol) sont composées par
+    # ``run_planning.plan_hybrid_run`` (finition T5 livrée) : segmentation →
+    # reconnaissance par région (fanout, couche 4) → assemblage ALTO. Consommateur
+    # vérifié de bout en bout par ``tests/pipeline/test_t5_envelope.py``.
+    registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
-    registry.register_builder("ner", _build_ner)
 
 
 __all__ = [

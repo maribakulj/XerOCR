@@ -25,6 +25,7 @@ from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from cinoc.adapters.layout.crop import crop_region
 from cinoc.app.modules.registry import ModuleRegistry
 from cinoc.app.resume import ResumeStore, unit_key
 from cinoc.domain.artifacts import Artifact, ArtifactType
@@ -213,6 +214,10 @@ def run(
                         deadline=deadline,
                         control=control,
                         workspace_uri=str(workspaces[pipeline.name]),
+                        # Découpe réelle des blocs pour les étapes ``fanout`` du
+                        # pipeline hybride (seg → OCR par région). Inerte hors
+                        # fan-out ; PIL importé paresseusement (seul le crop l'exige).
+                        cropper=crop_region,
                     ): (pipeline, document, key)
                     for pipeline, document, key in pending
                 }

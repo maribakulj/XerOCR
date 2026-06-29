@@ -1,8 +1,9 @@
-"""Routeur « Moteurs » : disponibilité runtime des moteurs (couche 8).
+"""Routeur d'aide au composeur (couche 8) : aperçu de normalisation + modèles.
 
-``GET /api/engines`` — **lecture seule**, alimente l'onglet « Moteurs » réservé
-Restitue l'état calculé par ``app.engines`` (sondes bon marché, mode
-public reflété). Aucune écriture → pas de CSRF.
+Endpoints **vivants** (consommés par le JS du Banc d'essai) : aperçu de
+normalisation (POST, CSRF) et suggestions de modèles par fournisseur (GET). Les
+listes de lecture (profils de normalisation/métriques, état des moteurs) sont
+rendues **côté serveur** dans les pages — pas d'API JSON dédiée.
 """
 
 from __future__ import annotations
@@ -10,13 +11,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from cinoc.app.engines import StatusProvider, normalization_profiles
 from cinoc.app.models import provider_models
 from cinoc.app.normalization_preview import (
     NormalizationPreviewError,
     preview_normalization,
 )
-from cinoc.app.run_planning import metric_profile_catalog
 from cinoc.interfaces.web.security.csrf import csrf_protect
 
 
@@ -30,14 +29,9 @@ class PreviewRequest(BaseModel):
     config: str | None = Field(default=None, max_length=8000)
 
 
-def build_engines_router(provider: StatusProvider) -> APIRouter:
-    """Construit le routeur « Moteurs » (monté par ``create_app``)."""
+def build_engines_router() -> APIRouter:
+    """Construit le routeur d'aide au composeur (monté par ``create_app``)."""
     router = APIRouter()
-
-    @router.get("/api/normalization/profiles")
-    def list_normalization_profiles() -> dict[str, list[str]]:
-        """Profils de comparaison disponibles — lus dynamiquement (couche 2)."""
-        return {"profiles": list(normalization_profiles())}
 
     @router.post(
         "/api/normalization/preview", dependencies=[Depends(csrf_protect)]
@@ -64,18 +58,6 @@ def build_engines_router(provider: StatusProvider) -> APIRouter:
             "provider": model_provider,
             "models": [m.model_dump() for m in provider_models(model_provider)],
         }
-
-    @router.get("/api/engines")
-    def list_engines() -> dict[str, list[dict[str, object]]]:
-        return {"engines": [status.model_dump() for status in provider()]}
-
-    @router.get("/api/metric-profiles")
-    def list_metric_profiles() -> dict[str, list[dict[str, object]]]:
-        """Profils de métriques proposables au lanceur (source unique, couche 6).
-
-        Lecture seule (pas de CSRF) ; ``standard`` d'abord. Le profil choisi
-        atterrit sur ``LaunchRequest.metric_profile`` (résolu au plan)."""
-        return {"profiles": list(metric_profile_catalog())}
 
     return router
 

@@ -13,8 +13,9 @@ from cinoc.evaluation.analysis import EconomicsPayload, MarginalCost
 from cinoc.evaluation.result import RunResult
 from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_cell, engine_order
-from cinoc.reports.html import escape, localized, view_prefix
+from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 
 
 def _fmt(value: float | None, lang: str, pattern: str = "{:.4f}") -> str:
@@ -175,20 +176,14 @@ class EconomicsSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        multi = len({a.view for a in result.analyses}) > 1
         order = engine_order(p.pipeline for p in result.pipelines)
-        blocks = [
-            _block(
-                view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, ctx.lang, order
-            )
-            for analysis in result.analyses
-            if isinstance(analysis.payload, EconomicsPayload)
-        ]
-        if not blocks:
-            return None
-        title = localized(ctx.lang, "Économie", "Economics")
-        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=EconomicsPayload,
+            title=localized(ctx.lang, "Économie", "Economics"),
+            block=lambda view, payload: _block(view, payload, ctx.lang, order),
+        )
 
 
 __all__ = ["EconomicsSection"]

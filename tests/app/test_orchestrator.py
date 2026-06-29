@@ -83,6 +83,42 @@ def test_run_end_to_end(tmp_path: Path) -> None:
     }
 
 
+def test_orchestrator_injects_real_block_cropper(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """L'orchestrateur passe le cropper réel (couche 5) à l'exécuteur — sans lui,
+    les étapes ``fanout`` du pipeline hybride ne pourraient pas découper les blocs.
+    """
+    from cinoc.adapters.layout.crop import crop_region
+    from cinoc.pipeline.executor import PipelineExecutor
+
+    captured: dict[str, object] = {}
+    original = PipelineExecutor.execute_document
+
+    def spy(self: PipelineExecutor, *args: object, **kwargs: object) -> object:
+        captured["cropper"] = kwargs.get("cropper")
+        return original(self, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(PipelineExecutor, "execute_document", spy)
+    (tmp_path / "doc1.eng.txt").write_text("abcd", encoding="utf-8")
+    (tmp_path / "doc1.gt.txt").write_text("abcd", encoding="utf-8")
+    document = DocumentRef(
+        id="doc1",
+        image_uri=str(tmp_path / "doc1.png"),
+        ground_truths=(
+            GroundTruthRef(
+                type=ArtifactType.RAW_TEXT, uri=str(tmp_path / "doc1.gt.txt")
+            ),
+        ),
+    )
+    run(
+        _spec(CorpusSpec(name="c", documents=(document,))),
+        registry=_registry(),
+        code_version="1.0",
+    )
+    assert captured["cropper"] is crop_region
+
+
 def test_missing_image_uri_raises(tmp_path: Path) -> None:
     corpus = CorpusSpec(name="c", documents=(DocumentRef(id="doc1"),))
     with pytest.raises(OrchestrationError):

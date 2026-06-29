@@ -46,12 +46,12 @@ def _upload(client: TestClient) -> str:
 
 def test_delete_route_then_gone(tmp_path: Path) -> None:
     client = _client(tmp_path)
-    corpus_id = _upload(client)
-    assert client.get(f"/api/corpus/{corpus_id}").status_code == 200
+    corpus_id = _upload(client)  # 201 → le corpus existe
     resp = client.delete(f"/api/corpus/{corpus_id}", headers=_CSRF)
     assert resp.status_code == 200
     assert resp.json() == {"deleted": True}
-    assert client.get(f"/api/corpus/{corpus_id}").status_code == 404
+    # re-supprimer un corpus déjà parti → 404 (preuve qu'il a bien disparu).
+    assert client.delete(f"/api/corpus/{corpus_id}", headers=_CSRF).status_code == 404
 
 
 def test_delete_unknown_is_404(tmp_path: Path) -> None:

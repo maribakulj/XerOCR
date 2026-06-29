@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from cinoc.adapters._resilience import call_resilient
 from cinoc.adapters.llm._base import (
     LLMCompletion,
     default_prompt_for_role,
@@ -78,11 +79,17 @@ def _anthropic_client(  # pragma: no cover -- réseau + clé API (cf. 'live')
     try:
         # SDK anthropic typé strictement ; dicts valides à l'exécution (tests live).
         client = Anthropic(**client_kwargs)  # type: ignore[arg-type]
-        response = client.messages.create(
-            model=model,
-            max_tokens=_MAX_TOKENS,
-            messages=[{"role": "user", "content": content}],  # type: ignore[typeddict-item]
-        )
+
+        def _create() -> Any:
+            return client.messages.create(
+                model=model,
+                max_tokens=_MAX_TOKENS,
+                messages=[{"role": "user", "content": content}],  # type: ignore[typeddict-item]
+            )
+
+        # Cap de concurrence (≤ N appels Anthropic simultanés) + retry borné sur
+        # 429/5xx (Retry-After respecté) — par défaut, sans configuration UI.
+        response = call_resilient("anthropic", _create)
     except AnthropicError as exc:
         raise AdapterStepError(
             f"anthropic a échoué ({model}) : {type(exc).__name__}: {exc}"

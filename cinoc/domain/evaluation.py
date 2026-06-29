@@ -107,12 +107,5 @@ class EvaluationSpec(BaseModel):
 
     views: tuple[EvaluationView, ...] = Field(default_factory=tuple)
 
-    def view_by_name(self, name: str) -> EvaluationView | None:
-        """Retourne la vue de nom ``name`` ou ``None``."""
-        for v in self.views:
-            if v.name == name:
-                return v
-        return None
-
 
 __all__ = ["MetricSpec", "EvaluationView", "EvaluationSpec"]

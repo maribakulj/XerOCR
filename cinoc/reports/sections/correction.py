@@ -10,8 +10,9 @@ from __future__ import annotations
 from cinoc.evaluation.analysis import CorrectionPayload, PipelineCorrection
 from cinoc.evaluation.result import RunResult
 from cinoc.reports._numbers import localize_decimal
-from cinoc.reports.html import escape, localized, view_prefix
+from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 
 
 def _pct(value: float | None, lang: str) -> str:
@@ -234,17 +235,13 @@ class CorrectionSection:
     requires: tuple[str, ...] = ()
 
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
-        multi = len({a.view for a in result.analyses}) > 1
-        blocks = [
-            _block(view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, ctx.lang)
-            for analysis in result.analyses
-            if isinstance(analysis.payload, CorrectionPayload)
-        ]
-        if not blocks:
-            return None
-        title = localized(ctx.lang, "Bilan de correction", "Correction balance")
-        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=CorrectionPayload,
+            title=localized(ctx.lang, "Bilan de correction", "Correction balance"),
+            block=lambda view, payload: _block(view, payload, ctx.lang),
+        )
 
 
 __all__ = ["CorrectionSection"]

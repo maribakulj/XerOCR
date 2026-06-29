@@ -669,6 +669,144 @@ def plan_segmentation_run(
     )
 
 
+#: Segmenteurs valides en tête d'un run hybride (réels + précalculé pour la démo).
+_HYBRID_SEGMENTERS = frozenset(SEGMENTER_KINDS) | {"precomputed_layout"}
+#: Reconnaisseurs **par région** câblés (OCR réel par bloc + précalculé démo).
+_HYBRID_OCR = frozenset({"tesseract", "precomputed_region"})
+
+_HybridKwargs = dict[str, dict[str, str | int | float | bool]]
+
+
+def _hybrid_recognizer(
+    ocr: str, *, label: str, source_label: str | None
+) -> tuple[str, dict[str, str | int | float | bool]]:
+    """``(adapter_name, kwargs)`` du reconnaisseur par région selon le moteur OCR."""
+    if ocr == "precomputed_region":
+        if not source_label:
+            raise RunPlanningError(
+                "plan_hybrid_run : 'source_label' requis pour precomputed_region."
+            )
+        return f"precomputed_region:{source_label}", {"source_label": source_label}
+    if ocr == "tesseract":
+        return f"tesseract:{label}", {"label": label}
+    raise RunPlanningError(
+        f"plan_hybrid_run : OCR par région inconnu {ocr!r} "
+        f"(attendu l'un de {sorted(_HYBRID_OCR)})."
+    )
+
+
+def _hybrid_spec(
+    corpus: CorpusSpec,
+    run_id: str,
+    *,
+    segmenter: str,
+    recognizer: str,
+    crop: bool,
+    adapter_kwargs: _HybridKwargs,
+) -> RunSpec:
+    """Pipeline **hybride** à 3 étages en **une** ``PipelineSpec`` :
+
+    1. ``segmenter`` : ``IMAGE → LAYOUT`` (régions seules — ``pp_doclayout`` réel,
+       ``remote_segmenter`` distant, ou ``precomputed_layout`` pour la démo) ;
+    2. ``recognizer`` : reconnaissance **par région** (``fanout=True`` → l'exécuteur
+       boucle sur les régions, **découpe** chaque bloc via le cropper de couche 5
+       et l'OCR par bloc, couche 4) → ``LAYOUT`` rempli ;
+    3. ``alto_assembler`` : ``LAYOUT`` rempli → ``ALTO_XML`` (déterministe).
+    """
+    steps = (
+        PipelineStep(
+            id="segment",
+            kind="segmentation",
+            adapter_name=segmenter,
+            input_types=(ArtifactType.IMAGE,),
+            output_types=(ArtifactType.LAYOUT,),
+        ),
+        PipelineStep(
+            id="recognize",
+            kind="recognition",
+            adapter_name=recognizer,
+            input_types=(ArtifactType.LAYOUT, ArtifactType.IMAGE),
+            output_types=(ArtifactType.LAYOUT,),
+            inputs_from={ArtifactType.LAYOUT: "segment"},
+            fanout=True,
+            crop=crop,
+        ),
+        PipelineStep(
+            id="assemble",
+            kind="assembly",
+            adapter_name="alto_assembler",
+            input_types=(ArtifactType.LAYOUT,),
+            output_types=(ArtifactType.ALTO_XML,),
+            inputs_from={ArtifactType.LAYOUT: "recognize"},
+        ),
+    )
+    return RunSpec(
+        corpus=corpus,
+        pipelines=(
+            PipelineSpec(
+                name="hybrid", initial_inputs=(ArtifactType.IMAGE,), steps=steps
+            ),
+        ),
+        # Pas de vue : un run hybride **produit** l'ALTO (géométrie + texte) ;
+        # le scoring d'une métrique de structure est un épaississement (F-3b),
+        # soumis à la preuve d'informativité (réflexe T7) avant câblage.
+        evaluation=EvaluationSpec(views=()),
+        adapter_kwargs=adapter_kwargs,
+        run_id=run_id,
+    )
+
+
+def plan_hybrid_run(
+    corpus: CorpusSpec,
+    run_id: str,
+    *,
+    segmenter: str = "pp_doclayout",
+    ocr: str = "tesseract",
+    label: str = "hybrid",
+    source_label: str | None = None,
+    endpoint: str | None = None,
+    token: str | None = None,
+) -> Callable[[Path], RunSpec]:
+    """Builder de spec d'un run **hybride** seg → reconnaissance par région → ALTO.
+
+    Compose un segmenteur (``pp_doclayout`` réel par défaut, ``remote_segmenter``,
+    ou ``precomputed_layout`` démo) + un OCR **par région** (``tesseract`` réel par
+    défaut, ``precomputed_region`` démo) + ``alto_assembler`` en une ``PipelineSpec``
+    à fan-out. L'exécuteur découpe chaque bloc (cropper couche 5) et OCRise le crop.
+    Pour ``remote_segmenter``, ``endpoint`` est requis ; pour ``precomputed_region``,
+    ``source_label`` est requis.
+    """
+    if segmenter not in _HYBRID_SEGMENTERS:
+        raise RunPlanningError(
+            f"plan_hybrid_run : segmenteur inconnu {segmenter!r} "
+            f"(attendu l'un de {sorted(_HYBRID_SEGMENTERS)})."
+        )
+    recognizer, reco_kwargs = _hybrid_recognizer(
+        ocr, label=label, source_label=source_label
+    )
+    # OCR réel par bloc → découpe l'image ; ``precomputed_region`` lit un texte
+    # figé par ``region_id`` (page entière, aucun pixel) → pas de crop.
+    crop = ocr != "precomputed_region"
+    adapter_kwargs: _HybridKwargs = {recognizer: reco_kwargs}
+    if segmenter == "remote_segmenter":
+        if not endpoint:
+            raise RunPlanningError(
+                "remote_segmenter : 'endpoint' requis (cible object-detection)."
+            )
+        seg_kwargs: dict[str, str | int | float | bool] = {"endpoint": endpoint}
+        if token:
+            seg_kwargs["token"] = token
+        adapter_kwargs[segmenter] = seg_kwargs
+    return lambda _ws: _hybrid_spec(
+        corpus,
+        run_id,
+        segmenter=segmenter,
+        recognizer=recognizer,
+        crop=crop,
+        adapter_kwargs=adapter_kwargs,
+    )
+
+
 __all__ = [
     "DEFAULT_METRIC_PROFILE",
     "METRIC_PROFILES",
@@ -679,5 +817,6 @@ __all__ = [
     "benchmark_engine_catalog",
     "metric_profile_catalog",
     "plan_benchmark_run",
+    "plan_hybrid_run",
     "plan_segmentation_run",
 ]

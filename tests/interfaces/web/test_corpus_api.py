@@ -48,9 +48,8 @@ def test_upload_ok_returns_summary(tmp_path: Path) -> None:
     assert resp.status_code == 201
     body = resp.json()
     assert body["n_documents"] == 2
-    # le résumé est consultable
-    got = client.get(f"/api/corpus/{body['corpus_id']}").json()
-    assert set(got["documents"]) == {"a", "b"}
+    # la réponse de création EST le résumé (corpus_id + documents) — pas de GET.
+    assert set(body["documents"]) == {"a", "b"}
 
 
 def test_hostile_archive_is_422(tmp_path: Path) -> None:
@@ -61,10 +60,6 @@ def test_hostile_archive_is_422(tmp_path: Path) -> None:
 def test_bad_zip_is_422(tmp_path: Path) -> None:
     resp = _upload(_client(tmp_path), b"not a zip")
     assert resp.status_code == 422
-
-
-def test_unknown_corpus_is_404(tmp_path: Path) -> None:
-    assert _client(tmp_path).get("/api/corpus/absent").status_code == 404
 
 
 def test_stem_collision_is_422_not_500(tmp_path: Path) -> None:

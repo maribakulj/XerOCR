@@ -3,18 +3,21 @@
 Protocole (SPEC_HIPE §11) — **fixture vendorée**, pas d'exécution du scorer en
 CI ordinaire :
 
-1. Sur un poste **Python ≥ 3.12** : ``pip install cinoc[hipe-oracle]``
-   (``hipe-ocrepair-scorer==0.9.9`` épinglé) ;
-2. scorer le corpus d'exemple du dépôt officiel et vendorer la paire
-   ``tests/fixtures/hipe_golden/input.jsonl`` (les enregistrements §4.8) +
-   ``tests/fixtures/hipe_golden/expected.json`` (sortie du scorer :
-   ``{"<pipeline>": {"cmer_micro": …, "cmer_macro": …}}``, bootstrap désactivé) ;
+1. Sur un poste **Python ≥ 3.12** : ``pip install "hipe-ocrepair-scorer==0.9.9"`` ;
+2. lancer ``tests/fixtures/hipe_golden/generate.py`` : il score un **corpus
+   synthétique contrôlé** (le scorer officiel ne distribue pas de corpus
+   d'exemple — l'oracle reste le vrai scorer v0.9.9, seules les entrées sont
+   curées) et (ré)écrit ``input.jsonl`` (enregistrements §4.8, texte brut) +
+   ``expected.json`` (``{"system": {"cmer_micro": …, "cmer_macro": …}}`` ;
+   ``mainscore`` = micro/macro globaux, CI bootstrap ignorées) ;
 3. ce test recalcule alors les scores **par notre chemin** (profil ``hipe`` +
-   ``cmer`` + conventions micro/macro §4.1) et exige l'égalité à 1e-9.
+   ``cmer`` + conventions micro/macro §4.1) et exige l'égalité à 1e-9 — il prouve
+   donc que notre profil ``hipe`` reproduit le ``norm()`` du scorer. Il tourne sur
+   **n'importe quel** Python (il recalcule, il n'exécute pas le scorer).
 
-Tant que la fixture n'est pas vendorée, le test **skip avec message** (réserve
-ouverte au DoD — jamais un faux vert silencieux). La parité locale de la
-formule, elle, tourne à chaque CI via ``jiwer`` (``test_metrics_conformity``).
+Si la fixture est absente, le test **skip avec message** (jamais un faux vert
+silencieux). La parité locale de la *formule* tourne en plus à chaque CI via
+``jiwer`` (``test_metrics_conformity``).
 """
 
 from __future__ import annotations

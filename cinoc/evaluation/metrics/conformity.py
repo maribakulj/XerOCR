@@ -13,9 +13,8 @@ même formule que le scorer) + golden vs scorer épinglé (job CI 3.12).
 
 from __future__ import annotations
 
-from rapidfuzz.distance import Levenshtein
-
 from cinoc.domain.artifacts import ArtifactType
+from cinoc.evaluation._alignment import char_mer
 from cinoc.evaluation.context import DocContext
 from cinoc.evaluation.errors import EvaluationError
 from cinoc.evaluation.metric import DocumentMetric, Observation, document_metric
@@ -40,18 +39,8 @@ def cmer(ctx: DocContext) -> Observation:
     """
     if not isinstance(ctx.reference, str) or not isinstance(ctx.hypothesis, str):
         raise EvaluationError("cmer : reference et hypothesis doivent être du texte.")
-    substitutions = deletions = insertions = 0
-    for op in Levenshtein.editops(ctx.reference, ctx.hypothesis):
-        if op.tag == "replace":
-            substitutions += 1
-        elif op.tag == "delete":
-            deletions += 1
-        else:
-            insertions += 1
-    # H + S + D = longueur de la référence (alignement complet de la référence).
-    total = len(ctx.reference) + insertions
-    edits = substitutions + deletions + insertions
-    return Observation(value=edits / total if total else 0.0, weight=total)
+    value, _edits, denom = char_mer(ctx.reference, ctx.hypothesis)
+    return Observation(value=value, weight=denom)
 
 
 #: Métriques de conformité, collectées explicitement par le registre.

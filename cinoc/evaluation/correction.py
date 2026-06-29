@@ -35,6 +35,7 @@ from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef
 from cinoc.domain.evaluation import EvaluationView
+from cinoc.evaluation._alignment import char_counts, char_mer
 from cinoc.evaluation.analysis import (
     Analysis,
     CorrectionPayload,
@@ -62,27 +63,6 @@ _MAX_WORD_SAMPLES = 12
 _MAX_REGRESSIONS = 10
 
 _Outputs = Mapping[str, Mapping[str, Mapping[ArtifactType, Artifact]]]
-
-
-def _counts(reference: str, hypothesis: str) -> tuple[int, int, int]:
-    """(substitutions, suppressions, insertions) de l'alignement caractère."""
-    substitutions = deletions = insertions = 0
-    for op in Levenshtein.editops(reference, hypothesis):
-        if op.tag == "replace":
-            substitutions += 1
-        elif op.tag == "delete":
-            deletions += 1
-        else:
-            insertions += 1
-    return substitutions, deletions, insertions
-
-
-def _cmer(reference: str, hypothesis: str) -> tuple[float, int, int]:
-    """``(cmer, edits, dénominateur)`` — dénominateur = H+S+D+I = len(ref)+I."""
-    s, d, i = _counts(reference, hypothesis)
-    total = len(reference) + i
-    edits = s + d + i
-    return (edits / total if total else 0.0), edits, total
 
 
 def _edit_runs(reference: str, hypothesis: str) -> list[int]:
@@ -164,27 +144,200 @@ def _safe_ratio(numerator: float, denominator: float) -> float | None:
     return numerator / denominator if denominator else None
 
 
+class _CorrectionAccumulator:
+    """État courant du bilan de correction d'un pipeline (**passe unique**).
+
+    ``add`` agrège un document (textes déjà préparés ``prepare_text`` ; un étage
+    absent = chaîne vide, compté R-1.8) ; ``build`` rend le ``PipelineCorrection``
+    ou ``None`` si aucun document applicable. Les ~25 cumuls interdépendants sont
+    regroupés ici : ``_pipeline_correction`` redevient une boucle lisible.
+    """
+
+    def __init__(self, pipeline: str) -> None:
+        self.pipeline = pipeline
+        self.n_documents = 0
+        self.n_missing_raw = self.n_missing_corrected = 0
+        self.improvement = self.regression = self.no_change = 0
+        self.n_catastrophic = 0
+        self.pcis_values: list[float] = []
+        self.ccr_edits = self.ccr_total = 0
+        self.n_overedited = 0
+        self.sys_insertions = self.sys_total = 0
+        self.n_heavy = 0
+        self.corrected_len = self.reference_len = 0
+        self.errors_before = self.errors_after = 0
+        self.n_corrected = self.n_introduced = self.n_kept = 0
+        self.corrected_tokens: set[str] = set()
+        self.introduced_tokens: set[str] = set()
+        self.n_correct_ocr = self.n_over_normalized = 0
+        self.over_samples: list[OverNormalizedWord] = []
+        self.runs: list[int] = []
+        self.raw_edits = self.raw_total = 0
+        self.regressions: list[RegressionSample] = []
+
+    def add(
+        self, document_id: str, reference: str, raw: str | None, corrected: str | None
+    ) -> None:
+        if raw is None:
+            self.n_missing_raw += 1
+            logger.warning(
+                "[correction] %s · %s : étage brut absent — matérialisé vide "
+                "(R-1.8).",
+                self.pipeline,
+                document_id,
+            )
+            raw = ""
+        if corrected is None:
+            self.n_missing_corrected += 1
+            logger.warning(
+                "[correction] %s · %s : étage corrigé absent — matérialisé "
+                "vide (R-1.8).",
+                self.pipeline,
+                document_id,
+            )
+            corrected = ""
+        self.n_documents += 1
+
+        cmer_raw, raw_doc_edits, raw_doc_total = char_mer(reference, raw)
+        self.raw_edits += raw_doc_edits
+        self.raw_total += raw_doc_total
+        s, d, i = char_counts(reference, corrected)
+        sys_edits, sys_denom = s + d + i, len(reference) + i
+        cmer_corrected = sys_edits / sys_denom if sys_denom else 0.0
+        self.sys_insertions += i
+        self.sys_total += sys_denom
+        if sys_denom and i / sys_denom > _HEAVY_INSERTION_THRESHOLD:
+            self.n_heavy += 1
+        self.corrected_len += len(corrected)
+        self.reference_len += len(reference)
+
+        delta = cmer_corrected - cmer_raw
+        if delta < 0:
+            self.improvement += 1
+        elif delta > 0:
+            self.regression += 1
+            self.regressions.append(
+                RegressionSample(
+                    document_id=document_id,
+                    cmer_raw=cmer_raw,
+                    cmer_corrected=cmer_corrected,
+                    delta=delta,
+                )
+            )
+        else:
+            self.no_change += 1
+        if delta > _CATASTROPHIC_THRESHOLD:
+            self.n_catastrophic += 1
+
+        # pcis (SPEC §4.2) : qualité q = 1 − cmer ; q_brut nul → clamp.
+        q_raw, q_sys = 1.0 - cmer_raw, 1.0 - cmer_corrected
+        self.pcis_values.append(
+            max(-1.0, min(1.0, q_sys)) if q_raw == 0 else (q_sys - q_raw) / q_raw
+        )
+
+        ccr_doc, edits, total = char_mer(raw, corrected)
+        self.ccr_edits += edits
+        self.ccr_total += total
+        if cmer_raw > 0 and ccr_doc / cmer_raw > _OVEREDIT_THRESHOLD:
+            self.n_overedited += 1
+
+        reference_words = reference.split()
+        raw_words, corrected_words = raw.split(), corrected.split()
+        missing_before = _missing(reference_words, raw_words)
+        missing_after = _missing(reference_words, corrected_words)
+        self.errors_before += sum(missing_before.values())
+        self.errors_after += sum(missing_after.values())
+        for word in set(missing_before) | set(missing_after):
+            before, after = missing_before.get(word, 0), missing_after.get(word, 0)
+            self.n_kept += min(before, after)
+            if before > after:
+                self.n_corrected += before - after
+                self.corrected_tokens.add(word)
+            elif after > before:
+                self.n_introduced += after - before
+                self.introduced_tokens.add(word)
+
+        aligned_raw = _aligned_words(reference_words, raw_words)
+        aligned_corrected = _aligned_words(reference_words, corrected_words)
+        for index, word in enumerate(reference_words):
+            if aligned_raw[index] != word:
+                continue
+            self.n_correct_ocr += 1
+            if aligned_corrected[index] != word:
+                self.n_over_normalized += 1
+                if len(self.over_samples) < _MAX_WORD_SAMPLES:
+                    self.over_samples.append(
+                        OverNormalizedWord(
+                            document_id=document_id,
+                            reference=word[:64],
+                            corrected=(aligned_corrected[index] or "∅")[:64],
+                        )
+                    )
+        self.runs.extend(_edit_runs(reference, corrected))
+
+    def build(self) -> PipelineCorrection | None:
+        if self.n_documents == 0:
+            return None
+        cmer_raw_micro = _safe_ratio(self.raw_edits, self.raw_total)
+        ccr_micro = _safe_ratio(self.ccr_edits, self.ccr_total)
+        big_runs = sum(r for r in self.runs if r > _EDIT_RUN_THRESHOLD)
+        return PipelineCorrection(
+            pipeline=self.pipeline,
+            n_documents=self.n_documents,
+            n_missing_raw=self.n_missing_raw,
+            n_missing_corrected=self.n_missing_corrected,
+            improvement_rate=self.improvement / self.n_documents,
+            regression_rate=self.regression / self.n_documents,
+            no_change_rate=self.no_change / self.n_documents,
+            pref_score=(self.improvement - self.regression) / self.n_documents,
+            n_catastrophic=self.n_catastrophic,
+            catastrophic_rate=self.n_catastrophic / self.n_documents,
+            pcis_macro=fmean(self.pcis_values) if self.pcis_values else None,
+            pcis_median=median(self.pcis_values) if self.pcis_values else None,
+            n_pcis_extreme=sum(1 for value in self.pcis_values if abs(value) > 1),
+            ccr=ccr_micro,
+            change_ratio=(
+                ccr_micro / cmer_raw_micro
+                if ccr_micro is not None and cmer_raw_micro
+                else None
+            ),
+            length_ratio=_safe_ratio(self.corrected_len, self.reference_len),
+            n_overedited=self.n_overedited,
+            char_ins_ratio=_safe_ratio(self.sys_insertions, self.sys_total),
+            n_hallucination_heavy=self.n_heavy,
+            errors_before=self.errors_before,
+            errors_after=self.errors_after,
+            corrected=self.n_corrected,
+            introduced=self.n_introduced,
+            kept_wrong=self.n_kept,
+            correction_rate=_safe_ratio(self.n_corrected, self.errors_before),
+            introduction_rate=_safe_ratio(self.n_introduced, self.errors_after),
+            net_improvement=self.n_corrected - self.n_introduced,
+            corrected_samples=tuple(
+                sorted(self.corrected_tokens)[:_MAX_TOKEN_SAMPLES]
+            ),
+            introduced_samples=tuple(
+                sorted(self.introduced_tokens)[:_MAX_TOKEN_SAMPLES]
+            ),
+            n_correct_ocr_words=self.n_correct_ocr,
+            n_over_normalized=self.n_over_normalized,
+            over_normalization=_safe_ratio(self.n_over_normalized, self.n_correct_ocr),
+            over_normalized_samples=tuple(self.over_samples),
+            edit_run_median=float(median(self.runs)) if self.runs else None,
+            edit_run_max=max(self.runs, default=0),
+            edit_run_share=_safe_ratio(big_runs, sum(self.runs)),
+            worst_regressions=tuple(
+                sorted(self.regressions, key=lambda r: (-r.delta, r.document_id))[
+                    :_MAX_REGRESSIONS
+                ]
+            ),
+        )
+
+
 def _pipeline_correction(
     pipeline: str, corpus: CorpusSpec, outputs: _Outputs, view: EvaluationView
 ) -> PipelineCorrection | None:
-    n_missing_raw = n_missing_corrected = 0
-    improvement = regression = no_change = n_catastrophic = 0
-    pcis_values: list[float] = []
-    ccr_edits = ccr_total = 0
-    n_overedited = 0
-    sys_insertions = sys_total = 0
-    n_heavy = 0
-    corrected_len = reference_len = 0
-    errors_before = errors_after = n_corrected = n_introduced = n_kept = 0
-    corrected_tokens: set[str] = set()
-    introduced_tokens: set[str] = set()
-    n_correct_ocr = n_over_normalized = 0
-    over_samples: list[OverNormalizedWord] = []
-    runs: list[int] = []
-    regressions: list[RegressionSample] = []
-    n_documents = 0
-    raw_edits = raw_total = 0
-
+    acc = _CorrectionAccumulator(pipeline)
     for document in corpus.documents:
         reference = _ground_truth(document, view)
         if reference is None:
@@ -193,155 +346,8 @@ def _pipeline_correction(
         corrected = _text_of(
             outputs, pipeline, document.id, ArtifactType.CORRECTED_TEXT, view
         )
-        if raw is None:
-            n_missing_raw += 1
-            logger.warning(
-                "[correction] %s · %s : étage brut absent — matérialisé vide "
-                "(R-1.8).",
-                pipeline,
-                document.id,
-            )
-            raw = ""
-        if corrected is None:
-            n_missing_corrected += 1
-            logger.warning(
-                "[correction] %s · %s : étage corrigé absent — matérialisé "
-                "vide (R-1.8).",
-                pipeline,
-                document.id,
-            )
-            corrected = ""
-        n_documents += 1
-
-        cmer_raw, raw_doc_edits, raw_doc_total = _cmer(reference, raw)
-        raw_edits += raw_doc_edits
-        raw_total += raw_doc_total
-        s, d, i = _counts(reference, corrected)
-        sys_edits, sys_denom = s + d + i, len(reference) + i
-        cmer_corrected = sys_edits / sys_denom if sys_denom else 0.0
-        sys_insertions += i
-        sys_total += sys_denom
-        if sys_denom and i / sys_denom > _HEAVY_INSERTION_THRESHOLD:
-            n_heavy += 1
-        corrected_len += len(corrected)
-        reference_len += len(reference)
-
-        delta = cmer_corrected - cmer_raw
-        if delta < 0:
-            improvement += 1
-        elif delta > 0:
-            regression += 1
-            regressions.append(
-                RegressionSample(
-                    document_id=document.id,
-                    cmer_raw=cmer_raw,
-                    cmer_corrected=cmer_corrected,
-                    delta=delta,
-                )
-            )
-        else:
-            no_change += 1
-        if delta > _CATASTROPHIC_THRESHOLD:
-            n_catastrophic += 1
-
-        # pcis (SPEC §4.2) : qualité q = 1 − cmer ; q_brut nul → clamp.
-        q_raw, q_sys = 1.0 - cmer_raw, 1.0 - cmer_corrected
-        pcis_values.append(
-            max(-1.0, min(1.0, q_sys)) if q_raw == 0 else (q_sys - q_raw) / q_raw
-        )
-
-        ccr_doc, edits, total = _cmer(raw, corrected)
-        ccr_edits += edits
-        ccr_total += total
-        if cmer_raw > 0 and ccr_doc / cmer_raw > _OVEREDIT_THRESHOLD:
-            n_overedited += 1
-
-        reference_words = reference.split()
-        raw_words, corrected_words = raw.split(), corrected.split()
-        missing_before = _missing(reference_words, raw_words)
-        missing_after = _missing(reference_words, corrected_words)
-        errors_before += sum(missing_before.values())
-        errors_after += sum(missing_after.values())
-        for word in set(missing_before) | set(missing_after):
-            before, after = missing_before.get(word, 0), missing_after.get(word, 0)
-            n_kept += min(before, after)
-            if before > after:
-                n_corrected += before - after
-                corrected_tokens.add(word)
-            elif after > before:
-                n_introduced += after - before
-                introduced_tokens.add(word)
-
-        aligned_raw = _aligned_words(reference_words, raw_words)
-        aligned_corrected = _aligned_words(reference_words, corrected_words)
-        for index, word in enumerate(reference_words):
-            if aligned_raw[index] != word:
-                continue
-            n_correct_ocr += 1
-            if aligned_corrected[index] != word:
-                n_over_normalized += 1
-                if len(over_samples) < _MAX_WORD_SAMPLES:
-                    over_samples.append(
-                        OverNormalizedWord(
-                            document_id=document.id,
-                            reference=word[:64],
-                            corrected=(aligned_corrected[index] or "∅")[:64],
-                        )
-                    )
-        runs.extend(_edit_runs(reference, corrected))
-
-    if n_documents == 0:
-        return None
-    cmer_raw_micro = _safe_ratio(raw_edits, raw_total)
-    ccr_micro = _safe_ratio(ccr_edits, ccr_total)
-    big_runs = sum(r for r in runs if r > _EDIT_RUN_THRESHOLD)
-    return PipelineCorrection(
-        pipeline=pipeline,
-        n_documents=n_documents,
-        n_missing_raw=n_missing_raw,
-        n_missing_corrected=n_missing_corrected,
-        improvement_rate=improvement / n_documents,
-        regression_rate=regression / n_documents,
-        no_change_rate=no_change / n_documents,
-        pref_score=(improvement - regression) / n_documents,
-        n_catastrophic=n_catastrophic,
-        catastrophic_rate=n_catastrophic / n_documents,
-        pcis_macro=fmean(pcis_values) if pcis_values else None,
-        pcis_median=median(pcis_values) if pcis_values else None,
-        n_pcis_extreme=sum(1 for value in pcis_values if abs(value) > 1),
-        ccr=ccr_micro,
-        change_ratio=(
-            ccr_micro / cmer_raw_micro
-            if ccr_micro is not None and cmer_raw_micro
-            else None
-        ),
-        length_ratio=_safe_ratio(corrected_len, reference_len),
-        n_overedited=n_overedited,
-        char_ins_ratio=_safe_ratio(sys_insertions, sys_total),
-        n_hallucination_heavy=n_heavy,
-        errors_before=errors_before,
-        errors_after=errors_after,
-        corrected=n_corrected,
-        introduced=n_introduced,
-        kept_wrong=n_kept,
-        correction_rate=_safe_ratio(n_corrected, errors_before),
-        introduction_rate=_safe_ratio(n_introduced, errors_after),
-        net_improvement=n_corrected - n_introduced,
-        corrected_samples=tuple(sorted(corrected_tokens)[:_MAX_TOKEN_SAMPLES]),
-        introduced_samples=tuple(sorted(introduced_tokens)[:_MAX_TOKEN_SAMPLES]),
-        n_correct_ocr_words=n_correct_ocr,
-        n_over_normalized=n_over_normalized,
-        over_normalization=_safe_ratio(n_over_normalized, n_correct_ocr),
-        over_normalized_samples=tuple(over_samples),
-        edit_run_median=float(median(runs)) if runs else None,
-        edit_run_max=max(runs, default=0),
-        edit_run_share=_safe_ratio(big_runs, sum(runs)),
-        worst_regressions=tuple(
-            sorted(regressions, key=lambda r: (-r.delta, r.document_id))[
-                :_MAX_REGRESSIONS
-            ]
-        ),
-    )
+        acc.add(document.id, reference, raw, corrected)
+    return acc.build()
 
 
 def correction_analysis(

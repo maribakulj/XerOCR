@@ -10,8 +10,9 @@ from cinoc.evaluation.analysis import CalibrationPayload
 from cinoc.evaluation.result import RunResult
 from cinoc.reports._numbers import localize_decimal
 from cinoc.reports.engine_badges import engine_accent, engine_order
-from cinoc.reports.html import escape, localized, view_prefix
+from cinoc.reports.html import escape, localized
 from cinoc.reports.section import Html, SectionContext
+from cinoc.reports.sections._payload import render_payload_section
 from cinoc.reports.svg import calibration_curve
 
 
@@ -83,19 +84,13 @@ class CalibrationSection:
     def render(self, result: RunResult, ctx: SectionContext) -> Html | None:
         # Ordre canonique des moteurs (accent stable, partagé avec les sections).
         order = engine_order(p.pipeline for p in result.pipelines)
-        multi = len({a.view for a in result.analyses}) > 1
-        blocks = [
-            _block(
-                view_prefix(analysis.view, ctx.lang, multi=multi),
-                analysis.payload, order, ctx.lang,
-            )
-            for analysis in result.analyses
-            if isinstance(analysis.payload, CalibrationPayload)
-        ]
-        if not blocks:
-            return None
-        title = localized(ctx.lang, "Calibration", "Calibration")
-        return Html(f"<h2>{title}</h2>\n" + "".join(blocks))
+        return render_payload_section(
+            result,
+            ctx,
+            payload_type=CalibrationPayload,
+            title=localized(ctx.lang, "Calibration", "Calibration"),
+            block=lambda view, payload: _block(view, payload, order, ctx.lang),
+        )
 
 
 __all__ = ["CalibrationSection"]

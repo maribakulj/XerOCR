@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 
+from cinoc.domain.errors import ProjectionError
 from cinoc.domain.layout import CanonicalLayout, LayoutPage, Region
 from cinoc.evaluation.errors import EvaluationError
 
@@ -53,7 +54,7 @@ def layout_to_text(representation: object, params: Mapping[str, ParamValue]) -> 
     Lignes jointes par ``\\n``, régions par ``\\n\\n``. Déterministe.
     """
     if not isinstance(representation, CanonicalLayout):
-        raise EvaluationError(
+        raise ProjectionError(
             "layout_to_text : un CanonicalLayout est attendu, reçu "
             f"{type(representation).__name__}."
         )
@@ -76,7 +77,7 @@ def identity_text(representation: object, params: Mapping[str, ParamValue]) -> o
     dédiée, sans confondre cette référence avec une vérité-terrain manuelle.
     """
     if not isinstance(representation, str):
-        raise EvaluationError(
+        raise ProjectionError(
             "identity_text : une représentation texte (str) est attendue, reçu "
             f"{type(representation).__name__}."
         )

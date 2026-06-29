@@ -18,16 +18,15 @@ Pillow) ; aucune exception large.
 
 from __future__ import annotations
 
-import hashlib
 import io
-import re
 import tempfile
 import zipfile
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Protocol
 
 from cinoc.adapters.images import thumbnail_data_uri, thumbnail_to_file
+from cinoc.app.security import safe_stem
 from cinoc.evaluation.result import RunResult
 
 #: Plafond par défaut de documents vignettés (borne le poids du rapport autonome).
@@ -91,17 +90,6 @@ def _ordered_refs(
     return [(doc_id, refs[doc_id]) for doc_id in selected]
 
 
-def _stem_for(doc_id: str, *, suffix: str = "") -> str:
-    """Stem de fichier **déterministe et sûr** dérivé du ``document_id``.
-
-    Slug lisible (caractères sûrs sur tous les OS) + empreinte SHA-256 courte du
-    ``document_id`` brut → jamais de collision même si deux ids se réduisent au
-    même slug. ``suffix`` distingue les variantes (vignette vs fac-similé)."""
-    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", doc_id).strip("-") or "doc"
-    digest = hashlib.sha256(doc_id.encode("utf-8")).hexdigest()[:8]
-    return f"{slug}-{digest}{suffix}"
-
-
 def build_thumbnails(
     result: RunResult, *, max_px: int = 280, max_docs: int = _DEFAULT_MAX_DOCS
 ) -> dict[str, str]:
@@ -134,11 +122,16 @@ def _build_sidecar(
     max_px: int,
     suffix: str,
     max_docs: int | None,
-    resolve: Callable[[str, Path, str], str | None],
 ) -> dict[str, str]:
+    """``{document_id: href relatif}`` ; écrit un dérivé JPEG par document image.
+
+    Les deux saveurs (vignette / fac-similé) ne diffèrent que par ``max_px`` et
+    ``suffix`` — la résolution (``thumbnail_to_file``) est la même, appelée
+    directement (pas d'indirection ``resolve``)."""
     out: dict[str, str] = {}
     for doc_id, ref in _ordered_refs(result, max_docs=max_docs):
-        href = resolve(ref, assets_dir, _stem_for(doc_id, suffix=suffix))
+        stem = safe_stem(doc_id, suffix=suffix, fallback="doc")
+        href = thumbnail_to_file(ref, assets_dir, stem, max_px=max_px)
         if href is not None:
             out[doc_id] = href
     return out
@@ -161,9 +154,6 @@ def build_sidecar_thumbnails(
         max_px=max_px,
         suffix="",
         max_docs=max_docs,
-        resolve=lambda ref, folder, stem: thumbnail_to_file(
-            ref, folder, stem, max_px=max_px
-        ),
     )
 
 
@@ -181,9 +171,6 @@ def build_sidecar_facsimiles(
         max_px=max_px,
         suffix=_FACSIMILE_SUFFIX,
         max_docs=max_docs,
-        resolve=lambda ref, folder, stem: thumbnail_to_file(
-            ref, folder, stem, max_px=max_px
-        ),
     )
 
 

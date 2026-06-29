@@ -63,9 +63,8 @@ def test_hf_import_ok_and_selectable(
     client = _client(tmp_path)
     resp = client.post("/api/corpus/import/huggingface", json=_BODY, headers=_CSRF)
     assert resp.status_code == 201
-    corpus_id = resp.json()["corpus_id"]
-    # corpus immédiatement consultable (intégré au store, cible de run)
-    assert client.get(f"/api/corpus/{corpus_id}").json()["n_documents"] == 1
+    # la réponse d'import EST le résumé (n_documents) → corpus cible de run.
+    assert resp.json()["n_documents"] == 1
 
 
 def test_hf_import_requires_csrf(tmp_path: Path) -> None:

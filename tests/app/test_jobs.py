@@ -10,6 +10,7 @@ import pytest
 
 from cinoc.adapters.storage import JobState, JobStore
 from cinoc.adapters.storage.history_store import HistoryStore
+from cinoc.app.demo import demo_run_spec, write_demo_corpus
 from cinoc.app.jobs import JobRunner
 from cinoc.app.modules.registry import ModuleRegistry, register_default_modules
 from cinoc.app.results import load_run_result
@@ -20,7 +21,6 @@ from cinoc.domain.errors import CinocError
 from cinoc.domain.evaluation import EvaluationSpec, EvaluationView
 from cinoc.domain.pipeline import PipelineSpec, PipelineStep
 from cinoc.domain.run_spec import RunSpec
-from cinoc.interfaces.demo import demo_run_spec, write_demo_corpus
 from cinoc.pipeline.protocols import ParamValue
 from cinoc.pipeline.run_control import RunControl
 from cinoc.pipeline.types import RunContext, StepOutput

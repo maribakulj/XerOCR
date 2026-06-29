@@ -39,6 +39,11 @@ logger = logging.getLogger(__name__)
 UnicodeForm = Literal["none", "NFC", "NFD", "NFKC", "NFKD"]
 WhitespaceMode = Literal["none", "intra_line", "flat"]
 ExcludeMode = Literal["delete", "space"]
+#: Fonction de pliage de casse (quand ``caseless``). ``casefold`` (défaut) est le
+#: pliage Unicode complet (``ß→ss``, ``ſ→s``, ``ﬀ→ff``…) ; ``lower`` est le
+#: minuscule simple — requis par la conformité HIPE, dont le ``norm()`` officiel
+#: plie via ``str.lower()`` (qui **garde** ``ſ``/``ﬀ``, cf. golden).
+CaseMode = Literal["casefold", "lower"]
 
 #: Caractères de contrôle conservés (pris en charge par le levier ``whitespace``).
 _KEEP_CONTROL = frozenset("\t\n\r\f\v")
@@ -200,6 +205,14 @@ class NormalizationProfile(BaseModel):
     name: str
     unicode_form: UnicodeForm = "NFC"
     caseless: bool = False
+    #: Fonction de pliage quand ``caseless`` (cf. :data:`CaseMode`). ``casefold``
+    #: par défaut ; ``lower`` n'est requis que par la conformité HIPE.
+    case_mode: CaseMode = "casefold"
+    #: Si vrai (défaut), l'hygiène retire les invisibles (``Cf``/``Cc``). Le profil
+    #: ``hipe`` le désactive : le scorer mappe ces caractères en **espace** (via
+    #: ``\\W → espace``), pas en suppression — il faut donc les laisser passer
+    #: jusqu'à ``non_word_to_space`` (cf. golden).
+    strip_invisible: bool = True
     whitespace: WhitespaceMode = "none"
     strip_diacritics: bool = False
     diplomatic_table: dict[str, str] = Field(default_factory=dict)
@@ -225,12 +238,17 @@ class NormalizationProfile(BaseModel):
 
     # -- application --------------------------------------------------------
 
+    def _fold(self, text: str) -> str:
+        """Pliage de casse selon ``case_mode`` (``casefold`` ou ``lower``)."""
+        return text.lower() if self.case_mode == "lower" else text.casefold()
+
     def normalize(self, text: str) -> str:
         """Applique le profil (ordre canonique figé)."""
-        text = _strip_invisible(text)
+        if self.strip_invisible:
+            text = _strip_invisible(text)
         text = _normalize_form(text, self.unicode_form)
         if self.caseless:
-            text = _normalize_form(text.casefold(), self.unicode_form)
+            text = _normalize_form(self._fold(text), self.unicode_form)
         if self.exclude_chars:
             text = self._apply_exclude(text)
         if self.diplomatic_table:
@@ -246,12 +264,12 @@ class NormalizationProfile(BaseModel):
             return self.exclude_chars
         folded: set[str] = set()
         for char in self.exclude_chars:
-            cf = char.casefold()
+            cf = self._fold(char)
             if len(cf) == 1:
                 folded.add(cf)
             else:
                 logger.warning(
-                    "[normalization] exclude %r : casefold multi-codepoint, ignoré",
+                    "[normalization] exclude %r : pliage multi-codepoint, ignoré",
                     char,
                 )
         return frozenset(folded)
@@ -264,7 +282,7 @@ class NormalizationProfile(BaseModel):
     def _effective_table(self) -> dict[str, str]:
         if not self.caseless:
             return self.diplomatic_table
-        return {k.casefold(): v.casefold() for k, v in self.diplomatic_table.items()}
+        return {self._fold(k): self._fold(v) for k, v in self.diplomatic_table.items()}
 
     def _apply_whitespace(self, text: str) -> str:
         if self.whitespace == "none":
@@ -284,6 +302,8 @@ class NormalizationProfile(BaseModel):
             "name": self.name,
             "unicode_form": self.unicode_form,
             "caseless": self.caseless,
+            "case_mode": self.case_mode,
+            "strip_invisible": self.strip_invisible,
             "whitespace": self.whitespace,
             "strip_diacritics": self.strip_diacritics,
             "diplomatic_table": dict(sorted(self.diplomatic_table.items())),
@@ -401,20 +421,26 @@ NORMALIZATION_PROFILES: dict[str, NormalizationProfile] = {
             diplomatic_table=DIPLOMATIC_LATIN_MEDIEVAL,
             description="Latin médiéval : ſ=s, u=v, i=j, ꝑ=per, ꝓ=pro, ꝗ=que…",
         ),
-        # Conformité HIPE-OCRepair (SPEC_HIPE §4.3/§7.2). ``unicode_form="none"``
-        # par fidélité : la ``norm()`` du scorer n'applique aucune normalisation
-        # Unicode. L'hygiène (caractères invisibles) reste appliquée — divergence
-        # potentielle connue (soft-hyphen), arbitrée par le test golden.
+        # Conformité HIPE-OCRepair (SPEC_HIPE §4.3/§7.2), reproduit le ``norm()``
+        # officiel **à l'identique** (prouvé à 1e-9 par le golden) :
+        # - ``unicode_form="none"`` : le scorer n'applique aucune normalisation ;
+        # - ``case_mode="lower"`` : le scorer plie via ``str.lower()`` (PAS casefold) —
+        #   il **garde** ſ/ﬀ/ﬁ (casefold les replierait à tort en s/ff/fi) ;
+        # - ``strip_invisible=False`` : le scorer mappe les invisibles (Cf/Cc) en
+        #   **espace** via ``\W → espace``, pas en suppression → on les laisse passer
+        #   jusqu'à ``non_word_to_space``.
         NormalizationProfile(
             name="hipe",
             unicode_form="none",
             caseless=True,
+            case_mode="lower",
+            strip_invisible=False,
             diplomatic_table=DIPLOMATIC_HIPE,
             non_word_to_space=True,
             whitespace="flat",
             description=(
-                "Conformité HIPE : casse pliée, ß/ꝛ/œ/æ/aͤ/oͤ/uͤ mappés, "
-                "césures DTA recollées, non-mot → espace, espaces compactés"
+                "Conformité HIPE : casse pliée (lower), ß/ꝛ/œ/æ/aͤ/oͤ/uͤ mappés, "
+                "ſ/ﬀ gardés, césures DTA recollées, invisibles → espace, compactés"
             ),
         ),
         # ``hipe`` SANS les pliages patrimoniaux : l'écart cmer(heritage) −
