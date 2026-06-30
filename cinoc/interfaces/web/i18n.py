@@ -18,7 +18,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_library": "Bibliothèque",
         "nav_benchmark": "Banc d'essai",
         "nav_reports": "Rapports",
-        "nav_segmentation": "Segmentation",
         "nav_history": "Historique",
         "nav_engines": "Moteurs",
         "wordmark_sub": "OCR · HTR · VLM",
@@ -63,7 +62,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_mode_text": "OCR → LLM (texte)",
         "bench_mode_image": "OCR → LLM (image+texte)",
         "bench_mode_vlm": "VLM (zero-shot)",
+        "bench_mode_hybrid": "Hybride (segmentation)",
         "bench_ocr_engine": "Moteur OCR",
+        "bench_segmenter": "Segmenteur",
+        "bench_segmenter_hint": "Détecte les régions en tête de pipeline ; le "
+        "distant délègue à un endpoint HF (modèle changé via l'URL).",
+        "bench_recognizer": "Reconnaisseur par bloc",
+        "bench_recognizer_hint": "Moteur appliqué à chaque bloc découpé : un OCR "
+        "réel, ou un VLM qui transcrit l'image du bloc (zero-shot). Texte assemblé "
+        "scoré CER/WER comme un pipeline à plat.",
+        "bench_seg_preview": "Aperçu des régions",
+        "bench_seg_preview_btn": "Prévisualiser la segmentation",
+        "bench_seg_preview_hint": "Lance le segmenteur sur le corpus choisi et "
+        "affiche les régions détectées (avant de lancer le benchmark).",
+        "bench_seg_preview_no_corpus": "Choisis d'abord un corpus.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
         "bench_model": "Modèle",
@@ -127,53 +139,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_curated_hint": "Dataset de référence Cinoc publié sur HuggingFace : "
         "le manifeste et la vérité-terrain sont rapatriés, les images restent "
         "des liens IIIF épinglés à la révision.",
-        # Run de segmentation — panneau de lancement (page /segmentation)
-        "seg_run_title": "Segmenter un corpus",
-        "seg_run_desc": "Choisissez un corpus préparé et un segmenteur, puis "
-        "lancez la détection des régions. Le segmenteur distant délègue à un "
-        "endpoint Hugging Face — on change de modèle en changeant l'URL.",
-        "seg_run_corpus": "Corpus",
-        "seg_run_engine": "Segmenteur",
+        # Aperçu de mise en page (panneau du lanceur) + reconnaisseur hybride :
+        # vestiges utiles de l'ancienne page /segmentation, repris par le composeur.
         "seg_run_endpoint": "Endpoint (object-detection HF)",
         "seg_run_endpoint_ph": "https://…",
         "seg_run_token": "Jeton (optionnel)",
-        "seg_run_btn": "Segmenter",
-        "seg_run_hint": "détecte les régions du corpus sélectionné.",
-        "seg_run_unavailable": "segmenteur indisponible",
-        "seg_run_no_corpus": "Aucun corpus préparé — importez-en un dans la "
-        "Bibliothèque.",
         "seg_run_running": "Segmentation en cours…",
-        "seg_run_done": "Segmentation terminée.",
-        "seg_run_open": "Voir la segmentation",
-        # Run hybride (transcription) — panneau de lancement (page /segmentation)
-        "hyb_run_title": "Transcrire un corpus (hybride)",
-        "hyb_run_desc": "Segmente chaque page, reconnaît chaque bloc avec le moteur "
-        "choisi (OCR réel ou VLM zero-shot), puis assemble un ALTO par page "
-        "(géométrie + texte). Téléchargeable une fois terminé ; les régions "
-        "détectées s'affichent ci-dessous.",
-        "hyb_run_btn": "Transcrire",
-        "hyb_run_done": "Transcription terminée.",
-        "hyb_run_download": "Télécharger l'ALTO (zip)",
-        "hyb_run_no_ocr": "Aucun reconnaisseur disponible — la transcription "
-        "hybride exige au moins un OCR (ex. Tesseract) ou un VLM avec sa clé.",
-        "hyb_run_recognizer": "Reconnaisseur par bloc",
-        "hyb_run_recognizer_hint": "Le moteur appliqué à chaque bloc découpé : un "
-        "OCR réel, ou un VLM qui transcrit l'image du bloc (zero-shot).",
         "hyb_run_vlm": "VLM, zero-shot",
-        "hyb_run_prompt": "Prompt VLM (optionnel)",
-        "hyb_run_prompt_ph": "Consigne de transcription du bloc (défaut intégré)",
-        # Segmentation (squelette de visualisation)
-        "seg_eyebrow": "Vitrine · mise en page",
-        "seg_desc": "Visualisation des régions d'une page segmentée "
-        "(boîtes + étiquettes), rendue côté serveur.",
-        "seg_regions": "régions",
-        "seg_demo_title": "Page de démonstration",
-        "seg_demo_desc": "Layout de démonstration déterministe : l'image de page "
-        "en fond, les régions détectées en surimpression.",
-        "seg_regions_title": "Régions",
-        "seg_col_id": "Identifiant",
-        "seg_col_type": "Type",
-        "seg_col_bbox": "Boîte (x, y · l×h)",
         "open_report_full": "Ouvrir le rapport",
         "sys_version": "Version",
         "sys_mode": "Mode",
@@ -276,7 +248,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_library": "Library",
         "nav_benchmark": "Benchmark",
         "nav_reports": "Reports",
-        "nav_segmentation": "Segmentation",
         "nav_history": "History",
         "nav_engines": "Engines",
         "wordmark_sub": "OCR · HTR · VLM",
@@ -319,7 +290,20 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_mode_text": "OCR → LLM (text)",
         "bench_mode_image": "OCR → LLM (image+text)",
         "bench_mode_vlm": "VLM (zero-shot)",
+        "bench_mode_hybrid": "Hybrid (segmentation)",
         "bench_ocr_engine": "OCR engine",
+        "bench_segmenter": "Segmenter",
+        "bench_segmenter_hint": "Detects regions at the head of the pipeline; the "
+        "remote one delegates to an HF endpoint (swap the model via the URL).",
+        "bench_recognizer": "Per-block recognizer",
+        "bench_recognizer_hint": "Engine applied to each cropped block: a real OCR, "
+        "or a VLM transcribing the block image (zero-shot). Assembled text scored "
+        "CER/WER like a flat pipeline.",
+        "bench_seg_preview": "Region preview",
+        "bench_seg_preview_btn": "Preview segmentation",
+        "bench_seg_preview_hint": "Runs the segmenter on the chosen corpus and shows "
+        "the detected regions (before launching the benchmark).",
+        "bench_seg_preview_no_corpus": "Pick a corpus first.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
         "bench_model": "Model",
@@ -383,51 +367,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_curated_hint": "Cinoc reference dataset published on HuggingFace: "
         "the manifest and ground truth are fetched, images stay as IIIF links "
         "pinned to the revision.",
-        # Segmentation run — launch panel (/segmentation page)
-        "seg_run_title": "Segment a corpus",
-        "seg_run_desc": "Pick a prepared corpus and a segmenter, then run region "
-        "detection. The remote segmenter delegates to a Hugging Face endpoint — "
-        "switch models by switching the URL.",
-        "seg_run_corpus": "Corpus",
-        "seg_run_engine": "Segmenter",
+        # Layout preview (launcher panel) + hybrid recognizer: useful remnants of
+        # the old /segmentation page, reused by the benchmark composer.
         "seg_run_endpoint": "Endpoint (HF object-detection)",
         "seg_run_endpoint_ph": "https://…",
         "seg_run_token": "Token (optional)",
-        "seg_run_btn": "Segment",
-        "seg_run_hint": "detects regions of the selected corpus.",
-        "seg_run_unavailable": "segmenter unavailable",
-        "seg_run_no_corpus": "No prepared corpus — import one in the Library.",
         "seg_run_running": "Segmenting…",
-        "seg_run_done": "Segmentation complete.",
-        "seg_run_open": "View the segmentation",
-        # Hybrid (transcription) run — launch panel (/segmentation page)
-        "hyb_run_title": "Transcribe a corpus (hybrid)",
-        "hyb_run_desc": "Segments each page, recognises each block with the chosen "
-        "engine (real OCR or a zero-shot VLM), then assembles one ALTO per page "
-        "(geometry + text). Downloadable once done; the detected regions show below.",
-        "hyb_run_btn": "Transcribe",
-        "hyb_run_done": "Transcription complete.",
-        "hyb_run_download": "Download the ALTO (zip)",
-        "hyb_run_no_ocr": "No recognizer available — hybrid transcription needs at "
-        "least one OCR (e.g. Tesseract) or a VLM with its key.",
-        "hyb_run_recognizer": "Per-block recognizer",
-        "hyb_run_recognizer_hint": "The engine applied to each cropped block: a "
-        "real OCR, or a VLM transcribing the block image (zero-shot).",
         "hyb_run_vlm": "VLM, zero-shot",
-        "hyb_run_prompt": "VLM prompt (optional)",
-        "hyb_run_prompt_ph": "Block transcription instruction (built-in default)",
-        # Segmentation (visualization skeleton)
-        "seg_eyebrow": "Showcase · layout",
-        "seg_desc": "Region visualization of a segmented page "
-        "(boxes + labels), server-rendered.",
-        "seg_regions": "regions",
-        "seg_demo_title": "Demonstration page",
-        "seg_demo_desc": "Deterministic demonstration layout: the page image as "
-        "background, detected regions overlaid.",
-        "seg_regions_title": "Regions",
-        "seg_col_id": "Identifier",
-        "seg_col_type": "Type",
-        "seg_col_bbox": "Box (x, y · w×h)",
         "open_report_full": "Open the report",
         "sys_version": "Version",
         "sys_mode": "Mode",

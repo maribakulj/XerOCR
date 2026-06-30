@@ -107,6 +107,7 @@ def build_runs_router(
     corpus_store: CorpusStore,
     *,
     statuses: StatusProvider,
+    segmenters: StatusProvider | None = None,
     ner_available: Callable[[], bool] = lambda: True,
     public_mode: bool = False,
 ) -> APIRouter:
@@ -175,6 +176,20 @@ def build_runs_router(
                     raise HTTPException(
                         status_code=409, detail=f"moteur indisponible : {kind!r}"
                     )
+        # 4ter : concurrent hybride → le **segmenteur** doit être disponible (extra
+        # [segment] / endpoint). Catégorie distincte des moteurs OCR (provider
+        # dédié) ; jamais masqué en mode public (local/délégué, pas de clé exposée).
+        seg_available = (
+            {s.kind for s in segmenters() if s.available}
+            if segmenters is not None
+            else set()
+        )
+        for comp in req.competitors:
+            if comp.segmenter and comp.segmenter not in seg_available:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"segmenteur indisponible : {comp.segmenter!r}",
+                )
         # 4bis : étape NER demandée → exiger spaCy (extra [ner]) AVANT le lancement.
         if any(comp.ner for comp in req.competitors) and not ner_available():
             raise HTTPException(

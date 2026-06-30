@@ -530,3 +530,63 @@ def test_layout_ground_truth_adds_structure_view(tmp_path: Path) -> None:
 def test_text_only_corpus_has_no_structure_view(tmp_path: Path) -> None:
     views = _views_for_corpus(_corpus(tmp_path))
     assert all("region_detection" not in v.metric_names for v in views)
+
+
+# --- Concurrent hybride (segmenteur → reconnaissance par bloc → texte scoré) ----
+
+
+def test_hybrid_competitor_pipeline_shape(tmp_path: Path) -> None:
+    # OCR par bloc : segment → recognize (fanout, crop) → text (RAW_TEXT scoré).
+    comp = Competitor(engine="mistral_ocr", segmenter="pp_doclayout")
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    assert pipe.name == "pp_doclayout→mistral_ocr"
+    assert [s.id for s in pipe.steps] == ["segment", "recognize", "text"]
+    segment, recognize, text = pipe.steps
+    assert segment.adapter_name == "pp_doclayout"
+    assert recognize.adapter_name == "mistral_ocr:c0"
+    assert recognize.fanout is True and recognize.crop is True
+    # L'étape texte produit du RAW_TEXT → scoré par la vue texte comme les autres.
+    assert text.adapter_name == "layout_to_text:c0"
+    assert text.output_types == (ArtifactType.RAW_TEXT,)
+    assert spec.adapter_kwargs["mistral_ocr:c0"] == {"label": "c0", "lang": "fra"}
+    assert spec.adapter_kwargs["layout_to_text:c0"] == {"label": "c0"}
+
+
+def test_hybrid_competitor_vlm_runs_zero_shot(tmp_path: Path) -> None:
+    comp = Competitor(
+        engine="openai", segmenter="pp_doclayout", prompt="Transcris ce bloc."
+    )
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    assert spec.adapter_kwargs["openai:c0"] == {
+        "label": "c0",
+        "role": "zero_shot",
+        "prompt": "Transcris ce bloc.",
+    }
+
+
+def test_hybrid_competitor_alto_appends_assembler(tmp_path: Path) -> None:
+    # ALTO en hybride n'est PAS réservé à tesseract : l'assembleur part du LAYOUT.
+    comp = Competitor(engine="mistral_ocr", segmenter="pp_doclayout", alto=True)
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    assert [s.id for s in pipe.steps] == ["segment", "recognize", "text", "assemble"]
+    assert pipe.steps[-1].output_types == (ArtifactType.ALTO_XML,)
+
+
+def test_hybrid_competitor_remote_segmenter_requires_endpoint(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", segmenter="remote_segmenter")
+    with pytest.raises(RunPlanningError, match="segmenter_endpoint"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+
+
+def test_hybrid_competitor_unknown_segmenter_refused(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", segmenter="bogus")
+    with pytest.raises(RunPlanningError, match="segmenteur non câblé"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+
+
+def test_hybrid_competitor_rejects_mode(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", segmenter="pp_doclayout", mode="text_only")
+    with pytest.raises(RunPlanningError, match="aucun mode"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)

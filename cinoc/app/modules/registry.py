@@ -288,6 +288,17 @@ def _build_alto_assembler(kwargs: Mapping[str, ParamValue]) -> Module:
     return AltoAssembler()
 
 
+def _build_layout_to_text(kwargs: Mapping[str, ParamValue]) -> Module:
+    label = kwargs.get("label")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "layout_to_text : 'label' (str) requis dans adapter_kwargs."
+        )
+    from cinoc.adapters.layout.to_text import LayoutToTextExtractor
+
+    return LayoutToTextExtractor(label=label)
+
+
 def _build_ner(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -325,6 +336,7 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
+    registry.register_builder("layout_to_text", _build_layout_to_text)
 
 
 __all__ = [

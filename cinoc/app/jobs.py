@@ -71,7 +71,7 @@ class JobRunner:
         #: Historique longitudinal : enregistre les agrégats de chaque run
         #: terminé. ``None`` → pas de suivi (rétro-compatible).
         self._history = history_store
-        #: Segmentation : persiste les ``LAYOUT`` produits pour /segmentation.
+        #: Segmentation : persiste les ``LAYOUT`` produits (aperçu du lanceur).
         #: ``None`` → pas de persistance de mise en page (rétro-compatible).
         self._segmentation = segmentation_store
         #: Export ALTO : persiste les ``ALTO_XML`` produits (téléchargeables par

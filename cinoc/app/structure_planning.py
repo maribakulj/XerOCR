@@ -52,7 +52,8 @@ def _segmentation_spec(
 
     Aucune vue d'évaluation : un run de segmentation produit de la **géométrie**
     (captée par le sink), pas une métrique scalaire. Le ``RunResult`` reste
-    l'output formel du run ; la visualisation vit sur ``/segmentation``.
+    l'output formel du run ; les régions se visualisent via l'aperçu du lanceur
+    (``GET /api/segmentation/preview``).
 
     ``adapter_kwargs`` porte les paramètres de construction du module choisi
     (ex. ``endpoint``/``token`` du segmenteur distant) → factory + ``RunManifest``.

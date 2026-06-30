@@ -9,14 +9,11 @@ from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 
 from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
-from cinoc.app.segmentation import SegmentationStore, demo_layout
 from cinoc.interfaces.web.app import _TEMPLATES_DIR
 from cinoc.interfaces.web.routers.home import build_home_router
 
 
 def _history_body(tmp_path: Path, store: HistoryStore) -> str:
-    seg = SegmentationStore(tmp_path / "seg")
-    seg_id = seg.save(demo_layout())
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -25,8 +22,6 @@ def _history_body(tmp_path: Path, store: HistoryStore) -> str:
             statuses=lambda: (),
             segmenters=lambda: (),
             history_store=store,
-            segmentation_store=seg,
-            demo_segmentation_id=seg_id,
         )
     )
     return TestClient(app).get("/history").text

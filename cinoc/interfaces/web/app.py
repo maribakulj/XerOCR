@@ -50,7 +50,6 @@ from cinoc.interfaces.web.metrics import MetricsMiddleware, RequestMetrics
 from cinoc.interfaces.web.routers.corpus import build_corpus_router
 from cinoc.interfaces.web.routers.engines import build_engines_router
 from cinoc.interfaces.web.routers.home import build_home_router
-from cinoc.interfaces.web.routers.hybrid import build_hybrid_router
 from cinoc.interfaces.web.routers.reports import build_reports_router
 from cinoc.interfaces.web.routers.runs import build_runs_router
 from cinoc.interfaces.web.routers.segmentation import build_segmentation_router
@@ -235,12 +234,12 @@ def create_app(
     history_store = HistoryStore(runtime_dir / "history.db")
     # Segmentation : un store disque par application + une graine de **démo**
     # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
-    # runs réels ; ``/segmentation`` affiche le plus récent (run réel > démo). Créé
-    # **avant** le runner pour le lui passer (même instance lue par /segmentation).
+    # runs réels ; l'aperçu du lanceur (``/api/segmentation/preview``) rend le plus
+    # récent (run réel > démo). Créé **avant** le runner pour le lui passer.
     seg_store = SegmentationStore(Path(tempfile.mkdtemp(prefix="cinoc-seg-")))
-    demo_seg_id = seg_store.save(
-        demo_layout(), image_ext=".png", image_bytes=demo_page_image()
-    )
+    # Graine de démo (layout + image) : l'aperçu du lanceur affiche ces régions
+    # tant qu'aucun run réel n'a été lancé.
+    seg_store.save(demo_layout(), image_ext=".png", image_bytes=demo_page_image())
     # Export ALTO : un store disque par application, indexé par run_id. Le sink du
     # runner y dépose les ``ALTO_XML`` produits ; le routeur des rapports les
     # rezippe à la demande (téléchargement par run).
@@ -265,8 +264,8 @@ def create_app(
         return engine_statuses()
 
     # Segmenteurs : catégorie distincte (pas dans le <select> moteur OCR), jamais
-    # masquée en public (segmenteur local, pas de clé). Alimente le gate du run
-    # de segmentation et (ultérieurement) le bouton de /segmentation.
+    # masquée en public (segmenteur local, pas de clé). Alimente le gate du run de
+    # segmentation, le mode hybride du composeur et l'aperçu de mise en page.
     def segmenter_status_provider() -> tuple[EngineStatus, ...]:
         return segmenter_statuses()
 
@@ -283,8 +282,6 @@ def create_app(
             segmenters=segmenter_status_provider,
             ner=ner_status_provider,
             history_store=history_store,
-            segmentation_store=seg_store,
-            demo_segmentation_id=demo_seg_id,
             corpus_store=corpus_store,
             curated_author=_resolve_curated_author(),
             public_mode=is_public,
@@ -300,22 +297,15 @@ def create_app(
             segmenters=segmenter_status_provider,
         )
     )
-    # Transcription hybride (seg → OCR par région → ALTO) : même JobRunner ; les
-    # ALTO produits se téléchargent via /reports/{run_id}/alto.zip, le LAYOUT se
-    # visualise via /segmentation (sinks AltoStore + SegmentationStore déjà câblés).
-    app.include_router(
-        build_hybrid_router(
-            runner=runner,
-            corpus_store=corpus_store,
-            segmenters=segmenter_status_provider,
-            engines=engine_status_provider,
-        )
-    )
+    # Le lanceur exécute aussi les concurrents **hybrides** (segmenteur →
+    # reconnaissance par bloc → texte scoré) : pas de second chemin d'exécution.
+    # Les ALTO produits (option) se téléchargent via /reports/{run_id}/alto.zip.
     app.include_router(
         build_runs_router(
             runner,
             corpus_store,
             statuses=engine_status_provider,
+            segmenters=segmenter_status_provider,
             ner_available=lambda: ner_status_provider().available,
             public_mode=is_public,
         )

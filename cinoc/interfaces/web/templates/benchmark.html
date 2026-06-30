@@ -58,6 +58,8 @@
                 data-mode="text_and_image">{{ t.bench_mode_image }}</button>
         <button type="button" role="tab" aria-selected="false"
                 data-mode="zero_shot">{{ t.bench_mode_vlm }}</button>
+        <button type="button" role="tab" aria-selected="false"
+                data-mode="hybrid">{{ t.bench_mode_hybrid }}</button>
       </div>
 
       <div class="composer-draft">
@@ -71,6 +73,52 @@
             {% endfor %}
           </select>
         </label>
+
+        <label class="comp-field" data-show="hybrid">
+          <span class="comp-label">{{ t.bench_segmenter }}</span>
+          <select id="draft-segmenter" class="select">
+            {% for s in segmenters %}
+            <option value="{{ s.kind }}"{% if not s.available %} disabled{% endif %}>
+              {{ s.label }}{% if not s.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          <span class="dropzone-meta">{{ t.bench_segmenter_hint }}</span>
+        </label>
+
+        <label class="comp-field" data-show="hybrid" id="draft-seg-endpoint-field" hidden>
+          <span class="comp-label">{{ t.seg_run_endpoint }}</span>
+          <input id="draft-seg-endpoint" class="input" type="url"
+                 placeholder="{{ t.seg_run_endpoint_ph }}">
+        </label>
+        <label class="comp-field" data-show="hybrid" id="draft-seg-token-field" hidden>
+          <span class="comp-label">{{ t.seg_run_token }}</span>
+          <input id="draft-seg-token" class="input" type="password">
+        </label>
+
+        <label class="comp-field" data-show="hybrid">
+          <span class="comp-label">{{ t.bench_recognizer }}</span>
+          <select id="draft-recognizer" class="select">
+            {% for r in recognizers %}
+            <option value="{{ r.kind }}" data-vlm="{{ '1' if r.vlm else '' }}"{% if not r.available %} disabled{% endif %}>
+              {{ r.label }}{% if r.vlm %} — {{ t.hyb_run_vlm }}{% endif %}{% if not r.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          <span class="dropzone-meta">{{ t.bench_recognizer_hint }}</span>
+        </label>
+
+        <div class="comp-field" data-show="hybrid">
+          <span class="comp-label">{{ t.bench_seg_preview }}</span>
+          <div class="seg-preview-actions">
+            <button id="seg-preview-btn" class="btn btn-sm" type="button"
+                    data-no-corpus="{{ t.bench_seg_preview_no_corpus }}">{{ t.bench_seg_preview_btn }}</button>
+            <span id="seg-preview-status" class="run-status" role="status"
+                  data-running="{{ t.seg_run_running }}"></span>
+          </div>
+          <div id="seg-preview" class="seg-canvas" aria-live="polite"></div>
+          <span class="dropzone-meta">{{ t.bench_seg_preview_hint }}</span>
+        </div>
 
         <label class="comp-field" data-show="text_only">
           <span class="comp-label">{{ t.bench_llm }}</span>
@@ -95,7 +143,7 @@
         </label>
 
         <label class="comp-field"
-               data-show="ocr_only text_only text_and_image zero_shot">
+               data-show="ocr_only text_only text_and_image zero_shot hybrid">
           <span class="comp-label">{{ t.bench_model }}</span>
           <input id="draft-model" class="input" type="text"
                  placeholder="{{ t.bench_model_ph }}">
@@ -103,7 +151,7 @@
         </label>
 
         <label class="comp-field comp-field-prompt"
-               data-show="text_only text_and_image zero_shot">
+               data-show="text_only text_and_image zero_shot hybrid">
           <span class="comp-label">{{ t.bench_prompt }}</span>
           {% if curated_prompts %}
           <select id="draft-prompt-curated" class="select">
@@ -119,7 +167,7 @@
         </label>
 
         <label class="comp-field comp-field-ner"
-               data-show="ocr_only text_only text_and_image zero_shot">
+               data-show="ocr_only text_only text_and_image zero_shot hybrid">
           <span class="comp-label">
             <input id="draft-ner" type="checkbox"
                    {% if not ner or not ner.available %}disabled{% endif %}>
@@ -132,7 +180,7 @@
         </label>
 
         <label class="comp-field comp-field-alto"
-               data-show="ocr_only text_only text_and_image">
+               data-show="ocr_only text_only text_and_image hybrid">
           <span class="comp-label">
             <input id="draft-alto" type="checkbox">
             {{ t.bench_alto }}
@@ -167,7 +215,8 @@
            data-label-ocr="OCR"
            data-label-ocr-llm="OCR → LLM"
            data-label-ocr-vlm="OCR → VLM"
-           data-label-vlm="VLM"></div>
+           data-label-vlm="VLM"
+           data-label-hybrid="{{ t.bench_mode_hybrid }}"></div>
       <p id="queue-empty" class="empty">{{ t.bench_queue_empty }}</p>
     </div>
   </div>

@@ -65,15 +65,25 @@ class Competitor(BaseModel):
     """Un concurrent de benchmark = un pipeline à exécuter (couche 6).
 
     ``engine`` est le moteur OCR (modes ``None``/``text_*``) **ou** le
-    fournisseur VLM (mode ``zero_shot``). ``llm`` nomme le fournisseur de
-    post-correction des modes ``text_*``. Validé exhaustivement à la
-    planification (jamais de retombée muette).
+    fournisseur VLM (mode ``zero_shot``) **ou**, quand ``segmenter`` est posé, le
+    **reconnaisseur par bloc** d'un pipeline **hybride** (segmenteur → bloc →
+    texte). ``llm`` nomme le fournisseur de post-correction des modes ``text_*``.
+    Validé exhaustivement à la planification (jamais de retombée muette).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     engine: str = Field(min_length=1, max_length=64)
     mode: PipelineMode | None = None
+    #: Pipeline **hybride** : segmenteur de mise en page en tête (``pp_doclayout`` /
+    #: ``remote_segmenter``). Posé ⇒ ``engine`` est le reconnaisseur **par bloc**
+    #: (OCR réel ou VLM zero-shot), scoré comme du texte à la page. ``None`` ⇒
+    #: pipeline à plat (OCR / chaîne / VLM), comportement historique.
+    segmenter: str | None = Field(default=None, max_length=64)
+    #: Endpoint object-detection HF (requis si ``segmenter == "remote_segmenter"``).
+    segmenter_endpoint: str | None = Field(default=None, max_length=2048)
+    #: Jeton d'auth de l'endpoint de segmentation distant (optionnel).
+    segmenter_token: str | None = Field(default=None, max_length=512)
     llm: str | None = Field(default=None, max_length=64)
     model: str | None = Field(default=None, max_length=128)
     lang: str = Field(default="fra", max_length=64)
@@ -322,6 +332,118 @@ def _ner_kwargs(
     return {"label": suffix, "model": comp.ner_model or _NER_DEFAULT_MODEL}
 
 
+def _hybrid_reco_kwargs(
+    comp: Competitor, suffix: str
+) -> tuple[str, dict[str, str | int | float | bool]]:
+    """``(adapter_name, kwargs)`` du reconnaisseur **par bloc** d'un hybride.
+
+    OCR réel → ``IMAGE → RAW_TEXT`` (``lang``/``model``) ; VLM → même contrat en
+    rôle ``zero_shot`` (transcription par bloc, prompt curé/libre optionnel).
+    """
+    name = f"{comp.engine}:{suffix}"
+    if comp.engine in _VLM_ENGINES:
+        kwargs: dict[str, str | int | float | bool] = {
+            "label": suffix,
+            "role": "zero_shot",
+        }
+        prompt = _resolve_prompt(comp)
+        if prompt:
+            kwargs["prompt"] = prompt
+    else:
+        kwargs = {"label": suffix, "lang": comp.lang}
+    if comp.model:
+        kwargs["model"] = comp.model
+    return name, kwargs
+
+
+def _hybrid_competitor(
+    comp: Competitor, suffix: str
+) -> tuple[PipelineSpec, dict[str, dict[str, str | int | float | bool]]]:
+    """Pipeline **hybride** d'un concurrent : segmenteur → reconnaissance par bloc
+    (fan-out, image découpée) → aplatissement texte (scoré CER/WER à la page) — et,
+    si ``alto``, assemblage ALTO XML téléchargeable. C'est « segmentation puis OCR/
+    VLM » jugé **côte à côte** avec un pipeline à plat, dans le même run."""
+    from cinoc.app.structure_planning import SEGMENTER_KINDS  # cycle → import local
+
+    if comp.segmenter not in SEGMENTER_KINDS:
+        raise RunPlanningError(
+            f"hybride : segmenteur non câblé : {comp.segmenter!r} "
+            f"(attendu l'un de {sorted(SEGMENTER_KINDS)})."
+        )
+    if comp.engine not in (_OCR_ENGINES | _VLM_ENGINES):
+        raise RunPlanningError(
+            f"hybride : reconnaisseur par bloc non câblé : {comp.engine!r}."
+        )
+    if comp.mode is not None:
+        raise RunPlanningError("hybride : aucun mode (le pipeline est seg → bloc).")
+    if comp.llm:
+        raise RunPlanningError("hybride : pas de LLM séparé (reconnaissance par bloc).")
+    recognizer, reco_kwargs = _hybrid_reco_kwargs(comp, suffix)
+    text_name = f"layout_to_text:{suffix}"
+    kwargs: dict[str, dict[str, str | int | float | bool]] = {
+        recognizer: reco_kwargs,
+        text_name: {"label": suffix},
+    }
+    steps: list[PipelineStep] = [
+        PipelineStep(
+            id="segment",
+            kind="segmentation",
+            adapter_name=comp.segmenter,
+            input_types=(ArtifactType.IMAGE,),
+            output_types=(ArtifactType.LAYOUT,),
+        ),
+        PipelineStep(
+            id="recognize",
+            kind="recognition",
+            adapter_name=recognizer,
+            input_types=(ArtifactType.LAYOUT, ArtifactType.IMAGE),
+            output_types=(ArtifactType.LAYOUT,),
+            inputs_from={ArtifactType.LAYOUT: "segment"},
+            fanout=True,
+            crop=True,
+        ),
+        PipelineStep(
+            id="text",
+            kind="extraction",
+            adapter_name=text_name,
+            input_types=(ArtifactType.LAYOUT,),
+            output_types=(ArtifactType.RAW_TEXT,),
+            inputs_from={ArtifactType.LAYOUT: "recognize"},
+        ),
+    ]
+    if comp.segmenter == "remote_segmenter":
+        if not comp.segmenter_endpoint:
+            raise RunPlanningError(
+                "hybride : 'segmenter_endpoint' requis pour remote_segmenter."
+            )
+        seg_kwargs: dict[str, str | int | float | bool] = {
+            "endpoint": comp.segmenter_endpoint
+        }
+        if comp.segmenter_token:
+            seg_kwargs["token"] = comp.segmenter_token
+        kwargs[comp.segmenter] = seg_kwargs
+    if comp.alto:
+        steps.append(
+            PipelineStep(
+                id="assemble",
+                kind="assembly",
+                adapter_name="alto_assembler",
+                input_types=(ArtifactType.LAYOUT,),
+                output_types=(ArtifactType.ALTO_XML,),
+                inputs_from={ArtifactType.LAYOUT: "recognize"},
+            )
+        )
+    if comp.ner:
+        steps.append(_ner_step(suffix, ArtifactType.RAW_TEXT, "text"))
+        kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)
+    pipeline = PipelineSpec(
+        name=f"{comp.segmenter}→{comp.engine}",
+        initial_inputs=(ArtifactType.IMAGE,),
+        steps=tuple(steps),
+    )
+    return pipeline, kwargs
+
+
 def _pipeline_for_competitor(
     comp: Competitor, index: int,
 ) -> tuple[PipelineSpec, dict[str, dict[str, str | int | float | bool]]]:
@@ -331,6 +453,10 @@ def _pipeline_for_competitor(
     ses propres instances de modules — pas de collision entre concurrents.
     """
     suffix = f"c{index}"
+    # Pipeline **hybride** (segmenteur posé) : branche dédiée AVANT le dispatch à
+    # plat — ALTO y est produit par l'assembleur (pas réservé à tesseract).
+    if comp.segmenter is not None:
+        return _hybrid_competitor(comp, suffix)
     # ALTO natif : réservé à tesseract (seul moteur du socle qui l'émet). Refusé
     # AVANT le dispatch de mode → message clair, jamais un export muet ignoré.
     if comp.alto and comp.engine != "tesseract":
