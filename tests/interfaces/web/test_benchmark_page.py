@@ -201,12 +201,9 @@ def _benchmark_body(
 
     from cinoc.adapters.storage.history_store import HistoryStore
     from cinoc.app.engines import EngineStatus
-    from cinoc.app.segmentation import SegmentationStore, demo_layout
     from cinoc.interfaces.web.app import _TEMPLATES_DIR
     from cinoc.interfaces.web.routers.home import build_home_router
 
-    seg_store = SegmentationStore(tmp_path / "seg")
-    seg_id = seg_store.save(demo_layout())
     detail = "ok" if segmenter_available else "PaddleX absent (extra [segment])"
     status = EngineStatus(
         kind="pp_doclayout",
@@ -222,8 +219,6 @@ def _benchmark_body(
             statuses=lambda: (),
             segmenters=lambda: (status,),
             history_store=HistoryStore(tmp_path / "h.db"),
-            segmentation_store=seg_store,
-            demo_segmentation_id=seg_id,
             corpus_store=corpus_store,
         )
     )

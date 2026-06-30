@@ -15,17 +15,10 @@ from cinoc.adapters.corpus.htr_united import HTRUnitedCatalogue, HTRUnitedEntry
 from cinoc.adapters.corpus.huggingface import HuggingFaceDataset
 from cinoc.adapters.storage.history_store import HistoryStore
 from cinoc.app.corpus_upload import CorpusStore
-from cinoc.app.segmentation import SegmentationStore, demo_layout
 from cinoc.domain.corpus import CorpusSpec
 from cinoc.domain.documents import DocumentRef
 from cinoc.interfaces.web.app import _TEMPLATES_DIR, create_app
 from cinoc.interfaces.web.routers.home import build_home_router
-
-
-def _seg(tmp_path: Path) -> tuple[SegmentationStore, str]:
-    """Store de segmentation + id de démo (la page Bibliothèque ne l'exerce pas)."""
-    store = SegmentationStore(tmp_path / "seg")
-    return store, store.save(demo_layout())
 
 _HTR_REMOTE = HTRUnitedCatalogue(
     entries=(
@@ -75,7 +68,6 @@ def _client(
         "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
-    seg_store, seg_id = _seg(tmp_path)
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -84,8 +76,6 @@ def _client(
             statuses=lambda: (),
             segmenters=lambda: (),
             history_store=HistoryStore(tmp_path / "h.db"),
-            segmentation_store=seg_store,
-            demo_segmentation_id=seg_id,
             corpus_store=corpus_store,
             curated_author=curated_author,
             public_mode=public_mode,
@@ -112,7 +102,6 @@ def test_library_caches_catalogue_across_loads(
         "cinoc.interfaces.web.routers.home.HuggingFaceCatalogue", _FakeHF
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
-    seg_store, seg_id = _seg(tmp_path)
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -121,8 +110,6 @@ def test_library_caches_catalogue_across_loads(
             statuses=lambda: (),
             segmenters=lambda: (),
             history_store=HistoryStore(tmp_path / "h.db"),
-            segmentation_store=seg_store,
-            demo_segmentation_id=seg_id,
         )
     )
     client = TestClient(app)

@@ -234,12 +234,12 @@ def create_app(
     history_store = HistoryStore(runtime_dir / "history.db")
     # Segmentation : un store disque par application + une graine de **démo**
     # (layout + image de page). Le sink du runner y persiste les ``LAYOUT`` des
-    # runs réels ; ``/segmentation`` affiche le plus récent (run réel > démo). Créé
-    # **avant** le runner pour le lui passer (même instance lue par /segmentation).
+    # runs réels ; l'aperçu du lanceur (``/api/segmentation/preview``) rend le plus
+    # récent (run réel > démo). Créé **avant** le runner pour le lui passer.
     seg_store = SegmentationStore(Path(tempfile.mkdtemp(prefix="cinoc-seg-")))
-    demo_seg_id = seg_store.save(
-        demo_layout(), image_ext=".png", image_bytes=demo_page_image()
-    )
+    # Graine de démo (layout + image) : l'aperçu du lanceur affiche ces régions
+    # tant qu'aucun run réel n'a été lancé.
+    seg_store.save(demo_layout(), image_ext=".png", image_bytes=demo_page_image())
     # Export ALTO : un store disque par application, indexé par run_id. Le sink du
     # runner y dépose les ``ALTO_XML`` produits ; le routeur des rapports les
     # rezippe à la demande (téléchargement par run).
@@ -264,8 +264,8 @@ def create_app(
         return engine_statuses()
 
     # Segmenteurs : catégorie distincte (pas dans le <select> moteur OCR), jamais
-    # masquée en public (segmenteur local, pas de clé). Alimente le gate du run
-    # de segmentation et (ultérieurement) le bouton de /segmentation.
+    # masquée en public (segmenteur local, pas de clé). Alimente le gate du run de
+    # segmentation, le mode hybride du composeur et l'aperçu de mise en page.
     def segmenter_status_provider() -> tuple[EngineStatus, ...]:
         return segmenter_statuses()
 
@@ -282,8 +282,6 @@ def create_app(
             segmenters=segmenter_status_provider,
             ner=ner_status_provider,
             history_store=history_store,
-            segmentation_store=seg_store,
-            demo_segmentation_id=demo_seg_id,
             corpus_store=corpus_store,
             curated_author=_resolve_curated_author(),
             public_mode=is_public,

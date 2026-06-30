@@ -9,15 +9,8 @@ from fastapi.templating import Jinja2Templates
 from fastapi.testclient import TestClient
 
 from cinoc.adapters.storage.history_store import HistoryRecord, HistoryStore
-from cinoc.app.segmentation import SegmentationStore, demo_layout
 from cinoc.interfaces.web.app import _TEMPLATES_DIR, create_app
 from cinoc.interfaces.web.routers.home import build_home_router
-
-
-def _seg(tmp_path: Path) -> tuple[SegmentationStore, str]:
-    """Store de segmentation + id de démo (les pages testées ne l'exercent pas)."""
-    store = SegmentationStore(tmp_path / "seg")
-    return store, store.save(demo_layout())
 
 
 def _rec(run_id: str, when: str, value: float) -> HistoryRecord:
@@ -42,7 +35,6 @@ def _seeded_client(tmp_path: Path) -> TestClient:
         ]
     )
     templates = Jinja2Templates(directory=_TEMPLATES_DIR)
-    seg_store, seg_id = _seg(tmp_path)
     app = FastAPI()
     app.include_router(
         build_home_router(
@@ -51,8 +43,6 @@ def _seeded_client(tmp_path: Path) -> TestClient:
             statuses=lambda: (),
             segmenters=lambda: (),
             history_store=store,
-            segmentation_store=seg_store,
-            demo_segmentation_id=seg_id,
         )
     )
     return TestClient(app)

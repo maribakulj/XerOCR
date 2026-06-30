@@ -122,9 +122,9 @@ class SegmentationStore:
     def latest(self) -> str | None:
         """Id du layout le plus récemment écrit (mtime), ou ``None`` si vide.
 
-        Consommé par ``/segmentation`` : un **run réel** persisté par le sink est
-        plus récent que la graine de démo → il s'affiche automatiquement. (Un
-        sélecteur multi-runs est une amélioration ultérieure.)
+        Consommé par l'aperçu du lanceur (``GET /api/segmentation/preview``) : un
+        **run réel** persisté par le sink est plus récent que la graine de démo →
+        il s'affiche automatiquement. (Un sélecteur multi-runs est ultérieur.)
         """
         if not self._base.is_dir():
             return None
