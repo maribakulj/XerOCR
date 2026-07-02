@@ -51,11 +51,16 @@ def _secure_paths(spec: RunSpec, base: Path) -> RunSpec:
 
 
 def _secure_document(document: DocumentRef, base: Path) -> DocumentRef:
-    image_uri = (
-        str(validated_path(document.image_uri, base))
-        if document.image_uri is not None
-        else None
-    )
+    # Une image **distante** (corpus curé : référence http/https épinglée) passe
+    # telle quelle — l'orchestrateur la matérialise au run via le fetch durci
+    # (anti-SSRF + plafond). ``validated_path`` ne garde que les chemins locaux.
+    raw_image = document.image_uri
+    if raw_image is not None and raw_image.startswith(("http://", "https://")):
+        image_uri: str | None = raw_image
+    else:
+        image_uri = (
+            str(validated_path(raw_image, base)) if raw_image is not None else None
+        )
     # La vérité-terrain est lue par l'évaluation : exiger son existence dès le
     # chargement donne une erreur claire (RunSpecError) au lieu d'un OSError
     # opaque en plein run. L'image, elle, n'est pas exigée ici — certains modules

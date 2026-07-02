@@ -55,6 +55,17 @@ def test_loads_valid_run_spec(tmp_path: Path) -> None:
     assert document.ground_truths[0].uri == str((tmp_path / "gt/doc1.txt").resolve())
 
 
+def test_remote_image_reference_passes_through(tmp_path: Path) -> None:
+    # Corpus curé : ``image_uri`` peut être une **référence** http(s) épinglée —
+    # elle passe telle quelle (matérialisée au run par l'orchestrateur via le
+    # fetch durci) ; seuls les chemins locaux passent par ``validated_path``.
+    (tmp_path / "gt").mkdir()
+    (tmp_path / "gt" / "doc1.txt").write_text("réf", encoding="utf-8")
+    url = "https://huggingface.co/datasets/x/y/resolve/abc/iiif/doc1/full/max/0/default.jpg"
+    spec = load_run_spec(_write(tmp_path, _VALID.replace("images/doc1.png", url)))
+    assert spec.corpus.documents[0].image_uri == url
+
+
 def test_path_traversal_rejected(tmp_path: Path) -> None:
     evil = _VALID.replace("images/doc1.png", "../../../etc/passwd")
     with pytest.raises(PathSecurityError):

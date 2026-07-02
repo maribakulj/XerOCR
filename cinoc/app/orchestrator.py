@@ -18,16 +18,20 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import threading
 from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
+from urllib.parse import urlsplit
 
+from cinoc.adapters.corpus._http import CorpusHttpError, download
 from cinoc.adapters.layout.crop import crop_region
 from cinoc.app.modules.registry import ModuleRegistry
 from cinoc.app.resume import ResumeStore, unit_key
+from cinoc.app.security import safe_stem
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.deadline import Deadline
 from cinoc.domain.documents import DocumentRef
@@ -169,6 +173,13 @@ def run(
             pipeline_workspace.mkdir()
             workspaces[pipeline.name] = pipeline_workspace
 
+        # 0) Images **référence** (corpus curé) : matérialisées en local une fois
+        #    par document — les moteurs lisent un fichier, jamais une URL ; la
+        #    spec d'origine (→ RunResult/rapport) garde la référence épinglée.
+        documents, unreachable = _materialize_remote_images(
+            documents, Path(workspace) / "images"
+        )
+
         # 1) Reprise (thread principal) : les unités déjà produites à l'identique
         #    sont rechargées ; les autres sont mises en file d'exécution.
         results: dict[tuple[str, str], dict[ArtifactType, Artifact]] = {}
@@ -176,6 +187,12 @@ def run(
         pending: list[tuple[PipelineSpec, DocumentRef, str | None]] = []
         for pipeline in spec.pipelines:
             for document in documents:
+                if document.id in unreachable:
+                    # Image distante injoignable : unité échouée (comme un échec
+                    # d'adapter isolé), le reste du corpus tourne normalement.
+                    results[(pipeline.name, document.id)] = {}
+                    progress.tick()
+                    continue
                 key = (
                     unit_key(
                         code_version=code_version,
@@ -309,6 +326,57 @@ def _bind_archaic_metrics(registry: MetricRegistry, spec: RunSpec) -> None:
     wants_hcpr = any("hcpr" in view.metric_names for view in spec.evaluation.views)
     if wants_hcpr:
         registry.register_document_metric(make_hcpr_metric(resolved.chars))
+
+
+#: Schémas d'une image **référence** (corpus curé HF/IIIF) à matérialiser au run.
+_REMOTE_SCHEMES = ("http://", "https://")
+#: Suffixe de fichier image plausible (dérivé de l'URL) ; sinon repli ``.img``
+#: (PIL/tesseract sniffent le contenu, l'extension n'est qu'un confort).
+_SAFE_SUFFIX = re.compile(r"\.[A-Za-z0-9]{1,8}$")
+
+
+def _materialize_remote_images(
+    documents: tuple[DocumentRef, ...], images_dir: Path
+) -> tuple[tuple[DocumentRef, ...], frozenset[str]]:
+    """Télécharge les images **distantes** du corpus dans le workspace du run.
+
+    Un corpus **curé** (HF/IIIF) porte des images en *référence* (URL épinglée),
+    pas en octets : les moteurs, eux, lisent un **fichier local**. On matérialise
+    donc chaque image distante **une fois par document** via le fetch durci
+    (anti-SSRF, plafond ``IMAGE_MAX_BYTES``, écriture atomique) — ce qui rend
+    aussi la **reprise** opérante (``unit_key`` hache les octets). La copie vit
+    dans le workspace temporaire (nettoyé en fin de run) ; la **spec d'origine
+    n'est pas réécrite** → le ``RunResult``/rapport garde l'URL de référence.
+
+    Renvoie ``(documents exécutables, ids irrécupérables)`` : une image
+    injoignable n'abat pas le banc (philosophie « échec isolé d'unité ») — ses
+    unités sont marquées échouées, le reste du corpus tourne.
+    """
+    localized: list[DocumentRef] = []
+    failed: set[str] = set()
+    for document in documents:
+        uri = document.image_uri
+        if uri is None or not uri.startswith(_REMOTE_SCHEMES):
+            localized.append(document)
+            continue
+        images_dir.mkdir(parents=True, exist_ok=True)
+        suffix = PurePosixPath(urlsplit(uri).path).suffix
+        if not _SAFE_SUFFIX.fullmatch(suffix):
+            suffix = ".img"
+        dest = images_dir / safe_stem(document.id, suffix=suffix)
+        try:
+            download(uri, dest)
+        except CorpusHttpError as exc:
+            logger.warning(
+                "[orchestrator] image distante irrécupérable (document %r) : %s",
+                document.id,
+                exc,
+            )
+            failed.add(document.id)
+            localized.append(document)
+            continue
+        localized.append(document.model_copy(update={"image_uri": str(dest)}))
+    return tuple(localized), frozenset(failed)
 
 
 def _initial_inputs(document: DocumentRef) -> dict[ArtifactType, Artifact]:
