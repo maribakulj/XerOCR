@@ -161,7 +161,7 @@ cinoc serve --port 8080                          # local web app
 
 `cinoc serve` (or the hosted Space) gives you the interactive surface:
 
-- **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**. Your curated Cinoc datasets (tagged `cinoc-corpus`) appear **automatically** — your handle is resolved from the Space (`SPACE_ID`) or an HF token, with `CINOC_HF_AUTHOR` as an explicit override; images stay as revision‑pinned IIIF references.
+- **Library** — prepare a corpus: drag‑and‑drop ZIP upload, or import from **IIIF / Gallica / eScriptorium / HuggingFace / HTR‑United**. Your curated Cinoc datasets (tagged `cinoc-corpus`) appear **automatically** — your handle is resolved from the Space (`SPACE_ID`) or an HF token, with `CINOC_HF_AUTHOR` as an explicit override; images stay as revision‑pinned remote references (a static‑IIIF layout served from the HF repo), fetched automatically — SSRF‑hardened, size‑capped — when a run needs the pixels.
 - **Benchmark** — the composer: pick a corpus, add competitors (OCR, OCR→LLM, VLM, **Hybrid**), launch (live progress over SSE). The **Hybrid** mode composes *segmenter → per‑region OCR/VLM → assembled text*, scored side‑by‑side with flat pipelines; a **layout preview** panel shows the detected regions before you launch. (There is no separate segmentation tab — it lives here.)
 - **Reports / History** — browse rendered reports and longitudinal trends.
 

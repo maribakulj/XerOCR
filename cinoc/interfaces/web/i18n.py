@@ -137,8 +137,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_repo": "Dépôt HF (org/nom-du-dataset)",
         "imp_revision": "Révision (SHA — recommandé pour l'épinglage)",
         "imp_curated_hint": "Dataset de référence Cinoc publié sur HuggingFace : "
-        "le manifeste et la vérité-terrain sont rapatriés, les images restent "
-        "des liens IIIF épinglés à la révision.",
+        "le manifeste et la vérité-terrain sont rapatriés ; les images restent "
+        "des références distantes (IIIF statique servi par HF, épinglé à la "
+        "révision), téléchargées automatiquement au moment du run.",
         # Aperçu de mise en page (panneau du lanceur) + reconnaisseur hybride :
         # vestiges utiles de l'ancienne page /segmentation, repris par le composeur.
         "seg_run_endpoint": "Endpoint (object-detection HF)",
@@ -365,8 +366,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_repo": "HF repo (org/dataset-name)",
         "imp_revision": "Revision (SHA — recommended for pinning)",
         "imp_curated_hint": "Cinoc reference dataset published on HuggingFace: "
-        "the manifest and ground truth are fetched, images stay as IIIF links "
-        "pinned to the revision.",
+        "the manifest and ground truth are fetched; images stay as remote "
+        "references (static IIIF served from HF, pinned to the revision), "
+        "downloaded automatically at run time.",
         # Layout preview (launcher panel) + hybrid recognizer: useful remnants of
         # the old /segmentation page, reused by the benchmark composer.
         "seg_run_endpoint": "Endpoint (HF object-detection)",

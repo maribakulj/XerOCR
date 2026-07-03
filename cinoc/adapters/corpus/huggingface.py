@@ -434,10 +434,14 @@ def snapshot_curated_layout(
     """Snapshot **partiel** d'un dataset curé Cinoc publié sur HF.
 
     Ne rapatrie que ``corpus.json`` + ``ground_truth/`` (scorables en local) ; les
-    images restent des **références** IIIF distantes (saveur rapport « liens HF »,
-    D-094). ``huggingface_hub`` (extra ``[huggingface]``) est importé
-    paresseusement → sans l'extra, ``HuggingFaceUnavailableError`` actionnable ;
-    dépôt/révision injoignable → ``CorpusHttpError`` (→ 422 côté web).
+    images restent des **références distantes** : le dataset embarque un layout
+    **IIIF statique** (Image API 3 level0, cf. ``app.dataset_standardize``) servi
+    par la racine ``resolve`` HF épinglée à la révision — l'URL est donc un lien
+    ``huggingface.co`` dont le chemin suit la syntaxe IIIF. Le rapport les affiche
+    (saveur « liens », D-094) et l'orchestrateur les **matérialise au run** (fetch
+    durci) pour les moteurs. ``huggingface_hub`` (extra ``[huggingface]``) est
+    importé paresseusement → sans l'extra, ``HuggingFaceUnavailableError``
+    actionnable ; dépôt/révision injoignable → ``CorpusHttpError`` (→ 422 web).
     """
     try:
         from huggingface_hub import snapshot_download  # type: ignore[import-not-found]

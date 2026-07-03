@@ -327,8 +327,11 @@ def import_hf_corpus(
 def _curated_entry(entry: object, root: Path, base_url: str | None) -> DocumentRef:
     """Une entrée ``corpus.json`` → ``DocumentRef`` (image = référence, GT = vraie).
 
-    Image : URL IIIF (``base_url`` + chemin relatif) si fourni, sinon chemin local
-    du dérivé medium. GT : ``RAW_TEXT`` sur le ``.gt.txt`` local. Chemins relatifs
+    Image : ``base_url`` + chemin relatif si fourni — le chemin est un dérivé
+    **IIIF statique** du layout (``iiif/<id>/full/…``), et ``base_url`` la racine
+    ``resolve`` HF épinglée (ou un serveur IIIF d'institution) ; sinon chemin
+    local du dérivé medium. La référence est matérialisée **au run** par
+    l'orchestrateur. GT : ``RAW_TEXT`` sur le ``.gt.txt`` local. Chemins relatifs
     durcis (``validated_path`` rejette ``..``) — un dataset tiers hostile ne peut
     pas pointer hors du layout."""
     if not isinstance(entry, dict):
@@ -365,11 +368,13 @@ def import_curated_corpus(
 ) -> CorpusSpec:
     """Importe un **layout dataset canonique Cinoc** → ``CorpusSpec`` scorable.
 
-    Variante **réf-IIIF** de ``import_hf_corpus`` (même sortie, pas un format
+    Variante **par référence** de ``import_hf_corpus`` (même sortie, pas un format
     parallèle) : produit par ``app.dataset_standardize`` ou snapshot d'un dataset
-    HF publié. L'image est une **référence** (URL IIIF si ``base_url``, sinon
-    chemin local du dérivé medium) ; la GT est une **vraie GT** ``RAW_TEXT``.
-    ``base_url`` + ``revision`` (SHA HF) → reproductibilité pinnée (``RunManifest``).
+    HF publié. L'image est une **référence** (``base_url`` + dérivé IIIF statique
+    du layout — en pratique une URL ``resolve`` HF épinglée ; sinon chemin local
+    du dérivé medium), matérialisée au run par l'orchestrateur ; la GT est une
+    **vraie GT** ``RAW_TEXT``. ``base_url`` + ``revision`` (SHA HF) →
+    reproductibilité pinnée (``RunManifest``).
     """
     root = Path(layout_dir)
     manifest_path = root / "corpus.json"
