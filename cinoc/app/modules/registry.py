@@ -299,6 +299,55 @@ def _build_layout_to_text(kwargs: Mapping[str, ParamValue]) -> Module:
     return LayoutToTextExtractor(label=label)
 
 
+def _build_block_chain(
+    registry: ModuleRegistry, kwargs: Mapping[str, ParamValue]
+) -> Module:
+    """Reconnaisseur **par bloc** OCR → LLM : compose deux modules du socle.
+
+    Fabrique un recognizer OCR (``<ocr>:<label>``) et un correcteur LLM
+    (``<corrector>:<label>`` en rôle ``text_only``) **via le registre lui-même**
+    (d'où la closure) — un seul contrat, deux instances composées. ``model`` /
+    ``prompt`` ciblent le **correcteur** (cohérent avec la chaîne à plat, où
+    ``model`` désigne le LLM aval).
+    """
+    label = kwargs.get("label")
+    ocr = kwargs.get("ocr")
+    corrector = kwargs.get("corrector")
+    if not isinstance(label, str):
+        raise ModuleResolutionError(
+            "block_chain : 'label' (str) requis dans adapter_kwargs."
+        )
+    if not isinstance(ocr, str) or not ocr:
+        raise ModuleResolutionError(
+            "block_chain : 'ocr' (kind du recognizer par bloc) requis."
+        )
+    if not isinstance(corrector, str) or not corrector:
+        raise ModuleResolutionError(
+            "block_chain : 'corrector' (kind du LLM de post-correction) requis."
+        )
+    ocr_kwargs: dict[str, ParamValue] = {
+        "label": label,
+        "lang": str(kwargs.get("lang", "fra")),
+    }
+    ocr_model = kwargs.get("ocr_model")
+    if isinstance(ocr_model, str) and ocr_model:
+        ocr_kwargs["model"] = ocr_model
+    corr_kwargs: dict[str, ParamValue] = {"label": label, "role": "text_only"}
+    model = kwargs.get("model")
+    if isinstance(model, str) and model:
+        corr_kwargs["model"] = model
+    prompt = kwargs.get("prompt")
+    if isinstance(prompt, str) and prompt:
+        corr_kwargs["prompt"] = prompt
+    from cinoc.adapters.layout.block_chain import BlockChainRecognizer
+
+    return BlockChainRecognizer(
+        label=label,
+        recognizer=registry.build(f"{ocr}:{label}", ocr_kwargs),
+        corrector=registry.build(f"{corrector}:{label}", corr_kwargs),
+    )
+
+
 def _build_ner(kwargs: Mapping[str, ParamValue]) -> Module:
     label = kwargs.get("label")
     if not isinstance(label, str):
@@ -337,6 +386,11 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
     registry.register_builder("layout_to_text", _build_layout_to_text)
+    # Reconnaisseur par bloc **OCR → LLM** (fan-out) : compose deux modules du
+    # socle → closure sur le registre (seul builder qui construit des sous-modules).
+    registry.register_builder(
+        "block_chain", lambda kwargs: _build_block_chain(registry, kwargs)
+    )
 
 
 __all__ = [

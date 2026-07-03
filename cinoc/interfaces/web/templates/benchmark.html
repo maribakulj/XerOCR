@@ -108,6 +108,19 @@
           <span class="dropzone-meta">{{ t.bench_recognizer_hint }}</span>
         </label>
 
+        <label class="comp-field" data-show="hybrid">
+          <span class="comp-label">{{ t.bench_hybrid_llm }}</span>
+          <select id="draft-hybrid-llm" class="select">
+            <option value="">{{ t.bench_hybrid_llm_none }}</option>
+            {% for e in catalog.llm %}
+            <option value="{{ e.kind }}"{% if not e.available %} disabled{% endif %}>
+              {{ e.label }}{% if not e.available %} — {{ t.engine_unavailable }}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+          <span class="dropzone-meta">{{ t.bench_hybrid_llm_hint }}</span>
+        </label>
+
         <div class="comp-field" data-show="hybrid">
           <span class="comp-label">{{ t.bench_seg_preview }}</span>
           <div class="seg-preview-actions">

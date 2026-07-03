@@ -48,8 +48,10 @@ FILE_BUDGETS: dict[str, int] = {
     # découpe). Ce fichier garde le **benchmark**, dont le mode **hybride comme
     # concurrent** (segmenteur → reconnaissance par bloc → texte scoré CER/WER,
     # comparé côte à côte avec un pipeline à plat) — concern benchmark, distinct
-    # du run structure autonome. Budget re-basé au courant (~727 LOC) + ~5 %.
-    "app/run_planning.py": 760,
+    # du run structure autonome. Le mode hybride sait aussi enchaîner un LLM
+    # **par bloc** (seg → OCR → LLM, texte corrigé ancré à la géométrie). Budget
+    # re-basé au courant (~763 LOC) + ~5 %.
+    "app/run_planning.py": 800,
     # Helpers SVG **serveur** déterministes (un par type de graphe : dispersion,
     # Venn, barres, calibration, heatmap, radar, bulles, box plot, camembert,
     # haltère, colonnes groupées, bump). Cohésion d'un même contrat de rendu

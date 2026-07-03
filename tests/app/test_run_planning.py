@@ -590,3 +590,49 @@ def test_hybrid_competitor_rejects_mode(tmp_path: Path) -> None:
     comp = Competitor(engine="tesseract", segmenter="pp_doclayout", mode="text_only")
     with pytest.raises(RunPlanningError, match="aucun mode"):
         plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+
+
+def test_hybrid_competitor_with_llm_uses_block_chain(tmp_path: Path) -> None:
+    # seg → OCR **par bloc** → LLM **par bloc** : le reconnaisseur déclaré est
+    # ``block_chain`` (compose OCR + correcteur), la sortie reste du RAW_TEXT scoré.
+    comp = Competitor(
+        engine="tesseract",
+        segmenter="pp_doclayout",
+        llm="openai",
+        model="gpt-4o-mini",
+        prompt="Corrige ce bloc.",
+    )
+    spec = plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+    (pipe,) = spec.pipelines
+    assert pipe.name == "pp_doclayout→tesseract→openai"
+    segment, recognize, text = pipe.steps
+    assert recognize.adapter_name == "block_chain:c0"
+    assert recognize.fanout is True and recognize.crop is True
+    assert text.output_types == (ArtifactType.RAW_TEXT,)
+    # kwargs de la chaîne : OCR + correcteur + modèle/prompt du correcteur.
+    assert spec.adapter_kwargs["block_chain:c0"] == {
+        "label": "c0",
+        "ocr": "tesseract",
+        "lang": "fra",
+        "corrector": "openai",
+        "model": "gpt-4o-mini",
+        "prompt": "Corrige ce bloc.",
+    }
+    # La chaîne est réellement constructible par le registre (OCR + LLM composés).
+    module = _registry().build(
+        "block_chain:c0", spec.adapter_kwargs["block_chain:c0"]
+    )
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
+
+
+def test_hybrid_llm_requires_ocr_recognizer(tmp_path: Path) -> None:
+    # Un VLM zero-shot par bloc n'a pas de LLM aval : la chaîne exige un OCR amont.
+    comp = Competitor(engine="openai", segmenter="pp_doclayout", llm="openai")
+    with pytest.raises(RunPlanningError, match="doit être un OCR"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)
+
+
+def test_hybrid_llm_refuses_uncabled_corrector(tmp_path: Path) -> None:
+    comp = Competitor(engine="tesseract", segmenter="pp_doclayout", llm="bogus")
+    with pytest.raises(RunPlanningError, match="correcteur"):
+        plan_benchmark_run((comp,), _corpus(tmp_path), "r")(tmp_path)

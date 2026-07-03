@@ -67,8 +67,9 @@ class Competitor(BaseModel):
     ``engine`` est le moteur OCR (modes ``None``/``text_*``) **ou** le
     fournisseur VLM (mode ``zero_shot``) **ou**, quand ``segmenter`` est posé, le
     **reconnaisseur par bloc** d'un pipeline **hybride** (segmenteur → bloc →
-    texte). ``llm`` nomme le fournisseur de post-correction des modes ``text_*``.
-    Validé exhaustivement à la planification (jamais de retombée muette).
+    texte). ``llm`` nomme le fournisseur de post-correction : des modes ``text_*``
+    (chaîne à plat) **ou**, en hybride, du correcteur **par bloc** (seg → OCR →
+    LLM). Validé exhaustivement à la planification (jamais de retombée muette).
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
@@ -337,9 +338,31 @@ def _hybrid_reco_kwargs(
 ) -> tuple[str, dict[str, str | int | float | bool]]:
     """``(adapter_name, kwargs)`` du reconnaisseur **par bloc** d'un hybride.
 
-    OCR réel → ``IMAGE → RAW_TEXT`` (``lang``/``model``) ; VLM → même contrat en
-    rôle ``zero_shot`` (transcription par bloc, prompt curé/libre optionnel).
+    Trois formes selon le concurrent :
+
+    - ``comp.llm`` posé → **chaîne par bloc** ``block_chain:<suffix>`` : OCR
+      (``comp.engine``) **puis** correction LLM (``comp.llm``) sur le texte du
+      bloc — le texte corrigé reste ancré à la géométrie (pas de ré-alignement).
+      ``model``/``prompt`` ciblent le **correcteur** (comme la chaîne à plat) ;
+    - VLM seul (``comp.engine`` vision, sans ``llm``) → ``IMAGE → RAW_TEXT`` en
+      rôle ``zero_shot`` (transcription par bloc, prompt curé/libre optionnel) ;
+    - OCR seul → ``IMAGE → RAW_TEXT`` (``lang``/``model`` du moteur).
     """
+    if comp.llm:
+        # OCR par bloc → LLM par bloc : le recognizer déclaré est ``block_chain``,
+        # qui compose le moteur OCR et le correcteur en interne (registre).
+        chain_kwargs: dict[str, str | int | float | bool] = {
+            "label": suffix,
+            "ocr": comp.engine,
+            "lang": comp.lang,
+            "corrector": comp.llm,
+        }
+        if comp.model:
+            chain_kwargs["model"] = comp.model
+        prompt = _resolve_prompt(comp)
+        if prompt:
+            chain_kwargs["prompt"] = prompt
+        return f"block_chain:{suffix}", chain_kwargs
     name = f"{comp.engine}:{suffix}"
     if comp.engine in _VLM_ENGINES:
         kwargs: dict[str, str | int | float | bool] = {
@@ -377,7 +400,19 @@ def _hybrid_competitor(
     if comp.mode is not None:
         raise RunPlanningError("hybride : aucun mode (le pipeline est seg → bloc).")
     if comp.llm:
-        raise RunPlanningError("hybride : pas de LLM séparé (reconnaissance par bloc).")
+        # Chaîne par bloc (seg → OCR → LLM) : le reconnaisseur par bloc doit être
+        # un **OCR** (on corrige un texte OCR, pas une transcription VLM), et le
+        # correcteur un LLM texte câblé — validé exhaustivement (pas de retombée).
+        if comp.engine not in _OCR_ENGINES:
+            raise RunPlanningError(
+                f"hybride + LLM : reconnaisseur par bloc doit être un OCR, "
+                f"pas {comp.engine!r} (le VLM zero-shot n'a pas de LLM aval)."
+            )
+        if comp.llm not in _LLM_ENGINES:
+            raise RunPlanningError(
+                f"hybride + LLM : correcteur {comp.llm!r} indisponible "
+                f"(attendu l'un de {sorted(_LLM_ENGINES)})."
+            )
     recognizer, reco_kwargs = _hybrid_reco_kwargs(comp, suffix)
     text_name = f"layout_to_text:{suffix}"
     kwargs: dict[str, dict[str, str | int | float | bool]] = {
@@ -436,8 +471,9 @@ def _hybrid_competitor(
     if comp.ner:
         steps.append(_ner_step(suffix, ArtifactType.RAW_TEXT, "text"))
         kwargs[f"ner:{suffix}"] = _ner_kwargs(suffix, comp)
+    block = f"{comp.engine}→{comp.llm}" if comp.llm else comp.engine
     pipeline = PipelineSpec(
-        name=f"{comp.segmenter}→{comp.engine}",
+        name=f"{comp.segmenter}→{block}",
         initial_inputs=(ArtifactType.IMAGE,),
         steps=tuple(steps),
     )

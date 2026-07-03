@@ -72,6 +72,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_recognizer_hint": "Moteur appliqué à chaque bloc découpé : OCR "
         "réel ou VLM (zero-shot). Le texte assemblé est scoré comme un pipeline "
         "à plat.",
+        "bench_hybrid_llm": "Correction LLM par bloc",
+        "bench_hybrid_llm_none": "Aucune",
+        "bench_hybrid_llm_hint": "Post-correction du texte de chaque bloc par un "
+        "LLM (OCR par bloc uniquement). Le texte corrigé reste ancré à la "
+        "géométrie : l'ALTO produit porte la correction, sans ré-alignement.",
         "bench_seg_preview": "Aperçu des régions",
         "bench_seg_preview_btn": "Prévisualiser la segmentation",
         "bench_seg_preview_hint": "Lance le segmenteur sur le corpus choisi et "
@@ -299,6 +304,11 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_recognizer": "Per-block recognizer",
         "bench_recognizer_hint": "Engine applied to each cropped block: real OCR "
         "or a VLM (zero-shot). Assembled text is scored like a flat pipeline.",
+        "bench_hybrid_llm": "Per-block LLM correction",
+        "bench_hybrid_llm_none": "None",
+        "bench_hybrid_llm_hint": "Post-corrects each block's text with an LLM "
+        "(per-block OCR only). Corrected text stays anchored to the geometry: the "
+        "assembled ALTO carries the correction, with no realignment.",
         "bench_seg_preview": "Region preview",
         "bench_seg_preview_btn": "Preview segmentation",
         "bench_seg_preview_hint": "Runs the segmenter on the chosen corpus and "

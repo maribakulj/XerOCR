@@ -30,6 +30,7 @@ def test_kinds_listed() -> None:
         "alto_assembler",
         "anthropic",
         "azure_di",
+        "block_chain",
         "calamari",
         "google_vision",
         "kraken",
@@ -148,6 +149,26 @@ def test_builds_openai_with_vision_role() -> None:
     assert module.input_types == frozenset(
         {ArtifactType.RAW_TEXT, ArtifactType.IMAGE}
     )
+
+
+def test_builds_block_chain_composes_ocr_and_llm() -> None:
+    # Chaîne par bloc : OCR (tesseract) + correcteur (openai text_only), composée
+    # par le registre lui-même. Le module composite lit une IMAGE, sort du RAW_TEXT.
+    module = _registry().build(
+        "block_chain:c0",
+        {"label": "c0", "ocr": "tesseract", "lang": "fra", "corrector": "openai"},
+    )
+    assert isinstance(module, Module)
+    assert module.name == "block_chain:c0"
+    assert module.input_types == frozenset({ArtifactType.IMAGE})
+    assert module.output_types == frozenset({ArtifactType.RAW_TEXT})
+
+
+def test_block_chain_requires_ocr_and_corrector() -> None:
+    with pytest.raises(ModuleResolutionError, match="'ocr'"):
+        _registry().build("block_chain:c0", {"label": "c0", "corrector": "openai"})
+    with pytest.raises(ModuleResolutionError, match="'corrector'"):
+        _registry().build("block_chain:c0", {"label": "c0", "ocr": "tesseract"})
 
 
 def test_unknown_kind_raises() -> None:

@@ -165,6 +165,7 @@
     var draftVlm = document.getElementById("draft-vlm");
     var draftSegmenter = document.getElementById("draft-segmenter");
     var draftRecognizer = document.getElementById("draft-recognizer");
+    var draftHybridLlm = document.getElementById("draft-hybrid-llm");
     var draftSegEndpoint = document.getElementById("draft-seg-endpoint");
     var draftSegToken = document.getElementById("draft-seg-token");
     var draftSegEndpointField = document.getElementById("draft-seg-endpoint-field");
@@ -237,8 +238,12 @@
       if (activeMode === "text_and_image" || activeMode === "zero_shot") {
         return draftVlm && draftVlm.value;
       }
-      // En hybride, le « modèle » cible le reconnaisseur par bloc (utile aux VLM).
-      if (activeMode === "hybrid") return draftRecognizer && draftRecognizer.value;
+      // En hybride, le « modèle » cible le **correcteur** LLM s'il est choisi
+      // (chaîne OCR→LLM par bloc), sinon le reconnaisseur par bloc (utile aux VLM).
+      if (activeMode === "hybrid") {
+        if (draftHybridLlm && draftHybridLlm.value) return draftHybridLlm.value;
+        return draftRecognizer && draftRecognizer.value;
+      }
       return "";
     }
 
@@ -314,6 +319,7 @@
           label: queueLabels.hybrid,
           meta:
             entry.segmenter + " → " + entry.engine +
+            (entry.llm ? " → " + entry.llm : "") +
             (entry.model ? " · " + entry.model : ""),
         };
       }
@@ -403,6 +409,16 @@
         // ou VLM zero-shot). ``model``/``prompt`` ciblent le reconnaisseur.
         var seg = draftSegmenter ? draftSegmenter.value : "";
         var remote = seg === "remote_segmenter";
+        var recognizerNode =
+          draftRecognizer &&
+          draftRecognizer.options[draftRecognizer.selectedIndex];
+        var recognizerIsVlm = !!(
+          recognizerNode && recognizerNode.getAttribute("data-vlm")
+        );
+        // LLM **par bloc** (post-correction) : seulement avec un OCR — le VLM
+        // zero-shot n'a pas de LLM aval (le serveur refuserait la combinaison).
+        var hybridLlm =
+          !recognizerIsVlm && draftHybridLlm ? draftHybridLlm.value : "";
         return {
           engine: draftRecognizer ? draftRecognizer.value : "",
           mode: "hybrid",
@@ -411,6 +427,7 @@
             remote && draftSegEndpoint ? draftSegEndpoint.value.trim() : "",
           segmenterToken:
             remote && draftSegToken ? draftSegToken.value.trim() : "",
+          llm: hybridLlm,
           model: model,
           prompt: prompt,
           promptName: promptName,
