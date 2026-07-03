@@ -21,7 +21,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_history": "Historique",
         "nav_engines": "Moteurs",
         "wordmark_sub": "OCR · HTR · VLM",
-        "hero_eyebrow": "Vitrine · lecture seule",
+        "hero_eyebrow": "Rapports · benchmark",
         "hero_desc": "Rapports de benchmark déterministes — "
         "OCR / HTR / VLM sur corpus patrimoniaux.",
         "stat_reports": "rapports",
@@ -37,8 +37,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         # Banc d'essai (lanceur interactif)
         "bench_eyebrow": "Banc d'essai · comparer",
         "bench_title": "Banc d'essai",
-        "bench_desc": "Compose des concurrents (OCR, OCR→LLM, VLM) et compare-les "
-        "sur un corpus, en un seul run. Sans concurrent : démonstration.",
+        "bench_desc": "Composer des concurrents (OCR, OCR→LLM, VLM, hybride) et "
+        "les comparer sur un corpus, en un seul run. Sans concurrent : "
+        "démonstration.",
         "bench_run": "Lancer le benchmark",
         "bench_launching": "Lancement…",
         "bench_status": "État",
@@ -49,7 +50,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_corpus_none": "aucun corpus (démo)",
         "bench_corpus_prepare": "Choisir dans la Bibliothèque",
         "bench_corpus_selected": "Corpus prêt à exécuter",
-        "bench_corpus_select_hint": "Sélectionne un corpus préparé, ou reste "
+        "bench_corpus_select_hint": "Sélectionner un corpus préparé, ou rester "
         "en démonstration.",
         "bench_competitors": "Concurrents",
         "bench_add_competitor": "Ajouter un concurrent",
@@ -66,37 +67,39 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_ocr_engine": "Moteur OCR",
         "bench_segmenter": "Segmenteur",
         "bench_segmenter_hint": "Détecte les régions en tête de pipeline ; le "
-        "distant délègue à un endpoint HF (modèle changé via l'URL).",
+        "segmenteur distant délègue à un endpoint HF.",
         "bench_recognizer": "Reconnaisseur par bloc",
-        "bench_recognizer_hint": "Moteur appliqué à chaque bloc découpé : un OCR "
-        "réel, ou un VLM qui transcrit l'image du bloc (zero-shot). Texte assemblé "
-        "scoré CER/WER comme un pipeline à plat.",
+        "bench_recognizer_hint": "Moteur appliqué à chaque bloc découpé : OCR "
+        "réel ou VLM (zero-shot). Le texte assemblé est scoré comme un pipeline "
+        "à plat.",
         "bench_seg_preview": "Aperçu des régions",
         "bench_seg_preview_btn": "Prévisualiser la segmentation",
         "bench_seg_preview_hint": "Lance le segmenteur sur le corpus choisi et "
-        "affiche les régions détectées (avant de lancer le benchmark).",
-        "bench_seg_preview_no_corpus": "Choisis d'abord un corpus.",
+        "affiche les régions détectées.",
+        "bench_seg_preview_no_corpus": "Sélectionner d'abord un corpus.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
         "bench_model": "Modèle",
         "bench_model_ph": "modèle (optionnel)",
         "bench_prompt": "Prompt",
-        "bench_prompt_ph": "Vide = prompt par défaut. Pour la correction, inclus "
-        "{ocr_text} là où le texte OCR doit être inséré (sinon il est ignoré).",
+        "bench_prompt_ph": "Vide = prompt par défaut. Pour la correction, "
+        "inclure {ocr_text} à l'emplacement du texte OCR.",
         "bench_prompt_curated_none": "— Prompt curé (par période) —",
-        "bench_prompt_hint": "Choisis un prompt curé OU écris le tien ci-dessous "
-        "(le texte libre est prioritaire).",
+        "bench_prompt_hint": "Prompt curé ou texte libre — le texte libre est "
+        "prioritaire.",
         "bench_ner": "Extraire les entités nommées (NER)",
         "bench_ner_model_ph": "modèle spaCy (défaut fr_core_news_sm)",
-        "bench_ner_hint": "Ajoute une étape NER en fin de pipeline ; scorée "
-        "(F1) si le corpus porte une vérité-terrain d'entités.",
+        "bench_ner_hint": "Étape NER en fin de pipeline, scorée (F1) si le corpus "
+        "porte une vérité-terrain d'entités. Requiert spaCy (extra [ner]) et un "
+        "modèle téléchargé (spacy download fr_core_news_sm).",
         "bench_alto": "Exporter l'ALTO (XML)",
-        "bench_alto_hint": "Tesseract uniquement : produit un ALTO XML par "
-        "document (géométrie + texte), téléchargeable depuis le rapport — "
-        "ré-importable dans eScriptorium ou Transkribus.",
+        "bench_alto_hint": "Tesseract uniquement : un ALTO XML par document "
+        "(géométrie + texte), téléchargeable depuis le rapport, ré-importable "
+        "dans eScriptorium ou Transkribus.",
         "bench_normalization": "Normalisation",
         "bench_norm_preview": "Aperçu de normalisation",
-        "bench_norm_sample_ph": "Colle un échantillon de texte pour voir l'effet…",
+        "bench_norm_sample_ph": "Coller un échantillon de texte pour voir "
+        "l'effet…",
         "bench_norm_custom": "Profil personnalisé (YAML) — prioritaire si rempli",
         "bench_norm_config_ph": "caseless: true\nexclude_chars: \",.;:\"",
         "bench_norm_preview_btn": "Aperçu",
@@ -106,17 +109,16 @@ _STRINGS: dict[str, dict[str, str]] = {
         "calcul (ne mesure plus ces caractères).",
         "bench_metric_profile": "Profil de métriques",
         "bench_metric_profile_hint": "Choisit les colonnes de classement du "
-        "rapport ; n'allège pas la donnée collectée (sections inchangées).",
+        "rapport ; la donnée collectée reste complète.",
         "bench_config_io": "Configuration",
         "bench_config_export": "Exporter (JSON)",
         "bench_config_import": "Importer…",
         "bench_config_loaded": "Configuration chargée.",
         "bench_config_invalid": "Fichier de configuration invalide.",
-        "bench_config_hint": "Sauvegarde l'état du formulaire (concurrents + "
-        "options) en JSON ; rechargeable plus tard. Aucune persistance serveur.",
+        "bench_config_hint": "Sauvegarde l'état du formulaire en JSON, "
+        "rechargeable plus tard. Aucune persistance serveur.",
         "bench_options": "Options",
-        "bench_execute_desc": "Lance le run puis ouvre le rapport final ou la "
-        "vue de segmentation.",
+        "bench_execute_desc": "Lance le run puis ouvre le rapport final.",
         "bench_norm_none": "(aucune)",
         "bench_error_422": "Configuration incomplète ou invalide.",
         "bench_error_404": "Corpus introuvable.",
@@ -136,10 +138,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_name": "Nom (optionnel)",
         "imp_repo": "Dépôt HF (org/nom-du-dataset)",
         "imp_revision": "Révision (SHA — recommandé pour l'épinglage)",
-        "imp_curated_hint": "Dataset de référence Cinoc publié sur HuggingFace : "
-        "le manifeste et la vérité-terrain sont rapatriés ; les images restent "
-        "des références distantes (IIIF statique servi par HF, épinglé à la "
-        "révision), téléchargées automatiquement au moment du run.",
+        "imp_curated_hint": "Dataset Cinoc publié sur HuggingFace : manifeste et "
+        "vérité-terrain rapatriés ; images en références épinglées (IIIF "
+        "statique servi par HF), téléchargées au run.",
         # Aperçu de mise en page (panneau du lanceur) + reconnaisseur hybride :
         # vestiges utiles de l'ancienne page /segmentation, repris par le composeur.
         "seg_run_endpoint": "Endpoint (object-detection HF)",
@@ -192,10 +193,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_col_metric": "Métrique",
         "history_col_value": "Valeur",
         "history_col_change": "Évolution",
-        "library_eyebrow": "VIEW · LIBRARY",
-        "library_title": "Bibliothèque de corpus",
-        "library_desc": "Corpus locaux et catalogues distants — toute la matière "
-        "en un seul endroit.",
+        "library_eyebrow": "Bibliothèque · corpus",
+        "library_title": "Bibliothèque",
+        "library_desc": "Corpus locaux et catalogues distants.",
         "library_search_button": "Rechercher",
         "library_demo_badge": "catalogue de démonstration (hors-ligne)",
         "library_open": "ouvrir",
@@ -223,10 +223,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_curated_yours": "Vos datasets curés",
         "library_curated_yours_hint": "Datasets curés Cinoc détectés sur votre "
         "compte HuggingFace (tag cinoc-corpus) — importez-en un en un clic.",
-        "library_curated_empty": "Aucun dataset curé détecté automatiquement. Sur "
-        "un Space, vos datasets tagués cinoc-corpus apparaissent ici sans réglage ; "
-        "en local, posez un jeton HF ou CINOC_HF_AUTHOR. Sinon, importez par "
-        "identifiant ci-dessous.",
+        "library_curated_empty": "Aucun dataset curé détecté. Sur un Space, les "
+        "datasets tagués cinoc-corpus apparaissent automatiquement ; en local, "
+        "définir un jeton HF ou CINOC_HF_AUTHOR.",
         "library_zip_meta": "ZIP · max 500 MB · paires auto-détectées",
         "library_ready": "prêt pour benchmark",
         "library_add_desc": "Téléversez un ZIP (glisser-déposer) ou importez "
@@ -252,7 +251,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "nav_history": "History",
         "nav_engines": "Engines",
         "wordmark_sub": "OCR · HTR · VLM",
-        "hero_eyebrow": "Showcase · read-only",
+        "hero_eyebrow": "Reports · benchmark",
         "hero_desc": "Deterministic benchmark reports — "
         "OCR / HTR / VLM on heritage corpora.",
         "stat_reports": "reports",
@@ -266,8 +265,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "download_alto": "Download ALTO (ZIP)",
         "bench_eyebrow": "Benchmark · compare",
         "bench_title": "Benchmark",
-        "bench_desc": "Compose competitors (OCR, OCR→LLM, VLM) and compare them "
-        "on a corpus, in a single run. No competitor: demonstration.",
+        "bench_desc": "Compose competitors (OCR, OCR→LLM, VLM, hybrid) and "
+        "compare them on a corpus, in a single run. No competitor: "
+        "demonstration.",
         "bench_run": "Run the benchmark",
         "bench_launching": "Launching…",
         "bench_status": "Status",
@@ -294,16 +294,15 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_mode_hybrid": "Hybrid (segmentation)",
         "bench_ocr_engine": "OCR engine",
         "bench_segmenter": "Segmenter",
-        "bench_segmenter_hint": "Detects regions at the head of the pipeline; the "
-        "remote one delegates to an HF endpoint (swap the model via the URL).",
+        "bench_segmenter_hint": "Detects regions at the head of the pipeline; "
+        "the remote segmenter delegates to an HF endpoint.",
         "bench_recognizer": "Per-block recognizer",
-        "bench_recognizer_hint": "Engine applied to each cropped block: a real OCR, "
-        "or a VLM transcribing the block image (zero-shot). Assembled text scored "
-        "CER/WER like a flat pipeline.",
+        "bench_recognizer_hint": "Engine applied to each cropped block: real OCR "
+        "or a VLM (zero-shot). Assembled text is scored like a flat pipeline.",
         "bench_seg_preview": "Region preview",
         "bench_seg_preview_btn": "Preview segmentation",
-        "bench_seg_preview_hint": "Runs the segmenter on the chosen corpus and shows "
-        "the detected regions (before launching the benchmark).",
+        "bench_seg_preview_hint": "Runs the segmenter on the chosen corpus and "
+        "shows the detected regions.",
         "bench_seg_preview_no_corpus": "Pick a corpus first.",
         "bench_llm": "LLM",
         "bench_vlm": "VLM",
@@ -311,18 +310,19 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_model_ph": "model (optional)",
         "bench_prompt": "Prompt",
         "bench_prompt_ph": "Empty = default prompt. For correction, include "
-        "{ocr_text} where the OCR text should be inserted (else it is ignored).",
+        "{ocr_text} where the OCR text goes.",
         "bench_prompt_curated_none": "— Curated prompt (by period) —",
-        "bench_prompt_hint": "Pick a curated prompt OR write your own below "
-        "(free text takes precedence).",
+        "bench_prompt_hint": "Curated prompt or free text — free text takes "
+        "precedence.",
         "bench_ner": "Extract named entities (NER)",
         "bench_ner_model_ph": "spaCy model (default fr_core_news_sm)",
-        "bench_ner_hint": "Adds a NER step at the end of the pipeline; scored "
-        "(F1) if the corpus carries an entity ground truth.",
+        "bench_ner_hint": "NER step at the end of the pipeline, scored (F1) if the "
+        "corpus carries an entity ground truth. Requires spaCy (extra [ner]) and a "
+        "downloaded model (spacy download fr_core_news_sm).",
         "bench_alto": "Export ALTO (XML)",
-        "bench_alto_hint": "Tesseract only: produces one ALTO XML per document "
-        "(geometry + text), downloadable from the report — re-importable into "
-        "eScriptorium or Transkribus.",
+        "bench_alto_hint": "Tesseract only: one ALTO XML per document (geometry "
+        "+ text), downloadable from the report, re-importable into eScriptorium "
+        "or Transkribus.",
         "bench_normalization": "Normalization",
         "bench_norm_preview": "Normalization preview",
         "bench_norm_sample_ph": "Paste a text sample to see the effect…",
@@ -338,14 +338,13 @@ _STRINGS: dict[str, dict[str, str]] = {
         "bench_config_import": "Import…",
         "bench_config_loaded": "Configuration loaded.",
         "bench_config_invalid": "Invalid configuration file.",
-        "bench_config_hint": "Saves the form state (competitors + options) as "
-        "JSON; reloadable later. No server persistence.",
+        "bench_config_hint": "Saves the form state as JSON, reloadable later. "
+        "No server persistence.",
         "bench_metric_profile": "Metric profile",
-        "bench_metric_profile_hint": "Picks the report's ranking columns; does not "
-        "drop collected data (sections unchanged).",
+        "bench_metric_profile_hint": "Picks the report's ranking columns; "
+        "collected data stays complete.",
         "bench_options": "Options",
-        "bench_execute_desc": "Launch the run, then open the final report or "
-        "segmentation view.",
+        "bench_execute_desc": "Launches the run, then opens the final report.",
         "bench_norm_none": "(none)",
         "bench_error_422": "Incomplete or invalid configuration.",
         "bench_error_404": "Corpus not found.",
@@ -365,10 +364,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "imp_name": "Name (optional)",
         "imp_repo": "HF repo (org/dataset-name)",
         "imp_revision": "Revision (SHA — recommended for pinning)",
-        "imp_curated_hint": "Cinoc reference dataset published on HuggingFace: "
-        "the manifest and ground truth are fetched; images stay as remote "
-        "references (static IIIF served from HF, pinned to the revision), "
-        "downloaded automatically at run time.",
+        "imp_curated_hint": "Cinoc dataset published on HuggingFace: manifest "
+        "and ground truth are fetched; images stay as pinned references "
+        "(static IIIF served from HF), downloaded at run time.",
         # Layout preview (launcher panel) + hybrid recognizer: useful remnants of
         # the old /segmentation page, reused by the benchmark composer.
         "seg_run_endpoint": "Endpoint (HF object-detection)",
@@ -420,10 +418,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "history_col_metric": "Metric",
         "history_col_value": "Value",
         "history_col_change": "Change",
-        "library_eyebrow": "VIEW · LIBRARY",
-        "library_title": "Corpus library",
-        "library_desc": "Local corpora and remote catalogues — all your material "
-        "in one place.",
+        "library_eyebrow": "Library · corpora",
+        "library_title": "Library",
+        "library_desc": "Local corpora and remote catalogues.",
         "library_search_button": "Search",
         "library_demo_badge": "demo catalogue (offline)",
         "library_open": "open",
@@ -451,9 +448,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "library_curated_yours": "Your curated datasets",
         "library_curated_yours_hint": "Cinoc curated datasets found on your "
         "HuggingFace account (cinoc-corpus tag) — import one in a click.",
-        "library_curated_empty": "No curated dataset detected automatically. On a "
-        "Space, your cinoc-corpus-tagged datasets appear here with no setup; locally, "
-        "set an HF token or CINOC_HF_AUTHOR. Otherwise, import by id below.",
+        "library_curated_empty": "No curated dataset detected. On a Space, "
+        "cinoc-corpus-tagged datasets appear automatically; locally, set an "
+        "HF token or CINOC_HF_AUTHOR.",
         "library_zip_meta": "ZIP · max 500 MB · pairs auto-detected",
         "library_ready": "ready for benchmark",
         "library_add_desc": "Upload a ZIP (drag-and-drop) or import from a "

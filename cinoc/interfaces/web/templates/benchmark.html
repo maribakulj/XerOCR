@@ -171,7 +171,7 @@
           <span class="comp-label">
             <input id="draft-ner" type="checkbox"
                    {% if not ner or not ner.available %}disabled{% endif %}>
-            {{ t.bench_ner }}{% if ner and not ner.available %} — {{ t.engine_unavailable }}{% endif %}
+            {{ t.bench_ner }}{% if ner and not ner.available %} — {{ ner.detail }}{% endif %}
           </span>
           <input id="draft-ner-model" class="input" type="text"
                  placeholder="{{ t.bench_ner_model_ph }}"
