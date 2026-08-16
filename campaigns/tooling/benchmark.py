@@ -43,8 +43,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-import lidenbrock  # noqa: E402
-from lidenbrock import (
+import saknussemm  # noqa: E402
+from saknussemm import (
     CorrectionResult,
     EditScript,
     ProducerMetadata,
@@ -52,9 +52,9 @@ from lidenbrock import (
     ReplaceLine,
     Usage,
 )
-from lidenbrock.producers.rules import RulesProducer, default_french_ocr_rules
-from lidenbrock.core.pipeline import CorrectionPipeline  # noqa: E402
-from lidenbrock.core.schemas import ConfidencePolicy, CorrectionRequest  # noqa: E402
+from saknussemm.producers.rules import RulesProducer, default_french_ocr_rules
+from saknussemm.core.pipeline import CorrectionPipeline  # noqa: E402
+from saknussemm.core.schemas import ConfidencePolicy, CorrectionRequest  # noqa: E402
 
 BENCHMARK_VERSION = "1"
 DEFAULT_CORPUS = (
@@ -159,7 +159,7 @@ class _NullObserver:
 
 
 def _line_texts(path: Path) -> dict[str, str]:
-    document = lidenbrock.load(path)
+    document = saknussemm.load(path)
     return {
         lm.line_id: lm.ocr_text for page in document.manifest.pages for lm in page.lines
     }
@@ -170,7 +170,7 @@ def run_case(case_dir: Path, case: dict, producer_spec: str) -> dict:
     reference = case_dir / case["reference"]
     ref_texts = _line_texts(reference)
 
-    document = lidenbrock.load(source)
+    document = saknussemm.load(source)
     producer = _make_producer(producer_spec, ref_texts)
     pipeline = CorrectionPipeline(
         producer=producer,
@@ -328,7 +328,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report = {
         "benchmark_version": BENCHMARK_VERSION,
-        "lib_version": lidenbrock.__version__,
+        "lib_version": saknussemm.__version__,
         "corpus_version": manifest["corpus_version"],
         "config_fingerprint": pipeline.config_fingerprint(),
         "producer": {
