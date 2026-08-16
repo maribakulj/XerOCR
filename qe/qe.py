@@ -1,8 +1,8 @@
-"""Zero-shot masked-LM quality estimator — the ``lidenbrock[qe]`` scorer.
+"""Zero-shot masked-LM quality estimator — the ``saknussemm[qe]`` scorer.
 
-Behind the pure-core :class:`~lidenbrock.core.quality.QEScorer` protocol,
+Behind the pure-core :class:`~saknussemm.core.quality.QEScorer` protocol,
 :class:`MaskedLMQEScorer` answers the same pre-LLM question the
-:class:`~lidenbrock.core.quality.HeuristicQEScorer` baseline can only
+:class:`~saknussemm.core.quality.HeuristicQEScorer` baseline can only
 guess at: *does this SOURCE line still carry an OCR error, or is it
 already clean?* It reads the masked **pseudo-perplexity** (Salazar et
 al. 2020, "Masked Language Model Scoring") of D'AlemBERT — a RoBERTa
@@ -21,7 +21,7 @@ OCR17+ corpus, 2026-07-24):
   ASCII): the perplexity measures linguistic implausibility, not
   typography, and the document text is never touched.
 * **The model informs, the app decides.** This returns a number; the
-  Router (:func:`~lidenbrock.core.quality.route_line`) decides.
+  Router (:func:`~saknussemm.core.quality.route_line`) decides.
 
 Heavy deps are LAZY and confined to this module — the pixel-light core
 never imports it (import-contract test). Runtime needs only
@@ -56,7 +56,7 @@ _DEGLYPH: dict[str, str] = {
 
 #: Default location of the ONNX bundle (``model.onnx`` + ``tokenizer.json``
 #: + ``qe_model.json``) that ``scripts/export_masked_lm_onnx.py`` writes.
-DEFAULT_MODEL_DIR = Path.home() / ".cache" / "lidenbrock" / "dalembert-onnx"
+DEFAULT_MODEL_DIR = Path.home() / ".cache" / "saknussemm" / "dalembert-onnx"
 
 #: Platt scaling of a word's masked surprisal (nats) into P(needs
 #: correction). The LM is zero-shot — these two constants only RESCALE
@@ -103,7 +103,7 @@ def _sigmoid(x: float) -> float:
 class MaskedLMQEScorer:
     """Zero-shot QE scorer over a masked LM's pseudo-perplexity.
 
-    Implements :class:`~lidenbrock.core.quality.QEScorer`:
+    Implements :class:`~saknussemm.core.quality.QEScorer`:
     ``needs_correction(text)`` returns, in ``[0, 1]``, the mean
     per-word probability that a word needs correction — higher means the
     line more likely carries an OCR error. Deterministic (greedy masked
@@ -114,7 +114,7 @@ class MaskedLMQEScorer:
     scorer is cheap and importing this module never requires the extra to
     be installed. ``model_dir`` defaults to :data:`DEFAULT_MODEL_DIR`
     (produced by ``scripts/export_masked_lm_onnx.py``); a clear error
-    names the missing bundle or the missing ``lidenbrock[qe]`` deps.
+    names the missing bundle or the missing ``saknussemm[qe]`` deps.
     """
 
     def __init__(
@@ -158,7 +158,7 @@ class MaskedLMQEScorer:
             from tokenizers import Tokenizer
         except ModuleNotFoundError as exc:  # pragma: no cover - env-dependent
             raise ModuleNotFoundError(
-                "MaskedLMQEScorer needs the 'qe' extra: pip install 'lidenbrock[qe]'"
+                "MaskedLMQEScorer needs the 'qe' extra: pip install 'saknussemm[qe]'"
             ) from exc
 
         manifest_path = self._model_dir / "qe_model.json"

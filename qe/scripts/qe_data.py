@@ -37,8 +37,8 @@ from pathlib import Path
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-import lidenbrock  # noqa: E402
-from lidenbrock.core.alignment import align_tokens  # noqa: E402
+import saknussemm  # noqa: E402
+from saknussemm.core.alignment import align_tokens  # noqa: E402
 
 DEFAULT_CORPUS = (
     _REPO_ROOT / "tests" / "corpus_gt" / "manifest.json"
@@ -52,7 +52,7 @@ class Degradation:
     ``clean`` is the substring as it appears in modern/corrected text;
     ``ocr`` is the plausible OCR misreading a scripted degradation
     injects. The DIRECTION is the opposite of
-    ``lidenbrock.core.confidence.DEFAULT_CONFUSIONS`` (which maps the
+    ``saknussemm.core.confidence.DEFAULT_CONFUSIONS`` (which maps the
     OCR form back to the correct one) — kept as its own curated,
     UNI-directional table so the generated errors are realistic, not
     every bidirectional pair fired blindly.
@@ -128,7 +128,7 @@ def real_labels(raw_text: str, ref_text: str) -> tuple[list[str], list[int]]:
 
 
 def _line_texts(path: Path) -> dict[str, str]:
-    document = lidenbrock.load(path)
+    document = saknussemm.load(path)
     return {
         lm.line_id: lm.ocr_text for page in document.manifest.pages for lm in page.lines
     }

@@ -1,4 +1,4 @@
-# QE scorer — zero-shot masked-LM quality estimation (`lidenbrock[qe]`)
+# QE scorer — zero-shot masked-LM quality estimation (`saknussemm[qe]`)
 
 The quality-estimation scorer answers the pre-LLM question the Phase-2
 calibration proved was missing: **does this source line still carry an OCR
@@ -6,14 +6,14 @@ error, or is it already clean?** A high score routes a line to the LLM (or
 an escalation); a low score lets the Router SKIP it with no model call —
 the hybrid-selective economics.
 
-`MaskedLMQEScorer` (in `lidenbrock.integrations.qe`, behind the pure-core
+`MaskedLMQEScorer` (in `saknussemm.integrations.qe`, behind the pure-core
 `QEScorer` protocol) reads the **masked pseudo-perplexity** of a
 pre-trained masked language model (Salazar et al. 2020): a token the
 language model finds improbable is a likely OCR break. **Zero-shot** — no
 QE training; the model informs, the app decides.
 
 - Runtime deps: `onnxruntime` + `tokenizers` only (**no torch, no
-  transformers**). Install with `pip install 'lidenbrock[qe]'`.
+  transformers**). Install with `pip install 'saknussemm[qe]'`.
 - The pixel-light core never imports it (import-contract test); heavy
   imports are lazy.
 - Historical orthography is **never** an error signal (README rule 3): the
@@ -29,9 +29,9 @@ offline by `scripts/export_masked_lm_onnx.py`, and every bundle is
 scorer needs, so pointing `model_dir` at the right bundle is all it takes:
 
 ```python
-from lidenbrock.integrations.qe import MaskedLMQEScorer
+from saknussemm.integrations.qe import MaskedLMQEScorer
 
-qe = MaskedLMQEScorer(model_dir="~/.cache/lidenbrock/camembert-onnx")
+qe = MaskedLMQEScorer(model_dir="~/.cache/saknussemm/camembert-onnx")
 score = qe.needs_correction("Le télégrapbe annonee que Mousieur…")  # 0..1
 ```
 
@@ -77,12 +77,12 @@ calm on proper nouns, but its OCR-tolerance weakens the error signal.
 # 1. Export (needs the dev-time optimum/torch stack, ONCE, offline):
 python scripts/export_masked_lm_onnx.py \
     --model-id camembert-base --license MIT \
-    --out ~/.cache/lidenbrock/camembert-onnx --validate
+    --out ~/.cache/saknussemm/camembert-onnx --validate
 
 # 2. Fit the calibration on a target-register corpus (one clean line per
 #    file line) and patch the bundle manifest:
 python scripts/fit_qe_calibration.py \
-    --model-dir ~/.cache/lidenbrock/camembert-onnx \
+    --model-dir ~/.cache/saknussemm/camembert-onnx \
     --sentences scripts/data/press19_clean.txt --write
 ```
 
@@ -111,7 +111,7 @@ sees genuine period press instead of pastiche:
 python scripts/extract_press19_corpus.py \
     --corpus /path/to/gt-corpus --lang fr --out scripts/data/press19_real.txt
 python scripts/fit_qe_calibration.py \
-    --model-dir ~/.cache/lidenbrock/camembert-onnx \
+    --model-dir ~/.cache/saknussemm/camembert-onnx \
     --sentences scripts/data/press19_real.txt --reducer max --write
 ```
 

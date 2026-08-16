@@ -1,6 +1,6 @@
 # `qe/` — le scorer d'estimation de qualité, en dépôt d'attente
 
-Arrivé de [`lidenbrock`](https://github.com/maribakulj/lidenbrock) le
+Arrivé de [`saknussemm`](https://github.com/maribakulj/saknussemm) le
 2026-08-16. **Il n'est pas encore branché sur cette plateforme** : ce
 dossier est un dépôt, pas une intégration, et il le dit pour qu'on ne le
 prenne pas pour l'un ou l'autre.
@@ -36,7 +36,7 @@ donc partout, et son module était exclu de la porte de couverture. Une
 bibliothèque qui se prépare à être publiée ne peut pas embarquer un extra
 que rien n'exécute.
 
-`lidenbrock` garde le **protocole** `QEScorer` : le point d'injection reste
+`saknussemm` garde le **protocole** `QEScorer` : le point d'injection reste
 public, l'implémentation part.
 
 ## Ce qu'il faut savoir avant de s'en servir

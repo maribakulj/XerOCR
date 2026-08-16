@@ -1,6 +1,6 @@
 # `corpus/` — corpus lourds, avec images et structure
 
-Arrivés de [`lidenbrock`](https://github.com/maribakulj/lidenbrock) le
+Arrivés de [`saknussemm`](https://github.com/maribakulj/saknussemm) le
 2026-08-16, où ils servaient à mesurer une bibliothèque de post-correction
 et pesaient 43 Mo dans un dépôt qui n'a plus vocation à contenir que du
 code publiable.
