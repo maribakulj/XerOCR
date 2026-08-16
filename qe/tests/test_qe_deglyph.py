@@ -1,6 +1,6 @@
 """Pure tests for the QE scorer's glyph-neutralization helpers.
 
-No model, no onnxruntime: ``lidenbrock.integrations.qe`` imports without
+No model, no onnxruntime: ``saknussemm.integrations.qe`` imports without
 the ``qe`` extra (heavy deps are lazy), so these run in every environment
 and lock the doctrine that scoring is glyph-neutral while the ORIGINAL
 spelling is always recoverable for reporting (ROADMAP rule 3).
@@ -8,7 +8,7 @@ spelling is always recoverable for reporting (ROADMAP rule 3).
 
 from __future__ import annotations
 
-from lidenbrock.integrations.qe import _deglyph, _deglyph_with_map
+from saknussemm.integrations.qe import _deglyph, _deglyph_with_map
 
 
 def test_deglyph_maps_glyphs_not_language() -> None:

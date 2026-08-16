@@ -1,7 +1,7 @@
 """Un corpus sans licence énoncée est un corpus que personne ne peut
 rediffuser — nous compris.
 
-Cette garde arrive de `lidenbrock` le 2026-08-16, avec les corpus qu'elle
+Cette garde arrive de `saknussemm` le 2026-08-16, avec les corpus qu'elle
 gardait. Elle y avait un sens tant que les corpus y vivaient ; l'y laisser
 l'aurait rendue verte et vide, ce qui est la façon dont une garde cesse de
 garder sans que personne s'en aperçoive.

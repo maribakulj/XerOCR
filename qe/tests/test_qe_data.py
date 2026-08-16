@@ -70,7 +70,7 @@ def test_rate_zero_degrades_nothing_rate_hundred_degrades_all_matches():
 def test_degraded_token_is_a_known_confusion_of_its_clean_form():
     """The synthetic error must be recoverable by the confusion table —
     it is a REALISTIC OCR error, not noise."""
-    from lidenbrock.core.confidence import is_known_confusion
+    from saknussemm.core.confidence import is_known_confusion
 
     clean = "maison"
     degraded = qe_data.degrade_token(clean, seed=1, index=0, rate_percent=100)

@@ -1,6 +1,6 @@
 # `campaigns/` — les runs mesurés, avec leurs relevés
 
-Archives de campagnes menées sur `lidenbrock` avant que cette plateforme
+Archives de campagnes menées sur `saknussemm` avant que cette plateforme
 reprenne le rôle de banc. Elles arrivent avec le corpus qu'elles mesuraient,
 le 2026-08-16.
 

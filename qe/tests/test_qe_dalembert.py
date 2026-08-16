@@ -1,4 +1,4 @@
-"""lidenbrock[qe] — the zero-shot D'AlemBERT masked-LM QE scorer.
+"""saknussemm[qe] — the zero-shot D'AlemBERT masked-LM QE scorer.
 
 Heavy and bundle-dependent, so it self-skips when either the
 ``onnxruntime``/``tokenizers`` extra OR the exported ONNX bundle is
@@ -20,13 +20,13 @@ pytest.importorskip("onnxruntime")
 pytest.importorskip("tokenizers")
 pytest.importorskip("numpy")
 
-from lidenbrock.core.quality import (  # noqa: E402
+from saknussemm.core.quality import (  # noqa: E402
     QEScorer,
     RoutingDecision,
     RoutingPolicy,
     route_line,
 )
-from lidenbrock.integrations.qe import (  # noqa: E402
+from saknussemm.integrations.qe import (  # noqa: E402
     DEFAULT_MODEL_DIR,
     MaskedLMQEScorer,
 )
@@ -35,7 +35,7 @@ pytestmark = pytest.mark.skipif(
     not (DEFAULT_MODEL_DIR / "model.onnx").exists(),
     reason=(
         "D'AlemBERT ONNX bundle absent; build it with "
-        "scripts/export_masked_lm_onnx.py --out ~/.cache/lidenbrock/dalembert-onnx"
+        "scripts/export_masked_lm_onnx.py --out ~/.cache/saknussemm/dalembert-onnx"
     ),
 )
 
