@@ -10,7 +10,7 @@ sont donc ici.
 ## Ce qu'ils ne sont pas
 
 **Le banc de cette plateforme.** La décision qui les a fait quitter
-`lidenbrock` disait : *retirés, pas déménagés* — porter un instrument dont
+`saknussemm` disait : *retirés, pas déménagés* — porter un instrument dont
 on vient de prouver qu'il fausse ses propres résultats serait porter le
 défaut avec.
 
