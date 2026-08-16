@@ -49,9 +49,19 @@ jobs:
             curl -sf http://127.0.0.1:7861/health >/dev/null 2>&1 && { ok=1; break; }
             sleep 0.5
           done
-          curl -s http://127.0.0.1:7861/api/reports
+          # Les pages que le Space sert réellement. `/api/reports` figurait ici
+          # et n'existe plus : en `curl -s` sans `-f` et sans lire le code, la
+          # sonde renvoyait 404 en silence et le smoke passait au vert sans
+          # rien tester d'autre que /health.
+          bad=""
+          for path in / /benchmark /library; do
+            c=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:7861${path}")
+            test "$c" = 200 || bad="${bad} ${path}=${c}"
+          done
           code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:7861/health)
           kill $srv 2>/dev/null || true
+          test -z "$bad" || {
+            echo "::error::pages servies en échec :${bad}"; exit 1; }
           test "$ok" = 1 && test "$code" = 200 || {
             echo "::error::la vitrine ne répond pas (ok=$ok code=$code)"; exit 1; }
           echo "smoke OK"
