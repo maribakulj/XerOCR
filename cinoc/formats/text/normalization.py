@@ -107,6 +107,33 @@ _HIPE_DEHYPHEN: dict[str, str] = {
     "uͤ": "ü",
 }
 
+#: Recollage des mots coupés en fin de ligne — **répertoire complet**, là où
+#: :data:`_HIPE_DEHYPHEN` ne couvre que les deux marques du scorer HIPE.
+#:
+#: À quoi ça sert, et à quoi ça ne sert pas. Appliqué des **deux côtés**, ce
+#: profil ne fait pas baisser l'erreur : mesuré sur ``corpus/37-GT-BNL``, il la
+#: fait légèrement *monter* (CER 0,1119 → 0,1133), parce qu'un mot recollé
+#: concentre en un seul long mot faux ce qui était une moitié juste et une
+#: moitié fausse.
+#:
+#: Son intérêt est ailleurs : **ne pas punir un correcteur qui recolle**. Un
+#: post-correcteur qui réunit correctement un mot coupé produit un texte plus
+#: court que la référence ligne à ligne, et sans ce profil il est pénalisé pour
+#: avoir bien fait — mesuré sur le même corpus : CER 0,1179 et WER 0,4019
+#: contre 0,1119 et 0,3734. C'est donc une **option de comparaison**, jamais un
+#: défaut : l'activer sans raison échange une mesure fidèle contre une mesure
+#: plus indulgente.
+#: **U+00AD n'y figure pas, et c'est délibéré.** L'ordre canonique de
+#: ``normalize`` retire les invisibles *avant* d'appliquer la table : un tiret
+#: conditionnel est donc déjà parti quand la table passe, et l'entrée
+#: correspondante ne pourrait jamais mordre. Une entrée morte laisserait croire
+#: à une couverture qui n'existe pas. Le cas réel est couvert en amont — le
+#: parser ALTO ramène le ``<HYP>`` U+00AD au tiret ordinaire à la lecture.
+DEHYPHENATE: dict[str, str] = {
+    f"{marque}\n": ""
+    for marque in ("-", "\u2010", "\u2011", "\u2013", "\u00ac", "\u2e17")
+}
+
 #: ``norm()`` du scorer HIPE-OCRepair (SPEC_HIPE §4.3) : mappings explicites
 #: appliqués après pliage de casse. ``ß→ss`` est déjà l'effet du casefold —
 #: conservé pour documenter la table complète du scorer (idempotent).
@@ -405,6 +432,15 @@ NORMALIZATION_PROFILES: dict[str, NormalizationProfile] = {
             exclude_chars="'’",  # type: ignore[arg-type]
             exclude_mode="delete",
             description="NFC + apostrophes droite (') et typographique (’) ignorées",
+        ),
+        NormalizationProfile(
+            name="dehyphenated",
+            diplomatic_table=DEHYPHENATE,
+            description=(
+                "Recolle les mots coupés en fin de ligne (répertoire complet). "
+                "Pour comparer équitablement un correcteur qui recolle — ne fait "
+                "PAS baisser l'erreur par lui-même"
+            ),
         ),
         NormalizationProfile(
             name="medieval_french",

@@ -172,10 +172,17 @@ def test_from_yaml_roundtrip(tmp_path) -> None:  # type: ignore[no-untyped-def]
 # --- profils & invariants ----------------------------------------------------
 
 
-def test_exactly_fourteen_profiles() -> None:
-    """12 profils retenus à la couche 2 + les 2 profils de conformité HIPE
-    (``hipe``/``heritage``, D-115)."""
-    assert len(NORMALIZATION_PROFILES) == 14
+def test_exactly_fifteen_profiles() -> None:
+    """12 profils retenus à la couche 2, les 2 profils de conformité HIPE
+    (``hipe``/``heritage``, D-115), et ``dehyphenated``.
+
+    ``dehyphenated`` est un profil de **comparaison**, ajouté quand un
+    correcteur qui recolle les mots coupés est devenu mesurable : sans lui, il
+    est pénalisé pour avoir bien fait (CER 0,1179 contre 0,1119 sur
+    ``corpus/37-GT-BNL``). Il ne fait pas baisser l'erreur par lui-même.
+    """
+    assert len(NORMALIZATION_PROFILES) == 15
+    assert "dehyphenated" in NORMALIZATION_PROFILES
 
 
 def test_no_english_profiles() -> None:
