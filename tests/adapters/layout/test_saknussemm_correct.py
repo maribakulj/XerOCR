@@ -129,14 +129,37 @@ def test_an_untouched_line_is_returned_verbatim(tmp_path: Path) -> None:
     assert _lines(arts[ArtifactType.LAYOUT])[0].text == "rien à corriger ici"
 
 
-def test_both_outputs_are_produced(tmp_path: Path) -> None:
-    """``CORRECTED_TEXT`` accompagne le ``LAYOUT`` pour que le bilan de
-    correction existant fonctionne **sans être modifié** : il cherche un
-    ``RAW_TEXT`` et un ``CORRECTED_TEXT`` dans les sorties du pipeline."""
+def test_the_three_outputs_are_produced(tmp_path: Path) -> None:
+    """``CORRECTED_TEXT`` fait fonctionner le bilan de correction existant
+    **sans le modifier** ; ``DECISIONS`` porte ce qu'un texte corrigé ne peut
+    pas dire — ce qui a été refusé, et pourquoi."""
     arts = _run(tmp_path, _layout("le ſoleil"))
-    assert set(arts) == {ArtifactType.LAYOUT, ArtifactType.CORRECTED_TEXT}
+    assert set(arts) == {
+        ArtifactType.LAYOUT,
+        ArtifactType.CORRECTED_TEXT,
+        ArtifactType.DECISIONS,
+    }
     text = Path(arts[ArtifactType.CORRECTED_TEXT].uri).read_text(encoding="utf-8")
     assert text == "le soleil"
+
+
+def test_the_decisions_say_what_happened_to_each_line(tmp_path: Path) -> None:
+    """Une ligne intacte et une ligne corrigée sont **distinguables** ici.
+
+    Dans le texte corrigé seul, elles ne le sont pas : c'est toute la raison
+    d'être de cet artefact.
+    """
+    import json
+
+    arts = _run(tmp_path, _layout("le ſoleil", "rien à corriger"))
+    decisions = json.loads(
+        Path(arts[ArtifactType.DECISIONS].uri).read_text(encoding="utf-8")
+    )
+    par_id = {ligne["line_id"]: ligne for ligne in decisions["lines"]}
+    assert par_id["L1"]["source_text"] == "le ſoleil"
+    assert par_id["L1"]["final_text"] == "le soleil"
+    assert par_id["L2"]["source_text"] == par_id["L2"]["final_text"]
+    assert {"status", "reason_code", "proposed_text"} <= set(par_id["L1"])
 
 
 def test_flattening_matches_to_text_exactly(tmp_path: Path) -> None:
@@ -211,5 +234,9 @@ def test_registered_under_its_own_kind() -> None:
     module = registry.build("saknussemm:regles", {"label": "regles"})
     assert module.input_types == frozenset({ArtifactType.LAYOUT})
     assert module.output_types == frozenset(
-        {ArtifactType.LAYOUT, ArtifactType.CORRECTED_TEXT}
+        {
+            ArtifactType.LAYOUT,
+            ArtifactType.CORRECTED_TEXT,
+            ArtifactType.DECISIONS,
+        }
     )

@@ -985,6 +985,68 @@ class WordErrorPayload(BaseModel):
 
 #: Union des payloads, discriminée par ``kind`` — s'élargit d'un membre par
 #: famille, dans le même commit que le calcul et le consommateur.
+#: Extrait d'une ligne montrée au rapport. Court : ce qu'on lit d'un coup d'œil.
+_MAX_LINE_CHARS = 300
+
+#: Lignes montrées en exemple par pipeline. Un rapport n'est pas un journal :
+#: au-delà, on ne lit plus, on fait défiler.
+_MAX_DECISION_SAMPLES = 40
+
+
+class DecisionReasonCount(BaseModel):
+    """Combien de lignes un motif de refus a-t-il retenues."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    code: str = Field(min_length=1, max_length=128)
+    n: int = Field(ge=0)
+
+
+class DecisionSample(BaseModel):
+    """Une ligne, son avant, son après, et le motif s'il y en a un."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    document_id: str = Field(min_length=1, max_length=256)
+    page_id: str = Field(min_length=1, max_length=256)
+    line_id: str = Field(min_length=1, max_length=256)
+    status: str = Field(min_length=1, max_length=64)
+    source_text: str = Field(max_length=_MAX_LINE_CHARS)
+    final_text: str = Field(max_length=_MAX_LINE_CHARS)
+    reason_code: str | None = Field(default=None, max_length=128)
+    reason_detail: str | None = Field(default=None, max_length=_MAX_LINE_CHARS)
+
+
+class PipelineDecisions(BaseModel):
+    """Bilan des décisions d'un pipeline correcteur.
+
+    ``kept`` n'est pas ``n_lines - changed`` : une ligne peut être **refusée
+    par une garde** après qu'un modèle a proposé autre chose. Confondre les deux
+    ferait passer un refus pour une absence de proposition.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    pipeline: str = Field(min_length=1, max_length=128)
+    n_lines: int = Field(ge=0)
+    changed: int = Field(ge=0)
+    #: Lignes où le modèle a proposé un changement que l'application a refusé.
+    refused: int = Field(ge=0)
+    #: Lignes qu'aucune proposition n'a touchées.
+    untouched: int = Field(ge=0)
+    reasons: tuple[DecisionReasonCount, ...] = ()
+    samples: tuple[DecisionSample, ...] = ()
+
+
+class DecisionsPayload(BaseModel):
+    """Ce qu'un correcteur a changé, refusé de changer, et pourquoi."""
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    kind: Literal["decisions"] = "decisions"
+    pipelines: tuple[PipelineDecisions, ...] = ()
+
+
 AnalysisPayload = Annotated[
     InferencePayload
     | EconomicsPayload
@@ -1003,7 +1065,8 @@ AnalysisPayload = Annotated[
     | InterEnginePayload
     | LinesPayload
     | NerPayload
-    | WordErrorPayload,
+    | WordErrorPayload
+    | DecisionsPayload,
     Field(discriminator="kind"),
 ]
 
@@ -1031,6 +1094,9 @@ __all__ = [
     "ComplementarityDocument",
     "ConformityPayload",
     "CorrectionPayload",
+    "DecisionReasonCount",
+    "DecisionSample",
+    "DecisionsPayload",
     "DiagnosticsPayload",
     "EconomicsPayload",
     "EngineTokenRecall",
@@ -1052,6 +1118,7 @@ __all__ = [
     "OverNormalizedWord",
     "PairwiseDifference",
     "PhilologyPayload",
+    "PipelineDecisions",
     "PipelineCalibration",
     "PipelineConformity",
     "PipelineConfusions",

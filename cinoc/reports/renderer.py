@@ -37,6 +37,7 @@ _SECTION_LABELS = {
     "structured_data": "Données structurées",
     "philology": "Philologie",
     "textual_fidelity": "Fidélité textuelle",
+    "decisions": "Décisions du correcteur",
     "lines": "Par ligne",
     "ner": "Entités nommées",
     "economics": "Économie",
@@ -66,6 +67,7 @@ _SECTION_LABELS_EN = {
     "structured_data": "Structured data",
     "philology": "Philology",
     "textual_fidelity": "Textual fidelity",
+    "decisions": "Corrector decisions",
     "lines": "Per line",
     "ner": "Named entities",
     "economics": "Economics",
@@ -105,7 +107,8 @@ _GROUPS: tuple[tuple[str, str, str, str, tuple[str, ...]], ...] = (
      ("cross_engine", "engine_duel", "word_errors")),
     ("rapport", "errors", "Familles d'erreurs & analyses fines",
      "Error families & fine-grained analyses",
-     ("conformity", "structure", "correction", "structured_data", "philology",
+     ("conformity", "structure", "correction", "decisions", "structured_data",
+      "philology",
       "textual_fidelity", "lines", "ner", "taxonomy", "calibration", "diagnostics")),
     ("rapport", "economics", "Économie", "Economics", ("economics",)),
     ("explorer", "documents", "Documents", "Documents", ("documents",)),
@@ -129,7 +132,8 @@ _SECTION_MODE: dict[str, str] = {
 _WIDE_SECTIONS: frozenset[str] = frozenset({
     "key_measures", "overview", "by_engine", "engine_profiles", "conformity",
     "structured_data", "ner", "lines", "economics", "cross_engine",
-    "word_errors", "taxonomy", "correction", "textual_fidelity", "documents",
+    "word_errors", "taxonomy", "correction", "decisions", "textual_fidelity",
+    "documents",
     "diagnostics",
 })
 
@@ -330,6 +334,7 @@ def default_report_renderer() -> ReportRenderer:
     from cinoc.reports.sections.corpus_composition import CorpusCompositionSection
     from cinoc.reports.sections.correction import CorrectionSection
     from cinoc.reports.sections.cross_engine import CrossEngineSection
+    from cinoc.reports.sections.decisions import DecisionsSection
     from cinoc.reports.sections.diagnostics import DiagnosticsSection
     from cinoc.reports.sections.dispersion import DispersionSection
     from cinoc.reports.sections.document_detail import DocumentDetailSection
@@ -367,6 +372,7 @@ def default_report_renderer() -> ReportRenderer:
             ConformitySection(),
             StructureSection(),
             CorrectionSection(),
+            DecisionsSection(),
             StructuredDataSection(),
             PhilologySection(),
             TextualFidelitySection(),
