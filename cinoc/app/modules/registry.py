@@ -241,6 +241,18 @@ def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
     return PrecomputedLayoutSource()
 
 
+def _build_saknussemm(kwargs: Mapping[str, ParamValue]) -> Module:
+    from cinoc.adapters.layout.saknussemm_correct import SaknussemmCorrector
+    from cinoc.adapters.llm._base import validate_llm_label
+
+    return SaknussemmCorrector(
+        label=validate_llm_label(str(kwargs["label"]), "SaknussemmCorrector"),
+        producer=str(kwargs.get("producer", "rules")),
+        model=str(kwargs.get("model", "")),
+        host=str(kwargs.get("host", "http://localhost:11434")),
+    )
+
+
 def _build_alto_source(kwargs: Mapping[str, ParamValue]) -> Module:
     from cinoc.adapters.layout.alto_source import AltoLayoutSource
 
@@ -342,6 +354,9 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     # Fait entrer un ALTO **existant** dans le banc sans l'aplatir : jusqu'ici
     # un corpus livré avec sa mise en page ne pouvait y entrer qu'en texte.
     registry.register_builder("alto_source", _build_alto_source)
+    # Post-correction **dans** la mise en page : l'identite de ligne survit au
+    # correcteur, donc l'appariement avant/apres est connu et non devine.
+    registry.register_builder("saknussemm", _build_saknussemm)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)

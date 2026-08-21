@@ -107,6 +107,10 @@ ADAPTERS_ALLOWED_PKG = (
 #: partiel d'un dataset curé publié (même extra, même import paresseux).
 #: ``paddlex`` : segmenteur de mise en page PP-DocLayout (extra ``[segment]``,
 #: import paresseux dans ``layout/pp_doclayout``).
+#: ``saknussemm`` : post-correction **dans** la mise en page (extra
+#: ``[saknussemm]``, imports paresseux dans ``layout/saknussemm_correct`` et son
+#: pont). Le banc corrigeait du texte plat ; cette brique corrige un ``LAYOUT``
+#: en gardant l'identite de ligne, donc l'appariement avant/apres est connu.
 ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     "pytesseract", "openai", "anthropic", "mistralai", "httpx", "httpcore",
     "datasets", "huggingface_hub", "PIL", "yaml", "paddlex", "kraken",
@@ -115,6 +119,8 @@ ADAPTERS_ALLOWED_EXT = ALLOWED_EXT | {
     # Extracteur d'entités nommées (extra `[ner]`, import paresseux dans
     # `ner/spacy_extractor`).
     "spacy",
+    # Post-correction structurée (extra `[saknussemm]`, imports paresseux).
+    "saknussemm",
 }
 
 
