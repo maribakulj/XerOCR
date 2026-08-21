@@ -197,6 +197,7 @@ def _build_ollama(kwargs: Mapping[str, ParamValue]) -> Module:
         label=label,
         model=str(kwargs.get("model", "llama3")),
         host=str(kwargs.get("host", "http://localhost:11434")),
+        role=str(kwargs.get("role", "text_only")),
         **extra,
     )
 
