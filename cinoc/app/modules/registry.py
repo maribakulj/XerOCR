@@ -257,7 +257,7 @@ def _build_saknussemm(kwargs: Mapping[str, ParamValue]) -> Module:
 def _build_alto_source(kwargs: Mapping[str, ParamValue]) -> Module:
     from cinoc.adapters.layout.alto_source import AltoLayoutSource
 
-    return AltoLayoutSource()
+    return AltoLayoutSource(ocr_sidecar=str(kwargs.get("ocr_sidecar", "")))
 
 
 def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:

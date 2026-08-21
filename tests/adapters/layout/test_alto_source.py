@@ -122,3 +122,118 @@ def test_registered_under_its_own_kind() -> None:
     module = registry.build("alto_source", {})
     assert module.input_types == frozenset({ArtifactType.IMAGE})
     assert module.output_types == frozenset({ArtifactType.LAYOUT})
+
+
+# --- OCR dégradé en entrée ---------------------------------------------------
+
+
+_SIDECAR = {
+    "ocr": {
+        "page.xml": {"L1": "Bonjour tra-", "L2": "lecture d'OCR"},
+    }
+}
+
+
+def _alto_deux_lignes() -> bytes:
+    return _alto(
+        '<TextLine ID="L1" HPOS="10" VPOS="20" WIDTH="300" HEIGHT="40">'
+        '<String CONTENT="Bonjour" WC="0.9"/><SP/>'
+        '<String CONTENT="tra" SUBS_TYPE="HypPart1" SUBS_CONTENT="travailleurs"/>'
+        "<HYP/></TextLine>"
+        '<TextLine ID="L2" HPOS="10" VPOS="70" WIDTH="300" HEIGHT="40">'
+        '<String CONTENT="vérité"/><SP/><String CONTENT="terrain"/></TextLine>'
+    )
+
+
+def _run_avec_sidecar(tmp_path: Path, sidecar: dict) -> CanonicalLayout:
+    import json
+
+    (tmp_path / "page.png").write_bytes(b"pas une vraie image")
+    (tmp_path / "page.xml").write_bytes(_alto_deux_lignes())
+    chemin = tmp_path / "ocr.json"
+    chemin.write_text(json.dumps(sidecar, ensure_ascii=False), encoding="utf-8")
+    out = AltoLayoutSource(ocr_sidecar=str(chemin)).execute(
+        {
+            ArtifactType.IMAGE: Artifact(
+                id="img",
+                document_id="doc1",
+                type=ArtifactType.IMAGE,
+                uri=str(tmp_path / "page.png"),
+                content_hash="0" * 64,
+            )
+        },
+        {},
+        RunContext(
+            document_id="doc1",
+            code_version="1.0",
+            pipeline_name="p",
+            workspace_uri=str(tmp_path / "ws"),
+        ),
+        RunControl(),
+    )
+    return CanonicalLayout.model_validate_json(
+        Path(out.artifacts[ArtifactType.LAYOUT].uri).read_bytes()
+    )
+
+
+def test_the_ocr_reading_replaces_the_text_and_nothing_else(tmp_path: Path) -> None:
+    """Sans ça, un corpus à vérité terrain fait entrer sa **propre référence**
+    dans le banc : le correcteur n'a rien à corriger et le CER vaut zéro par
+    construction. Un zéro tautologique ressemble à un excellent résultat, ce qui
+    en fait le plus trompeur de tous.
+    """
+    lignes = [
+        ligne
+        for page in _run_avec_sidecar(tmp_path, _SIDECAR).pages
+        for region in page.regions
+        for ligne in region.lines
+    ]
+    assert [ligne.text for ligne in lignes] == ["Bonjour tra-", "lecture d'OCR"]
+    # L'identité et la géométrie viennent toujours de l'ALTO.
+    assert [ligne.id for ligne in lignes] == ["L1", "L2"]
+    assert lignes[0].geometry is not None
+
+
+def test_an_empty_reading_is_a_reading(tmp_path: Path) -> None:
+    """Le moteur n'a rien reconnu : c'est un résultat d'OCR, pas une absence.
+
+    Garder le texte d'ALTO créditerait le moteur d'une ligne qu'il n'a **pas
+    lue** — exactement la contamination trouvée le 2026-08-21 sur la campagne
+    du 14 août, où six lignes vides avaient repris la vérité terrain.
+    """
+    layout = _run_avec_sidecar(
+        tmp_path, {"ocr": {"page.xml": {"L1": "", "L2": "lu"}}}
+    )
+    textes = [
+        ligne.text
+        for page in layout.pages
+        for region in page.regions
+        for ligne in region.lines
+    ]
+    assert textes == ["", "lu"]
+
+
+def test_a_line_absent_from_the_sidecar_keeps_its_alto_text(tmp_path: Path) -> None:
+    """Absent ≠ vide : une ligne que le sidecar ne mentionne pas n'a pas été
+    soumise au moteur, elle garde donc son texte."""
+    layout = _run_avec_sidecar(tmp_path, {"ocr": {"page.xml": {"L1": "lu"}}})
+    textes = [
+        ligne.text
+        for page in layout.pages
+        for region in page.regions
+        for ligne in region.lines
+    ]
+    assert textes == ["lu", "vérité terrain"]
+
+
+def test_a_sidecar_matching_nothing_is_refused(tmp_path: Path) -> None:
+    """Un sidecar qui ne touche aucune ligne est presque toujours un mauvais
+    appariement de clés, pas un OCR parfait. Le taire publierait un CER nul en
+    croyant mesurer une correction."""
+    with pytest.raises(AdapterStepError, match="ne couvre aucune"):
+        _run_avec_sidecar(tmp_path, {"ocr": {"page.xml": {"INCONNUE": "x"}}})
+
+
+def test_an_unknown_file_is_named(tmp_path: Path) -> None:
+    with pytest.raises(AdapterStepError, match="ne connaît pas"):
+        _run_avec_sidecar(tmp_path, {"ocr": {"autre.xml": {"L1": "x"}}})
