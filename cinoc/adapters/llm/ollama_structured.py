@@ -54,7 +54,7 @@ class OllamaStructuredClient:
 
         # Les classes concrètes vivent en ``core.protocols``, à côté du contrat
         # qui les lève — ``errors`` n'ancre que leur base ``ProviderError``.
-        from saknussemm.core.protocols import (  # noqa: PLC0415
+        from saknussemm.core.protocols import (  # type: ignore[import-not-found]  # noqa: PLC0415
             ProviderPermanentError,
             ProviderTransientError,
         )

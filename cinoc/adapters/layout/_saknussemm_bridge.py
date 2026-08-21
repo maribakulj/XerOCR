@@ -40,12 +40,12 @@ def layout_to_manifest(layout: CanonicalLayout, *, document_id: str) -> Any:
     anonyme ne peut donc pas traverser la bibliothèque, et le dire ici nomme la
     vraie cause.
     """
-    from saknussemm.core.pairing import (  # noqa: PLC0415
+    from saknussemm.core.pairing import (  # type: ignore[import-not-found]  # noqa: PLC0415
         HYPHEN_CHARS,
         link_hyphen_pairs,
         trailing_hyphen_char,
     )
-    from saknussemm.core.schemas import (  # noqa: PLC0415
+    from saknussemm.core.schemas import (  # type: ignore[import-not-found]  # noqa: PLC0415
         BlockManifest,
         Coords,
         DocumentManifest,

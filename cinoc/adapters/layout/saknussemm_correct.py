@@ -45,7 +45,7 @@ _PRODUCERS = ("rules", "ollama")
 
 def _require_saknussemm() -> Any:
     try:
-        import saknussemm  # noqa: PLC0415
+        import saknussemm  # type: ignore[import-not-found]  # noqa: PLC0415
     except ImportError as exc:  # pragma: no cover - dépend de l'installation
         raise AdapterStepError(
             "saknussemm_correct : la bibliothèque 'saknussemm' n'est pas "
@@ -99,14 +99,16 @@ class SaknussemmCorrector:
 
     def _build_producer(self) -> Any:
         if self._producer == "rules":
-            from saknussemm.producers.rules import (  # noqa: PLC0415
+            from saknussemm.producers.rules import (  # type: ignore[import-not-found]  # noqa: PLC0415
                 RulesProducer,
                 default_french_ocr_rules,
             )
 
             return RulesProducer(default_french_ocr_rules())
 
-        from saknussemm.producers.llm_edit import LLMEditProducer  # noqa: PLC0415
+        from saknussemm.producers.llm_edit import (  # type: ignore[import-not-found]  # noqa: PLC0415, E501
+            LLMEditProducer,
+        )
 
         from cinoc.adapters.llm.ollama_structured import (  # noqa: PLC0415
             OllamaStructuredClient,
@@ -140,7 +142,9 @@ class SaknussemmCorrector:
             ) from exc
         _require_saknussemm()
 
-        from saknussemm.core.pipeline import CorrectionPipeline  # noqa: PLC0415
+        from saknussemm.core.pipeline import (  # type: ignore[import-not-found]  # noqa: PLC0415, E501
+            CorrectionPipeline,
+        )
 
         from cinoc.adapters.layout._saknussemm_bridge import (  # noqa: PLC0415
             layout_to_manifest,
