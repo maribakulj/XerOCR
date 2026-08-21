@@ -71,6 +71,8 @@ def _word(string: AltoString) -> Word:
         text=string.content,
         geometry=_geometry(string.bbox, None),
         confidence=string.confidence,
+        subs_type=string.subs_type,
+        subs_content=string.subs_content,
     )
 
 
@@ -78,7 +80,10 @@ def _line(line: AltoLine) -> Line:
     words = tuple(_word(s) for s in line.strings)
     return Line(
         id=line.id,
-        text=" ".join(w.text for w in words),
+        # ``line.text`` vient du parser, qui a lu les ``SP`` et les ``HYP``.
+        # La jointure par espaces reste le repli des layouts construits à la
+        # main (tests, segmenteurs), qui n'ont ni l'un ni l'autre.
+        text=line.text or " ".join(w.text for w in words),
         geometry=_geometry(line.bbox, line.polygon),
         baseline=tuple(line.baseline or ()),
         words=words,
@@ -159,6 +164,8 @@ def _alto_strings(line: Line) -> tuple[AltoString, ...]:
                 content=word.text,
                 bbox=_alto_bbox(word.geometry),
                 confidence=word.confidence,
+                subs_type=word.subs_type,
+                subs_content=word.subs_content,
             )
             for word in line.words
         )
@@ -172,6 +179,9 @@ def _alto_line(line: Line) -> AltoLine:
         polygon=_alto_polygon(line.geometry),
         baseline=tuple(line.baseline) or None,
         strings=_alto_strings(line),
+        # Le texte dit où sont les blancs et la marque de coupure ; sans lui
+        # l'écrivain ne peut que deviner.
+        text=line.text,
     )
 
 

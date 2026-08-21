@@ -75,6 +75,34 @@ def _write_string(parent: etree._Element, ns: str | None, s: AltoString) -> None
         el.set("SUBS_CONTENT", s.subs_content)
 
 
+def _line_layout(line: AltoLine) -> tuple[list[bool], str | None]:
+    """Où mettre les ``<SP>``, et quelle marque de coupure finale.
+
+    ``line.text`` fait autorité : il vient du parser, qui a lu les ``SP`` et le
+    ``HYP`` d'origine. On y relit la position de chaque ``String`` pour savoir
+    si ses voisins étaient séparés par un blanc. Sans ce texte (document
+    construit à la main), on retombe sur un blanc partout — ce que faisait
+    l'ancienne jointure.
+
+    Écrire les ``String`` sans ``SP`` produisait un ALTO qui dit ``helloworld``.
+    Ça ne se voyait pas : le parser ignorait les ``SP`` et rejoignait par des
+    blancs, donc l'aller-retour se comparait égal à lui-même.
+    """
+    default = [True] * max(len(line.strings) - 1, 0)
+    if not line.text:
+        return default, None
+    pos = 0
+    gaps: list[bool] = []
+    for i, s in enumerate(line.strings):
+        idx = line.text.find(s.content, pos)
+        if idx < 0:
+            return default, None  # texte et String désaccordés : repli
+        if i:
+            gaps.append(" " in line.text[pos:idx])
+        pos = idx + len(s.content)
+    return gaps, line.text[pos:].strip() or None
+
+
 def _write_line(parent: etree._Element, ns: str | None, line: AltoLine) -> None:
     el = etree.SubElement(parent, _q(ns, "TextLine"))
     if line.id is not None:
@@ -83,8 +111,13 @@ def _write_line(parent: etree._Element, ns: str | None, line: AltoLine) -> None:
         el.set("BASELINE", format_points(line.baseline))
     _set_bbox(el, line.bbox)
     _write_polygon(el, ns, line.polygon)
-    for s in line.strings:
+    gaps, break_mark = _line_layout(line)
+    for i, s in enumerate(line.strings):
+        if i and gaps[i - 1]:
+            etree.SubElement(el, _q(ns, "SP"))
         _write_string(el, ns, s)
+    if break_mark is not None:
+        etree.SubElement(el, _q(ns, "HYP")).set("CONTENT", break_mark)
 
 
 def _write_block(parent: etree._Element, ns: str | None, block: AltoBlock) -> None:
