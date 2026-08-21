@@ -241,6 +241,12 @@ def _build_precomputed_layout(kwargs: Mapping[str, ParamValue]) -> Module:
     return PrecomputedLayoutSource()
 
 
+def _build_alto_source(kwargs: Mapping[str, ParamValue]) -> Module:
+    from cinoc.adapters.layout.alto_source import AltoLayoutSource
+
+    return AltoLayoutSource()
+
+
 def _build_pp_doclayout(kwargs: Mapping[str, ParamValue]) -> Module:
     import os
 
@@ -333,6 +339,9 @@ def register_default_modules(registry: ModuleRegistry) -> None:
     # ``run_planning.plan_hybrid_run`` (finition T5 livrée) : segmentation →
     # reconnaissance par région (fanout, couche 4) → assemblage ALTO. Consommateur
     # vérifié de bout en bout par ``tests/pipeline/test_t5_envelope.py``.
+    # Fait entrer un ALTO **existant** dans le banc sans l'aplatir : jusqu'ici
+    # un corpus livré avec sa mise en page ne pouvait y entrer qu'en texte.
+    registry.register_builder("alto_source", _build_alto_source)
     registry.register_builder("precomputed_layout", _build_precomputed_layout)
     registry.register_builder("precomputed_region", _build_precomputed_region)
     registry.register_builder("alto_assembler", _build_alto_assembler)
