@@ -33,8 +33,10 @@ from cinoc.app.report_images import (
     write_report_bundle,
 )
 from cinoc.app.resume import ResumeStore
+from cinoc.app.variance import VarianceSummary, run_repeatedly
 from cinoc.domain.errors import CinocError
 from cinoc.evaluation.analysis import EconomicsPayload
+from cinoc.evaluation.result import RunResult
 from cinoc.reports import default_report_renderer, render_comparison
 from cinoc.reports.csv_export import run_result_csv
 
@@ -126,6 +128,32 @@ def _run_demo(output: str) -> int:
     return 0
 
 
+def _write_variance(output: Path, variance: VarianceSummary) -> None:
+    """Écrit la fourchette à côté du rapport et l'affiche.
+
+    Affichée **et** écrite : un fichier qu'on ne regarde pas ne protège de rien,
+    et c'est le chiffre le plus large qui borne ce qu'on a le droit d'affirmer.
+    """
+    chemin = output.with_suffix(output.suffix + ".variance.json")
+    chemin.write_text(variance.model_dump_json(indent=2), encoding="utf-8")
+    print(f"\nVariance sur {variance.runs} runs ({variance.corpus}) :")
+    pires = variance.widest()
+    if not pires:
+        print("  aucune métrique applicable sur plusieurs runs.")
+    for spread in pires:
+        print(
+            f"  {spread.pipeline} · {spread.metric} : "
+            f"{spread.minimum:.4f} – {spread.maximum:.4f} "
+            f"(médiane {spread.median_value:.4f}, étendue {spread.spread:.1%})"
+        )
+    if pires:
+        print(
+            "  Toute comparaison plus serrée que l'étendue la plus large "
+            "est du bruit sur ce corpus."
+        )
+    print(f"Bilan de variance écrit : {chemin}")
+
+
 def _run_config(
     config_path: str,
     output: str,
@@ -135,7 +163,13 @@ def _run_config(
     hipe_jsonl: str | None = None,
     max_workers: int | None = None,
     report_dir: str | None = None,
+    repeat: int = 1,
 ) -> int:
+    if repeat > 1 and resume_dir:
+        raise CinocError(
+            "--repeat et --resume-dir s'excluent : rejouer un cache de reprise "
+            "mesurerait le cache, pas la variance du dispositif."
+        )
     registry = ModuleRegistry()
     register_default_modules(registry)
     discover_plugins(registry, enabled=True)  # CLI local : code de confiance
@@ -148,14 +182,24 @@ def _run_config(
         from cinoc.app.hipe_export import hipe_jsonl_sink
 
         artifact_sink = hipe_jsonl_sink(Path(hipe_jsonl), spec.corpus)
-    result = run_orchestrator(
-        spec,
-        registry=registry,
-        code_version=resolve_code_version(),
-        resume_store=resume_store,
-        artifact_sink=artifact_sink,
-        max_workers=max_workers,
-    )
+    def _once(index: int) -> RunResult:
+        if repeat > 1:
+            print(f"run {index + 1}/{repeat}…", flush=True)
+        return run_orchestrator(
+            spec,
+            registry=registry,
+            code_version=resolve_code_version(),
+            resume_store=resume_store,
+            artifact_sink=artifact_sink,
+            max_workers=max_workers,
+        )
+
+    results, variance = run_repeatedly(_once, repeat)
+    # Le rapport porte le DERNIER run : un rapport qui mélangerait des runs
+    # n'en décrirait aucun. La fourchette vit à côté, dans son propre fichier.
+    result = results[-1]
+    if repeat > 1:
+        _write_variance(Path(output), variance)
     title = f"Cinoc — {spec.corpus.name}"
     if report_dir is not None:
         # Saveur dossier : images réelles dans report-assets/, HTML à liens
@@ -357,6 +401,16 @@ def main(argv: list[str] | None = None) -> int:
         "(un fichier par pipeline — soumission leaderboard).",
     )
     run_cmd.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Exécute la même spec N fois et écrit une FOURCHETTE par métrique "
+        "au lieu d'une décimale isolée (≥5 recommandé). Le rapport et le JSON "
+        "portent le dernier run ; le bilan de variance va dans "
+        "<sortie>.variance.json. Incompatible avec --resume-dir : rejouer un "
+        "cache mesurerait le cache.",
+    )
+    run_cmd.add_argument(
         "--workers",
         type=int,
         default=None,
@@ -458,6 +512,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.hipe_jsonl,
                 args.workers,
                 args.report_dir,
+                args.repeat,
             )
         if args.command == "history":
             return _run_history(
