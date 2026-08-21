@@ -28,6 +28,7 @@ def test_builds_precomputed_module() -> None:
 def test_kinds_listed() -> None:
     assert _registry().kinds() == (
         "alto_assembler",
+        "alto_source",
         "anthropic",
         "azure_di",
         "calamari",
