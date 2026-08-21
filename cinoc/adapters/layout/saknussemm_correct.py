@@ -13,7 +13,11 @@ Deux sorties, et c'est délibéré :
 * ``CORRECTED_TEXT`` — le même contenu aplati, **pour que le bilan de correction
   existant fonctionne sans être modifié**. Il cherche un ``RAW_TEXT`` et un
   ``CORRECTED_TEXT`` dans les sorties du pipeline ; les lui donner coûte une
-  projection et évite d'inventer un type d'artefact dont personne n'a besoin.
+  projection et évite d'inventer un type d'artefact pour ça ;
+* ``DECISIONS`` — ce qui a été changé, ce qui a été **refusé**, et pourquoi.
+  Un texte corrigé ne dit pas si une ligne est intacte parce qu'une garde l'a
+  protégée ou parce que rien n'a été proposé : deux situations que rien ne
+  distingue une fois le texte écrit.
 
 Ce que la bibliothèque décide, l'étape le rapporte sans le retoucher : une ligne
 refusée par une garde ressort **avec son texte d'origine**. C'est le principe de
@@ -23,6 +27,7 @@ reviendrait à réintroduire en aval ce que les gardes ont écarté.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -93,7 +98,13 @@ class SaknussemmCorrector:
 
     @property
     def output_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.LAYOUT, ArtifactType.CORRECTED_TEXT})
+        return frozenset(
+            {
+                ArtifactType.LAYOUT,
+                ArtifactType.CORRECTED_TEXT,
+                ArtifactType.DECISIONS,
+            }
+        )
 
     # -- producteur ---------------------------------------------------------
 
@@ -171,16 +182,20 @@ class SaknussemmCorrector:
             for outcome in result.report.lines
         }
         corrected = _apply(layout, decided, manifest_page_ids(manifest))
-        return self._emit(corrected, context)
+        return self._emit(corrected, _decisions(result, context.document_id), context)
 
-    def _emit(self, layout: CanonicalLayout, context: RunContext) -> StepOutput:
+    def _emit(
+        self, layout: CanonicalLayout, decisions: bytes, context: RunContext
+    ) -> StepOutput:
         payload = layout.model_dump_json().encode("utf-8")
         text = _flatten(layout).encode("utf-8")
         layout_path = self._out(context, "layout.json")
         text_path = self._out(context, "corrected.txt")
+        decisions_path = self._out(context, "decisions.json")
         layout_path.parent.mkdir(parents=True, exist_ok=True)
         layout_path.write_bytes(payload)
         text_path.write_bytes(text)
+        decisions_path.write_bytes(decisions)
         return StepOutput(
             artifacts={
                 ArtifactType.LAYOUT: Artifact(
@@ -197,6 +212,13 @@ class SaknussemmCorrector:
                     uri=str(text_path),
                     content_hash=compute_content_hash(text),
                 ),
+                ArtifactType.DECISIONS: Artifact(
+                    id=f"{context.document_id}:{self.name}:decisions",
+                    document_id=context.document_id,
+                    type=ArtifactType.DECISIONS,
+                    uri=str(decisions_path),
+                    content_hash=compute_content_hash(decisions),
+                ),
             }
         )
 
@@ -206,6 +228,38 @@ class SaknussemmCorrector:
                 context.workspace_uri, context.document_id, self._label, suffix
             )
         return Path(f"{context.document_id.replace('/', '_')}.{self._label}.{suffix}")
+
+
+def _decisions(result: object, document_id: str) -> bytes:
+    """Sérialise ce que la bibliothèque a décidé, ligne par ligne.
+
+    Le **statut** distingue trois situations qu'un texte corrigé confond :
+    la ligne a changé, une garde a refusé un changement proposé, ou rien n'a
+    été proposé. Sans cette distinction, un correcteur prudent et un correcteur
+    inerte rendent le même artefact.
+    """
+    lignes = []
+    for outcome in result.report.lines:  # type: ignore[attr-defined]
+        decision = outcome.decision
+        propose = outcome.proposal.output_text if outcome.proposal else None
+        raison = decision.reason
+        lignes.append(
+            {
+                "document_id": document_id,
+                "page_id": outcome.page_id,
+                "line_id": outcome.line_id,
+                "status": decision.status,
+                "source_text": outcome.source_text,
+                "final_text": decision.final_text,
+                "proposed_text": propose,
+                "hyphen_role": outcome.hyphen_role,
+                "reason_code": raison.code if raison else None,
+                "reason_detail": raison.detail if raison else None,
+            }
+        )
+    return json.dumps(
+        {"document_id": document_id, "lines": lignes}, ensure_ascii=False
+    ).encode("utf-8")
 
 
 def _apply(

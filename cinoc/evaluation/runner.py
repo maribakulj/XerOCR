@@ -25,6 +25,7 @@ from cinoc.evaluation.calibration import calibration_analysis
 from cinoc.evaluation.conformity import conformity_analysis
 from cinoc.evaluation.context import CrossEngineContext, DocContext
 from cinoc.evaluation.correction import correction_analysis
+from cinoc.evaluation.decisions import decisions_analysis
 from cinoc.evaluation.economics import economics_analysis
 from cinoc.evaluation.errors import EvaluationError
 from cinoc.evaluation.inference import inference_analysis
@@ -150,6 +151,11 @@ def evaluate_run(
         correction = correction_analysis(view, corpus, pipeline_outputs)
         if correction is not None:
             analyses.append(correction)
+        # Ce qu'un correcteur a **refusé** de changer : invisible dans le texte
+        # de sortie, donc invisible partout ailleurs.
+        decisions = decisions_analysis(view.name, pipeline_outputs)
+        if decisions is not None:
+            analyses.append(decisions)
 
     # Post-passe cross-vues : la conformité HIPE lit les résultats des vues
     # raw/hipe/heritage déjà calculés (zéro re-scoring) — cf. ``conformity``.

@@ -74,6 +74,15 @@ class ArtifactType(StrEnum):
     #: Confidences OCR au niveau token (sidecar JSON).
     CONFIDENCES = "confidences"
 
+    #: **Décisions ligne à ligne** d'une étape de post-correction : ce qu'elle a
+    #: changé, ce qu'elle a refusé de changer, et **pourquoi**. Sidecar JSON.
+    #:
+    #: Un correcteur qui rend un texte ne dit pas s'il a délibérément laissé une
+    #: ligne intacte ou s'il n'a rien trouvé — deux situations que rien ne
+    #: distingue une fois le texte écrit. Ce type existe pour porter cette
+    #: différence jusqu'au rapport, faute de quoi elle est calculée puis perdue.
+    DECISIONS = "decisions"
+
     @classmethod
     def _missing_(cls, value: object) -> ArtifactType | None:
         """Accepte les chaînes courtes ``"text"``/``"alto"``/``"page"`` en
