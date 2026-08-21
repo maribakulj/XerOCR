@@ -18,22 +18,31 @@ from __future__ import annotations
 from typing import NoReturn
 
 from cinoc.adapters.llm._base import (
-    DEFAULT_CORRECTION_PROMPT,
     LLMCompletion,
+    default_prompt_for_role,
+    llm_input_types,
+    llm_output_type,
     normalize_llm_content,
     run_llm_step,
     usage_tokens,
     validate_llm_label,
+    validate_role,
 )
 from cinoc.domain.artifacts import Artifact, ArtifactType
 from cinoc.domain.deadline import Deadline
 from cinoc.domain.errors import AdapterStepError
+from cinoc.domain.pipeline import PipelineMode
 from cinoc.pipeline.protocols import ParamValue
 from cinoc.pipeline.run_control import RunControl
 from cinoc.pipeline.types import RunContext, StepOutput
 
 _VERSION = "1.0"
 _DEFAULT_MODEL = "llama3"
+#: Les trois modes, comme les fournisseurs distants. ``zero_shot`` a un sens
+#: particulier ici : un modèle d'OCR local (churro, par exemple) transcrit
+#: l'image sans OCR amont.
+_SUPPORTED: frozenset[str] = frozenset({"text_only", "text_and_image", "zero_shot"})
+
 _DEFAULT_HOST = "http://localhost:11434"
 
 
@@ -57,6 +66,7 @@ def _invoke_ollama(  # pragma: no cover -- réseau (serveur ollama ; cf. marqueu
     host: str,
     deadline: Deadline,
     control: RunControl,
+    image_b64: str | None = None,
 ) -> LLMCompletion:
     try:
         import httpx  # type: ignore[import-not-found]
@@ -64,11 +74,14 @@ def _invoke_ollama(  # pragma: no cover -- réseau (serveur ollama ; cf. marqueu
         raise AdapterStepError(
             "ollama : httpx non installé (pip install 'cinoc[ollama]')."
         ) from exc
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-    }
+    # L'image voyage dans un tableau ``images`` **du message**, en base64 nu —
+    # pas d'URI ``data:``, pas de type de média : ollama ne suit pas la
+    # convention d'OpenAI ici, et un ``data:`` passé tel quel est ignoré en
+    # silence (le modèle répond alors sans avoir rien vu).
+    demande: dict[str, object] = {"role": "user", "content": prompt}
+    if image_b64 is not None:
+        demande["images"] = [image_b64]
+    payload = {"model": model, "messages": [demande], "stream": False}
     client = httpx.Client(timeout=deadline.as_sdk_timeout())
     # Annulation câblée : fermer le client interrompt la requête en vol.
     control.register_cancel_handle(client.close)
@@ -132,7 +145,12 @@ def list_installed_models(
 
 
 class OllamaAdapter:
-    """Post-correction LLM, serveur ollama local : ``RAW_TEXT`` → ``CORRECTED_TEXT``."""
+    """LLM/VLM local (ollama), trois modes comme les fournisseurs distants.
+
+    L'adapter était ``text_only`` : un modèle vision installé en local ne
+    pouvait pas concourir au banc, alors que des poids figés sont **plus**
+    reproductibles qu'un instantané d'API susceptible d'être déprécié.
+    """
 
     def __init__(
         self,
@@ -140,12 +158,16 @@ class OllamaAdapter:
         label: str,
         model: str = _DEFAULT_MODEL,
         host: str = _DEFAULT_HOST,
-        prompt: str = DEFAULT_CORRECTION_PROMPT,
+        role: str = "text_only",
+        prompt: str | None = None,
     ) -> None:
         self._label = validate_llm_label(label, "OllamaAdapter")
         self._model = model
         self._host = host
-        self._prompt = prompt
+        self._role: PipelineMode = validate_role(role, "OllamaAdapter", _SUPPORTED)
+        self._prompt = (
+            prompt if prompt is not None else default_prompt_for_role(self._role)
+        )
 
     @property
     def name(self) -> str:
@@ -157,11 +179,11 @@ class OllamaAdapter:
 
     @property
     def input_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.RAW_TEXT})
+        return llm_input_types(self._role)
 
     @property
     def output_types(self) -> frozenset[ArtifactType]:
-        return frozenset({ArtifactType.CORRECTED_TEXT})
+        return frozenset({llm_output_type(self._role)})
 
     def execute(
         self,
@@ -179,8 +201,22 @@ class OllamaAdapter:
                 control=control,
             )
 
+        def vision_invoke(
+            prompt: str, media_type: str, image_b64: str
+        ) -> LLMCompletion:
+            # ``media_type`` est ignoré : ollama devine le format des octets.
+            del media_type
+            return _invoke_ollama(
+                model=self._model,
+                prompt=prompt,
+                host=self._host,
+                deadline=context.deadline,
+                control=control,
+                image_b64=image_b64,
+            )
+
         return run_llm_step(
-            role="text_only",
+            role=self._role,
             label=self._label,
             name=self.name,
             prompt=self._prompt,
@@ -188,7 +224,7 @@ class OllamaAdapter:
             context=context,
             control=control,
             text_invoke=text_invoke,
-            vision_invoke=None,
+            vision_invoke=vision_invoke,
         )
 
 
