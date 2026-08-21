@@ -19,11 +19,13 @@ d'origine, et la césure (``SUBS_TYPE``/``SUBS_CONTENT`` + la marque portée par
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from cinoc.adapters._workspace import workspace_artifact_path
 from cinoc.domain.artifacts import Artifact, ArtifactType, compute_content_hash
 from cinoc.domain.errors import AdapterStepError, CinocError
+from cinoc.domain.layout import CanonicalLayout, Line, Region
 from cinoc.formats.alto.layout_map import alto_to_layout
 from cinoc.formats.alto.parser import parse_alto
 from cinoc.pipeline.protocols import ParamValue
@@ -37,7 +39,24 @@ _SUFFIXES = (".xml", ".alto.xml")
 
 
 class AltoLayoutSource:
-    """Lit l'ALTO voisin de l'image et le projette en ``CanonicalLayout``."""
+    """Lit l'ALTO voisin de l'image et le projette en ``CanonicalLayout``.
+
+    ``ocr_sidecar`` remplace le **texte** des lignes par une lecture d'OCR
+    réelle, en gardant de l'ALTO tout le reste — identité, géométrie, césure.
+    Sans lui, un corpus à vérité terrain fait entrer sa propre référence dans
+    le banc : le correcteur n'a rien à corriger et le CER vaut zéro **par
+    construction**. Un zéro tautologique ressemble à un excellent résultat, ce
+    qui en fait le plus trompeur de tous.
+
+    Format attendu (celui de ``scripts/ocr_corpus.py``) : ``{"ocr": {fichier:
+    {line_id: texte}}}``. Une ligne absente du sidecar **garde son texte
+    d'ALTO** et est comptée ; une ligne présente mais **vide** est une lecture
+    d'OCR à part entière — le moteur n'a rien reconnu — et remplace donc le
+    texte. Confondre les deux crédite le moteur d'une ligne qu'il n'a pas lue.
+    """
+
+    def __init__(self, *, ocr_sidecar: str = "") -> None:
+        self._sidecar = ocr_sidecar
 
     @property
     def name(self) -> str:
@@ -66,6 +85,26 @@ class AltoLayoutSource:
             f"({attendus} attendu dans {image_path.parent})."
         )
 
+    def _read_sidecar(self, alto_name: str) -> dict[str, str]:
+        chemin = Path(self._sidecar)
+        try:
+            data = json.loads(chemin.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise AdapterStepError(
+                f"{self.name} : sidecar OCR illisible ({chemin}) — {exc}"
+            ) from exc
+        par_fichier = data.get("ocr") if isinstance(data, dict) else None
+        if not isinstance(par_fichier, dict):
+            raise AdapterStepError(
+                f"{self.name} : {chemin.name!r} n'a pas de section 'ocr'."
+            )
+        lectures = par_fichier.get(alto_name)
+        if not isinstance(lectures, dict):
+            raise AdapterStepError(
+                f"{self.name} : le sidecar ne connaît pas {alto_name!r}."
+            )
+        return {str(k): str(v) for k, v in lectures.items()}
+
     def execute(
         self,
         inputs: dict[ArtifactType, Artifact],
@@ -86,6 +125,19 @@ class AltoLayoutSource:
             raise AdapterStepError(
                 f"{self.name} : {alto_path.name!r} illisible — {exc}"
             ) from exc
+        if self._sidecar:
+            layout, remplacees, total = _apply_ocr(
+                layout, self._read_sidecar(alto_path.name)
+            )
+            if remplacees == 0 and total:
+                # Un sidecar qui ne touche AUCUNE ligne est presque toujours un
+                # mauvais appariement de clés, pas un OCR parfait. Le dire ici
+                # évite de publier un CER nul en croyant mesurer une correction.
+                raise AdapterStepError(
+                    f"{self.name} : le sidecar ne couvre aucune des {total} "
+                    f"lignes de {alto_path.name!r} — clés de fichier ou de "
+                    "ligne incompatibles."
+                )
 
         # Une ligne sans ``id`` n'a pas d'identité stable, et un post-correcteur
         # qui reçoit un tel layout ne peut pas rendre ses décisions ligne à
@@ -128,6 +180,51 @@ class AltoLayoutSource:
                 )
             }
         )
+
+
+def _apply_ocr(
+    layout: CanonicalLayout, lectures: dict[str, str]
+) -> tuple[CanonicalLayout, int, int]:
+    """Remplace le texte des lignes connues du sidecar. Renvoie ``(layout,
+    remplacées, total)`` — les compteurs servent à refuser un appariement vide.
+
+    Les **mots sont abandonnés** sur une ligne remplacée : leur géométrie
+    décrivait les caractères de la vérité terrain, pas ceux que l'OCR a lus.
+    """
+    remplacees = 0
+    total = 0
+
+    def region(reg: Region) -> Region:
+        nonlocal remplacees, total
+        lignes = []
+        for line in reg.lines:
+            total += 1
+            if line.id is not None and line.id in lectures:
+                remplacees += 1
+                lignes.append(
+                    Line(
+                        id=line.id,
+                        text=lectures[line.id],
+                        geometry=line.geometry,
+                        baseline=line.baseline,
+                        words=(),
+                        confidence=line.confidence,
+                    )
+                )
+            else:
+                lignes.append(line)
+        return reg.model_copy(
+            update={
+                "lines": tuple(lignes),
+                "regions": tuple(region(r) for r in reg.regions),
+            }
+        )
+
+    pages = tuple(
+        page.model_copy(update={"regions": tuple(region(r) for r in page.regions)})
+        for page in layout.pages
+    )
+    return layout.model_copy(update={"pages": pages}), remplacees, total
 
 
 __all__ = ["AltoLayoutSource"]
