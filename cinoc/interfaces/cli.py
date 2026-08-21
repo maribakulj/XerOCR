@@ -33,10 +33,11 @@ from cinoc.app.report_images import (
     write_report_bundle,
 )
 from cinoc.app.resume import ResumeStore
-from cinoc.app.variance import VarianceSummary, run_repeatedly
+from cinoc.app.variance import run_repeatedly
 from cinoc.domain.errors import CinocError
 from cinoc.evaluation.analysis import EconomicsPayload
 from cinoc.evaluation.result import RunResult
+from cinoc.interfaces._correction_command import run_correction, write_variance
 from cinoc.reports import default_report_renderer, render_comparison
 from cinoc.reports.csv_export import run_result_csv
 
@@ -128,32 +129,6 @@ def _run_demo(output: str) -> int:
     return 0
 
 
-def _write_variance(output: Path, variance: VarianceSummary) -> None:
-    """Écrit la fourchette à côté du rapport et l'affiche.
-
-    Affichée **et** écrite : un fichier qu'on ne regarde pas ne protège de rien,
-    et c'est le chiffre le plus large qui borne ce qu'on a le droit d'affirmer.
-    """
-    chemin = output.with_suffix(output.suffix + ".variance.json")
-    chemin.write_text(variance.model_dump_json(indent=2), encoding="utf-8")
-    print(f"\nVariance sur {variance.runs} runs ({variance.corpus}) :")
-    pires = variance.widest()
-    if not pires:
-        print("  aucune métrique applicable sur plusieurs runs.")
-    for spread in pires:
-        print(
-            f"  {spread.pipeline} · {spread.metric} : "
-            f"{spread.minimum:.4f} – {spread.maximum:.4f} "
-            f"(médiane {spread.median_value:.4f}, étendue {spread.spread:.1%})"
-        )
-    if pires:
-        print(
-            "  Toute comparaison plus serrée que l'étendue la plus large "
-            "est du bruit sur ce corpus."
-        )
-    print(f"Bilan de variance écrit : {chemin}")
-
-
 def _run_config(
     config_path: str,
     output: str,
@@ -199,7 +174,7 @@ def _run_config(
     # n'en décrirait aucun. La fourchette vit à côté, dans son propre fichier.
     result = results[-1]
     if repeat > 1:
-        _write_variance(Path(output), variance)
+        write_variance(Path(output), variance)
     title = f"Cinoc — {spec.corpus.name}"
     if report_dir is not None:
         # Saveur dossier : images réelles dans report-assets/, HTML à liens
@@ -482,6 +457,51 @@ def main(argv: list[str] | None = None) -> int:
         help="Prompt de transcription pour un reconnaisseur VLM (zero-shot).",
     )
 
+    correct_cmd = subparsers.add_parser(
+        "correct",
+        help="Corrige un dossier d'ALTO existants (post-correction structurée).",
+    )
+    correct_cmd.add_argument(
+        "alto_dir", help="Dossier de paires <nom>.xml + <nom>.png/.jpg."
+    )
+    correct_cmd.add_argument(
+        "-o", "--output", default="rapport.html", help="Fichier HTML de sortie."
+    )
+    correct_cmd.add_argument(
+        "--producer",
+        default="rules",
+        choices=("rules", "ollama"),
+        help="Producteur de corrections. 'rules' est déterministe et hors "
+        "ligne ; 'ollama' parle à un serveur local (exige --model).",
+    )
+    correct_cmd.add_argument(
+        "--model", default="", help="Modèle ollama (ex. gemma4:e2b)."
+    )
+    correct_cmd.add_argument(
+        "--host", default="http://localhost:11434", help="Serveur ollama."
+    )
+    correct_cmd.add_argument(
+        "--ocr-sidecar",
+        dest="ocr_sidecar",
+        default="",
+        help="JSON d'OCR réel {'ocr': {fichier: {line_id: texte}}} qui remplace "
+        "le texte des lignes. INDISPENSABLE sur un corpus à vérité terrain : "
+        "sans lui la source lit la référence, il n'y a rien à corriger, et le "
+        "CER vaut zéro par construction.",
+    )
+    correct_cmd.add_argument(
+        "--no-ground-truth",
+        dest="ground_truth",
+        action="store_false",
+        help="L'ALTO est de l'OCR, pas une transcription : aucune vue de "
+        "structure n'est ajoutée (il n'y aurait rien à quoi comparer).",
+    )
+    correct_cmd.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        help="Exécute N fois et écrit une fourchette (≥5 recommandé).",
+    )
     serve_cmd = subparsers.add_parser(
         "serve", help="Sert la vitrine web des rapports (extra [serve])."
     )
@@ -513,6 +533,17 @@ def main(argv: list[str] | None = None) -> int:
                 args.workers,
                 args.report_dir,
                 args.repeat,
+            )
+        if args.command == "correct":
+            return run_correction(
+                args.alto_dir,
+                args.output,
+                producer=args.producer,
+                model=args.model,
+                host=args.host,
+                ocr_sidecar=args.ocr_sidecar,
+                ground_truth=args.ground_truth,
+                repeat=args.repeat,
             )
         if args.command == "history":
             return _run_history(
