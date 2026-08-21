@@ -24,6 +24,8 @@ def test_default_metrics_registration_is_idempotent() -> None:
         "fca",
         "hallucination",
         "ins_rate",
+        "line_identity_cer",
+        "line_identity_coverage",
         "mer",
         "mufi_err",
         "ner_f1",
@@ -72,6 +74,8 @@ def test_get_and_select_by_input_types() -> None:
         ArtifactType.LAYOUT, ArtifactType.LAYOUT
     )
     assert {metric.name for metric in layout_metrics} == {
+        "line_identity_cer",
+        "line_identity_coverage",
         "region_cer",
         "region_detection",
     }
