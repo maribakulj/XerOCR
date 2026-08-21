@@ -51,6 +51,13 @@ class AltoLine(BaseModel):
     polygon: tuple[Point, ...] | None = None
     baseline: tuple[Point, ...] | None = None
     strings: tuple[AltoString, ...] = ()
+    #: Texte logique de la ligne, reconstruit des enfants ``String``/``SP``/
+    #: ``HYP`` au parsing. ``strings`` seul ne suffit pas : l'espace ALTO est
+    #: **explicite** (``<SP>``) et le tiret de coupure est un élément frère
+    #: (``<HYP>``), donc recoller les ``String`` par une espace invente des
+    #: blancs et perd la marque de césure. Vide pour un document construit
+    #: sans parser — les consommateurs retombent alors sur la jointure.
+    text: str = ""
 
 
 class AltoTextBlock(BaseModel):

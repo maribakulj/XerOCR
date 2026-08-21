@@ -62,6 +62,11 @@ def _rich_doc() -> AltoDocument:
         polygon=((10, 20), (510, 20), (510, 60)),
         baseline=((10, 50), (510, 50)),
         strings=(s1, s2),
+        # Une ligne sans ``text`` est **sous-spécifiée** : elle ne dit pas où
+        # sont ses blancs (l'espace ALTO est un ``<SP>`` explicite). Le fixture
+        # « riche » les dit, donc l'aller-retour préserve le modèle à
+        # l'identique. Cf. ``test_underspecified_line_becomes_specified``.
+        text="Bonjour monde",
     )
     text_block = AltoTextBlock(
         id="b1",

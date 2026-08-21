@@ -110,6 +110,39 @@ def _parse_string(el: etree._Element) -> AltoString:
     )
 
 
+#: Marques de coupure de mot rencontrées en fin de ligne. Une ``<HYP>`` qui
+#: répète une marque déjà présente dans le ``CONTENT`` du ``String`` précédent
+#: ne doit être rendue qu'une fois.
+_BREAK_MARKS = ("-", "\u00ad", "\u2010", "\u2011", "\u2013", "\u00ac", "\u2e17")
+
+
+def _reconstruct_text(el: etree._Element) -> str:
+    """Texte logique d'une ``<TextLine>`` : ``String`` + ``SP`` + ``HYP``.
+
+    Les trois règles d'ALTO, qu'une jointure par espaces ne peut pas deviner :
+    un ``String`` rend son ``CONTENT`` **verbatim** (deux ``String`` voisins
+    sans ``SP`` sont collés — ``L``+``r``+``s`` est ``Lrs``, pas ``L r s``) ;
+    un ``SP`` rend **une** espace ; un ``HYP`` rend son ``CONTENT`` (défaut
+    ``-``), le tiret conditionnel U+00AD étant ramené à ``-``.
+    """
+    out: list[str] = []
+    for child in el:
+        name = _lname(child)
+        if name == "String":
+            out.append(child.get("CONTENT", ""))
+        elif name == "SP":
+            out.append(" ")
+        elif name == "HYP":
+            mark = child.get("CONTENT") or "-"
+            if mark == "\u00ad":
+                mark = "-"
+            # Un producteur qui écrit la marque dans le String ET émet un HYP
+            # veut une marque, pas deux.
+            if not "".join(out).rstrip().endswith(_BREAK_MARKS):
+                out.append(mark)
+    return "".join(out).replace("\r", "").strip()
+
+
 def _parse_line(el: etree._Element) -> AltoLine:
     strings = tuple(_parse_string(c) for c in el if _lname(c) == "String")
     return AltoLine(
@@ -118,6 +151,7 @@ def _parse_line(el: etree._Element) -> AltoLine:
         polygon=_polygon(el),
         baseline=_points_attr(el, "BASELINE"),
         strings=strings,
+        text=_reconstruct_text(el),
     )
 
 

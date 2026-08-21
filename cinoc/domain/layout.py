@@ -51,6 +51,13 @@ class Word(BaseModel):
     text: str
     geometry: Geometry | None = None
     confidence: float | None = None
+    #: ``SUBS_TYPE`` ALTO (``HypPart1``/``HypPart2``/``Abbreviation``…) et son
+    #: ``SUBS_CONTENT``. Portés ici parce que la césure est une propriété du
+    #: **mot** en ALTO, et parce qu'un post-correcteur qui recolle un mot coupé
+    #: en a besoin : sans eux, un aller-retour par ``CanonicalLayout`` perd
+    #: quelle ligne continue quelle autre.
+    subs_type: str | None = None
+    subs_content: str | None = None
 
 
 class Line(BaseModel):
