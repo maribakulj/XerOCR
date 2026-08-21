@@ -185,6 +185,94 @@ def region_detection(ctx: DocContext) -> Observation | None:
 
 
 #: Socle de métriques de structure, collecté explicitement par le registre.
-LAYOUT_METRICS: tuple[DocumentMetric, ...] = (region_cer, region_detection)
+def _lines_by_id(layout: CanonicalLayout) -> dict[str, str]:
+    """``{line_id: texte}``. Les lignes sans identifiant sont **ignorées** : sans
+    identité, elles n'ont rien à quoi être appariées."""
+    return {
+        line.id: line.text
+        for page in layout.pages
+        for region in _walk(page.regions)
+        for line in region.lines
+        if line.id
+    }
 
-__all__ = ["LAYOUT_METRICS", "region_cer", "region_detection"]
+
+@document_metric(
+    name="line_identity_cer",
+    input_types=(ArtifactType.LAYOUT, ArtifactType.LAYOUT),
+    description="CER par ligne appariée par IDENTITÉ (et non par alignement).",
+    higher_is_better=False,
+    tags=frozenset({"structure", "edit_distance", "layout", "identity"}),
+)
+def line_identity_cer(ctx: DocContext) -> Observation | None:
+    """CER par ligne, lignes appariées par leur **identifiant**.
+
+    Le banc apparie sinon les lignes par un alignement de Levenshtein sur des
+    *listes de lignes* — une devinette, nécessaire quand tout est du texte plat.
+    Quand les deux côtés portent des identifiants, l'appariement est **connu**.
+
+    Ce que coûte la devinette, mesuré sur ``corpus/37-GT-BNL`` (522 lignes) :
+    elle diverge de l'identité sur **57 lignes** et porte le CER moyen par ligne
+    de 0,1188 à 0,1879. Elle se trompe presque toujours dans le même sens —
+    **51 lignes sur-notées contre 6 sous-notées** — et pour **14** d'entre elles
+    elle conclut « aucune correspondance » (CER 1,0) alors qu'un jumeau existe
+    sous le même identifiant. Le déclencheur est une ligne vide côté hypothèse :
+    absente du texte aplati, elle décale les blocs d'opcodes, et des lignes
+    voisines quasi parfaites se retrouvent déclarées non appariées.
+
+    Une ligne de référence absente de l'hypothèse compte comme **entièrement
+    fausse** — c'est une ligne perdue, pas une ligne à ignorer.
+    """
+    reference, hypothesis = _layout_pair(ctx)
+    ref_lines = _lines_by_id(reference)
+    if not ref_lines or not _lines_by_id(hypothesis):
+        return None
+    hyp_lines = _lines_by_id(hypothesis)
+    total_edits = 0
+    total_chars = 0
+    for line_id, ref_text in ref_lines.items():
+        total_edits += _edit_distance(ref_text, hyp_lines.get(line_id, _MISSING))
+        total_chars += len(ref_text)
+    if total_chars == 0:
+        return None
+    return Observation(value=total_edits / total_chars, weight=total_chars)
+
+
+@document_metric(
+    name="line_identity_coverage",
+    input_types=(ArtifactType.LAYOUT, ArtifactType.LAYOUT),
+    description="Part des lignes de référence retrouvées par identifiant.",
+    higher_is_better=True,
+    tags=frozenset({"structure", "layout", "identity", "coverage"}),
+)
+def line_identity_coverage(ctx: DocContext) -> Observation | None:
+    """Part des lignes de référence que l'hypothèse porte **sous le même id**.
+
+    Une étape qui perd des lignes, en fusionne, ou leur réattribue un
+    identifiant fait chuter ce chiffre — et c'est invisible dans un CER, qui
+    n'a aucun moyen de signaler qu'une ligne a disparu plutôt que d'être mal
+    transcrite.
+    """
+    reference, hypothesis = _layout_pair(ctx)
+    ref_lines = _lines_by_id(reference)
+    if not ref_lines:
+        return None
+    hyp_ids = set(_lines_by_id(hypothesis))
+    retrouvees = sum(1 for line_id in ref_lines if line_id in hyp_ids)
+    return Observation(value=retrouvees / len(ref_lines), weight=len(ref_lines))
+
+
+LAYOUT_METRICS: tuple[DocumentMetric, ...] = (
+    region_cer,
+    region_detection,
+    line_identity_cer,
+    line_identity_coverage,
+)
+
+__all__ = [
+    "LAYOUT_METRICS",
+    "line_identity_cer",
+    "line_identity_coverage",
+    "region_cer",
+    "region_detection",
+]

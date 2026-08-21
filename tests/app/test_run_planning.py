@@ -523,7 +523,12 @@ def test_layout_ground_truth_adds_structure_view(tmp_path: Path) -> None:
         v for v in _views_for_corpus(corpus) if "region_detection" in v.metric_names
     ]
     assert len(layout_views) == 1
-    assert layout_views[0].metric_names == ("region_detection", "region_cer")
+    assert layout_views[0].metric_names == (
+        "region_detection",
+        "region_cer",
+        "line_identity_cer",
+        "line_identity_coverage",
+    )
     assert ArtifactType.LAYOUT in layout_views[0].candidate_types
 
 

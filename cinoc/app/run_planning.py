@@ -174,7 +174,16 @@ def _layout_view() -> EvaluationView:
     return EvaluationView(
         name="structure (mise en page)",
         candidate_types=frozenset({ArtifactType.LAYOUT}),
-        metric_names=("region_detection", "region_cer"),
+        metric_names=(
+            "region_detection",
+            "region_cer",
+            # Appariement par IDENTITÉ, quand les deux côtés portent des
+            # identifiants de ligne : exact là où l'alignement de lignes
+            # devine. Mesuré sur corpus/37-GT-BNL : la devinette diverge sur
+            # 57 lignes de 522 et gonfle le CER par ligne de 58 %.
+            "line_identity_cer",
+            "line_identity_coverage",
+        ),
     )
 
 
