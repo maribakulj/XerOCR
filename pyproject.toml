@@ -40,7 +40,13 @@ azure = ["httpx", "httpcore"]  # Document Intelligence via REST — AZURE_DOC_IN
 ollama = ["httpx", "httpcore"]
 # Post-correction structuree (LAYOUT -> LAYOUT) : corrige dans la mise en
 # page au lieu d'aplatir avant de corriger.
-saknussemm = ["saknussemm", "httpx", "httpcore"]
+# Le paquet n'est pas encore publie sur PyPI : on l'installe depuis le
+# depot. Le jour ou il sortira, cette ligne redeviendra "saknussemm".
+saknussemm = [
+    "saknussemm @ git+https://github.com/maribakulj/saknussemm.git",
+    "httpx",
+    "httpcore",
+]
 huggingface = ["datasets", "huggingface_hub"]  # datasets = streaming ; huggingface_hub = publication (scripts/) + snapshot dataset curé (import_curated_hf_corpus)
 segment = ["paddlex"]
 ner = ["spacy"]  # extraction d'entités nommées — modèle téléchargé à part (`spacy download`)
